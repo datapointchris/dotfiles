@@ -13,7 +13,7 @@ install's status is ignored in both directions and what decides the outcome is
 whether the binary arrived, measured directly.
 
 **Which source is preferred is decided by whether winget delivered**, not by a
-mode — the same arrangement `gotool` reaches for the module proxy. The employer
+mode — the same arrangement `gotool` reaches for the module proxy. The restricted
 network this box sits on blocks winget outright, so "online" here means a network
 and never a reachable Store; a run that only tried winget would leave every one of
 these eight permanently uninstalled on the one machine that declares them. The

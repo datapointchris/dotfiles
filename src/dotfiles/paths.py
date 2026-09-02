@@ -66,8 +66,8 @@ FLAGS_FILE = INSTALL_DIR / 'flags.yml'
 
 # State rather than cache or data: it survives runs, nobody authored it, and
 # deleting it changes what the tool can answer rather than costing a recompute. Its own
-# Syncthing folder, so the fleet shares run history and the work box — which is
-# not on Syncthing — keeps its own by construction rather than by a rule.
+# synced folder, so the fleet shares run history and a machine outside that sync
+# keeps its own by construction rather than by a rule.
 #
 # Run records already carry the machine in the filename. The two below do not on
 # their own, and sharing the directory without a suffix would have four machines

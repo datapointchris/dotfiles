@@ -260,7 +260,7 @@ were each rejected for saying something the repo does not know:
 Deriving it from `os_family is WINDOWS` would make the OS the reason, and it is
 not — Windows 10 and later can create a symlink from an account holding
 `SeCreateSymbolicLinkPrivilege` or with Developer Mode on. What refuses here is
-one employer's group policy on one box, which is a fact about that machine's
+one group policy on one managed box, which is a fact about that machine's
 administration and would be wrong for the next Windows machine.
 
 A fourth column on `TREES` would make it per-tree. Nothing about `configs/`

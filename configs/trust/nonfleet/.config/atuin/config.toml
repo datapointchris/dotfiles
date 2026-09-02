@@ -13,7 +13,7 @@
 # This box is a git-only node: no SSH, no Syncthing, a corporate firewall between
 # it and the fleet's network, and a standing rule that nothing written here
 # travels home.
-# Commands typed at work are exactly what that rule is about, so the fleet's
+# Commands typed on this box are exactly what that rule is about, so the fleet's
 # server is not merely unreachable from here — it is the wrong destination.
 #
 # Local capture is unaffected: Ctrl-R, exit codes, cwd and `atuin stats` all work

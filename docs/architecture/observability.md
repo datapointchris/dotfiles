@@ -15,9 +15,9 @@ the thing none of them can state, because each knows only its own end.
 | `status-<box>.json` | every `check` | a caller asking where this machine stands |
 
 All three sit under `$XDG_STATE_HOME/dotfiles/`, which is its own Syncthing
-folder. The fleet shares one history that way, and the work box keeps its own by
-construction rather than by a rule, because it is not on Syncthing. Every name
-carries the box because the directory is shared — a run id embeds it
+folder. The fleet shares one history that way, and a machine outside that sync
+keeps its own by construction rather than by a rule. Every name carries the box
+because the directory is shared — a run id embeds it
 (`20260823T224350Z-archlinux-apply.json`) and `status-<box>.json` spells it out.
 What collided before they did is `src/dotfiles/paths.py`.
 
@@ -44,7 +44,7 @@ question rather than this tool's.
 
 `plan --json` and `check --json` compose it and hand it to stdout, so where it
 lands is the caller's business. It is the one artifact of the four with no reader
-on this machine. The work box is git-only and off Syncthing, so the way its needs
+on this machine. A nonfleet box is git-only and outside the sync, so the way its needs
 reach the fleet is its check output travelling as a file, and what that file says
 is missing is what the fleet builds into the next offline bundle for it. Why it
 carries a version, and what each generation holds, are `VERSION` in

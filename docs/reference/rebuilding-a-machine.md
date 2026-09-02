@@ -83,7 +83,7 @@ Do a base install, ensure `git` and `sudo` are present, then run `install.sh`
 and the `apply` it prints. The installer owns everything above the base system,
 including the AUR helper.
 
-## WSL — the work machine
+## WSL — the restricted machine
 
 Measure the firewall and build the offline bundle *before* the wipe. Both need
 the old box alive and networked, and neither is recoverable afterwards

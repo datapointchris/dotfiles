@@ -1,6 +1,6 @@
 """Offline bundles: this repo's installers, staged for a machine with no network.
 
-It exists for a work box behind a firewall that cannot reach GitHub. The bundle
+It exists for a box behind a firewall that cannot reach GitHub. The bundle
 is built where the network is, for a machine that is not the one building it,
 which is why neither `--machine` nor `--arch` has a default.
 

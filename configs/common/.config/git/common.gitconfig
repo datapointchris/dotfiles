@@ -4,8 +4,8 @@ addIgnoredFile = false
 # No identity here, by design — it differs per machine, not per platform, so it
 # arrives through the trust include at the foot of this file. useConfigOnly stops
 # git synthesizing one from hostname and username when nothing sets it: on a
-# machine where employer and personal repos coexist, a guessed author is a wrong
-# author that commits silently.
+# machine where two identities coexist, a guessed author is a wrong author that
+# commits silently.
 [user]
 useConfigOnly = true
 
@@ -104,9 +104,9 @@ path = ~/.config/delta/current.gitconfig
 # and a relative include would resolve against the repo. Ignored while absent, so
 # each machine reads only the lines its own coordinates deployed.
 #
-# trust comes last: it carries identity, and on a machine hosting both employer
-# and personal work the personal exception is an includeIf that has to be read
-# after the default it overrides.
+# trust comes last: it carries identity, and on a machine hosting two identities
+# the personal exception is an includeIf that has to be read after the default it
+# overrides.
 
 # os
 [include]

@@ -681,7 +681,7 @@ def _fetched_bundle(machine: str) -> Path | None:
 
     Off unless `remote.fetch_bundle_when_none_is_staged` says otherwise, and the
     default is what a machine that declares nothing gets. The machine this exists
-    for sits on an employer network where the concern is monitoring rather than
+    for sits on a monitored network where the concern is observation rather than
     capability, so an apply that reaches a server unasked is a change in posture
     and not a convenience — it has to be something somebody turned on.
 
@@ -891,7 +891,7 @@ def apply_machine(
             return unstaged
 
     # Streamed rather than collected, for the reason `survey` is: an `apply`
-    # measures the whole machine before it writes anything, and on the work box
+    # measures the whole machine before it writes anything, and on WSL
     # that stretch is minutes of blank screen.
     planned = []
     for event in engine.assess(session, selection):

@@ -4,7 +4,7 @@ icon: material/monitor-multiple
 
 # Work Monitor
 
-Route the Arch box's spare HDMI output to the work desk's secondary monitor, on demand, without letting Hyprland treat it as a permanent second display.
+Route the Arch box's spare HDMI output to a second desk's monitor, on demand, without letting Hyprland treat it as a permanent second display.
 
 Arch Linux only.
 
@@ -12,9 +12,9 @@ Bound to ++super+ctrl+w++. Workspace 9 is reachable with ++super+9++, and ++supe
 
 ## The Problem This Solves
 
-The personal desk and the work desk sit far enough apart that both screens cannot be read at once. Debugging a work WSL problem from the personal desk therefore means memorizing error output and carrying it across the room. Running a cable from the Arch box to the work desk's spare monitor input removes that, and it does so over a pure video path — nothing crosses the corporate network.
+The two desks sit far enough apart that both screens cannot be read at once. Debugging a problem on the machine at one desk from the other therefore means memorizing error output and carrying it across the room. Running a cable from the Arch box to the second desk's spare monitor input removes that, and it does so over a pure video path — nothing crosses either machine's network.
 
-The obstacle is what happens the rest of the time. Hyprland's catch-all `monitor = , preferred, auto, 1` rule adopts any output that appears, so a permanently connected second monitor means workspaces spread across two desks and windows open on a panel that is usually showing the work laptop instead.
+The obstacle is what happens the rest of the time. Hyprland's catch-all `monitor = , preferred, auto, 1` rule adopts any output that appears, so a permanently connected second monitor means workspaces spread across two desks and windows open on a panel that is usually showing the other machine instead.
 
 Leaving the cable plugged in and letting the output come and go on its own does not help either. When the Dell switches to another input it de-asserts hotplug detect, so the source sees a genuine disconnect: Hyprland tears the layout down, migrates workspaces, and rebuilds on reconnect. That reshuffling is the actual complaint, and no display setting prevents it, because from the compositor's point of view the monitor really did disappear.
 

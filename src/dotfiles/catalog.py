@@ -518,7 +518,7 @@ class WingetPackage(Entry):
 
     `repo` and `asset` name where the same binary is published on GitHub, which is
     the offline channel rather than a note about one: the machine that needs these
-    most cannot use winget at all, because an employer network blocks it outright.
+    most cannot use winget at all, because its network blocks winget outright.
     `create_bundle.add_winget_binaries` stages from that coordinate and
     `providers.winget` installs what it staged — in the general bundler beside
     every other category, because Windows is one more machine to build a bundle
@@ -760,7 +760,7 @@ class SystemConfig(Entry):
     authentication control is a defensible choice on a machine on its own network
     and is somebody else's decision on a managed one, so the row has to be able to
     say which machines it describes. A rewrite of `/etc/security/faillock.conf`
-    that reached a work box would be this repo weakening a security control on
+    that reached a managed box would be this repo weakening a security control on
     hardware it does not own.
 
     `capacity` was a fourth for one commit, for the rows that pointed a tool at

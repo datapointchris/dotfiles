@@ -562,10 +562,10 @@ for layer_file in "$SHELL_DIR"/*/*/*.sh(N); do
 done
 unset layer_file
 
-# Machine-local file, last so it can build on what the layers exported (the
-# work box's aws-login reads $winchris from wsl.sh). A real file, not a symlink:
-# it holds shell code that deliberately never enters this repo — employer
-# hostnames and the like — and it is restored by safekeep rather than installed.
+# Machine-local file, last so it can build on what the layers exported (a
+# nonfleet box's aws-login reads $winchris from wsl.sh). A real file, not a
+# symlink: it holds shell code that deliberately never enters this repo —
+# internal hostnames and the like — restored by safekeep rather than installed.
 # `relink` only removes symlinks that resolve into the repo, so it survives
 # untouched. Absent on every machine that does not declare one, and the last of
 # the three guards that stays: this file is restored, never deployed, so

@@ -1,7 +1,7 @@
 # abtop — htop for AI coding agents.
 #
 # Trust-scoped rather than common because the install is fleet-only: the two
-# personal workstations name abtop in cargo_packages and the work box does not.
+# personal workstations name abtop in cargo_packages and the nonfleet box does not.
 # Move both together if that changes — a config here for a machine without the
 # binary is an orphan, and a binary without the config falls back to the btop
 # theme.

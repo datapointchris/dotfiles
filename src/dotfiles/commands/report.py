@@ -524,7 +524,7 @@ def publish_after_apply() -> None:
 
     Off unless `remote.publish_reports_after_apply` says otherwise, for the reason
     `status.publish_after_apply` gives: a converge that reaches a server unasked is
-    a change in posture on an employer network.
+    a change in posture on a monitored network.
 
     **Unlike the status, this publishes a failed run too.** A status describes what
     the machine *is*, and one composed from a half-finished apply describes a

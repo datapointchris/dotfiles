@@ -10,7 +10,7 @@ verbs. The reasoning behind each one sits in the comments above its function in
 
 A distro's filesystem is one file on the Windows side and it never contracts on
 its own. Shrinking it in place needs a Windows administrator, which a managed
-work machine does not hand out. `wsl-tools rebuild` is the route that needs none,
+machine does not hand out. `wsl-tools rebuild` is the route that needs none,
 because export, unregister and import are all user-scope operations.
 
 There is a third option that is not in this tool. Back up with safekeep, delete

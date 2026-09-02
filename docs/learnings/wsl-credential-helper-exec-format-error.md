@@ -15,7 +15,7 @@ the credential prompt comes back, and the obvious reading is that the token expi
 SSO session lapsed. Re-authenticating does not help. A reboot does, which is what makes it
 look like a flaky credential store rather than a broken machine.
 
-The helper is reached this way because Okta SSO is the login path, and the Windows
+The helper is reached this way because SSO is the login path, and the Windows
 credential manager is what holds that credential. Nothing on the Linux side can supply it.
 
 ## Solution
@@ -60,6 +60,6 @@ helper for a real credential and is deliberately not part of `check`.
 - **`systemd-binfmt.service` re-applies its own registrations** on a systemd-enabled WSL
   distro and can clear the WSL handler when it runs. Check
   `journalctl -u systemd-binfmt -b` when the failure is intermittent.
-- **The helper belongs in `~/.config/git/local.gitconfig`** on the work box, which is
+- **The helper belongs in `~/.config/git/local.gitconfig`** on that machine, which is
   declared in `install/flags.yml` and restored by safekeep. In `~/.gitconfig` it masks the
   whole include chain, and in the entry point `~/.config/git/config` nothing backs it up.

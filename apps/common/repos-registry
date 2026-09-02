@@ -2,10 +2,10 @@
 # Where this machine's repo registry is, as a path on stdout.
 #
 # The one resolver. Seven skills and a handful of tools each need the same answer
-# and were each carrying the literal `~/dev/repos.json`, which resolves on a fleet
-# box and names nothing on the work box — a machine that has its own registry,
-# listing work repos, at its own path. A hardcoded path is not a smaller version
-# of this; it is a wrong answer on one of the machines that reads it.
+# and were each carrying one literal path, which resolves on a fleet box and names
+# nothing on a nonfleet one — a machine that has its own registry, listing its own
+# repos, at its own path. A hardcoded path is not a smaller version of this; it is
+# a wrong answer on one of the machines that reads it.
 #
 # Lives in dotfiles rather than in fleet because every machine has this and only
 # some have fleet, which is the same reason `pull-requests` and `claude-sessions` are
