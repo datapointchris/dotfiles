@@ -7,25 +7,47 @@ accident on one subcommand and nowhere else — which is how `link`/`relink`,
 `--dry-run`, `--force` and `--mine` each came to mean something slightly
 different depending on where they were typed.
 
-These tests never invoke a command. They inspect the built app, so nothing here
-touches the machine.
+Nothing here invokes a command. Some tests inspect the built app and others render
+a report into a buffer from fabricated results, so nothing reads or writes the
+machine's own state.
 """
 
 from __future__ import annotations
 
 import ast
+import datetime as dt
+import functools
+import importlib
+import io
+import pkgutil
+import sys
+from collections.abc import Callable
 from pathlib import Path
+from types import ModuleType
 
 import click
 import pytest
+from rich.console import Console
 from typer.main import get_command
 
 import dotfiles
+from dotfiles import create_bundle
+from dotfiles import offline_bundle
 from dotfiles import output
+from dotfiles import reconcile
 from dotfiles import registry
+from dotfiles import remote
 from dotfiles import resources
 from dotfiles import vocabulary
+from dotfiles.commands import staging
 from dotfiles.main import app
+from dotfiles.plan import Stage
+from dotfiles.resources import Change
+from dotfiles.resources import Repair
+from dotfiles.resources import Verdict
+from dotfiles.results import Lens
+from dotfiles.results import ResourceResult
+from dotfiles.results import ResourceVerdict
 
 
 def walk(command: click.Command, path: tuple[str, ...] = ()) -> list[tuple[tuple[str, ...], click.Command]]:
@@ -458,100 +480,249 @@ def test_the_exit_scan_finds_the_calls_it_is_asserting_about() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# No report draws its own section heading
+# Every report shares one geometry, one wording and one prompt
 # ─────────────────────────────────────────────────────────────────────────────
+#
+# What each of these asserts is the rendered line: where a heading puts its
+# columns, what a count is worded as, what a prompt does when nobody can answer
+# it, and what a sweep keeps. Two reports disagreeing about a column is something
+# a reader sees; which module holds the constant behind it is not.
+#
+# The pinning mechanism is a rebinding. A constant is swapped for a sentinel in
+# every module of the package at once, the line is rendered, and a site that holds
+# its own copy of the value is the one that did not move.
 
 
-HEADING_GEOMETRY = ('ADDRESS_COLUMN', 'VERDICT_WIDTH')
-"""The two widths that lay out a report's own lines: a section heading's name
-column, and the closing line's verdict word.
+@functools.cache
+def package_modules() -> tuple[ModuleType, ...]:
+    """Every module in the package, imported.
 
-Distinct from `VERDICT_COLUMN` and `SUBJECT_COLUMN`, which are an evidence *row*'s
-and are imported wherever a command renders rows — `commands/resources.py` sets its
-own rows in them deliberately. These two belong to `output.section_line` and
-`output.render_verdict`, which are the only two functions that lay out those lines.
-"""
-
-
-def heading_layouts() -> list[tuple[str, int]]:
-    """Every f-string in the package that puts a padded name behind a bold tag.
-
-    The shape a section heading is: rich's `[bold]`, then the name of the thing,
-    padded so the detail after it starts in one column. Matched on the pair rather
-    than on either half, because a bold field alone is a title and a padded field
-    alone is a row, and neither is what this asserts about.
+    Walked rather than listed: a list of modules cannot tell "nobody put a second
+    copy of a constant somewhere" from "somebody did and nothing looked".
     """
-    found = []
-    for path in SOURCE:
-        for node in ast.walk(ast.parse(path.read_text())):
-            if not isinstance(node, ast.JoinedStr):
-                continue
-            for left, right in zip(node.values, node.values[1:], strict=False):
-                bold = isinstance(left, ast.Constant) and str(left.value).endswith('[bold]')
-                padded = isinstance(right, ast.FormattedValue) and right.format_spec is not None and '<' in ast.unparse(right.format_spec)
-                if bold and padded:
-                    found.append((path.name, node.lineno))
+    found = pkgutil.walk_packages(dotfiles.__path__, prefix=f'{dotfiles.__name__}.')
+    return (dotfiles, *(importlib.import_module(module.name) for module in found))
+
+
+def rebind(monkeypatch: pytest.MonkeyPatch, name: str, value: object) -> list[str]:
+    """Point every module holding this name at a different value, and say which.
+
+    A module reaching a constant by `from dotfiles.output import X` holds its own
+    reference, so patching the module that defines it moves nothing there. The
+    sweep is what makes one rebinding reach every site rather than the first.
+    """
+    held = [module for module in package_modules() if name in vars(module)]
+    for module in held:
+        monkeypatch.setattr(module, name, value)
+    return [module.__name__ for module in held]
+
+
+RENDER_WIDTH = 400
+"""Wider than anything rendered below, since a wrapped line moves the column being
+measured and would report a geometry defect that is really a window size."""
+
+
+def capture(monkeypatch: pytest.MonkeyPatch) -> io.StringIO:
+    """Both consoles, writing plain text into one buffer.
+
+    `no_color`, because what is measured is a character index and an escape
+    sequence would sit in front of it. Rebound across the package rather than on
+    `output` alone, since modules throughout it hold their own reference to one.
+    """
+    buffer = io.StringIO()
+    stream = Console(file=buffer, width=RENDER_WIDTH, highlight=False, no_color=True)
+    rebind(monkeypatch, 'console', stream)
+    rebind(monkeypatch, 'err_console', stream)
+    return buffer
+
+
+DETAIL = 'what-this-section-found'
+"""A detail no renderer produces on its own, so its index in a rendered line is
+the column that line started its detail in."""
+
+
+def a_row(detail: str) -> ResourceResult:
+    """One resource's row, which is the shape a read verb's heading is built from."""
+    return ResourceResult(address='packages', verdict=ResourceVerdict.DRIFT, detail=detail)
+
+
+def section_renderers() -> dict[str, Callable[[], None]]:
+    """Every renderer that opens a section, by the report that reaches it.
+
+    Four reports open one, and a section whose detail runs to a second line is here
+    as a fifth: the continuation is laid out by its own format string and is what
+    the first line has to agree with.
+    """
+    return {
+        'a listing heading': lambda: output.console.print(output.section_line(output.VERDICT_MARKS['drift'], 'packages', DETAIL)),
+        "an apply's measure pass": lambda: output.render_section('packages', DETAIL),
+        'the summary block': lambda: output.render_summary_row('drift', 'packages', DETAIL, output.console),
+        "a read verb's resource row": lambda: output.render_result(a_row(DETAIL), output.console),
+        'a detail that runs on': lambda: output.render_result(a_row(f'first line\n{DETAIL}'), output.console),
+    }
+
+
+def section_columns(monkeypatch: pytest.MonkeyPatch, width: int | None = None) -> dict[str, int]:
+    """Where each section renderer put its detail, at one name-column width."""
+    if width is not None:
+        rebind(monkeypatch, 'ADDRESS_COLUMN', width)
+    buffer = capture(monkeypatch)
+    found = {}
+    for report, render in section_renderers().items():
+        buffer.seek(0)
+        buffer.truncate()
+        render()
+        carrying = [line for line in buffer.getvalue().splitlines() if DETAIL in line]
+        assert len(carrying) == 1, f'{report} rendered {len(carrying)} lines carrying its detail'
+        found[report] = carrying[0].index(DETAIL)
     return found
 
 
-def files_naming(constants: tuple[str, ...]) -> set[str]:
-    """Which files in the package reference any of these names."""
-    return {
-        path.name
-        for path in SOURCE
-        for node in ast.walk(ast.parse(path.read_text()))
-        if isinstance(node, ast.Name | ast.Attribute) and ast.unparse(node).split('.')[-1] in constants
-    }
-
-
-def test_one_function_lays_out_every_section_heading() -> None:
-    """The invariant the shared renderer created, which its own tests do not assert.
+def test_every_report_opens_its_section_in_one_column(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The invariant the shared renderer created, asserted as the line a reader sees.
 
     Four reports open a section — a read verb's resource row, an `apply`'s measure
-    pass, the line above each group of work, and `machines show`'s groups — and
-    while each laid out its own, a fifth one's disagreement stood beside four
-    siblings getting it right. `output.section_line` is the one builder for all of
-    them, which removes that redundancy and puts nothing in its place: a report
-    written next can lay out a heading of its own, land in a column no other report
-    uses, and leave the suite green.
+    pass, the line above each group of work, and the summary block — and while each
+    laid out its own, a fifth one's disagreement stood beside four siblings getting
+    it right. `output.section_line` is the one builder for all of them, which
+    removes that redundancy and puts nothing in its place.
 
-    The bound is the shape rather than the intent: a heading built without `[bold]`,
-    or with a width computed some other way, is not caught here. What is caught is
-    the one a person writes by copying a line that already looks right, which is how
-    all four of the originals came to exist.
+    What it bought is one column, so the column is what is asserted. Measured at
+    two widths, because a row of hardcoded numbers agrees at one width too: a
+    renderer holding its own does not move with the constant, and the second
+    measurement is what sees it.
     """
-    assert {where for where, _ in heading_layouts()} == {'output.py'}
+    narrow = section_columns(monkeypatch, width=8)
+    wide = section_columns(monkeypatch, width=30)
+
+    assert len(set(narrow.values())) == 1, f'section headings disagree about their column: {narrow}'
+    assert len(set(wide.values())) == 1, f'section headings disagree about their column: {wide}'
+    assert wide['the summary block'] - narrow['the summary block'] == 22, f'a heading did not follow the width: {narrow} then {wide}'
 
 
-def test_the_heading_scan_finds_the_line_it_is_asserting_about() -> None:
-    """Guards the test above: a walk that matches nothing passes vacuously."""
-    assert heading_layouts()
+def test_no_resource_name_pushes_its_own_heading_out_of_line() -> None:
+    """The width every heading shares has to fit the longest name that reaches it.
+    A name wider than the column pushes its own detail right, so the misaligned
+    report is the one a real machine prints.
+
+    Asserted over every resource rather than over the longest, since which name is
+    longest is the thing that changes when one is added.
+
+    Measured on the markup rather than on a rendered line: the tags around the name
+    are the same length whatever the name, so a column that differs is padding.
+    """
+    columns = {resource: output.section_line('~', resource, DETAIL).index(DETAIL) for resource in vocabulary.RESOURCES}
+
+    assert len(set(columns.values())) == 1, f'a resource name is wider than the column every heading shares: {columns}'
 
 
-def files_spelling(phrase: str) -> set[str]:
-    """Which files in the package write this phrase as a string literal."""
+def verdict_columns(monkeypatch: pytest.MonkeyPatch, width: int | None = None) -> dict[str, int]:
+    """Where each verdict word's closing sentence started, at one word width."""
+    if width is not None:
+        rebind(monkeypatch, 'VERDICT_WIDTH', width)
+    buffer = capture(monkeypatch)
+    found = {}
+    for word in output.VERDICT_COLOURS:
+        buffer.seek(0)
+        buffer.truncate()
+        output.render_verdict(word, DETAIL, output.console)
+        found[word] = buffer.getvalue().index(DETAIL)
+    return found
+
+
+def test_every_run_starts_its_closing_sentence_in_one_column(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The other half of the same geometry, for the line a run answers with.
+
+    `output.render_verdict` is the one place the verdict word is spelled out, and
+    what that buys is a sentence starting in one place whatever the run answered.
+    A report reaching the width by importing it, or by copying the number, is a
+    second owner of that column.
+
+    The shipped width is measured first and without a rebinding, which is the half
+    a swap cannot reach: a width smaller than the longest verdict pads nothing and
+    moves that one word's sentence right.
+    """
+    shipped = verdict_columns(monkeypatch)
+    assert len(set(shipped.values())) == 1, f'the closing sentence moves with the verdict: {shipped}'
+
+    narrow = verdict_columns(monkeypatch, width=12)
+    wide = verdict_columns(monkeypatch, width=30)
+
+    assert len(set(narrow.values())) == 1, f'closing lines disagree about their column: {narrow}'
+    assert len(set(wide.values())) == 1, f'closing lines disagree about their column: {wide}'
+    assert wide['drift'] - narrow['drift'] == 18, f'a closing line did not follow the width: {narrow} then {wide}'
+
+
+ATTENTION = 'ATTENTION-READ-FROM-THE-CONSTANT'
+ATTENTIONS = 'ATTENTIONS-READ-FROM-THE-CONSTANT'
+"""Sentinels carrying no lowercase `attention`, so a site that typed the wording
+rather than reading it is the one still spelling it after the swap."""
+
+
+def a_declined_change() -> Change:
+    """One item that differs, can be measured, and `apply` will not touch, which is
+    the thing an attention count counts."""
+    return Change(
+        resource='auth',
+        stage=Stage.ENVIRONMENT,
+        item='auth/meso',
+        verdict=Verdict.MISSING,
+        repair=Repair.BY_HAND,
+        detail='logged out',
+        advice='log in with `meso auth login`',
+    )
+
+
+def attention_wordings(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
+    """Every line in the package that words what `apply` declined to act on.
+
+    Reached through the function that builds each one rather than through a
+    command, so nothing here walks a machine. Two modules render them: the tally
+    on a row, a folded `check` row's own sentence, both read verbs' closing lines,
+    an `apply`'s closing line, and the section heading over what it walked past.
+    """
+    buffer = capture(monkeypatch)
+    declined = a_declined_change()
+    checked = reconcile.from_changes('auth', [declined], 'all logged in', lens=Lens.CHECK)
+    planned = reconcile.from_changes('auth', [declined], 'all logged in', lens=Lens.PLAN)
+    counted = ResourceResult(address='auth', verdict=ResourceVerdict.DRIFT, detail='', lens=Lens.PLAN, attention=1)
+
+    reconcile._report_untouched([declined], [])
+
     return {
-        path.name
-        for path in SOURCE
-        for node in ast.walk(ast.parse(path.read_text()))
-        if isinstance(node, ast.Constant) and isinstance(node.value, str) and phrase in node.value
+        'the tally on a row': output.tallies(counted),
+        "a check row's own sentence": checked.detail,
+        "plan's closing line": reconcile.verdict_line([planned], Lens.PLAN),
+        "check's closing line": reconcile.verdict_line([checked], Lens.CHECK),
+        "apply's closing line": reconcile.applied_line(1, [], [declined], []),
+        'the heading over what apply walked past': buffer.getvalue(),
     }
 
 
-def test_the_attention_wording_is_spelled_in_exactly_one_file() -> None:
-    """The invariant centralising it created, which nothing else asserts.
+def test_every_line_wording_attention_reads_it_from_one_constant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The invariant centralising the wording created, asserted as what is printed.
 
-    Six render sites across `output.py` and `reconcile.py` became one owner, and
-    the copies were themselves the guard: while six existed, rewording meant
-    finding all six. A seventh site typing the literal is invisible to a suite
-    that only ever compares against the constant.
+    Six render sites across two modules became one owner, and the copies were
+    themselves the guard: while six existed, rewording meant finding all six. A
+    seventh site typing the literal is invisible to a suite that only ever compares
+    against the constant.
 
-    Docstrings count, and that is the point. `documentation.md` § "A comment
-    explains the thing, not the change that produced it" refuses a docstring that
-    pastes a rendered string, for the same reason — nothing keeps the copy in step,
-    and no linter or type checker reads it.
+    Swapped rather than searched for, so what is asserted is that each line *reads*
+    the constant. A site that typed the wording renders the shipped phrase after
+    the swap while every sibling renders the sentinel.
     """
-    assert files_spelling('need attention') == {'output.py'}
+    shipped = attention_wordings(monkeypatch)
+    for where, text in shipped.items():
+        assert output.NEED_ATTENTION in text or output.NEEDS_ATTENTION in text, f'{where} words no attention count, so it asserts nothing'
+
+    swept = rebind(monkeypatch, 'NEED_ATTENTION', ATTENTION)
+    swept += rebind(monkeypatch, 'NEEDS_ATTENTION', ATTENTIONS)
+
+    rendered = attention_wordings(monkeypatch)
+    typed = {where: text for where, text in rendered.items() if 'attention' in text}
+    assert not typed, f'wording typed rather than read, with {sorted(set(swept))} swapped: {typed}'
+    for where, text in rendered.items():
+        assert ATTENTION in text or ATTENTIONS in text, f'{where} lost its attention count under the swap: {text!r}'
 
 
 def test_the_two_attention_spellings_agree() -> None:
@@ -561,57 +732,151 @@ def test_the_two_attention_spellings_agree() -> None:
     assert output.NEED_ATTENTION.replace('need', 'needs', 1) == output.NEEDS_ATTENTION
 
 
-def test_the_heading_widths_are_named_only_where_the_heading_is_built() -> None:
-    """The other half of the same invariant, for a report that reaches the columns by
-    importing them rather than by copying a number.
-
-    A module naming either constant is laying out a heading or a closing line of its
-    own, whatever it draws it with. `machines show` and `network check` are the two
-    that most wanted to — both render a section and neither imports a width, because
-    `section_line` and `render_verdict` hand them the geometry already.
-    """
-    assert files_naming(HEADING_GEOMETRY) == {'output.py'}
+# ─────────────────────────────────────────────────────────────────────────────
+# One way to ask a yes-or-no question, and one way to decline it
+# ─────────────────────────────────────────────────────────────────────────────
 
 
-def calls_named(name: str) -> list[tuple[str, int]]:
-    """Every call to `name` in the package, qualified or bare, with where it is.
+class Terminal(io.StringIO):
+    """Stdin a prompt can read from, which is the branch `--yes` exists to skip."""
 
-    Both forms, because a function is reached one way from outside its module and
-    the other from inside it — and the inside caller is the one a
-    "somewhere else does this too" invariant would otherwise miss entirely.
-    """
-    found = []
-    for path in SOURCE:
-        for node in ast.walk(ast.parse(path.read_text())):
-            if not isinstance(node, ast.Call):
-                continue
-            called = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, 'id', '')
-            if called == name:
-                found.append((path.name, node.lineno))
-    return found
+    def isatty(self) -> bool:
+        return True
 
 
-def test_one_place_asks_a_yes_or_no_question() -> None:
+class NotATerminal(io.StringIO):
+    """Stdin a scheduled run has: readable, and nobody behind it."""
+
+    def isatty(self) -> bool:
+        return False
+
+
+@pytest.mark.parametrize(('stdin', 'no_input'), [(Terminal, True), (NotATerminal, False)], ids=['--no-input', 'no terminal'])
+def test_a_question_nobody_can_answer_names_the_flag_and_the_effect(
+    stdin: type[io.StringIO], no_input: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A centralization pins the invariant it created, or it is one refactor and no
     guarantee — standards/testing.md § "A refactor that centralizes scattered
     handling pins the invariant it created".
 
-    That `_confirmed` works and that nothing bypasses `_confirmed` are independent
-    claims, and the tests for the first are satisfied by a fourth prompt written
-    out longhand. Three copies is where this started: three different declines,
-    one of them printing nothing at all.
+    Three prompts written out longhand drift into three different declines, and the
+    one that drifts furthest prints nothing at all — a non-zero status with no
+    reason on screen for somebody who answered `n`. What `_confirmed` guarantees is
+    the decline, so the decline is what is asserted.
+
+    `BadParameter` and not `Abort`, which is the reason click's own `prompt=` is
+    not used here: `Abort` exits 1, and 1 is DRIFT, so a pipeline that forgot a
+    flag would report a machine that differs from its declaration.
     """
-    assert [where for where, _ in calls_named('confirm')] == ['staging.py']
+    monkeypatch.setattr(sys, 'stdin', stdin())
+
+    with pytest.raises(click.BadParameter) as refused:
+        staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=no_input)
+
+    assert refused.value.exit_code == vocabulary.ExitCode.USAGE
+    assert '--yes' in str(refused.value)
+    assert 'removed 3 locally' in str(refused.value)
 
 
-def test_one_place_composes_the_retention_rule() -> None:
-    """The same claim for the other centralization in this feature.
+def test_a_question_that_can_be_asked_defaults_to_no_and_asks_on_stderr(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """The other two answers the one helper gives.
 
-    `base_of` and `superseded` are each legitimate alone — the first names a pin
-    and the second counts a limit. Composing them and dropping the base is the
-    *rule*, and a fourth caller assembling it by hand is where three sites stopped
-    agreeing before.
+    Default no, because two of the three prompts it serves are destructive. On
+    stderr, because stdout carries the document a `--json` caller parses and a
+    question in the middle of one is a syntax error rather than a question.
+
+    `--yes` short-circuits ahead of both, so a run that passed it never reaches a
+    terminal that is not there.
     """
-    composing = {where for where, _ in calls_named('base_of')} & {where for where, _ in calls_named('superseded')}
+    monkeypatch.setattr(sys, 'stdin', Terminal('\n'))
+    assert staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=False) is False
 
-    assert composing == {'offline_bundle.py'}
+    asked = capsys.readouterr()
+    assert '[y/N]' in asked.err, f'the prompt does not default to no: {asked.err!r}'
+    # The question, rather than the whole stream: click puts a lone space on stdout
+    # ahead of the read, as its own workaround for readline eating a backspace.
+    assert 'Remove 3 bundle(s)?' not in asked.out
+
+    monkeypatch.setattr(sys, 'stdin', NotATerminal())
+    assert staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=True, no_input=False) is True
+
+
+def test_every_leaf_that_takes_yes_also_takes_no_input() -> None:
+    """The surface half of one helper, which nothing else pins.
+
+    `_confirmed` takes both, so a leaf reaching it declares both. A prompt written
+    longhand declares whatever its author thought of, and the flag it leaves out is
+    `--no-input` — the one nobody types by hand and a scheduled run needs.
+
+    Not the other direction: `bundle create` asks which machine a bundle is for,
+    which is a choice rather than a yes or no, so `--yes` would answer nothing.
+    """
+    for path, options in ACCEPTED.items():
+        if '--yes' in options:
+            assert '--no-input' in options, f'{"/".join(path)} can be answered yes and cannot be told not to ask'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# One rule decides what a sweep of staged bundles removes
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+KEEP = 2
+"""A limit smaller than the stack `a_stack` builds, so retention has something to
+remove."""
+
+
+def a_stack(machine: str) -> tuple[str, ...]:
+    """One machine's bundles: a full one, then three sparse ones built after it.
+
+    Named through `create_bundle.bundle_name` rather than typed, so the stamp and
+    the `-sparse` suffix are the ones the tool really writes — which is what
+    `base_of` reads to find the base and what retention sorts by.
+    """
+    day = functools.partial(dt.datetime, 2026, 1, tzinfo=dt.UTC)
+    built = create_bundle.bundle_name(machine, 'linux', 'x86_64', day(1))
+    since = tuple(create_bundle.bundle_name(machine, 'linux', 'x86_64', day(number), sparse=True) for number in (2, 3, 4))
+    return (built, *since)
+
+
+def test_no_sweep_removes_the_bundle_the_sparse_ones_fall_back_to(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The invariant composing the rule created, asserted as what a sweep removes.
+
+    `base_of` names a pin and `remote.superseded` counts a limit. Each is legitimate
+    alone, and composing them is the rule: the count sorts by stamp and a full
+    bundle is always the oldest, so it takes the base first. "The newest is never
+    removed" is true and takes the only bundle a sparse stack can fall through to.
+
+    That the count really does take the base is asserted first. Without it the rest
+    passes on a stack retention would never have touched, which is the shape of a
+    test that cannot fail.
+
+    Asserted at every door that answers what a sweep would remove — the rule, the
+    cross-machine sweep the local cache asks, and the helper `bundle prune` names
+    files with — because a fourth caller assembling it by hand is where three sites
+    stopped agreeing before.
+    """
+    machine = 'archlinux'
+    names = a_stack(machine)
+    base = names[0]
+
+    assert base in remote.superseded(names, KEEP), 'the count no longer takes the base, so nothing below is asserting anything'
+
+    rule = offline_bundle.retention(names, KEEP)
+    assert rule.superseded and base not in rule.superseded
+    assert rule.pinned == (base,)
+
+    across = offline_bundle.swept(offline_bundle.by_machine(names), KEEP)
+    assert across.superseded and base not in across.superseded
+    assert across.pinned == (base,)
+
+    for name in names:
+        (tmp_path / f'{name}.tar.gz').touch()
+    monkeypatch.setattr(staging.paths, 'archive_dir', lambda: tmp_path)
+    monkeypatch.setattr(staging.providers, 'staged_bundles', lambda: ())
+
+    locally = staging._superseded_locally(KEEP, machine)
+    assert locally.superseded and base not in locally.superseded
+    assert locally.pinned == (base,)
