@@ -94,8 +94,11 @@ Two things specific to this repo:
 - Shell style lives in `.editorconfig`, which shfmt reads directly. Never put a printer or parser
   flag on the shfmt hook — one flag replaces the file wholesale instead of merging with it.
 
-The dies are **fleet-wide**: running either one from inside this repo rewrites every active repo in
-the registry, not just this one. Check `git status` across the portfolio afterwards.
+The dies are **fleet-wide by default**: either one rewrites every active repo in the registry, not
+just this one. The working directory is not a scope. Each repo's target comes from its registry
+entry, so running the command from inside this repo, or from a worktree of it, changes nothing
+about where the output lands. `--filter dotfiles` is what narrows it to this repo. Run unscoped,
+check `git status` across the portfolio afterwards.
 
 **Critical Bash Gotcha - Arithmetic with set -e** (⚠️ This has caught us 4+ times):
 
