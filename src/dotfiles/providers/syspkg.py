@@ -35,7 +35,7 @@ from pathlib import Path
 
 from dotfiles import effects
 from dotfiles.effects import Output
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
 from dotfiles.providers import Kind
@@ -318,10 +318,10 @@ one name and no alternative — there is nothing to prefer between.
 """
 
 
-def install(manager: str, names: Sequence[str], privilege: Privilege) -> Result:
+def install(manager: str, names: Sequence[str], privilege: Escalates) -> Result:
     """One transaction. The caller has already refreshed and grouped.
 
-    Streamed on both branches, and the escalating one has to ask: `Privilege.run`
+    Streamed on both branches, and the escalating one has to ask: `Escalates.run`
     defaults to `Output.QUIET` where `effects.run` defaults to `Output.STREAM`, so
     without this apt and pacman — the two managers that install the most — go
     silent through a transaction over every declared package while brew and
@@ -362,7 +362,7 @@ def stop_service(manager: str, package: str, unit: str) -> None:
         effects.run(['brew', 'services', 'stop', package], output=Output.QUIET)
 
 
-def uninstall(manager: str, names: Sequence[str], privilege: Privilege) -> Result:
+def uninstall(manager: str, names: Sequence[str], privilege: Escalates) -> Result:
     """Take named packages off the machine, for a caller that was authorised to.
 
     Nothing here decides that it should happen. `evidence.superseded` measures the
@@ -388,7 +388,7 @@ def uninstall(manager: str, names: Sequence[str], privilege: Privilege) -> Resul
     return Result(False, f'{" ".join(command[:2])} exited {completed.returncode}', kind=Kind.COMMAND_FAILED)
 
 
-def refresh(manager: str, privilege: Privilege) -> Result:
+def refresh(manager: str, privilege: Escalates) -> Result:
     """Bring the manager's index up to date, or say why the install should stop.
 
     A failure here is fatal to the batch rather than a warning. Installing against
@@ -606,7 +606,7 @@ def _names(transcript: str) -> frozenset[str]:
     return frozenset(found)
 
 
-def upgrade(manager: str, privilege: Privilege) -> Result:
+def upgrade(manager: str, privilege: Escalates) -> Result:
     """Bring everything this manager installed up to date."""
     command = list(UPGRADE[manager])
     try:

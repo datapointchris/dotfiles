@@ -31,7 +31,7 @@ from dotfiles import registry
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Plan
 from dotfiles.plan import Preconditions
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.providers import clone
 from dotfiles.registry import PluginSyncProvider
 from dotfiles.registry import Provider
@@ -255,7 +255,7 @@ class PluginsResource:
                 changes.append(_unaskable(item))
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Whichever provider planned it clones it or syncs it, or says why it cannot."""
         return registry.install(session, change, privilege)
 

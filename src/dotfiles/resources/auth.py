@@ -56,7 +56,7 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.plan import Plan
 from dotfiles.plan import Stage
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.resources import GITHUB_AUTH_ADVICE
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
@@ -151,7 +151,7 @@ class AuthResource:
             if credential.verdict is not Verdict.MATCHED
         )
 
-    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Never reached — every change here is BY_HAND, so `actionable` is false.
 
         Present because the protocol has three methods and a resource that answers

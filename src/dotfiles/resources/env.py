@@ -22,7 +22,7 @@ from dotfiles import envfile
 from dotfiles import settings
 from dotfiles.plan import Plan
 from dotfiles.plan import Stage
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
@@ -179,7 +179,7 @@ class EnvResource:
         changes.extend(_undeclared(machine, observed))
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Rewrite the generated section.
 
         Every automatic change here is repaired by one write, so this re-reads

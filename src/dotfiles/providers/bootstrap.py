@@ -30,7 +30,7 @@ from pathlib import Path
 
 from dotfiles import effects
 from dotfiles.effects import Output
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import syspkg
@@ -179,7 +179,7 @@ def _yay() -> Result:
     return Result(True, 'yay built from the AUR', kind=Kind.APPLIED)
 
 
-def flathub(installer: str, privilege: Privilege) -> Result:
+def flathub(installer: str, privilege: Escalates) -> Result:
     """flatpak, and the remote every declared app is named against.
 
     The remote is the half that matters. `flatpak install <id>` with no remote

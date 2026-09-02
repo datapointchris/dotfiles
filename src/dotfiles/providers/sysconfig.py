@@ -10,7 +10,7 @@ It goes over the session bus, so a shell without one — non-interactive SSH is 
 live case — cannot reach the manager, and that is reported UNKNOWN rather than as
 drift.
 
-Nothing here says `sudo`. A privileged write takes an authorized `Privilege` and
+Nothing here says `sudo`. A privileged write takes an authorized `Escalates` and
 refuses without one, so a machine with no root still converges everything else and
 says what it could not do.
 
@@ -36,7 +36,7 @@ from dotfiles import catalog
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 from dotfiles.effects import run
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
 from dotfiles.providers import Kind
@@ -91,7 +91,7 @@ class Escalation(Protocol):
 class AsRoot:
     """The repairs of a row declaring it needs root, through one authorization."""
 
-    privilege: Privilege
+    privilege: Escalates
 
     def run(self, command: Sequence[str], *, reason: str) -> Completed:
         return self.privilege.run(list(command), reason=reason)
@@ -157,7 +157,7 @@ def observe(entry: catalog.SystemConfig) -> State:
     return _observe_login_shell(entry)
 
 
-def apply(entry: catalog.SystemConfig, privilege: Privilege) -> Result:
+def apply(entry: catalog.SystemConfig, privilege: Escalates) -> Result:
     """Repair one row, escalating where and only where the row declares it must.
 
     `needs_root` is read on both sides of a run or on neither. `plan` counts it to

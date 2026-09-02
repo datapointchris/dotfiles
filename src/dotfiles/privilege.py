@@ -1,8 +1,12 @@
 """The only module in this package that says the word `sudo`.
 
-**One module escalates.** Everything else takes an injected `Privilege` and calls
-`run`. `tests/system/test_privilege.py` greps the package for the word, so a
+**One module escalates.** Everything else takes an injected `Escalates` and calls
+`run`. `tests/resources/test_privilege.py` greps the package for the word, so a
 provider reaching for a direct escalation fails a test rather than working.
+
+`Escalates` is the capability and `Privilege` is the one implementation of it that
+holds a sudo. Nothing outside this module names the class, so a caller cannot
+reach `acquire` and a test can hand over a stand-in that spends no password.
 
 **Privilege is declared, not discovered.** A `Change` knows before anything runs
 whether repairing it needs root, so `plan` can say how many of its findings will
@@ -37,6 +41,7 @@ from __future__ import annotations
 import enum
 import os
 import shutil
+from typing import Protocol
 
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
@@ -60,6 +65,25 @@ class Authorization(enum.StrEnum):
 
 class PrivilegeUnavailable(RuntimeError):
     """A privileged action was reached and root could not be obtained."""
+
+
+class Escalates(Protocol):
+    """What a caller needs from an authorization: run a command, read the answer.
+
+    The whole surface. `acquire`, `permitted` and `_ask` belong to the one module
+    that escalates, and nothing outside it reads them — so a parameter annotated
+    `Privilege` is asking for more than it uses, and a recording stand-in that
+    spends no sudo cannot satisfy it.
+
+    Named for the capability rather than for the class, because the two are not
+    the same thing: `Privilege` is where the sudo lives, and this is what a
+    provider is handed.
+    """
+
+    @property
+    def state(self) -> Authorization: ...
+
+    def run(self, command: list[str] | tuple[str, ...], *, reason: str, output: Output = Output.QUIET) -> Completed: ...
 
 
 class Privilege:
