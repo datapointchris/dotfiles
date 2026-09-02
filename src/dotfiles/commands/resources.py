@@ -30,7 +30,6 @@ from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import currency
 from dotfiles.commands import refresh_flag
-from dotfiles.commands import resolved
 from dotfiles.commands import verbosity
 from dotfiles.output import CHANGE_COLOURS
 from dotfiles.output import SUBJECT_COLUMN
@@ -131,22 +130,12 @@ def _survey(
     machine was `""` while the walk had correctly read `~/.env`.
     """
     began = dt.datetime.now(dt.UTC)
-    session = _session(machine, owner=owner, packages=packages, offline=offline, refresh=refresh)
+    session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=refresh)
     if offline:
         reconcile.report_bundle(offline_bundle.describe(), session.machine_name)
     selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session.plan, owner, packages)
     walked = reconcile.fold(engine.assess(session, selection), lens)
     _report(walked, as_json, machine=session.machine_name, when=began, lens=lens)
-
-
-def _session(
-    machine: str | None,
-    owner: str | None = None,
-    packages: frozenset[str] = frozenset(),
-    offline: bool = False,
-    refresh: bool = False,
-) -> Session:
-    return resolved(machine, owner, packages=packages, offline=offline, refresh=refresh)
 
 
 def _selected(resource: str, source: str | None, packages: frozenset[str] = frozenset()) -> tuple[str, ...]:
@@ -664,7 +653,7 @@ def symlinks_apply(
     # the command was typed, and the run it would authorise is the run that
     # happens anyway — so a record filed under it would answer for nothing.
     if force:
-        session = _session(machine)
+        session = Session.resolve(machine)
         if session.machine.wants(symlinks.DEPLOY_BY_COPY):
             raise symlinks.ForceUnavailable(
                 f'--force decides nothing on {session.machine_name}, which deploys by copy rather than by symlink',
@@ -678,7 +667,7 @@ def symlinks_show(machine: str = MachineOption) -> None:
     """List every symlink this repo declares, and where each one stands."""
     from dotfiles import deploy
 
-    deploy.show(_session(machine))
+    deploy.show(Session.resolve(machine))
 
 
 @symlinks_app.command('unlink')
@@ -700,7 +689,7 @@ def symlinks_unlink(
 
     from dotfiles import deploy
 
-    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(_session(machine)) else ExitCode.ISSUE)
+    raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(Session.resolve(machine)) else ExitCode.ISSUE)
 
 
 env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity and its feature flags')
@@ -732,7 +721,7 @@ def env_show(machine: str = MachineOption) -> None:
     """Print the generated section without writing anything."""
     from dotfiles import envfile
 
-    emit_text(envfile.render(_session(machine).machine))
+    emit_text(envfile.render(Session.resolve(machine).machine))
 
 
 system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this repo owns')
@@ -903,7 +892,7 @@ def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """
     from dotfiles.resources import auth
 
-    session = _session(machine)
+    session = Session.resolve(machine)
     found = auth.RESOURCE.observe(session, session.plan).found
     if as_json:
         emit_json({tool: {'verdict': str(credential.verdict), 'detail': credential.detail} for tool, credential in found.items()})
@@ -965,7 +954,7 @@ def credentials_show(
     """
     from dotfiles.resources import credentials
 
-    session = _session(machine)
+    session = Session.resolve(machine)
     found = credentials.RESOURCE.observe(session, session.plan).found
     # Positional, not keyed. It was `{entry.helper.label: ...}`, and a label is the
     # scope or `every remote` — so two helpers on one scope, which is the ordinary

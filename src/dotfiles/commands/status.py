@@ -35,7 +35,6 @@ from dotfiles import status as status_document
 from dotfiles import vocabulary
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
-from dotfiles.commands import resolved
 from dotfiles.commands import verbosity
 from dotfiles.output import VERDICT_COLOURS
 from dotfiles.output import VERDICT_MARKS
@@ -52,6 +51,7 @@ from dotfiles.output import warn
 from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
 from dotfiles.results import ResourceVerdict
+from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='What this machine has installed, for the machine that builds its bundles')
@@ -101,7 +101,7 @@ def composed(machine: str | None) -> Composed:
     is what the gate refuses — so an unrooted document refuses itself. A builder
     wants the version rather than which home it sat in, so nothing is lost.
     """
-    session = resolved(machine)
+    session = Session.resolve(machine)
     named = session.machine_name
     withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
     # No run record, which is the same choice `commands/resources.py` made for the
@@ -262,7 +262,7 @@ def list_statuses(
     """List the statuses the remote holds for a machine, newest first."""
     verbosity(verbose, quiet)
     where = transport.reachable()
-    named = machine or resolved(None).machine_name
+    named = machine or Session.resolve(None).machine_name
     listed = status_document.on_remote(where, named)
     shown = listed[:limit] if limit else listed
 
@@ -297,7 +297,7 @@ def download(
     """
     verbosity(verbose, quiet)
     where = transport.reachable()
-    named = machine or resolved(None).machine_name
+    named = machine or Session.resolve(None).machine_name
     listed = status_document.on_remote(where, named)
     if not listed:
         error(f'the remote holds no status for {named} at {transport.statuses_for(where, named)}')

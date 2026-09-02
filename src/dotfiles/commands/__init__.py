@@ -18,7 +18,6 @@ from dotfiles import machine as machine_declaration
 from dotfiles.output import console
 from dotfiles.output import error
 from dotfiles.session import NoMachine
-from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 VerboseOption = typer.Option(
@@ -128,27 +127,3 @@ def verbosity(verbose: int, quiet: bool) -> None:
         raise typer.BadParameter('--verbose and --quiet ask for opposite things; pass one')
     logging.choose_console(verbose, quiet)
     logging.configure()
-
-
-def resolved(
-    machine: str | None,
-    owner: str | None = None,
-    packages: frozenset[str] = frozenset(),
-    *,
-    offline: bool = False,
-    refresh: bool = False,
-) -> Session:
-    """One machine's Session, for every leaf that takes `--machine`.
-
-    Three failures, two answers, and none of them is decided here any more.
-    `NoMachine` is nothing named at all and `NoSuchMachine` is a name nothing
-    declares; both are retryable by naming a different one, which is what
-    `ExitCode.USAGE` means, and both now say so themselves. A manifest that
-    exists and will not parse is `ExitCode.ISSUE` — the machine really is wrong
-    and no amount of retyping helps.
-
-    All three are raised by `Session.resolve`, which reads the manifest rather than
-    only naming it — a helper touching a lazy property to provoke an error reads as
-    a dead line to the next person.
-    """
-    return Session.resolve(machine, owner=owner, packages=packages, offline=offline, refresh=refresh and not offline)

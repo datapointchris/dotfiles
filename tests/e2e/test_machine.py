@@ -169,8 +169,8 @@ def test_the_apps_work(converged_machine: Machine) -> None:
 
 
 CURRENCY_PROBE = (
-    'from dotfiles import commands; from dotfiles.providers import syspkg; '
-    'declared = set(commands.resolved(None).machine.coordinates.installers) & syspkg.NETWORKED; '
+    'from dotfiles.session import Session; from dotfiles.providers import syspkg; '
+    'declared = set(Session.resolve(None).machine.coordinates.installers) & syspkg.NETWORKED; '
     'answers = [(name, syspkg.outdated(name)) for name in sorted(declared)]; '
     "print('PROBE ' + '; '.join(name + '=' + ('unmeasurable' if held is None else str(len(held))) for name, held in answers))"
 )
