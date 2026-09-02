@@ -1,16 +1,16 @@
 """What the log-reading verbs in this directory get for free.
 
-`paths.RUNS_DIR` and `paths.MACHINE_ID` are the pair the branch's headline defect
-lived between, so the two files that need them get them the same way from one
-place.
+`runs.latest_event_log` narrows on `paths.MACHINE_ID` and `runlogs.stream` files
+under `runlogs.MACHINE`, so a lookup finds nothing unless the two agree. The
+files that need them get both from one place rather than each answering half.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import derivations
 import pytest
-import rebind
 from runlogs import MACHINE
 
 from dotfiles import paths
@@ -29,6 +29,6 @@ def runs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     the box asking, and the records written here claim to come from several.
     """
     monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'state'))
-    rebind.hostname(monkeypatch, MACHINE)
+    derivations.rerun(monkeypatch, hostname=MACHINE)
     paths.RUNS_DIR.mkdir(parents=True)
     return paths.RUNS_DIR

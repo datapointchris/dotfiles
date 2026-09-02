@@ -9,8 +9,8 @@ while it is still free to change.
 import datetime as dt
 import json
 
+import derivations
 import pytest
-import rebind
 
 from dotfiles import paths
 from dotfiles import runs
@@ -37,7 +37,7 @@ def runs_dir(tmp_path, monkeypatch):
     answering about two different places.
     """
     monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'state'))
-    rebind.hostname(monkeypatch, HOST)
+    derivations.rerun(monkeypatch, hostname=HOST)
     paths.RUNS_DIR.mkdir(parents=True)
     return paths.RUNS_DIR
 
@@ -266,7 +266,7 @@ class TestListing:
     def test_latest_points_at_the_newest_record(self, runs_dir, monkeypatch):
         """Both halves are per-machine now that the fleet shares runs/: the link
         carries the name in it, and the lookup narrows to the machine asking."""
-        rebind.hostname(monkeypatch, 'macos-personal-workstation')
+        derivations.rerun(monkeypatch, hostname='macos-personal-workstation')
         older = a_run()
         older.started_at = '2026-08-01T00:00:00Z'
         runs.write(older, runs_dir)

@@ -35,8 +35,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import derivations
 import pytest
-import rebind as rebind_paths
 import yaml
 from typer.testing import CliRunner
 
@@ -635,7 +635,7 @@ def _silence_the_ambient_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
     """Re-run the derivations that already happened, now that the variables say this.
 
-    `rebind_paths.derive` covers everything `paths` computed at import, and is
+    `derivations.rerun` covers everything `paths` computed at import, and is
     shared with the trees outside this one that need the same thing. What is left
     here is the sandbox's own half: the symlink manager's two roots, and the
     captured defaults below.
@@ -649,7 +649,7 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
     from dotfiles import checkout
     from dotfiles.symlinks import core
 
-    rebind_paths.derive(monkeypatch)
+    derivations.rerun(monkeypatch)
     repo = paths.REPO_ROOT
 
     monkeypatch.setattr(core, 'DOTFILES_DIR', repo)

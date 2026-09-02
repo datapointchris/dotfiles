@@ -14,8 +14,8 @@ import datetime as dt
 import json
 from pathlib import Path
 
+import derivations
 import pytest
-import rebind
 from typer.testing import CliRunner
 
 from dotfiles import paths
@@ -42,12 +42,13 @@ BEGAN = dt.datetime(2026, 8, 10, 14, 30, 0, tzinfo=dt.UTC)
 def runs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Shadows the one in `conftest.py`, which answers to a different box.
 
-    `latest` narrows to this machine now that the fleet shares runs/, so the
-    identity is answered here — otherwise the suite's answer depends on which box
-    it runs on, which is the machine the records do not claim.
+    Defensive rather than load-bearing: `write` and `latest` both take the link's
+    name from `paths.LATEST_RUN`, so they agree whatever the host is and no
+    assertion below reads the value. It is answered so the filenames a failure
+    prints are the same on every desk as the `machine` the records carry.
     """
     monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'state'))
-    rebind.hostname(monkeypatch, MACHINE)
+    derivations.rerun(monkeypatch, hostname=MACHINE)
     return paths.RUNS_DIR
 
 

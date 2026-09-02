@@ -12,8 +12,8 @@ import datetime as dt
 import os
 from pathlib import Path
 
+import derivations
 import pytest
-import rebind
 
 from dotfiles import paths
 from dotfiles import status
@@ -35,9 +35,14 @@ def state_at(monkeypatch: pytest.MonkeyPatch, xdg_state: Path) -> Path:
     keying the file on it would have the second overwrite the first in a directory
     Syncthing shares. A fixture spelling the name itself cannot tell those apart,
     so it would agree with the module by coincidence.
+
+    The host is answered as `Box.local` and the file comes out `status-box.json`,
+    which is what pins the two things `machine_id` does to it. Answered bare and
+    lowercase, dropping either would leave every assertion below green and put
+    `status-Box.local.json` beside `status-box.json` in that shared directory.
     """
     monkeypatch.setenv('XDG_STATE_HOME', str(xdg_state))
-    rebind.hostname(monkeypatch, 'box')
+    derivations.rerun(monkeypatch, hostname='Box.local')
     return paths.STATE_HOME
 
 
