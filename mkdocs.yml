@@ -170,3 +170,4 @@ nav:
       - A Conflicting Package Blocks an Install Forever: learnings/a-conflicting-package-blocks-an-install-forever.md
       - Go Was on No PATH, and Nothing Said So: learnings/go-was-on-no-path-and-nothing-said-so.md
       - A Unix Socket Path Is Shorter Than tmp_path: learnings/unix-socket-path-is-shorter-than-tmp-path.md
+      - A Cache Outlives the File You Restored: learnings/a-cache-outlives-the-file-you-restored.md
