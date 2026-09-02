@@ -133,28 +133,24 @@ def test_a_linked_home_gitconfig_holding_an_identity_is_kept(entry_point: Path, 
 FLEET = dc.replace(NONFLEET, network_trust=axes.NetworkTrust.FLEET, host=axes.Host.NATIVE)
 
 
-def test_a_fleet_machine_is_told_to_delete_rather_than_to_rescue(
-    entry_point: Path, home_gitconfig: Path, capsys: pytest.CaptureFixture
-) -> None:
+def test_a_fleet_machine_is_offered_no_rescue_file(entry_point: Path, home_gitconfig: Path) -> None:
     """The repo already ships that address in personal.gitconfig, so there is
     nothing to preserve. Naming a rescue file here sent one Mac looking for a
     destination its trust variant never includes."""
     home_gitconfig.write_text(IDENTITY)
 
-    deploy._ensure_git_config_entry(FLEET)
+    rescue = deploy._retire_home_gitconfig(FLEET)
 
-    advice = capsys.readouterr()
-    assert 'personal.gitconfig' in advice.out + advice.err
-    assert 'local.gitconfig' not in advice.out + advice.err
-    assert home_gitconfig.exists()
+    assert rescue is None
+    assert home_gitconfig.exists(), 'the identity is never deleted, whichever answer it gets'
 
 
-def test_off_the_fleet_it_is_told_where_to_move_it(entry_point: Path, home_gitconfig: Path, capsys: pytest.CaptureFixture) -> None:
+def test_off_the_fleet_it_is_told_where_to_move_it(entry_point: Path, home_gitconfig: Path) -> None:
     """There the identity is the only copy of an address the repo deliberately
     does not hold, so it needs somewhere to go before ~/.gitconfig is deleted."""
     home_gitconfig.write_text(IDENTITY)
 
-    deploy._ensure_git_config_entry(NONFLEET)
+    rescue = deploy._retire_home_gitconfig(NONFLEET)
 
-    advice = capsys.readouterr()
-    assert 'local.gitconfig' in advice.out + advice.err
+    assert rescue == deploy.LOCAL_IDENTITY
+    assert home_gitconfig.exists()
