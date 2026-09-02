@@ -23,6 +23,15 @@ refuses rather than forces.
 is not handed one, so the code to ask for a password is not reachable from the
 half `plan` and `check` run. Every resource but `system` ignores it, and that is
 the point — an unused parameter is cheaper than a subsystem that has to be trusted.
+
+**The run is `Any` in the three signatures that name it, and only here.** This
+module reads no member off one, and it cannot name the type that does: `evidence`
+imports this module for `Verdict` and `Blocker`, so importing a session type back
+would close a cycle. A member-less `Protocol` is the wrong shape for the same
+slot — every implementation annotates the real `Session`, which is narrower than
+"any object", so the protocol would reject all nine of them on contravariance.
+`Any` is compatible in both directions and rejects none. The concrete resources
+carry the real type, and the checking happens there.
 """
 
 from __future__ import annotations
@@ -30,7 +39,7 @@ from __future__ import annotations
 import dataclasses as dc
 import enum
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
 
@@ -42,9 +51,6 @@ from dotfiles.plan import Precondition
 from dotfiles.plan import Preconditions
 from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
-
-if TYPE_CHECKING:
-    from dotfiles.session import Session
 
 
 class Verdict(enum.StrEnum):
@@ -400,7 +406,7 @@ class Resource(Protocol):
     name: str
     help: str
 
-    def observe(self, session: Session, plan: Plan) -> Observation:
+    def observe(self, session: Any, plan: Plan) -> Observation:
         """Measure the machine. Reads only. May be slow, may need the network."""
         ...
 
@@ -408,7 +414,7 @@ class Resource(Protocol):
         """Pure. Desired × observed → decided work, in the order it must happen."""
         ...
 
-    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Any, change: Change, privilege: Privilege) -> Outcome:
         """Do one Change, re-checking live that it is still the right thing to do."""
         ...
 
@@ -428,7 +434,7 @@ class Batched(Protocol):
     together. A provider that cannot honour that must not opt in.
     """
 
-    def perform_batch(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    def perform_batch(self, session: Any, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
         """Do these Changes together, re-checking live as `perform` does."""
         ...
 

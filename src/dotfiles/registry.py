@@ -66,7 +66,7 @@ from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
 
 if TYPE_CHECKING:
-    from dotfiles.session import Session
+    from dotfiles.context import MachineContext
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -156,7 +156,7 @@ class Provider:
         """
         return False
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         """Repair one item, re-checking live that it is still the right thing to do.
 
         Raising rather than returning a refusal: a provider reaching this has
@@ -165,7 +165,7 @@ class Provider:
         """
         raise NotImplementedError(f'{self.name} plans items and cannot install them')
 
-    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    def install_all(self, session: MachineContext, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
         """Repair several of this provider's items, one Outcome each in order.
 
         One at a time by default, which is what every provider but the package
@@ -214,13 +214,13 @@ class VendoredProvider(CatalogProvider):
     manager-backed provider hands all three to `go install` or `npm i -g`.
     """
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         if arrived := self._arrived(change, item):
             return arrived
         result = self.fetch(session, item)
         return Outcome.from_result(change, result)
 
-    def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
+    def fetch(self, session: MachineContext, item: DesiredItem) -> providers.Result:
         raise NotImplementedError
 
     def _arrived(self, change: Change, item: DesiredItem) -> Outcome | None:
@@ -284,7 +284,7 @@ class ReleaseProvider(VendoredProvider):
             return ev.Evidence(Verdict.MISSING, owed)
         return found
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         """Displace whatever holds this entry's name, then install it.
 
         One act rather than two, and the ordering inside it is the reason. The
@@ -308,7 +308,7 @@ class ReleaseProvider(VendoredProvider):
             return Outcome.from_result(change, supervision)
         return Outcome.from_result(change, self.fetch(session, item, privilege=privilege))
 
-    def _supervision_only(self, session: Session, change: Change, item: DesiredItem) -> providers.Result | None:
+    def _supervision_only(self, session: MachineContext, change: Change, item: DesiredItem) -> providers.Result | None:
         """Give a present, current binary its supervisor, without fetching it again.
 
         `evidence` reports an unsupervised daemon as MISSING, which is what it is; the
@@ -327,7 +327,7 @@ class ReleaseProvider(VendoredProvider):
             return None
         return ghrelease.supervise(entry, coordinates.target_for(session.machine.coordinates))
 
-    def _displace(self, session: Session, item: DesiredItem, privilege: Privilege) -> providers.Result:
+    def _displace(self, session: MachineContext, item: DesiredItem, privilege: Privilege) -> providers.Result:
         """Remove the superseded package where this run authorised it.
 
         Measured against `session.inventories`, which is the same reading `observe`
@@ -348,7 +348,7 @@ class ReleaseProvider(VendoredProvider):
         syspkg.stop_service(blocking.manager, blocking.package, ghrelease.declared_unit(item.name))
         return syspkg.uninstall(blocking.manager, [blocking.package], privilege)
 
-    def fetch(self, session: Session, item: DesiredItem, *, privilege: Privilege | None = None) -> providers.Result:
+    def fetch(self, session: MachineContext, item: DesiredItem, *, privilege: Privilege | None = None) -> providers.Result:
         entry = item.entry
         if not isinstance(entry, catalogs.GithubRelease):
             return providers.Result(False, f'{item.name} is not a github_releases entry', kind=providers.Kind.DECLARATION_INVALID)
@@ -381,7 +381,7 @@ class CustomProvider(VendoredProvider):
             return found
         return ev.Evidence(Verdict.MISSING, f'{item.name} is installed, but {", ".join(absent)} is not')
 
-    def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
+    def fetch(self, session: MachineContext, item: DesiredItem) -> providers.Result:
         entry = item.entry
         if not isinstance(entry, catalogs.CustomInstaller):
             return providers.Result(False, f'{item.name} is not a custom_installers entry', kind=providers.Kind.DECLARATION_INVALID)
@@ -421,14 +421,14 @@ class WingetProvider(VendoredProvider):
             return found
         return ev.by_command(dc.replace(item, executable=f'{item.executable}.exe'))
 
-    def fetch(self, session: Session, item: DesiredItem) -> providers.Result:
+    def fetch(self, session: MachineContext, item: DesiredItem) -> providers.Result:
         entry = item.entry
         if not isinstance(entry, catalogs.WingetPackage):
             return providers.Result(False, f'{item.name} is not a winget_packages entry', kind=providers.Kind.DECLARATION_INVALID)
         return winget.install(entry, providers.bin_dir(), offline=session.offline)
 
 
-def version_floor(session: Session, change: Change) -> str:
+def version_floor(session: MachineContext, change: Change) -> str:
     """What a staged bundle has to beat before an online fallback installs from it.
 
     `change.observed` is the installed version wherever currency settled the
@@ -455,7 +455,7 @@ class CargoProvider(CatalogProvider):
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.in_provider_dir(item, cargo.cargo_bin())
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = item.entry
         if not isinstance(entry, catalogs.CargoPackage):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a cargo_packages entry')
@@ -480,7 +480,7 @@ class GoToolProvider(CatalogProvider):
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.in_provider_dir(item, gotool.gobin())
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = item.entry
         if not isinstance(entry, catalogs.GoTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a go_tools entry')
@@ -501,7 +501,7 @@ class NpmProvider(CatalogProvider):
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.in_provider_dir(item, npm.prefix() / 'bin')
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = item.entry
         if not isinstance(entry, catalogs.NpmGlobal):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not an npm_globals entry')
@@ -537,10 +537,10 @@ class SystemPackageProvider(RegistryProvider):
     def needs_root(self, item: DesiredItem) -> bool:
         return True
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         return self.install_all(session, [change], privilege)[0]
 
-    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    def install_all(self, session: MachineContext, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
         """One transaction per manager, and one bootstrap and refresh before each.
 
         Grouped by manager rather than done in the order given, because the order
@@ -574,7 +574,7 @@ class UvToolProvider(CatalogProvider):
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.by_uv_tool(item)
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = item.entry
         if not isinstance(entry, catalogs.UvTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a uv_tools entry')
@@ -591,7 +591,7 @@ class GitUvToolProvider(UvToolProvider):
     as a PyPI one.
     """
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = item.entry
         if not isinstance(entry, catalogs.GitUvTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a git_uv_tools entry')
@@ -609,10 +609,10 @@ class CaskProvider(RegistryProvider):
     an app rather than a package that happens to be graphical.
     """
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         return self.install_all(session, [change], privilege)[0]
 
-    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    def install_all(self, session: MachineContext, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
         return _through('cask', session, changes, privilege, lambda item: item.name)
 
 
@@ -630,10 +630,10 @@ class AppStoreProvider(CatalogProvider):
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.by_app_store(item, installed)
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         return self.install_all(session, [change], privilege)[0]
 
-    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    def install_all(self, session: MachineContext, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
         """`mas install`, which needs an App Store this process cannot sign into.
 
         mas 7 dropped `account` and offers no way to ask whether anyone is signed
@@ -655,10 +655,10 @@ def _app_id(item: DesiredItem) -> str:
 class FlatpakProvider(RegistryProvider):
     """A Flathub app, addressed by its reverse-DNS id rather than its name."""
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         return self.install_all(session, [change], privilege)[0]
 
-    def install_all(self, session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    def install_all(self, session: MachineContext, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
         return _through('flatpak', session, changes, privilege, _flatpak_id)
 
 
@@ -680,7 +680,7 @@ class CloneProvider(CatalogProvider):
     the resource applying it is not yet worth a second protocol.
     """
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         """Clone what is missing, pull what is behind, and reach no network offline.
 
         Two repairs behind one verb because the verdict already separates them,
@@ -763,10 +763,10 @@ class PluginSyncProvider(Provider):
             ),
         )
 
-    def pending(self, session: Session) -> str:
+    def pending(self, session: MachineContext) -> str:
         """What still needs this manager run, or '' where nothing does.
 
-        Session-taking, unlike `evidence`, and this is the class that forced it:
+        Handed the run, unlike `evidence`, and this is the class that forced it:
         what a plugin manager installed is a path under a home directory, and
         `evidence` is handed neither a home nor a plan. `CloneProvider` names the
         same gap and leaves the answer to the plugins resource; these two cannot,
@@ -780,7 +780,7 @@ class PluginSyncProvider(Provider):
 class TmuxSyncProvider(PluginSyncProvider):
     """TPM, told where to install and given a server that is not the user's."""
 
-    def pending(self, session: Session) -> str:
+    def pending(self, session: MachineContext) -> str:
         """What TPM has left to do, counting "cannot be asked yet" as work.
 
         A precondition TPM is missing is supplied by an earlier stage of this same
@@ -798,7 +798,7 @@ class TmuxSyncProvider(PluginSyncProvider):
             return ''
         return f'{len(missing)} of the {len(declared)} plugins tmux.conf declares are not installed: {pluginsync.listed(missing)}'
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         directory = tmux_plugins_dir(session)
         if directory is None:
             return Outcome(change, OutcomeStatus.REFUSED, 'nothing declares TPM, so there is nowhere to install its plugins')
@@ -817,7 +817,7 @@ class TmuxSyncProvider(PluginSyncProvider):
 class NvimSyncProvider(PluginSyncProvider):
     """lazy.nvim, run headless once so the first real `nvim` is not a clone storm."""
 
-    def pending(self, session: Session) -> str:
+    def pending(self, session: MachineContext) -> str:
         """Whether lazy has installed what it last recorded — not what the spec says.
 
         The spec is lua, and the only reader of it is nvim, whose startup installs
@@ -835,7 +835,7 @@ class NvimSyncProvider(PluginSyncProvider):
         gone = pluginsync.unsynced(session.home)
         return f'{len(gone)} plugins lazy recorded installing are not on disk: {pluginsync.listed(gone)}' if gone else ''
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         """Refused rather than failed where nvim is absent, because it is a package
         an earlier stage of this same run installs — and refused offline, because a
         sync is lazy cloning from GitHub and the bundle stages no plugin."""
@@ -848,7 +848,7 @@ class NvimSyncProvider(PluginSyncProvider):
         return Outcome.from_result(change, result)
 
 
-def tmux_plugins_dir(session: Session) -> Path | None:
+def tmux_plugins_dir(session: MachineContext) -> Path | None:
     """Where TPM's plugins belong, or None where nothing declares TPM.
 
     Derived from the clone rather than declared a second time. `tmux_plugins`
@@ -926,7 +926,7 @@ class ManagerProvider(Provider):
     def needs_root(self, item: DesiredItem) -> bool:
         return item.name in syspkg.ESCALATES
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         ready = _bootstrap(item.name, session, privilege)
         if not ready.ok:
             return Outcome(change, OutcomeStatus.REFUSED, ready.detail)
@@ -1042,11 +1042,11 @@ class ToolchainProvider(Provider):
             ),
         )
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         result = self.converge(session, privilege)
         return Outcome.from_result(change, result)
 
-    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+    def converge(self, session: MachineContext, privilege: Privilege) -> providers.Result:
         """Put this runtime on the machine, by whatever means it has.
 
         Abstract, unlike the base `Provider.install`, because there is no honest
@@ -1060,7 +1060,7 @@ class ToolchainProvider(Provider):
 class UvToolchain(ToolchainProvider):
     """astral's install script, then the default interpreter it manages."""
 
-    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+    def converge(self, session: MachineContext, privilege: Privilege) -> providers.Result:
         return toolchain.install_uv(offline=session.offline)
 
 
@@ -1068,7 +1068,7 @@ class UvToolchain(ToolchainProvider):
 class RustToolchain(ToolchainProvider):
     """rustup, which brings `rustc` and `cargo` together."""
 
-    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+    def converge(self, session: MachineContext, privilege: Privilege) -> providers.Result:
         return toolchain.install_rust(offline=session.offline)
 
 
@@ -1082,7 +1082,7 @@ class GoToolchain(ToolchainProvider):
     already built.
     """
 
-    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+    def converge(self, session: MachineContext, privilege: Privilege) -> providers.Result:
         return toolchain.install_go(coordinates.target_for(session.machine.coordinates), privilege, offline=session.offline)
 
     def needs_root(self, item: DesiredItem) -> bool:
@@ -1093,7 +1093,7 @@ class GoToolchain(ToolchainProvider):
 class NodeToolchain(ToolchainProvider):
     """fnm's default alias, which is what a bare `node` resolves to."""
 
-    def converge(self, session: Session, privilege: Privilege) -> providers.Result:
+    def converge(self, session: MachineContext, privilege: Privilege) -> providers.Result:
         return toolchain.install_node(session.home, offline=session.offline)
 
 
@@ -1167,7 +1167,7 @@ class SystemConfigProvider(Provider):
     def repair(self, entry: catalogs.SystemConfig, privilege: Privilege) -> Result:
         return sysconfig.apply(entry, privilege)
 
-    def install(self, session: Session, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
+    def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Privilege) -> Outcome:
         entry = _configuration(item.entry)
 
         # Re-read rather than trusting the diff: `observe` ran before the report
@@ -1371,7 +1371,7 @@ def needs_root(item: DesiredItem) -> bool:
     return provider is not None and provider.needs_root(item)
 
 
-def _by_manager(session: Session, changes: Sequence[Change]) -> dict[str, list[tuple[Change, str]]]:
+def _by_manager(session: MachineContext, changes: Sequence[Change]) -> dict[str, list[tuple[Change, str]]]:
     """Which manager installs each change, and under what name.
 
     A machine's `installers` is the family its package manager selects — pacman
@@ -1393,7 +1393,7 @@ def _by_manager(session: Session, changes: Sequence[Change]) -> dict[str, list[t
     return grouped
 
 
-def _bootstrap(manager: str, session: Session, privilege: Privilege) -> Result:
+def _bootstrap(manager: str, session: MachineContext, privilege: Privilege) -> Result:
     """Whatever this manager needs to exist before it can install anything.
 
     Routed here rather than dispatched inside `providers.bootstrap`, for the same
@@ -1416,7 +1416,7 @@ def _bootstrap(manager: str, session: Session, privilege: Privilege) -> Result:
 
 def _through(
     manager: str,
-    session: Session,
+    session: MachineContext,
     changes: Sequence[Change],
     privilege: Privilege,
     name_of: Callable[[DesiredItem], str],
@@ -1508,7 +1508,7 @@ def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Privile
     return isolated
 
 
-def install_one(provider: Provider, session: Session, change: Change, privilege: Privilege) -> Outcome:
+def install_one(provider: Provider, session: MachineContext, change: Change, privilege: Privilege) -> Outcome:
     """One change through its provider, or a refusal naming what is missing."""
     item = change.desired
     if item is None:
@@ -1516,7 +1516,7 @@ def install_one(provider: Provider, session: Session, change: Change, privilege:
     return provider.install(session, change, item, privilege)
 
 
-def install_all(session: Session, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+def install_all(session: MachineContext, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
     """A group of changes through the one provider that planned them.
 
     The engine groups by provider before it gets here, so the group is homogeneous
@@ -1530,7 +1530,7 @@ def install_all(session: Session, changes: Sequence[Change], privilege: Privileg
     return provider.install_all(session, changes, privilege)
 
 
-def install(session: Session, change: Change, privilege: Privilege) -> Outcome:
+def install(session: MachineContext, change: Change, privilege: Privilege) -> Outcome:
     """Repair one change through whichever provider planned it.
 
     The three resources that group providers share this rather than each keeping a
