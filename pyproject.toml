@@ -90,6 +90,37 @@ close-quotes-on-newline = true
 blank = false
 
 
+# The layering `lint-imports` enforces, read by the pre-commit hook of the same
+# name and by tests/install/test_layering.py.
+#
+# Each layer may import everything below it and nothing above it, directly or
+# through any number of hops. The hops are what the contract is for: no single
+# import in the violations it has closed was wrong on its own, and every one of
+# them was a chain.
+#
+# Modules not named here are unconstrained and still carry violations — a route
+# through `session`, `resources` or `evidence` breaks a layer pair as surely as a
+# direct import does.
+
+[tool.importlinter]
+root_package = "dotfiles"
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture"
+type = "layers"
+# `resolve` sits above `registry` because `resolve()` walks `registry.PROVIDERS`.
+layers = [
+    "dotfiles.main",
+    "dotfiles.commands",
+    "dotfiles.reconcile",
+    "dotfiles.engine",
+    "dotfiles.resolve",
+    "dotfiles.registry",
+    "dotfiles.catalog",
+    "dotfiles.paths",
+]
+
+
 [tool.mypy]
 pretty = true
 ignore_missing_imports = true
@@ -216,6 +247,12 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-xdist>=3.5.0",
     "types-PyYAML>=6.0.12",
+    # A dependency rather than a `uv tool`, because `lint-imports` resolves the
+    # package it measures off the Python path — outside the project environment
+    # it exits with `Could not find package 'dotfiles' in your Python path`. That
+    # is also what puts the console script beside `sys.executable`, which is how
+    # tests/install/test_layering.py spawns it.
+    "import-linter>=2.14",
 ]
 
 # mkdocs is a repo concern, not a runtime one: `uv tool install` deploys this

@@ -274,6 +274,27 @@ repos:
         files: ^(install/|src/dotfiles/)
         stages: [pre-commit]
 
+      # The layering contract in `[tool.importlinter]`. A second in a shell,
+      # ahead of the suite below, because a violation reported here names the
+      # chain and one reported by tests/install/test_layering.py names an
+      # assertion five minutes later.
+      #
+      # `--no-cache` because the cache keys on mtime: a branch change, a
+      # `git restore` or two edits inside one second each leave it answering
+      # about a tree that is gone. The gate would then pass on a graph nobody
+      # measured, which is the failure it exists to prevent.
+      #
+      # `pyproject.toml` is in the selector because the contract lives there, and
+      # `src/` because that is the graph — `standards/ci.md` § "A `paths:` filter
+      # names every file the build reads, not only the ones it renders".
+      - id: import-linter
+        name: import-linter (layered architecture)
+        entry: uv run lint-imports --no-cache
+        language: system
+        pass_filenames: false
+        files: '^(src/|pyproject\.toml$)'
+        stages: [pre-commit]
+
       # The whole suite, which since the bats tiers ported is every test the repo
       # has that does not want Docker or a network. `addopts` deselects those.
       #
