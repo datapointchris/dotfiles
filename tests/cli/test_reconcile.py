@@ -434,13 +434,13 @@ def steady_checkout(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(reconcile.checkout, 'report_stray_branch', lambda: None)
 
 
-def summarised(results: list[ResourceResult], capsys: pytest.CaptureFixture) -> list[str]:
+def summarized(results: list[ResourceResult], capsys: pytest.CaptureFixture) -> list[str]:
     reconcile.report_summary(results, Lens.CHECK)
     return [line.rstrip() for line in capsys.readouterr().out.splitlines() if line.strip()]
 
 
-def test_the_block_says_which_question_it_is_summarising(steady_checkout, capsys: pytest.CaptureFixture) -> None:
-    assert summarised([], capsys)[0].startswith('check summary ─')
+def test_the_block_says_which_question_it_is_summarizing(steady_checkout, capsys: pytest.CaptureFixture) -> None:
+    assert summarized([], capsys)[0].startswith('check summary ─')
 
 
 def test_a_summary_row_is_the_section_heading_word_for_word(steady_checkout, capsys: pytest.CaptureFixture) -> None:
@@ -449,18 +449,18 @@ def test_a_summary_row_is_the_section_heading_word_for_word(steady_checkout, cap
     detail = 'however the fold happened to word it'
     results = [ResourceResult('auth', ResourceVerdict.ISSUE, detail, lens=Lens.CHECK, attention=3)]
 
-    assert f'{"auth":<{output.ADDRESS_COLUMN}} {detail}' in ' '.join(summarised(results, capsys))
+    assert f'{"auth":<{output.ADDRESS_COLUMN}} {detail}' in ' '.join(summarized(results, capsys))
 
 
 def test_a_converged_resource_is_left_out(steady_checkout, capsys: pytest.CaptureFixture) -> None:
     results = [ResourceResult('symlinks', ResourceVerdict.CONVERGED, '144 in place', lens=Lens.CHECK)]
 
-    assert not [line for line in summarised(results, capsys) if 'symlinks' in line]
+    assert not [line for line in summarized(results, capsys) if 'symlinks' in line]
 
 
 def test_the_checkout_row_names_the_clone_and_sits_above_the_verdict(steady_checkout, capsys: pytest.CaptureFixture) -> None:
     """Printed under the verdict sentence it read as a continuation of it."""
-    lines = summarised([result(ResourceVerdict.ISSUE)], capsys)
+    lines = summarized([result(ResourceVerdict.ISSUE)], capsys)
 
     assert [position for position, line in enumerate(lines) if CLONE in line] < [
         position for position, line in enumerate(lines) if line.startswith('issue')

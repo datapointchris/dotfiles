@@ -316,7 +316,7 @@ def age_days(created_at: str, *, now: dt.datetime) -> int:
     return int((now - created).total_seconds() // 86400)
 
 
-def finalise(prs: list[dict[str, Any]], paths: dict[str, Path], *, now: dt.datetime) -> list[dict[str, Any]]:
+def finalize(prs: list[dict[str, Any]], paths: dict[str, Path], *, now: dt.datetime) -> list[dict[str, Any]]:
     """Age and local path added, oldest first. Pure, so the sort is testable."""
     for pr in prs:
         pr['age_days'] = age_days(pr['created_at'], now=now)
@@ -324,13 +324,13 @@ def finalise(prs: list[dict[str, Any]], paths: dict[str, Path], *, now: dt.datet
     return sorted(prs, key=lambda pr: pr['created_at'])
 
 
-# JSON's own types, each its own colour, so the screen can show that a missing
+# JSON's own types, each its own color, so the screen can show that a missing
 # count is `null` and a missing review is `""`. pytermstyle carries the palette
 # and not this mapping, because no other tool here prints a JSON document.
 #
 # `bool` leads because a bool is an int, and `true` reading as a number would be
 # a lie about the type a consumer meets.
-TYPE_COLOURS = {bool: MAGENTA, int: YELLOW, str: GREEN}
+TYPE_COLORS = {bool: MAGENTA, int: YELLOW, str: GREEN}
 
 # One row of the array, with the fields in the order they are emitted. Shown
 # rather than listed, because the listing it replaced could not say that a count
@@ -399,15 +399,15 @@ NOTES = (
 
 
 def prose(line: str) -> str:
-    """A sentence with its backticked spans coloured, so a field name stays
+    """A sentence with its backticked spans colored, so a field name stays
     findable inside one. Odd-numbered splits are what was between the ticks."""
     return ''.join(f'{COMMAND}{part}{RESET}' if index % 2 else part for index, part in enumerate(line.split('`')))
 
 
 def literal(value: Any) -> str:
-    """One JSON scalar, coloured by the type it will arrive as."""
-    colour = next(paint for kind, paint in TYPE_COLOURS.items() if isinstance(value, kind))
-    return f'{colour}{json.dumps(value, ensure_ascii=False)}{RESET}'
+    """One JSON scalar, colored by the type it will arrive as."""
+    color = next(paint for kind, paint in TYPE_COLORS.items() if isinstance(value, kind))
+    return f'{color}{json.dumps(value, ensure_ascii=False)}{RESET}'
 
 
 def example_document() -> list[str]:
@@ -482,7 +482,7 @@ def main() -> int:
         return die(f'no registry at {registry}')
 
     now = dt.datetime.now(tz=dt.UTC)
-    prs = finalise(
+    prs = finalize(
         from_github(load_repos(registry, 'github')) + from_bitbucket(load_repos(registry, 'bitbucket')),
         registry_paths(registry),
         now=now,

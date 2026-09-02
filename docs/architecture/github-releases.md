@@ -21,7 +21,7 @@ github_releases:
 
 Measure the proposal against every entry before believing it. Most asset names do
 fit a vocabulary, and two more placeholders would take all but a handful. Those
-few defeat it outright — an architecture spelled one way per OS, a capitalisation
+few defeat it outright — an architecture spelled one way per OS, a capitalization
 nothing else uses, an archive format nothing else uses. Read them side by side in
 `providers/releases.py`.
 

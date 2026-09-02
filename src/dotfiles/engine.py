@@ -1,7 +1,7 @@
 """The one walk over a machine's resources.
 
 It yields `Event`s rather than printing, so what a reader does with them —
-render, serialise, record, fold to an exit code — is that reader's business and
+render, serialize, record, fold to an exit code — is that reader's business and
 not the walk's. Every other spelling of `observe → diff` carried its own idea of
 what to do when a resource raised, and its own rendering.
 
@@ -125,7 +125,7 @@ class Selection:
         `dc.replace` rather than a fresh `Selection`, because a constructor call
         listing the fields it knows about silently drops the ones it does not:
         built positionally this returned a selection with no ceiling, so
-        `--owner X --through Y` honoured the owner and converged the whole machine.
+        `--owner X --through Y` honored the owner and converged the whole machine.
         """
         current = self.providers if self.providers is not None else frozenset(provider.name for provider in registry.PROVIDERS)
         kept = current & wanted
@@ -299,7 +299,7 @@ def assess(session: Session, selection: Selection | None = None) -> Iterator[Eve
 
     # Driven by `resources()` rather than by the selection, so two callers naming
     # the same addresses in different orders get the same report. Observation is
-    # read-only and so has no dependency order to honour; what does is `execute`,
+    # read-only and so has no dependency order to honor; what does is `execute`,
     # which sorts by stage.
     for address, resource in known.items():
         if address in covered.resources:
@@ -392,7 +392,7 @@ def _act(session: Session, resource: Resource, group: list[Event], privilege: Es
     """One group's repairs, isolated at the granularity the resource acts at.
 
     Item by item unless the resource declares itself `Batched` and there is more
-    than one to do — which is the pre-existing behaviour for every resource that
+    than one to do — which is the pre-existing behavior for every resource that
     does not, down to the per-item clock.
     """
     changes = [event.payload for event in group if isinstance(event.payload, Change)]

@@ -1,6 +1,6 @@
 """What counts as evidence that a declared tool is installed.
 
-Every seam here is a real knob the code already honours — `PATH`, `UV_TOOL_DIR`,
+Every seam here is a real knob the code already honors — `PATH`, `UV_TOOL_DIR`,
 the package-manager binaries on `PATH` — so nothing in `src/dotfiles/` is
 patched. `PATH` keeps `/usr/bin:/bin`, with the tools under test shadowed by name
 in a fake bin dir: without the real ones, `git` and `bash` raise
@@ -1149,7 +1149,7 @@ def test_a_release_that_cannot_be_fetched_leaves_the_package_installed(
 def test_a_release_nothing_else_owns_is_installed_without_removing_anything(
     tmp_path: Path, fake_bin: Path, only_brew_answers: None, installs: list[str], removals: list, unprivileged: Privilege
 ) -> None:
-    """`--force` authorises a removal; it does not ask for one. A machine that has
+    """`--force` authorizes a removal; it does not ask for one. A machine that has
     already migrated must not have a package taken off it on every apply."""
     live = dc.replace(session(tmp_path, SYNCTHING, DECLARES_SYNCTHING), force=True)
 
@@ -1343,7 +1343,7 @@ def test_a_second_copy_on_path_is_reported_against_the_item_that_declares_it(
 def test_a_second_copy_is_not_something_apply_can_repair(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """`check`'s subject and not `plan`'s. The declaration says what should be
     installed and cannot say which of two copies may be removed safely, so an
-    `apply` that deleted one would be acting on a judgement nobody declared."""
+    `apply` that deleted one would be acting on a judgment nobody declared."""
     cargo_installed('frob')
     executable(second_bin(tmp_path, monkeypatch), 'frob')
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)

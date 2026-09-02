@@ -37,14 +37,14 @@ MACHINE = 'box'
 @pytest.fixture
 def server(sandbox: Sandbox) -> Path:
     root = sandbox.root / 'server'
-    (root / 'artefacts').mkdir(parents=True)
+    (root / 'artifacts').mkdir(parents=True)
     install_relay(sandbox.bin, root)
     declare(sandbox.config)
     return root
 
 
 def shelf(server: Path) -> Path:
-    return server / 'artefacts' / 'status' / MACHINE
+    return server / 'artifacts' / 'status' / MACHINE
 
 
 class TestWhatTheDocumentCovers:
@@ -133,7 +133,7 @@ class TestTheGate:
         it, so a scan that read it as identity would refuse every document there
         has ever been. Measured on a box named `archlinux` running
         `archlinux-personal-workstation`, where the hostname is a substring of the
-        key the exchange is organised by."""
+        key the exchange is organized by."""
         document = {'scope': list(publishing.PUBLISHABLE), 'machine': 'wkstn01x-work-workstation', 'rows': []}
 
         assert publishing.redacted(document, NAMED) == ()
@@ -464,8 +464,8 @@ class TestPublishing:
     def test_the_shelf_is_keyed_on_the_manifest(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         cli('status', 'upload')
 
-        assert (server / 'artefacts' / 'status' / MACHINE).is_dir()
-        assert not (server / 'artefacts' / 'status' / paths.machine_id()).exists()
+        assert (server / 'artifacts' / 'status' / MACHINE).is_dir()
+        assert not (server / 'artifacts' / 'status' / paths.machine_id()).exists()
 
     def test_two_uploads_accumulate_rather_than_overwriting(
         self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch

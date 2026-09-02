@@ -3,7 +3,7 @@
 `defaults` has a native, unprivileged, exact read side, so a Mac can be asked
 whether it still matches. Writing the keys and reporting that the writes happened
 answers nothing: a setting changed by hand in System Settings, or reset by an OS
-upgrade, stays invisible until someone notices the behaviour.
+upgrade, stays invisible until someone notices the behavior.
 
 **One export per domain, not one read per key.** `defaults export <domain> -`
 prints the whole domain as an XML plist, which `plistlib` parses into real

@@ -132,8 +132,8 @@ def test_no_output_mode_leaves_a_childs_stdin_open_to_the_caller(output: Output,
     Whether that menu then hangs or takes the listed default depends entirely on
     what this process's stdin happened to be wired to, which is exactly the
     "luck of a closed stdin" a real terminal does not share. Asserted against the
-    kwargs actually handed to the OS call, not against blocking behaviour: a
-    behavioural test would inherit the same luck it exists to rule out, since
+    kwargs actually handed to the OS call, not against blocking behavior: a
+    behavioral test would inherit the same luck it exists to rule out, since
     pytest's own stdin may already be closed in this environment.
     """
     captured: dict[str, object] = {}
@@ -338,7 +338,7 @@ class TestNoCredentialReachesTheRunLog:
         for answer in ('doit 2.0.0', '/usr/local/go/bin/go', 'converged'):
             assert effects.redacted(answer) == answer
 
-    def test_a_command_asked_for_a_credential_is_recognised(self) -> None:
+    def test_a_command_asked_for_a_credential_is_recognized(self) -> None:
         assert effects.yields_credential(['gh', 'auth', 'token'])
         assert effects.yields_credential(['bbkt', 'config', 'path', 'token'])
         assert not effects.yields_credential(['gh', 'auth', 'status'])

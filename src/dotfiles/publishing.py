@@ -170,7 +170,7 @@ def wrote(name: str) -> str:
 
 
 STAMPED = re.compile(r'-v(\d{8}T\d{6}Z)-')
-"""The build stamp inside a published artefact's name, for both readers of it.
+"""The build stamp inside a published artifact's name, for both readers of it.
 
 One parse, because a bundle's age is rendered two ways — `bundle list` in a label
 column and `bundle download` in a sentence — and two parses disagree about the
@@ -179,7 +179,7 @@ unparseable name while nothing compares them.
 
 
 def built_at(name: str) -> dt.datetime | None:
-    """When a published artefact was built, read off its own name.
+    """When a published artifact was built, read off its own name.
 
     From the name rather than the record, so a listing costs one transfer however
     many rows it has. `None` where the name is not one this tool wrote, which each
@@ -195,7 +195,7 @@ def age_of(name: str, now: dt.datetime | None = None) -> dt.timedelta | None:
     """How long ago that was, clamped at zero, or `None` for an unparseable name.
 
     Clamped because the builder stamps the name and another box renders it, so a
-    few minutes of clock skew is ordinary — and `timedelta` normalises a negative
+    few minutes of clock skew is ordinary — and `timedelta` normalizes a negative
     by borrowing, which reads as 23 hours ago rather than as five minutes hence.
     """
     made = built_at(name)
@@ -205,7 +205,7 @@ def age_of(name: str, now: dt.datetime | None = None) -> dt.timedelta | None:
 
 
 def age_column(name: str) -> str:
-    """A published artefact's age, short enough to sit in the label column.
+    """A published artifact's age, short enough to sit in the label column.
 
     The label is what the eye runs down and age is the fact that varies down it.
     Putting it there leaves the filename unpadded, which matters because these

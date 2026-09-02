@@ -262,7 +262,7 @@ def test_nothing_holding_a_file_is_an_answer_too(tmp_path: Path) -> None:
     assert (holder, why) == ('', '')
 
 
-def test_an_unrecognised_failure_is_returned_untouched() -> None:
+def test_an_unrecognized_failure_is_returned_untouched() -> None:
     """The common case, and it must stay free: no probe runs until a known
     failure is matched, so an unfamiliar message costs one regex."""
     message = 'go: module example.com/x@latest found, but does not contain package'

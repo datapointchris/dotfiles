@@ -58,7 +58,7 @@ RUNTIMES: dict[str, Any] = {
 """One catalog carrying a tool for each runtime, and a floor for one of them.
 
 `version` rather than `min_version`, which is the only constraint `Runtime`
-honours — `catalog.Entry.problems` refuses a constraint nothing reads, and the
+honors — `catalog.Entry.problems` refuses a constraint nothing reads, and the
 resource takes `min_version or version` as the floor either way.
 
 Rust is the runtime the floor is declared for because `rustc` is answered by
@@ -489,7 +489,7 @@ def test_the_toolchain_list_is_the_runtimes_section_and_nothing_else(sandbox: Sa
 def test_a_toolchain_nothing_declares_is_refused_rather_than_answered_emptily(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """`USAGE`, because naming a toolchain that exists is what fixes it.
 
-    It answered a bare 1 until `declaration.main` stopped signalling through
+    It answered a bare 1 until `declaration.main` stopped signaling through
     `sys.exit` — argparse's convention, where 1 means failed, arriving in a tool
     where 1 means the machine has drift.
     """
@@ -827,7 +827,7 @@ def test_narrowing_a_write_to_a_section_reaches_the_runtime_that_section_needs(
 
     The network guard is the proof the runtime was reached. Nothing here is
     installable offline, so an apply that got as far as rustup is an apply that
-    honoured `needed_by`.
+    honored `needed_by`.
     """
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})

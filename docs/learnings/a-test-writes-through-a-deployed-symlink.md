@@ -89,7 +89,7 @@ tool recreates the source it was meant to lose.
 
 - **A deployed symlink makes any write to the target a write into the repo.** The
   checkout is machine state in both directions, and the second direction is the one
-  nothing warns about. It is ordinary `open(path, 'w')` behaviour rather than anything
+  nothing warns about. It is ordinary `open(path, 'w')` behavior rather than anything
   unusual about the writer, so a test, a tool and an editor all do it.
 - **A live link and a dangling one damage different ends.** Through a live link the
   write truncates the tracked source in place. Through a dangling one it creates the
@@ -103,5 +103,5 @@ tool recreates the source it was meant to lose.
   verdict with `Repair.BY_HAND`, so the scheduled check reports it and `apply` cannot
   clear it. Detection hands the work to a person and the clock keeps running.
 - **A guard that fires on a narrow shape stays green for the wide one.**
-  `no_run_artefacts_on_this_machine` fails on records that are empty *and* carry this
+  `no_run_artifacts_on_this_machine` fails on records that are empty *and* carry this
   machine's id. The leaked records were neither, so it passed throughout.

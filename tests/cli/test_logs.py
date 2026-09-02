@@ -147,7 +147,7 @@ def test_a_command_line_carrying_brackets_survives_rendering(runs_dir: Path) -> 
     """Rich reads `[...]` as a style tag, which is the defect `report._render`
     carries a comment about. Every row here renders arbitrary command lines and
     file paths, so it reaches this on any run that names an array or a version."""
-    stream(runs_dir, '20260815T100000Z', ran('eza -1 [abc] --colour'))
+    stream(runs_dir, '20260815T100000Z', ran('eza -1 [abc] --color'))
 
     result = runner.invoke(app, ['logs', 'show'])
     assert '[abc]' in result.output

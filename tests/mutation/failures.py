@@ -4,7 +4,7 @@ Loaded into the mutant's pytest with `-p mutation.failures`. `report.nodeid` is 
 attribution is a set intersection rather than a parse — no `-rfE` to make the summary appear, no terminal width to keep an id off
 a wrap, and no rule for where an id ends in a line that may contain ` - ` inside it.
 
-A file that could not be imported is recorded under its own path with no `::`, which is how the harness recognises that every test
+A file that could not be imported is recorded under its own path with no `::`, which is how the harness recognizes that every test
 it holds went down with it.
 
 Nothing here imports from `dotfiles`, so no mutation can reach it.

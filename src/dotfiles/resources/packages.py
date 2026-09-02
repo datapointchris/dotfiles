@@ -132,7 +132,7 @@ class Observed:
     and nothing else — and it decides something narrower than the flag's name
     suggests. Only a blocker carrying a `under_force` command is cleared, which is a
     superseded *release*; a superseded system package is refused whatever this says,
-    because the manager is the thing refusing and authorising this repo to overwrite
+    because the manager is the thing refusing and authorizing this repo to overwrite
     what it did not create says nothing to pacman.
     """
 
@@ -170,7 +170,7 @@ class Observed:
         It read `all N declared packages are installed` — a count of the
         declaration with the word `installed` attached, so a machine missing four
         tools said every one of them was there. A second predicate here would be
-        free to disagree with the rows it is summarising.
+        free to disagree with the rows it is summarizing.
 
         Lives here rather than in the walk because it is a sentence about *this*
         observation: the walk reaching into `evidence` to count it is the walk
@@ -370,7 +370,7 @@ def _shadowing(
 
     What is left over is a stray somebody installed by hand and then declared
     through another mechanism — `shellcheck` from pacman beside the release
-    binary. `Repair.BY_HAND` because removing one is a judgement about which: the
+    binary. `Repair.BY_HAND` because removing one is a judgment about which: the
     declaration says what should be there and cannot say what else is safe to
     uninstall.
     """
@@ -720,7 +720,7 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
         # A kind no bundle is built to carry is not a gap in the staged one, so it
         # is answered before any question about which bundle. Read the other way it
         # advised extracting a newer bundle to fix something no bundle will ever
-        # carry — a permanent finding against the wrong artefact.
+        # carry — a permanent finding against the wrong artifact.
         if not bundle.bundlable(item.entry):
             return _never_bundled(item)
         # A sparse bundle explains most of what it left out, so an entry it does
@@ -731,7 +731,7 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
         # Every staged bundle, not any of them. One full bundle in the stack makes
         # an absence a gap again, so an entry missing from the *full* bundle was
         # being reported against the sparse one — the bundle that is not the
-        # problem, and the wrong artefact to go and rebuild.
+        # problem, and the wrong artifact to go and rebuild.
         described = bundle.descriptions()
         if described and all(one.sparse for one in described):
             return f'the sparse bundle neither carries {item.name} nor measured it, so it was never considered'

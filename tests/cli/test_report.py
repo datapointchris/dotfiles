@@ -2,7 +2,7 @@
 
 Every case here is one a real record hit and no test noticed, because `runs.py`
 was tested against hand-typed verdict strings rather than the ones the writer
-serialises — so the record round-tripped perfectly and rendered wrong.
+serializes — so the record round-tripped perfectly and rendered wrong.
 
 `report path` is covered by the fact that it is one `print`; what needed covering
 is the rendering that omitted the same path while answering every other question.
@@ -102,7 +102,7 @@ def test_the_list_calls_a_run_with_nothing_wrong_ok(runs_dir: Path) -> None:
 
 
 def test_a_run_where_nothing_drifted_says_converged(runs_dir: Path) -> None:
-    """`converged` compared the serialised verdict against `'MATCHED'`, which a
+    """`converged` compared the serialized verdict against `'MATCHED'`, which a
     `StrEnum` of lower-case values can never equal, so every record ever rendered
     claimed drift — including the ones with nothing wrong."""
     recorded(runs_dir, Event('packages', change('zk', Verdict.MATCHED)), verb='check')

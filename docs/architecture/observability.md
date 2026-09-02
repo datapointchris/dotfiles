@@ -6,9 +6,9 @@ rather than one.
 Every module named here documents its own job. This page is the arrangement —
 the thing none of them can state, because each knows only its own end.
 
-## Three artefacts, and the reader is what splits them
+## Three artifacts, and the reader is what splits them
 
-| Artefact | Written by | Read by |
+| Artifact | Written by | Read by |
 | --- | --- | --- |
 | `runs/<id>.json` | every `plan`, `check` and `apply` | `dotfiles report`, days later |
 | `runs/<id>.jsonl` | every `plan`, `check` and `apply` | `dotfiles logs`, during the run or after |
@@ -43,7 +43,7 @@ question rather than this tool's.
 ## The interchange document is a fourth thing, and nothing here writes it
 
 `plan --json` and `check --json` compose it and hand it to stdout, so where it
-lands is the caller's business. It is the one artefact of the four with no reader
+lands is the caller's business. It is the one artifact of the four with no reader
 on this machine. The work box is git-only and off Syncthing, so the way its needs
 reach the fleet is its check output travelling as a file, and what that file says
 is missing is what the fleet builds into the next offline bundle for it. Why it

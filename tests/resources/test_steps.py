@@ -86,25 +86,25 @@ def test_the_screenshot_directory_is_its_own_row(home: Path) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# The Xcode licence — the one read that needs root
+# The Xcode license — the one read that needs root
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_no_xcodebuild_means_there_is_no_licence_to_accept(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_no_xcodebuild_means_there_is_no_license_to_accept(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The cheap question first. A machine with no command line tools must not
     report an unanswerable row for something it does not have."""
     monkeypatch.setenv('PATH', str(fake_bin))
 
-    assert steps.observe('xcode-licence').verdict is Verdict.MATCHED
+    assert steps.observe('xcode-license').verdict is Verdict.MATCHED
 
 
-def test_command_line_tools_alone_need_no_licence(fake_bin: Path) -> None:
+def test_command_line_tools_alone_need_no_license(fake_bin: Path) -> None:
     """The second cheap question, and the one that settles it on every Mac in
     this fleet: `xcode-select -p` pointing at the CLT is not a full Xcode."""
     executable(fake_bin, 'xcodebuild')
     executable(fake_bin, 'xcode-select', f'#!/bin/sh\nprintf "%s\\n" "{steps.COMMAND_LINE_TOOLS}"\n')
 
-    assert steps.observe('xcode-licence').verdict is Verdict.MATCHED
+    assert steps.observe('xcode-license').verdict is Verdict.MATCHED
 
 
 def test_a_full_xcode_is_unknown_because_the_read_needs_root(fake_bin: Path) -> None:
@@ -113,28 +113,28 @@ def test_a_full_xcode_is_unknown_because_the_read_needs_root(fake_bin: Path) -> 
     `Verdict.UNKNOWN`."""
     executable(fake_bin, 'xcodebuild')
     executable(fake_bin, 'xcode-select', '#!/bin/sh\nprintf "/Applications/Xcode.app/Contents/Developer\\n"\n')
-    state = steps.observe('xcode-licence')
+    state = steps.observe('xcode-license')
 
     assert state.verdict is Verdict.UNKNOWN
     assert state.repair is Repair.NONE
     assert 'needs root' in state.detail
 
 
-def test_accepting_the_licence_escalates_and_then_runs_first_launch(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
+def test_accepting_the_license_escalates_and_then_runs_first_launch(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
     log = tmp_path / 'calls'
     executable(fake_bin, 'xcodebuild', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit 0\n')
 
-    assert steps.apply('xcode-licence', granted).ok
+    assert steps.apply('xcode-license', granted).ok
     assert log.read_text().splitlines() == ['-license accept', '-runFirstLaunch']
 
 
-def test_a_declined_password_leaves_the_licence_alone(fake_bin: Path, tmp_path: Path) -> None:
+def test_a_declined_password_leaves_the_license_alone(fake_bin: Path, tmp_path: Path) -> None:
     log = tmp_path / 'calls'
     executable(fake_bin, 'sudo', '#!/bin/sh\nexit 1\n')
     executable(fake_bin, 'xcodebuild', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit 0\n')
     privilege = Privilege()
 
-    result = steps.apply('xcode-licence', privilege)
+    result = steps.apply('xcode-license', privilege)
 
     assert not result.ok
     assert result.kind is Kind.PRIVILEGE_UNAVAILABLE
@@ -246,7 +246,7 @@ def test_a_converged_machine_never_asks_windows_for_the_account(windows: Path, h
     """This observe runs on the ten-minute timer, and asking forks `cmd.exe`.
 
     A Linux process spawning `cmd.exe` to read `%USERNAME%` is user-discovery
-    behaviour, and at a fixed interval it stops being an event and becomes a
+    behavior, and at a fixed interval it stops being an event and becomes a
     pattern. The account cannot change without the directory it names changing
     too, so a file still pointing at a real directory is the whole answer.
     """
@@ -378,12 +378,12 @@ def test_a_step_with_no_function_says_so_rather_than_passing() -> None:
     assert state.repair is Repair.NONE
 
 
-def test_only_the_xcode_licence_declares_that_it_needs_root() -> None:
+def test_only_the_xcode_license_declares_that_it_needs_root() -> None:
     """Every other row is user-level. Marking the section privileged would put a
     password prompt in front of a Mac setting its own screenshot directory."""
     privileged = {entry.name for entry in declared() if entry.needs_root}  # type: ignore[attr-defined]
 
-    assert privileged == {'xcode-licence'}
+    assert privileged == {'xcode-license'}
 
 
 def test_the_windows_font_path_is_asked_of_windows_not_read_from_the_environment() -> None:
@@ -397,7 +397,7 @@ def test_the_windows_font_path_is_asked_of_windows_not_read_from_the_environment
 
 
 def test_the_step_module_never_imports_the_environment_for_a_home(home: Path) -> None:
-    """Every path here goes through `Path.home()`, which honours `$HOME` — which
+    """Every path here goes through `Path.home()`, which honors `$HOME` — which
     is why these tests can run without a Mac and why a systemd timer running
     `check` reads the same files an interactive shell would."""
     assert steps._screenshot_directory() == home / 'Desktop' / 'screenshots'

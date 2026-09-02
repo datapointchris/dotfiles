@@ -97,7 +97,7 @@ class Session:
     """
 
     force: bool = False
-    """Authorisation to destroy what this repo did not create, to converge over it.
+    """Authorization to destroy what this repo did not create, to converge over it.
 
     Not a switch between reading and writing — `check` never writes whatever this
     says. It is the deliberate answer to a refusal, and there are two:
@@ -133,7 +133,7 @@ class Session:
     structural — the argument's presence selects it, never a flag.
 
     Bare it means everything the run covers, which is expensive rather than
-    dangerous. Distinct from `force`, which authorises destroying something
+    dangerous. Distinct from `force`, which authorizes destroying something
     *foreign* and decides nothing about what is installed in its place.
     """
 

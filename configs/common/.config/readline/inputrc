@@ -1,5 +1,5 @@
 ## Config file for GNU readline, command line util ##
-# This file controls the behaviour of line input editing for
+# This file controls the behavior of line input editing for
 # programs that use the GNU Readline library.  Existing
 # programs include FTP, Bash, and GDB.
 

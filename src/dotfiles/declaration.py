@@ -74,7 +74,7 @@ class Platform(Enum):
 def use_color() -> bool:
     """Preference, then override, then detection.
 
-    NO_COLOR is the user saying they do not want colour and wins outright.
+    NO_COLOR is the user saying they do not want color and wins outright.
     FORCE_COLOR answers the different question "is this a terminal", for a caller
     that knows the detection is wrong. Treating them as one chain lets a
     FORCE_COLOR inherited from a CI image overrule a user who asked for none.

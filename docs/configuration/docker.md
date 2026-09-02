@@ -7,7 +7,7 @@ than cosmetic. This page records the choices behind those routes.
 
 macOS cannot run containers natively and needs a Linux VM, so the runtime is a real choice here.
 WSL takes Docker Desktop because Windows offers no comparable alternative and the work machine
-already has it. On macOS the choice is open, and Docker Desktop requires a paid licence for
+already has it. On macOS the choice is open, and Docker Desktop requires a paid license for
 commercial use.
 
 OrbStack bundles the Docker CLI, Compose, Buildx and shell completions. Do not install Homebrew's
@@ -54,7 +54,7 @@ for it rather than retrying the generator in every shell. Enabling the integrati
 
 ### The native engine inside WSL is a deliberate departure
 
-Docker Desktop's licence is per-seat for commercial use, so a work machine may not have it. The
+Docker Desktop's license is per-seat for commercial use, so a work machine may not have it. The
 alternative is a native engine inside the distro: run `install/wsl/docker-repo.sh` past its WSL
 guard, install `docker-ce` and the plugins by hand, and enable systemd so `systemctl start docker`
 works.

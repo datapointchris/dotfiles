@@ -458,16 +458,16 @@ def unpack(archive: Path, into: Path) -> bool:
             return extracted('tar', True)
     except (OSError, tarfile.TarError, zipfile.BadZipFile):
         return extracted('unreadable', False)
-    # Neither sniffer recognised it, which is a different failure from one that
+    # Neither sniffer recognized it, which is a different failure from one that
     # threw halfway through and worth being able to tell apart in the stream.
-    return extracted('unrecognised', False)
+    return extracted('unrecognized', False)
 
 
 def restore_mode(member: zipfile.ZipInfo, landed: str) -> None:
     """Put back the permission bits `extractall` dropped, on the file it wrote.
 
     **`landed` comes from the extractor, never from the member's name.** A zip
-    records whatever name its author chose, and `ZipFile._extract_member` sanitises
+    records whatever name its author chose, and `ZipFile._extract_member` sanitizes
     that — stripping drive letters, leading separators, `.` and `..` — before
     deciding where to write. Reconstructing the path instead means chmod-ing
     somewhere the extractor never touched: `into / '/etc/hosts'` is `/etc/hosts`,

@@ -77,7 +77,7 @@ def test_the_machine_every_row_starts_from_is_converged(cli: Callable[..., Invoc
     assert cli('packages', 'apply').exit_code == ExitCode.CONVERGED
 
 
-def test_every_flag_that_narrowed_or_authorised_the_run_is_in_its_record(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+def test_every_flag_that_narrowed_or_authorized_the_run_is_in_its_record(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """A row is read back against what the run covered and what it was allowed to do.
 
     `force` is the one that matters most and the one most easily left out: it is the

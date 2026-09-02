@@ -1103,7 +1103,7 @@ def test_a_package_nothing_declares_is_reported(tmp_path: Path, monkeypatch: pyt
 def test_the_row_is_by_hand_so_apply_cannot_act_on_it(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """`syspkg.REMOVE`'s rule: an uninstall inferred from what a declaration does
     not name takes a package off a machine on the strength of a typo. The row names
-    the package and hands over the judgement."""
+    the package and hands over the judgment."""
     chose(monkeypatch, CONTROL)
     live = session(tmp_path, DECLARES_BAT, MAC)
     change = undeclared(live)[0]

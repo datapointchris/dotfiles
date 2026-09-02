@@ -8,7 +8,7 @@ HTTP chokepoint raise, so upstream versions can only come from the release cache
 the test wrote.
 
 They join the three the root conftest already installs:
-`no_installing_on_this_machine` at `subprocess`, `no_run_artefacts_on_this_machine`
+`no_installing_on_this_machine` at `subprocess`, `no_run_artifacts_on_this_machine`
 over the real state directory, and `logging_is_configured`. Nothing here repeats
 them.
 """

@@ -1,4 +1,4 @@
-"""Where a run's two artefacts are opened and closed. One run, both ends of it.
+"""Where a run's two artifacts are opened and closed. One run, both ends of it.
 
 Recording is not a feature bolted onto the walk; it is one more consumer of what
 the walk already yields, and it works only because the walk yields values instead

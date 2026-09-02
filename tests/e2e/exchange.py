@@ -3,7 +3,7 @@
 `bundle create` used to run on the host, out of the worktree, through
 `uv run --project UNDER_TEST`. That made the test runner the code under test:
 editing a source file mid-run changed what was being measured, and the only
-defence was not editing. It also meant the one machine in the trip that had a
+defense was not editing. It also meant the one machine in the trip that had a
 network was not a machine at all, so nothing about the builder was ever asserted.
 
 So the trip is two containers on one docker network. `BUILDER` has a network and

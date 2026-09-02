@@ -263,7 +263,7 @@ flags:
       - configs/common/.config/zsh/.zshrc
 
   - name: SHELL_SYNTAX_HIGHLIGHTING
-    description: Colour the command line as it is typed
+    description: Color the command line as it is typed
     default: true
     consumers:
       - configs/common/.config/zsh/.zshrc

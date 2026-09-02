@@ -1,5 +1,5 @@
-// Ghostty passes colour uniforms as sRGB component values while the render
-// pipeline blends in linear space, so an unconverted cursor colour reads far
+// Ghostty passes color uniforms as sRGB component values while the render
+// pipeline blends in linear space, so an unconverted cursor color reads far
 // too bright.
 vec3 srgbToLinear(vec3 c) {
     return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));

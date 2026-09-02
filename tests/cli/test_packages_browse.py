@@ -12,7 +12,7 @@ taken off, and it is the only way to reach `sections`, `stats` and `tags`, which
 the `dotfiles` CLI does not expose at all.
 
 **In process rather than in a subprocess.** `tests/apps/test_packages_list.py`
-drives `python -m dotfiles.declaration`, which measures the same behaviour and
+drives `python -m dotfiles.declaration`, which measures the same behavior and
 reports no coverage for any of it — so every branch here read as unexecuted
 while three tests were passing over it.
 
@@ -89,7 +89,7 @@ that computes its expectation the way the code does cannot disagree with it.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def state_colour_preference(monkeypatch: pytest.MonkeyPatch, *, wanted: bool) -> None:
+def state_color_preference(monkeypatch: pytest.MonkeyPatch, *, wanted: bool) -> None:
     """Set `NO_COLOR` or `FORCE_COLOR` in the environment, and rebind what read them at import.
 
     `USE_COLOR = use_color()` runs at import, so a variable set now arrives too
@@ -119,7 +119,7 @@ def point_at(root: Path, packages: dict[str, Any] | None, monkeypatch: pytest.Mo
     `packages` of None writes no file, which is how a test reaches the refusal
     `get_packages_file` raises when a checkout has no declaration.
 
-    Colour is declined so the handful of cases that do read the rendered surface —
+    Color is declined so the handful of cases that do read the rendered surface —
     a truncated column, the guidance an empty tally prints — find plain text on
     every desk rather than ANSI escapes on the ones exporting `$FORCE_COLOR`.
     """
@@ -132,7 +132,7 @@ def point_at(root: Path, packages: dict[str, Any] | None, monkeypatch: pytest.Mo
     monkeypatch.setattr(paths, 'REPO_ROOT', derived)
     monkeypatch.setattr(paths, 'INSTALL_DIR', derived / 'install')
     monkeypatch.setattr(paths, 'PACKAGES_FILE', derived / 'install' / 'packages.yml')
-    state_colour_preference(monkeypatch, wanted=False)
+    state_color_preference(monkeypatch, wanted=False)
     return derived
 
 
@@ -161,7 +161,7 @@ def executable(directory: Path, name: str) -> Path:
     return target
 
 
-def uncoloured(line: str) -> str:
+def uncolored(line: str) -> str:
     return line.replace(Color.BRIGHT_CYAN.value, '').replace(Color.RESET.value, '')
 
 
@@ -875,10 +875,10 @@ def test_a_system_package_is_available_only_where_its_own_manager_is(
     assert available is (on_arch if wanted_on_arch else not on_arch)
 
 
-def test_an_unrecognised_system_still_answers_with_the_debian_spelling(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_unrecognized_system_still_answers_with_the_debian_spelling(monkeypatch: pytest.MonkeyPatch) -> None:
     """`get_current_platform` answers UNKNOWN for anything that is not Darwin or
     Linux, and the availability check has to answer something — apt is the
-    fallback, so an unrecognised box lists what it can rather than nothing."""
+    fallback, so an unrecognized box lists what it can rather than nothing."""
     monkeypatch.setattr(platform, 'system', lambda: 'FreeBSD')
     packaged = {'_section': 'system_packages', 'name': 'ripgrep'}
 
@@ -890,7 +890,7 @@ PLATFORMS = (('Darwin', Platform.MACOS), ('Windows', Platform.UNKNOWN), ('FreeBS
 
 
 @pytest.mark.parametrize(('system', 'expected'), PLATFORMS, ids=[system for system, _ in PLATFORMS])
-def test_an_unrecognised_system_is_unknown_rather_than_assumed_to_be_linux(
+def test_an_unrecognized_system_is_unknown_rather_than_assumed_to_be_linux(
     monkeypatch: pytest.MonkeyPatch, system: str, expected: Platform
 ) -> None:
     monkeypatch.setattr(platform, 'system', lambda: system)
@@ -941,11 +941,11 @@ def test_an_app_bundle_is_matched_by_name_without_regard_to_case(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Colour: the preference, the override, and the two renderers
+# Color: the preference, the override, and the two renderers
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-COLOUR_PREFERENCES = (
+COLOR_PREFERENCES = (
     ('the user says no', {'NO_COLOR': '1'}, False),
     ('the user says no over an image that forces it', {'NO_COLOR': '1', 'FORCE_COLOR': '1'}, False),
     ('a caller that knows the detection is wrong', {'FORCE_COLOR': '1'}, True),
@@ -953,7 +953,7 @@ COLOUR_PREFERENCES = (
 )
 
 
-@pytest.mark.parametrize(('label', 'environment', 'wanted'), COLOUR_PREFERENCES, ids=[row[0] for row in COLOUR_PREFERENCES])
+@pytest.mark.parametrize(('label', 'environment', 'wanted'), COLOR_PREFERENCES, ids=[row[0] for row in COLOR_PREFERENCES])
 def test_a_stated_preference_outranks_an_inherited_override(
     monkeypatch: pytest.MonkeyPatch, label: str, environment: dict[str, str], wanted: bool
 ) -> None:
@@ -968,10 +968,10 @@ def test_a_stated_preference_outranks_an_inherited_override(
     assert declaration.use_color() is wanted
 
 
-def test_a_status_carries_its_colour_only_where_colour_is_wanted(monkeypatch: pytest.MonkeyPatch) -> None:
-    state_colour_preference(monkeypatch, wanted=True)
+def test_a_status_carries_its_color_only_where_color_is_wanted(monkeypatch: pytest.MonkeyPatch) -> None:
+    state_color_preference(monkeypatch, wanted=True)
     lit = declaration.format_status(InstallStatus.INSTALLED, '/somewhere/bin/lazygit')
-    state_colour_preference(monkeypatch, wanted=False)
+    state_color_preference(monkeypatch, wanted=False)
     plain = declaration.format_status(InstallStatus.INSTALLED, '/somewhere/bin/lazygit')
 
     assert plain is not None, 'only NOT_AVAILABLE formats to nothing'
@@ -983,7 +983,7 @@ def test_a_status_carries_its_colour_only_where_colour_is_wanted(monkeypatch: py
 def test_only_an_unavailable_package_formats_to_no_status_row_at_all(monkeypatch: pytest.MonkeyPatch, status: InstallStatus) -> None:
     """`show` prints the Status line only when this returns something, so None is
     how "not for this machine" is said without a row claiming it is missing."""
-    state_colour_preference(monkeypatch, wanted=False)
+    state_color_preference(monkeypatch, wanted=False)
 
     formatted = declaration.format_status(status, '/somewhere/bin/lazygit')
 

@@ -39,13 +39,13 @@ RULE_DEFAULT = 'default-logic'
 RENDER_MODULES = frozenset({'banner.py', 'logging.py'})
 """Modules whose every constant is rendering.
 
-Their subject *is* the sentence — a colour name, a column width, a tick mark, a log format. Nothing in them is read by a machine
+Their subject *is* the sentence — a color name, a column width, a tick mark, a log format. Nothing in them is read by a machine
 except through a caller, and the caller's own constants are classified on their own merits.
 
 **`output.py` is not one of them, and that is the point of the exclusion.** It
 holds the fleet's status vocabulary beside its decoration: `MATCHED` is the same
-string `resources` declares, and the keys of `VERDICT_COLOURS`, `VERDICT_MARKS`
-and `CHANGE_COLOURS` are verdicts a machine reads. Marked whole-module, every one
+string `resources` declares, and the keys of `VERDICT_COLORS`, `VERDICT_MARKS`
+and `CHANGE_COLORS` are verdicts a machine reads. Marked whole-module, every one
 of them left the score, and a test that pinned one landed in PROSE-PINNED — which
 the gate turns into a refusal. Its decoration is caught by the render-call and
 style rules on its own merits, which is what the narrow rules are for.
@@ -75,7 +75,7 @@ Deliberately not `typer.Exit`, whose argument is an exit code and is the most ma
 """
 
 STRUCTLOG_FACTORIES = frozenset({'dotfiles.logging.get_logger', 'structlog.get_logger'})
-"""What binds a name to a logger, so `log.info(...)` can be recognised without matching every `.info` in the repo."""
+"""What binds a name to a logger, so `log.info(...)` can be recognized without matching every `.info` in the repo."""
 
 STYLE_WORDS = frozenset(
     {
@@ -103,7 +103,7 @@ STYLE_WORDS = frozenset(
         'bright_white',
     }
 )
-"""A rich style phrase, for the colour that is assigned to a name before it reaches the call that renders it.
+"""A rich style phrase, for the color that is assigned to a name before it reaches the call that renders it.
 
 The one content rule here, and it is kept narrow on purpose: `default`, `reverse` and `strike` are rich styles too and are also
 plausible values in a declaration, so they are left out and a mutation on one surfaces as a survivor instead of disappearing.

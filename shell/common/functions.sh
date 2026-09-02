@@ -233,14 +233,14 @@ f() {
   history -w
 
   # ADD A REPEATABLE COMMAND TO THE BASH HISTORY ############################
-  # Store the arguments in a temporary file for sanitising before being
+  # Store the arguments in a temporary file for sanitizing before being
   # entered into bash history
   : >/tmp/fzf_tmp
   for file in "${arguments[@]}"; do
     echo "$file" >>/tmp/fzf_tmp
   done
 
-  # Put all input arguments on one line and sanitise the command by putting
+  # Put all input arguments on one line and sanitize the command by putting
   # single quotes around each argument, also first put an extra single quote
   # next to any pre-existing single quotes in the raw argument
   sed -i "s/'/''/g; s/.*/'&'/g; s/\n//g" /tmp/fzf_tmp
@@ -250,10 +250,10 @@ f() {
     sed -i '${s/$/ \&/}' /tmp/fzf_tmp
   fi
 
-  # Grab the sanitised arguments
+  # Grab the sanitized arguments
   arguments="$(cat /tmp/fzf_tmp)"
 
-  # Add the command with the sanitised arguments to our .bash_history
+  # Add the command with the sanitized arguments to our .bash_history
   # shellcheck disable=SC2086 # unquoted on purpose: the three parts are one command line
   echo $program$options$arguments >>~/.bash_history
 

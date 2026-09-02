@@ -897,7 +897,7 @@ def a_file_declaring_it_needs_no_root(sandbox: Sandbox) -> Path:
 
 
 def test_a_row_declaring_it_needs_no_root_is_planned_as_needing_none(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Current behaviour on the read side, and it is the honest half.
+    """Current behavior on the read side, and it is the honest half.
 
     `needs_root` is a field on `SystemConfig`, so any of the four kinds may carry
     it. The `steps` rows and the one `scope: user` systemd unit declare it today,
@@ -919,7 +919,7 @@ def test_a_row_declaring_it_needs_no_root_is_written_without_root(sandbox: Sandb
 
     The field decides one thing today — the number `plan` prints and the password
     warning built from it — so a row that declares `false` is a row the plan
-    promises costs nothing and the write refuses to do. Either the write honours
+    promises costs nothing and the write refuses to do. Either the write honors
     it or the field stops being settable on a row whose repair cannot.
     """
     a_file_declaring_it_needs_no_root(sandbox)

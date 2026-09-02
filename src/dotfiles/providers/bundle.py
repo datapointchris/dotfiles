@@ -51,7 +51,7 @@ DOCUMENT = 'bundle.json'
 VERSION = 1
 """`bundle.json`'s own schema number, independent of every other version here.
 
-Not `status.VERSION` and not `STATE_VERSION`: three artefacts with three
+Not `status.VERSION` and not `STATE_VERSION`: three artifacts with three
 lifetimes, and a shared number could not say which of them changed — the split
 `status.py` already documents between the document and the state file.
 """

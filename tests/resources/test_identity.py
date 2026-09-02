@@ -1,6 +1,6 @@
 """The git identity: checked, and deliberately never written.
 
-`GIT_CONFIG_GLOBAL` is the seam — a real knob git honours, pointed at a temp
+`GIT_CONFIG_GLOBAL` is the seam — a real knob git honors, pointed at a temp
 file, so nothing in `src/dotfiles/` is patched to make these run and the command
 under test is the same one a machine runs.
 """

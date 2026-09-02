@@ -148,7 +148,7 @@ def test_tpm_talks_to_a_throwaway_server_not_the_callers(tmux: Tmux, capsys) -> 
 
 @needs_tmux
 def test_the_isolation_holds_even_when_run_from_inside_a_session(tmux: Tmux, monkeypatch, capsys) -> None:
-    """A bogus `$TMUX` is safe and proves the unset happened: were it honoured,
+    """A bogus `$TMUX` is safe and proves the unset happened: were it honored,
     tmux would fail to reach that socket entirely.
 
     `env` cannot express this — it merges over the environment, so the most it can

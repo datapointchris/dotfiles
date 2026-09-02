@@ -129,18 +129,18 @@ def test_a_route_with_no_direct_import_between_its_ends_is_reported(paths_above_
     assert 'dotfiles.evidence -> dotfiles.paths' not in ran.stdout
 
 
-def test_every_mutation_still_produces_a_config_the_tool_can_analyse(stale_order: Path, paths_above_evidence: Path) -> None:
+def test_every_mutation_still_produces_a_config_the_tool_can_analyze(stale_order: Path, paths_above_evidence: Path) -> None:
     """A guard on `relayered`, which is the only thing here that can be wrong silently.
 
     Layer order is not an input to graph construction, so equal `Analyzed` lines
     prove nothing about the package. What they prove is that each mutation parsed:
-    a `relayered` that mangled the TOML exits before analysing anything, and the
+    a `relayered` that mangled the TOML exits before analyzing anything, and the
     three red cases above would then be red for that rather than for a violation.
     A layer named twice is enough to cause it.
     """
 
-    def analysed(ran: subprocess.CompletedProcess[str]) -> str:
+    def analyzed(ran: subprocess.CompletedProcess[str]) -> str:
         return next(line for line in ran.stdout.splitlines() if line.startswith('Analyzed '))
 
-    assert analysed(contract(stale_order)) == analysed(contract(CONFIG))
-    assert analysed(contract(paths_above_evidence)) == analysed(contract(CONFIG))
+    assert analyzed(contract(stale_order)) == analyzed(contract(CONFIG))
+    assert analyzed(contract(paths_above_evidence)) == analyzed(contract(CONFIG))

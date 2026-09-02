@@ -70,7 +70,7 @@ def monorepo(tmp_path: Path) -> Path:
     for plugin, body in (('git.yazi', '-- git\n'), ('chmod.yazi', '-- chmod\n')):
         (origin / plugin).mkdir(parents=True)
         (origin / plugin / 'main.lua').write_text(body)
-    # Each plugin links to the one licence at the root, the way yazi-rs/plugins
+    # Each plugin links to the one license at the root, the way yazi-rs/plugins
     # does — the reason the subdirectory is copied out rather than moved.
     (origin / 'LICENSE').write_text('MIT\n')
     (origin / 'git.yazi' / 'LICENSE').symlink_to(Path('..') / 'LICENSE')
@@ -188,16 +188,16 @@ def test_a_monorepo_plugin_takes_only_its_own_subdirectory(tmp_path: Path, monor
 
 
 def test_a_link_out_of_the_subdirectory_is_materialised_not_left_dangling(tmp_path: Path, monorepo: Path, unprivileged: Privilege) -> None:
-    """The licence link points at the repo root, which does not come with the
+    """The license link points at the repo root, which does not come with the
     plugin. Moved, it would dangle — and aim at the shared plugins directory,
     where something else could later satisfy it."""
     live = session(tmp_path, packages={'yazi_plugins': [{'name': 'git', 'repo': str(monorepo), 'subdirectory': 'git.yazi'}]})
 
     plugins.RESOURCE.perform(live, changes(live)[0], unprivileged)
 
-    licence = live.home / '.config' / 'yazi' / 'plugins' / 'git.yazi' / 'LICENSE'
-    assert not licence.is_symlink()
-    assert licence.read_text() == 'MIT\n'
+    license = live.home / '.config' / 'yazi' / 'plugins' / 'git.yazi' / 'LICENSE'
+    assert not license.is_symlink()
+    assert license.read_text() == 'MIT\n'
 
 
 def test_a_subdirectory_that_moved_upstream_fails_and_says_so(tmp_path: Path, monorepo: Path, unprivileged: Privilege) -> None:
@@ -242,7 +242,7 @@ def test_one_plugin_provider_is_an_address_not_a_stage_sieve(tmp_path: Path, ups
     assert not (live.home / '.config' / 'tmux' / 'plugins' / 'tpm').is_dir()
 
 
-def test_skipping_one_provider_leaves_its_neighbours_in_the_walk(tmp_path: Path, upstream: Path) -> None:
+def test_skipping_one_provider_leaves_its_neighbors_in_the_walk(tmp_path: Path, upstream: Path) -> None:
     """The user-visible half of provider addressing, and the inverse of the test
     above: `--skip plugins/tpm` leaves the shell plugins alone.
 
@@ -264,7 +264,7 @@ def test_skipping_one_provider_leaves_its_neighbours_in_the_walk(tmp_path: Path,
     assert reported == ['shell-plugin/forgit', 'tmux-sync/tpm']
 
 
-def test_a_private_plugin_is_gated_and_its_neighbour_is_not(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_private_plugin_is_gated_and_its_neighbor_is_not(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A plugin can declare a precondition, and this resource has to see it.
 
     `CloneProvider` inherits `CatalogProvider.plan`, which reads

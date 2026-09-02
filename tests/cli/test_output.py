@@ -4,7 +4,7 @@
 exercised only where a CLI test happened to run one, which covers the rendering
 but none of the contract underneath it.
 
-Two failures hide there. A colour map keyed on a verdict's string raises
+Two failures hide there. A color map keyed on a verdict's string raises
 `KeyError` at render time the day an enum gains a member, and that lands while a
 run is already reporting something unusual. And the stdout/stderr split is a
 machine contract rather than a preference — one diagnostic on stdout turns a
@@ -49,18 +49,18 @@ def a_change(**overrides) -> Change:
 
 
 @pytest.mark.parametrize('verdict', list(ResourceVerdict))
-def test_every_resource_verdict_has_a_colour(verdict: ResourceVerdict) -> None:
-    """`render_result` indexes `VERDICT_COLOURS` on the verdict's string value,
+def test_every_resource_verdict_has_a_color(verdict: ResourceVerdict) -> None:
+    """`render_result` indexes `VERDICT_COLORS` on the verdict's string value,
     so a member added without an entry raises KeyError rather than rendering in a
-    default colour."""
-    assert str(verdict) in output.VERDICT_COLOURS
+    default color."""
+    assert str(verdict) in output.VERDICT_COLORS
 
 
 @pytest.mark.parametrize('verdict', list(Verdict))
-def test_every_change_verdict_has_a_colour(verdict: Verdict) -> None:
+def test_every_change_verdict_has_a_color(verdict: Verdict) -> None:
     """Same failure as the resource map, one level down, and likelier: `Verdict`
     is the enum a new kind of item would extend."""
-    assert str(verdict) in output.CHANGE_COLOURS
+    assert str(verdict) in output.CHANGE_COLORS
 
 
 def test_emit_json_writes_a_document_and_nothing_else(capsys: pytest.CaptureFixture) -> None:
@@ -491,11 +491,11 @@ def test_the_section_heading_is_the_resource_name_not_its_verdict(capsys: pytest
     assert written.startswith(f'{output.VERDICT_MARKS["converged"]} packages')
 
 
-def test_every_resource_verdict_has_a_mark_as_well_as_a_colour() -> None:
-    """`NO_COLOR` is a preference this fleet honours, so a report carrying its
+def test_every_resource_verdict_has_a_mark_as_well_as_a_color() -> None:
+    """`NO_COLOR` is a preference this fleet honors, so a report carrying its
     verdict only in an escape code answers nothing on a machine that asked for
     none."""
-    assert set(output.VERDICT_MARKS) == set(output.VERDICT_COLOURS)
+    assert set(output.VERDICT_MARKS) == set(output.VERDICT_COLORS)
 
 
 def test_a_section_ends_with_a_blank_line(capsys: pytest.CaptureFixture) -> None:
@@ -527,7 +527,7 @@ def test_a_summary_with_two_sentences_aligns_the_second_and_carries_the_counts(c
     assert '1 unmeasured' in second
 
 
-def test_a_group_small_enough_to_read_lists_while_its_neighbour_stays_a_count(capsys: pytest.CaptureFixture) -> None:
+def test_a_group_small_enough_to_read_lists_while_its_neighbor_stays_a_count(capsys: pytest.CaptureFixture) -> None:
     """One threshold over the whole resource could only suppress both, and the nine
     `system.yml` rows are worth naming on every run where a hundred packages are
     not."""
@@ -573,13 +573,13 @@ def test_the_subject_column_stops_widening_for_one_very_long_item(capsys: pytest
     assert short.index('here') == len(''.join(columns))
 
 
-class TestTheBrowsingPathResolvesColourTheSameWayAsEverythingElse:
+class TestTheBrowsingPathResolvesColorTheSameWayAsEverythingElse:
     """`declaration.py` renders with its own ANSI constants rather than through
     rich, because browsing has to survive a `packages.yml` that will not load.
-    That is deliberate; answering the colour question differently from the rest
+    That is deliberate; answering the color question differently from the rest
     of the fleet is not.
 
-    Colour resolves once, and `NO_COLOR` outranks
+    Color resolves once, and `NO_COLOR` outranks
     `FORCE_COLOR`: preference, then override, then detection. Checking only the
     TTY — which this did — silently ignored both variables.
     """

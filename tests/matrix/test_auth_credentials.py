@@ -777,7 +777,7 @@ def test_each_helper_reports_its_own_probe_answer(sandbox: Sandbox, cli: Callabl
 
 @pytest.mark.parametrize('noun', ['auth', 'credentials'])
 @pytest.mark.parametrize('verb', ['plan', 'check', 'show'])
-def test_the_machine_option_is_honoured_where_the_name_resolves(
+def test_the_machine_option_is_honored_where_the_name_resolves(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation], noun: str, verb: str
 ) -> None:
     """Six leaves, one option, and the sandbox machine named explicitly.

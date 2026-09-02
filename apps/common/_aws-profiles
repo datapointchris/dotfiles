@@ -57,7 +57,7 @@ CYAN = '\033[0;36m'
 DIM = '\033[0;90m'
 
 
-def colour_enabled(stream) -> bool:
+def color_enabled(stream) -> bool:
     """colors.sh's precedence — preference beats detection — asked about the
     stream the menu actually goes to, which is stderr.
     """
@@ -70,14 +70,14 @@ def colour_enabled(stream) -> bool:
     return stream.isatty()
 
 
-def paint(text: str, colour: str, enabled: bool) -> str:
+def paint(text: str, color: str, enabled: bool) -> str:
     """Wrap already-padded text.
 
     Never pad the result of this: an escape sequence counts toward a format
-    spec's width, so colouring before padding silently shortens the field. It is
+    spec's width, so coloring before padding silently shortens the field. It is
     the same trap print_help_row documents in formatting.sh.
     """
-    return f'{colour}{text}{RESET}' if enabled else text
+    return f'{color}{text}{RESET}' if enabled else text
 
 
 def read_ini(path: Path) -> configparser.ConfigParser:
@@ -183,7 +183,7 @@ def refresh_cache(profiles: list[str]) -> dict[str, dict[str, str]]:
 def account_labels(settings: dict[str, dict[str, str]], cache: dict[str, dict[str, str]]) -> dict[str, str]:
     """Account number to label, from whichever profiles carry `account_label`.
 
-    Labelling the account rather than the profile is what lets one label cover
+    Labeling the account rather than the profile is what lets one label cover
     every profile that reaches the same account.
     """
     labels: dict[str, str] = {}
@@ -217,44 +217,44 @@ def build_rows(profiles: list[str], settings: dict[str, dict[str, str]], cache: 
     return rows
 
 
-def render_row(row: dict[str, str], width: dict[str, int], is_current: bool, colour: bool) -> str:
+def render_row(row: dict[str, str], width: dict[str, int], is_current: bool, color: bool) -> str:
     """One profile line. Every field is padded first and painted after."""
-    marker = paint('▸', GREEN, colour) if is_current else ' '
-    number = paint(f'{row["number"]})', GREEN if is_current else DIM, colour)
+    marker = paint('▸', GREEN, color) if is_current else ' '
+    number = paint(f'{row["number"]})', GREEN if is_current else DIM, color)
 
     profile = f'{row["profile"]:<{width["profile"]}}'
-    profile = paint(profile, GREEN, colour) if is_current else profile
+    profile = paint(profile, GREEN, color) if is_current else profile
 
     account = f'{row["account"]:<{width["account"]}}'
     if row['account'] == UNKNOWN_ACCOUNT:
-        account = paint(account, DIM, colour)
+        account = paint(account, DIM, color)
 
     identity = f'{row["identity"]:<{width["identity"]}}'
     if row['identity'] == UNREACHABLE:
-        identity = paint(identity, RED, colour)
+        identity = paint(identity, RED, color)
 
     cells = [f'{marker}{number} {profile}', account]
     if width['label']:
         padded_label = f'{row["label"]:<{width["label"]}}'
-        # An unlabelled row is padding, and wrapping whitespace in escapes just
+        # An unlabeled row is padding, and wrapping whitespace in escapes just
         # makes the line harder to read in a log.
-        cells.append(paint(padded_label, CYAN, colour) if row['label'] else padded_label)
+        cells.append(paint(padded_label, CYAN, color) if row['label'] else padded_label)
     cells.append(identity)
 
     # The region column only needs padding when something follows it.
     if row['source_profile']:
-        cells.append(f'{row["region"]:<9}  ' + paint(f'← assumed via {row["source_profile"]}', DIM, colour))
+        cells.append(f'{row["region"]:<9}  ' + paint(f'← assumed via {row["source_profile"]}', DIM, color))
     else:
         cells.append(row['region'])
 
     return '  '.join(cells).rstrip()
 
 
-def render_menu(rows: list[dict[str, str]], current_profile: str, colour: bool = False) -> str:
+def render_menu(rows: list[dict[str, str]], current_profile: str, color: bool = False) -> str:
     """The menu, as one string. Columns are sized from the widest value in each,
     which is why this builds the whole table before printing any of it.
 
-    `colour` is a parameter rather than a call to isatty in here: pytest
+    `color` is a parameter rather than a call to isatty in here: pytest
     reinstalls the streams between fixture setup and the test body, so a gate
     read at the wrong moment passes for the wrong reason.
     """
@@ -268,10 +268,10 @@ def render_menu(rows: list[dict[str, str]], current_profile: str, colour: bool =
     title = 'AWS Profile Selection'
     lines = [
         '',
-        paint(title, CYAN, colour),
-        paint('─' * (len(title) + 15), CYAN, colour),
+        paint(title, CYAN, color),
+        paint('─' * (len(title) + 15), CYAN, color),
         '',
-        f'  {paint("0)", DIM, colour)} {paint("Clear", YELLOW, colour)} the current profile',
+        f'  {paint("0)", DIM, color)} {paint("Clear", YELLOW, color)} the current profile',
         '',
     ]
 
@@ -279,16 +279,16 @@ def render_menu(rows: list[dict[str, str]], current_profile: str, colour: bool =
     if width['label']:
         header += f'{"LABEL":<{width["label"]}}  '
     header += f'{"IDENTITY":<{width["identity"]}}  REGION'
-    lines.append(paint(header, BLUE, colour))
+    lines.append(paint(header, BLUE, color))
 
-    lines.extend(render_row(row, width, row['profile'] == current_profile, colour) for row in rows)
+    lines.extend(render_row(row, width, row['profile'] == current_profile, color) for row in rows)
 
     lines.append('')
-    lines.append(paint('  --refresh re-resolves every account, rather than reading the cache', DIM, colour))
+    lines.append(paint('  --refresh re-resolves every account, rather than reading the cache', DIM, color))
     return '\n'.join(lines)
 
 
-def confirm_selection(profile: str, cache: dict[str, dict[str, str]], colour: bool = False) -> None:
+def confirm_selection(profile: str, cache: dict[str, dict[str, str]], color: bool = False) -> None:
     """Check the chosen profile for real and rewrite its cache line.
 
     A rotated key shows as unreachable next time instead of keeping a stale row
@@ -299,9 +299,9 @@ def confirm_selection(profile: str, cache: dict[str, dict[str, str]], colour: bo
     write_cache(cache)
 
     if entry['identity'] == UNREACHABLE:
-        print(paint(f'{profile} is unreachable — check its credentials', RED, colour), file=sys.stderr)
+        print(paint(f'{profile} is unreachable — check its credentials', RED, color), file=sys.stderr)
     else:
-        print(paint(f'account {entry["account"]}  {entry["identity"]}', GREEN, colour), file=sys.stderr)
+        print(paint(f'account {entry["account"]}  {entry["identity"]}', GREEN, color), file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -309,22 +309,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--refresh', action='store_true', help='re-resolve every account before listing')
     args = parser.parse_args(argv)
 
-    colour = colour_enabled(sys.stderr)
+    color = color_enabled(sys.stderr)
 
     settings = profile_settings()
     profiles = list(settings)
     if not profiles:
-        print(paint(f'No profiles found in {CONFIG_PATH} or {CREDENTIALS_PATH}', RED, colour), file=sys.stderr)
+        print(paint(f'No profiles found in {CONFIG_PATH} or {CREDENTIALS_PATH}', RED, color), file=sys.stderr)
         return 1
 
     cache = read_cache()
     if args.refresh or any(profile not in cache for profile in profiles):
-        print(paint('Resolving AWS accounts...', DIM, colour), file=sys.stderr)
+        print(paint('Resolving AWS accounts...', DIM, color), file=sys.stderr)
         cache = refresh_cache(profiles)
 
     rows = build_rows(profiles, settings, cache)
-    print(render_menu(rows, os.environ.get('AWS_PROFILE', ''), colour), file=sys.stderr)
-    print(f'\n{paint("Select option number and press [ENTER]:", BLUE, colour)} ', file=sys.stderr)
+    print(render_menu(rows, os.environ.get('AWS_PROFILE', ''), color), file=sys.stderr)
+    print(f'\n{paint("Select option number and press [ENTER]:", BLUE, color)} ', file=sys.stderr)
 
     try:
         choice = input().strip()
@@ -337,11 +337,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if not choice.isdigit() or not 1 <= int(choice) <= len(rows):
-        print(paint(f'No profile at option {choice}.', RED, colour), file=sys.stderr)
+        print(paint(f'No profile at option {choice}.', RED, color), file=sys.stderr)
         return 1
 
     row = rows[int(choice) - 1]
-    confirm_selection(row['profile'], cache, colour)
+    confirm_selection(row['profile'], cache, color)
     print(f'set\t{row["profile"]}\t{row["region"]}')
     return 0
 

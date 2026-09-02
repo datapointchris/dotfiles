@@ -222,7 +222,7 @@ def test_a_removal_runs_the_managers_own_uninstall(fake_bin: Path, unprivileged)
 
 def test_the_apt_removal_cannot_take_more_than_the_name_it_was_given(fake_bin: Path) -> None:
     """`apt-get remove -y` resolves reverse dependencies and `-y` answers the
-    confirmation that would have shown the list, so one authorised removal takes an
+    confirmation that would have shown the list, so one authorized removal takes an
     unbounded set. `dpkg --remove` refuses exactly where `pacman -R` does, which is
     what makes `--force` mean the same thing on both distros."""
     assert syspkg.UNINSTALL['apt'][:2] == ('dpkg', '--remove')
@@ -274,7 +274,7 @@ def test_a_manager_that_refuses_the_removal_says_so(fake_bin: Path, unprivileged
 
 def test_the_networked_reads_are_the_ones_with_no_local_index_worth_reading() -> None:
     """Flathub's available versions live on Flathub, the App Store has no offline
-    catalogue, and `yay -Qu` asks the AUR's RPC about every AUR package.
+    catalog, and `yay -Qu` asks the AUR's RPC about every AUR package.
 
     `pacman` and `apt` are the two a reader would not predict. Both really do have a
     local index, which is exactly the problem: it is as old as the last sync, and a

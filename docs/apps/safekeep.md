@@ -8,7 +8,7 @@ icon: material/safe-square-outline
 [datapointchris/safekeep](https://github.com/datapointchris/safekeep), and that repository is where
 its documentation is now maintained — the README for the short version, and
 [`docs/reference.md`](https://github.com/datapointchris/safekeep/blob/main/docs/reference.md) for
-the full behaviour and the reasoning behind it, which moved there intact.
+the full behavior and the reasoning behind it, which moved there intact.
 
 This page is a pointer, not a copy. Two copies get a chance to disagree, and the one shipping beside
 the code is the one that will be right.

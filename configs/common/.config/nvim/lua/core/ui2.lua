@@ -1,7 +1,7 @@
 -- Native message + cmdline UI (Neovim 0.12 'ui2'). It highlights the cmdline as
 -- you type, drops the hit-enter prompts, and spills long output into a pager
 -- buffer. fidget owns notifications via vim.notify; ui2 owns messages and the
--- cmdline, and plugins/tiny-cmdline.lua centres the cmdline window while a
+-- cmdline, and plugins/tiny-cmdline.lua centers the cmdline window while a
 -- command is being typed.
 --
 -- ui2 lives under the private vim._core namespace and is experimental — it was

@@ -965,7 +965,7 @@ class TestZipPermissions:
         ],
     )
     def test_a_member_lying_about_where_it_belongs_is_chmodded_where_it_landed(self, tmp_path, recorded, lands_at):
-        """The shapes `ZipFile._extract_member` sanitises, which are exactly the
+        """The shapes `ZipFile._extract_member` sanitizes, which are exactly the
         ones a reconstructed path gets wrong.
 
         `into / '/absolute'` is `/absolute` — pathlib resets on an absolute segment

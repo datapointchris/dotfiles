@@ -161,7 +161,7 @@ class TestGrouped:
 VANISHED = 'ERROR: not found: /repo/tests/x.py::test_a[apt]\n(no match in any of [<Module x.py>])\n'
 
 
-def test_a_node_id_the_mutant_renamed_is_recognised_by_the_suffix_it_still_shares() -> None:
+def test_a_node_id_the_mutant_renamed_is_recognized_by_the_suffix_it_still_shares() -> None:
     """pytest prints the absolute path, and a prefix match would take `test_ab` for `test_a`."""
     subsetted = ('tests/x.py::test_a[apt]', 'tests/x.py::test_ab[apt]', 'tests/x.py::test_b')
     assert harness.vanished_in(VANISHED, subsetted) == ('tests/x.py::test_a[apt]',)
@@ -509,7 +509,7 @@ def stub_pytest(tmp_path: Path, body: str) -> Path:
 def stub_recording(tmp_path: Path, recorded: Sequence[str], code: int) -> Path:
     """A stub pytest that writes what the real plugin would have, then exits.
 
-    The record is the plugin's whole contract, so a stub standing in for pytest has to honour it or it is testing an interface
+    The record is the plugin's whole contract, so a stub standing in for pytest has to honor it or it is testing an interface
     nothing has.
     """
     body = f'import json, os, sys\nopen(os.environ[{failures.WHERE!r}], "w").write(json.dumps({list(recorded)!r}))\nsys.exit({code})\n'

@@ -98,7 +98,7 @@ has *gone* is `score.compare`'s question.
 
 The score answers whether the suite catches a bug. `redundancy.py` answers the
 opposite question — whether anything would stop being caught if a given test
-were deleted — and it answers it with a measurement rather than a judgement.
+were deleted — and it answers it with a measurement rather than a judgment.
 
 ```sh
 task test:redundancy -- tests/resolver/test_versions.py

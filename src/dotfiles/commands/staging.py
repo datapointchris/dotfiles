@@ -36,7 +36,7 @@ from dotfiles import status as status_document
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
-from dotfiles.output import VERDICT_COLOURS
+from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
 from dotfiles.output import console
 from dotfiles.output import emit_json
@@ -164,7 +164,7 @@ def create(
     one thing no other flag can reach is a cached file that is wrong — truncated,
     or a release republished under a tag it already used.
 
-    **`--against` makes the build sparse**, and it parameterises the build rather
+    **`--against` makes the build sparse**, and it parameterizes the build rather
     than adding an effect to it: what changes is which installers are staged, not
     whether an archive is written. A tool the named status reports at the version
     upstream currently publishes is left out and recorded in `bundle.json` as
@@ -211,7 +211,7 @@ def _status_for(named: str | None, machine: str) -> Path | None:
     Refusing there costs them a second command to learn that the loop has to be
     primed.
 
-    What makes the fallback safe is that it is announced *and* the artefact says
+    What makes the fallback safe is that it is announced *and* the artifact says
     it for itself: the archive is not named `-sparse` and its `bundle.json` reads
     `completeness: full`. The failure this feature exists to avoid is a bundle
     that carries everything while reporting itself sparse, and nothing about this
@@ -256,7 +256,7 @@ def _status_for(named: str | None, machine: str) -> Path | None:
         # ambiguity it had just declined to resolve. An example says what it is
         # for, not just what to type.
         newest_per_box = {publishing.wrote(name): name for name in reversed(listed)}
-        offered = '\n'.join(f'  {box or "an unrecognised box"}: --status {name}' for box, name in sorted(newest_per_box.items()))
+        offered = '\n'.join(f'  {box or "an unrecognized box"}: --status {name}' for box, name in sorted(newest_per_box.items()))
         raise typer.BadParameter(
             f'--against latest: {len(published)} machines share the {machine} manifest and have published, '
             f'so "latest" does not name one. Fetch the one you mean:\n'
@@ -415,7 +415,7 @@ def list_bundles(
         raise typer.Exit(ExitCode.CONVERGED)
 
     word = str(ResourceVerdict.CONVERGED)
-    console.print(section_line(VERDICT_MARKS[word], 'bundles', f'{len(listed)} for {named}', VERDICT_COLOURS[word]))
+    console.print(section_line(VERDICT_MARKS[word], 'bundles', f'{len(listed)} for {named}', VERDICT_COLORS[word]))
     for name in shown:
         render_row(publishing.age_column(name), name, '')
     if limit and len(listed) > limit:
@@ -440,7 +440,7 @@ def _elapsed(since: dt.timedelta) -> str:
     `3 days` answers it where `3 days, 4:07:19.284` makes a reader do arithmetic
     to reach the same conclusion.
 
-    Clamped at zero first. `timedelta` normalises a negative by borrowing, so five
+    Clamped at zero first. `timedelta` normalizes a negative by borrowing, so five
     minutes in the future is `days=-1, seconds=86100` and reads as 23 hours ago.
     The builder stamps the name and the offline box renders this, so a few minutes
     of skew between two machines is ordinary — and freshness is the whole content
@@ -600,7 +600,7 @@ def check(
     reconcile.report_bundle(staged, '')
     # Here rather than in `report_bundle`, which the apply gate and the `--offline`
     # rehearsals of `plan` and `check` all share — a per-bundle listing in four
-    # places is browse density inside a nudge. Rendered without colour, matching
+    # places is browse density inside a nudge. Rendered without color, matching
     # the `measured` rows below: a pin is a fact rather than a warning.
     for path, described in zip(staged.bundles, staged.descriptions, strict=True):
         pin = ', pinned — the sparse bundles above it read through it' if path == staged.base else ''

@@ -446,7 +446,7 @@ def read_status(path: Path) -> dict[str, Any]:
     # A membership test rather than a set intersection: the document is untrusted
     # — `--against` takes any path and `status download` pulls one off a shelf —
     # and an unhashable element makes `set()` raise `TypeError` past the refusal
-    # contract every other malformed shape in this function honours.
+    # contract every other malformed shape in this function honors.
     scope = document.get('scope')
     covered = [one for one in scope if one in publishing.PUBLISHABLE] if isinstance(scope, list) else []
     if isinstance(scope, list) and not covered:
@@ -530,7 +530,7 @@ class Bundle:
         its document read `full`, which is the disagreement between an archive and
         its own description that `bundle check` exists to make impossible.
 
-        So a sparse build with an empty `current` is a legitimate artefact and
+        So a sparse build with an empty `current` is a legitimate artifact and
         says what it is: planned against a report, and it left nothing out.
 
         `built_for` is which *box* the premise came from, where `machine` is the
@@ -698,7 +698,7 @@ PACKED_SUFFIXES = (
 Named so that "unpacked by a branch below" and "not packed at all" stay two
 answers rather than one fallthrough. A Go release legitimately ships the bare
 executable under a name with no suffix, so `extract_go_binary` cannot make the
-unrecognised case and the bare-binary case the same branch — a `.zip` taking the
+unrecognized case and the bare-binary case the same branch — a `.zip` taking the
 bare-binary path is moved under the tool's name, chmod'd 0755 and recorded staged,
 and the only machine that reads the result is the one with no network to work out
 why nothing runs.
@@ -1082,7 +1082,7 @@ def add_uv(bundle: Bundle, cache: DownloadCache) -> str:
     name from `uname -s` and copies `bin/uv.exe` onto PATH, so the suffix is a
     contract between two files rather than a label. `tests/shell/test_install_handover.py`
     holds them to it, both ways: the bootstrap must not hardcode `bin/uv`, and it
-    must recognise the same Git Bash unames the CLI does.
+    must recognize the same Git Bash unames the CLI does.
     """
     log.info('Downloading uv...')
     version = fetch_latest_version(UV_REPO)

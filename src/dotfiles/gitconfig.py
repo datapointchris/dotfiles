@@ -372,7 +372,7 @@ def render(layering: Layering, console) -> None:  # noqa: ANN001 — a rich Cons
     console.print('[bold yellow]set in more than one file[/]')
     for conflict in layering.conflicts:
         console.print(f'  [bold]{conflict.key}[/]')
-        # The losers plain and the winner coloured, rather than the losers faint.
+        # The losers plain and the winner colored, rather than the losers faint.
         # Faint is unreadable on half the themes this fleet uses, and these rows
         # are the evidence for the finding — the one that must stay legible is
         # the value being overridden, not the one already in effect.
@@ -392,7 +392,7 @@ def _state(path: Path, contributed: dict[Path, int]) -> str:
     optional per axis and lets one shared file name every value.
 
     The three are told apart by what they say, not by how faintly they are
-    printed. Every one of them is an ordinary state, so none earns a colour, and
+    printed. Every one of them is an ordinary state, so none earns a color, and
     faint is unreadable on half the themes this fleet uses.
     """
     if not path.exists():

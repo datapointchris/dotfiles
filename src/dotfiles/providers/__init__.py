@@ -163,7 +163,7 @@ class Kind(enum.StrEnum):
     """Something is already at the destination and was not put there by this tool.
 
     A hand-made directory where a clone belongs, a `config.json` that is not JSON.
-    Refusing to clobber it is the behaviour; a person has to decide what happens
+    Refusing to clobber it is the behavior; a person has to decide what happens
     next.
     """
 

@@ -90,12 +90,12 @@ RAMPS: tuple[tuple[str, ...], ...] = (
     ('yellow', 'green', 'blue'),
     ('blue', 'cyan', 'green'),
 )
-"""The colour a row takes, top to bottom.
+"""The color a row takes, top to bottom.
 
-Spread across however many rows the font has rather than one colour per row, so a
+Spread across however many rows the font has rather than one color per row, so a
 three-row font shows all three and a six-row font shows two rows of each. A ramp
 indexed by row number would leave the short fonts permanently missing their last
-colour.
+color.
 """
 
 
@@ -115,10 +115,10 @@ def fitting(width: int) -> tuple[tuple[str, ...], ...]:
 
 
 def styles(art: tuple[str, ...], ramp: tuple[str, ...]) -> tuple[str, ...]:
-    """The colour each row of `art` takes, the ramp spread over however many there are.
+    """The color each row of `art` takes, the ramp spread over however many there are.
 
     The clamp is for the last row, whose index rounds up to `len(ramp)` once the
-    font has more rows than the ramp has colours.
+    font has more rows than the ramp has colors.
     """
     return tuple(ramp[min(position * len(ramp) // len(art), len(ramp) - 1)] for position in range(len(art)))
 

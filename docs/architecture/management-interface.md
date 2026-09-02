@@ -218,7 +218,7 @@ its sibling.
 
 Narrowing belongs to the resolver rather than to each installer. A hand-rolled
 filter block per installer is how `--mine` came to run cargo, uv and npm in full
-while claiming to filter, because only the Go one honoured the owner. The rules
+while claiming to filter, because only the Go one honored the owner. The rules
 that fall out of doing it once are `Selection` in `src/dotfiles/engine.py`: why a
 misspelt address is a usage error, why the narrowing is per resource, and why a
 section brings the runtime it declared it needs.
@@ -233,7 +233,7 @@ sections at once.
 **Scope and force are different flags.** `--package` narrows and `--reinstall`
 overrules what measuring concluded. One flag carrying both — `--reinstall
 lazygit` — puts a scope somewhere no other resource can see, so none of them can
-honour the force. Bare, `--reinstall` covers the whole run, which is expensive
+honor the force. Bare, `--reinstall` covers the whole run, which is expensive
 and not dangerous. Scope is structural — the argument's presence selects it,
 never a flag — and an absent argument is what sanctions a set-wide act.
 

@@ -33,7 +33,7 @@ def timed(**steps) -> runs.Timing:
 
 
 def a_run(machine='macos-personal-workstation', verb='apply', host=None) -> runs.RunRecord:
-    """Verdicts and actions spelled by the enums the writer serialises, never by
+    """Verdicts and actions spelled by the enums the writer serializes, never by
     hand. `converged` compared against a hand-typed `'MATCHED'` for its whole life
     and was therefore never true, and this fixture typing the same word is the
     reason no test noticed.

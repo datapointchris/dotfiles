@@ -42,7 +42,7 @@ def build(tmp_path: Path, *tools: str) -> Session:
     """A synthetic install tree declaring these tools, and a home to probe under.
 
     `XDG_DATA_HOME` and `XDG_CONFIG_HOME` are left to the fixture below: they are
-    real knobs every tool here honours, so pointing them at `tmp_path` is the same
+    real knobs every tool here honors, so pointing them at `tmp_path` is the same
     seam `GIT_CONFIG_GLOBAL` gives `test_identity.py` rather than a patch.
     """
     install = tmp_path / 'install'
@@ -519,7 +519,7 @@ def test_an_empty_sso_cache_directory_is_not_a_session(xdg: Path, fake_bin: Path
 
 
 def test_bbkt_is_asked_where_its_token_lives_rather_than_told(xdg: Path, fake_bin: Path) -> None:
-    """`config path token` honours a `token_file` override this repo has no
+    """`config path token` honors a `token_file` override this repo has no
     business guessing at, and `config check` is refused because its own help says
     it connects to the instance."""
     token = xdg / 'somewhere-else' / 'token'

@@ -49,7 +49,7 @@ MARKERS = ('install.sh', 'tests/e2e/harness.py')
 def repo_under_test(start: Path | None = None) -> Path:
     """The checkout these tests came from, found by what is in it.
 
-    Not `paths.REPO_ROOT`, which honours `$DOTFILES_DIR` — correct for the product,
+    Not `paths.REPO_ROOT`, which honors `$DOTFILES_DIR` — correct for the product,
     because the CLI must deploy the machine's repo from wherever it is invoked, and
     exactly wrong for a harness. `.zshenv` exports that variable to `~/dotfiles`, so
     an e2e run from a git worktree mounted `~/dotfiles` and installed *main's* code
@@ -131,7 +131,7 @@ BLOCKED_HOSTS = (
 Chosen for the install paths each one closes, because that is what the rehearsal
 is for. A blocked registry kills a whole section and is what makes `go_tools`
 prove the bundle path. A blocked vendor host kills one custom installer while its
-neighbours keep working — `awscli` plays that part, and terraform-ls or mount-s3
+neighbors keep working — `awscli` plays that part, and terraform-ls or mount-s3
 would do as well, each being a custom installer with a vendor host to itself. What
 the part needs is any one of those three; theme, font and bashselfupdate cannot
 take it, since they share `raw.githubusercontent.com` and blocking it fails all
@@ -732,7 +732,7 @@ def _install_tail(machine: Machine) -> str:
     """The end of the install log, appended to whatever gap is being reported.
 
     The log is written by `tee` and survives every failure, and the fixture that
-    raises this discards it — so the one artefact that says *why* is the one
+    raises this discards it — so the one artifact that says *why* is the one
     nobody sees. Diagnosing a failed install then costs a second run of the
     install, which is forty minutes to learn something already on disk.
     """
@@ -1458,7 +1458,7 @@ def build_base(environment: Environment, now: dt.datetime | None = None) -> str:
 CACHE_PATHS = ('/var/cache/pacman/pkg', '/var/cache/apt/archives', '{home}/.cache')
 """Download caches a base has no use for, cleared before it is committed.
 
-Not a micro-optimisation: they were 2.4 GB of a 14.4 GB Arch base, and a base is
+Not a micro-optimization: they were 2.4 GB of a 14.4 GB Arch base, and a base is
 kept per environment for two weeks on a root volume `.planning/status.md` already
 records as too small. What they hold is packages already installed and archives
 already unpacked — a set installing over this image re-downloads what *it* needs

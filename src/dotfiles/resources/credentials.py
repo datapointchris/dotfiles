@@ -358,7 +358,7 @@ def probe(helper: Helper) -> tuple[bool, str]:
     # `sh -c ' get'` and the shell resolves `get` on PATH and runs whatever is
     # there. `--probe` then executes a binary the configuration never named, on the
     # one entry the resource had already ruled unusable. `program` is where that
-    # judgement already lives, so this asks it rather than re-deciding.
+    # judgment already lives, so this asks it rather than re-deciding.
     if not helper.program:
         return False, 'the helper names no command, so there is nothing to ask'
 

@@ -140,7 +140,7 @@ def test_selecting_one_resource_narrows_to_it() -> None:
     assert engine.Selection.of('packages').resources == ('packages',)
 
 
-def test_selecting_one_provider_keeps_its_resource_and_drops_its_neighbours() -> None:
+def test_selecting_one_provider_keeps_its_resource_and_drops_its_neighbors() -> None:
     """`--source github_releases` is one address now rather than the intersection
     of a section against a hand-written phase-to-provider column."""
     selection = engine.Selection.of('packages/ghrelease')
@@ -194,7 +194,7 @@ def test_owner_narrowing_keeps_the_ceiling_it_was_handed() -> None:
 
     A narrowing that rebuilds the selection field by field drops whatever it was
     not written to know about, and the failure is silent in the safe-looking
-    direction: `apply --owner X --through Y` would honour the owner and then
+    direction: `apply --owner X --through Y` would honor the owner and then
     converge the whole machine.
     """
     plan = resolve.resolve(catalog.load(), machines.load(MACHINE), owner=OWNER)
@@ -758,7 +758,7 @@ class TestTheRecordSaysWhatTheRunMeant:
     def test_an_unmeasurable_item_is_not_recorded_as_planned_work(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """An item nothing could measure is not work the run intended to do. Recorded
         as `planned` it inflates the record with rows carrying `verdict: unknown`,
-        and the record is the only artefact a person reads afterwards to find out
+        and the record is the only artifact a person reads afterwards to find out
         what the run meant."""
         monkeypatch.setattr(paths, 'RUNS_DIR', tmp_path)
         walked(monkeypatch, Walk(unmeasurable('doit'), drift('atuin', Repair.BY_HAND), drift('ripgrep'), outcomes=()))

@@ -1,4 +1,4 @@
-"""Whether this machine can exchange an artefact with the one on the other side.
+"""Whether this machine can exchange an artifact with the one on the other side.
 
 One verb, for the same reason `network check` has one: the question has a single
 answer and `check` is already the word for "report what is wrong". It writes
@@ -19,7 +19,7 @@ from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
 from dotfiles.output import MATCHED
-from dotfiles.output import VERDICT_COLOURS
+from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
 from dotfiles.output import console
 from dotfiles.output import emit_json
@@ -31,7 +31,7 @@ from dotfiles.output import section_line
 from dotfiles.results import ResourceVerdict
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help='Whether this machine can exchange an artefact with the remote')
+app = typer.Typer(no_args_is_help=True, help='Whether this machine can exchange an artifact with the remote')
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
@@ -73,10 +73,10 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
     verdict = ResourceVerdict.ISSUE if faults else ResourceVerdict.CONVERGED
     word = str(verdict)
     detail = f'{len(measured) - len(faults)} of {len(measured)} measured'
-    console.print(section_line(VERDICT_MARKS[word], 'remote', detail, VERDICT_COLOURS[word]))
+    console.print(section_line(VERDICT_MARKS[word], 'remote', detail, VERDICT_COLORS[word]))
     for reach in measured:
         label = MATCHED if reach.ok else ('issue' if reach.required else 'absent')
-        render_row(label, reach.subject, reach.detail, VERDICT_COLOURS['issue'] if reach.faulty else '')
+        render_row(label, reach.subject, reach.detail, VERDICT_COLORS['issue'] if reach.faulty else '')
 
     if not found.declared:
         hint(transport.ADVICE)

@@ -248,17 +248,17 @@ def test_a_mas_app_id_stays_an_integer(tmp_path: Path) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_a_pin_is_accepted_where_its_installer_honours_it(tmp_path: Path) -> None:
+def test_a_pin_is_accepted_where_its_installer_honors_it(tmp_path: Path) -> None:
     loaded = catalog.load(write(tmp_path, {'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': '0.50.0'}]}))
 
     assert loaded.find('github_releases', 'fzf').version == '0.50.0'
 
 
-def test_a_constraint_nothing_honours_is_refused(tmp_path: Path) -> None:
+def test_a_constraint_nothing_honors_is_refused(tmp_path: Path) -> None:
     """The failure this rule exists for: four version fields sat in packages.yml
     unread, one of them eight versions stale, because nothing objected."""
     found = issues(tmp_path, {'cargo_packages': [{'name': 'fd', 'version': '10.0.0'}]})
-    assert_named(found, 'nothing honours for cargo_packages')
+    assert_named(found, 'nothing honors for cargo_packages')
 
 
 def test_a_pin_beside_a_bound_is_refused(tmp_path: Path) -> None:
@@ -291,7 +291,7 @@ def test_a_grandfathered_floor_is_left_alone(tmp_path: Path) -> None:
 
 
 def test_a_grouped_section_flattens_its_categories(tmp_path: Path) -> None:
-    """The category keys organise the file and are read by nothing."""
+    """The category keys organize the file and are read by nothing."""
     loaded = catalog.load(
         write(
             tmp_path,

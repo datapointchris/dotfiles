@@ -62,7 +62,7 @@ class Structure(enum.Enum):
     """How a section is spelled in the YAML.
 
     `GROUPED` sections nest their rows under editorial category keys
-    (`npm_globals.language_servers`); the categories organise the file and are
+    (`npm_globals.language_servers`); the categories organize the file and are
     read by nothing, so they are flattened away here rather than carried as a
     field no provider consumes. `KEYED` sections are a mapping whose key is the
     row's name.
@@ -176,9 +176,9 @@ class Entry:
 
     The three version constraints sit here rather than on the sections that pin
     today, because any section could grow one and only its *provider* decides
-    whether it means anything. `honoured_constraints` is that decision, declared
+    whether it means anything. `honored_constraints` is that decision, declared
     beside the class whose installer reads it — so declaring a constraint where
-    nothing honours it is an error rather than a silent no-op. Four such fields
+    nothing honors it is an error rather than a silent no-op. Four such fields
     sat unread in `packages.yml` until a URL audit found them, one eight versions
     stale. `.planning/version-constraints.md` carries the vocabulary.
     """
@@ -212,9 +212,9 @@ class Entry:
     seventh coordinate axis.
 
     One entry uses it — `ollama`, whose pacman name is `ollama-rocm` and whose
-    dependency closure is 12 GiB. On the base like its neighbour above, which
+    dependency closure is 12 GiB. On the base like its neighbor above, which
     means any section may declare it while only the resources that evaluate
-    preconditions honour it. The same trade `reports_version` accepts.
+    preconditions honor it. The same trade `reports_version` accepts.
     """
 
     reports_version: bool = True
@@ -258,7 +258,7 @@ class Entry:
 
     section: ClassVar[str]
     structure: ClassVar[Structure] = Structure.LIST
-    honoured_constraints: ClassVar[tuple[str, ...]] = ()
+    honored_constraints: ClassVar[tuple[str, ...]] = ()
     declared_in: ClassVar[str] = 'packages.yml'
     """Which declaration file holds this section, so an error names the file a
     reader has to open rather than the one most sections happen to live in."""
@@ -301,10 +301,10 @@ class Entry:
         declared = [key for key in CONSTRAINTS if getattr(self, key)]
 
         for key in declared:
-            if key not in self.honoured_constraints and (self.section, self.name, key) not in GRANDFATHERED_CONSTRAINTS:
+            if key not in self.honored_constraints and (self.section, self.name, key) not in GRANDFATHERED_CONSTRAINTS:
                 found.append(
-                    f"declares '{key}', which nothing honours for {self.section}. Remove it, or make it real and "
-                    f'widen honoured_constraints on the same class in the same change.'
+                    f"declares '{key}', which nothing honors for {self.section}. Remove it, or make it real and "
+                    f'widen honored_constraints on the same class in the same change.'
                 )
             if getattr(self, key).startswith('v') or '/' in getattr(self, key):
                 found.append(
@@ -406,7 +406,7 @@ class GithubRelease(Entry):
     """
 
     section: ClassVar[str] = 'github_releases'
-    honoured_constraints: ClassVar[tuple[str, ...]] = ('version',)
+    honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
 
     repo: str
     binary_link: str = ''
@@ -682,7 +682,7 @@ class Runtime(Entry):
 
     section: ClassVar[str] = 'runtimes'
     structure: ClassVar[Structure] = Structure.KEYED
-    honoured_constraints: ClassVar[tuple[str, ...]] = ('version',)
+    honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
 
     install_method: str
     repo: str = ''
@@ -740,7 +740,7 @@ class SystemConfig(Entry):
 
     A field with a per-section default rather than a class constant, because it
     is mostly a property of the section and occasionally not: macOS preferences
-    are user-level throughout, and the Xcode licence is the one step in the repo
+    are user-level throughout, and the Xcode license is the one step in the repo
     whose *read* needs root. Treating a whole section as privileged would put a
     password prompt in front of a Mac that needs none.
     """
@@ -971,7 +971,7 @@ class Step(SystemConfig):
     """A piece of machine state with no shared mechanism behind it.
 
     `~/Library` being visible is a file flag, the screenshot directory existing
-    is a directory existing, the Xcode licence is a `sudo` read, OrbStack's
+    is a directory existing, the Xcode license is a `sudo` read, OrbStack's
     plugin directory is a JSON merge, and the Windows font path is discovered by
     asking Windows. Five rows with nothing in common.
 
@@ -981,7 +981,7 @@ class Step(SystemConfig):
     not fit it anyway.
 
     `needs_root` defaults to False here rather than to the section default: four
-    of the five are user-level, and the Xcode licence declares its own exception.
+    of the five are user-level, and the Xcode license declares its own exception.
     """
 
     section: ClassVar[str] = 'steps'
@@ -1088,7 +1088,7 @@ def _parsed(source: Path) -> dict[str, Any]:
     declaration nothing could read.
 
     The parser's message carries the line and column, so it is kept whole rather
-    than summarised. `problem_mark` is what makes it worth keeping.
+    than summarized. `problem_mark` is what makes it worth keeping.
     """
     try:
         return yaml.safe_load(source.read_text()) or {}
@@ -1137,9 +1137,9 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
 
 
 def raw_sections(path: Path) -> dict[str, Any]:
-    """A declaration file as written, before any of it is modelled.
+    """A declaration file as written, before any of it is modeled.
 
-    For the questions a `Catalog` cannot answer because modelling is what
+    For the questions a `Catalog` cannot answer because modeling is what
     discards them: which sections the file names *including* the ones no
     dataclass claims, and what a manifest body holds when it is about to be
     rewritten into a fixture. Both need the file rather than the object, and both

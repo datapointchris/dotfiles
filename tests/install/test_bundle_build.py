@@ -1023,7 +1023,7 @@ def test_a_transient_failure_is_retried_rather_than_ending_the_build(upstream: U
 # ─────────────────────────────────────────────────────────────────────────────
 # A sparse build
 #
-# `--against` parameterises the build; it never adds an effect to it.
+# `--against` parameterizes the build; it never adds an effect to it.
 #
 # What changes is which installers are staged, and the omission has to stay
 # legible on the other end — without `current`, a bundle carrying less is

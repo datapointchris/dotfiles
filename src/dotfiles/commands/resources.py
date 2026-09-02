@@ -35,7 +35,7 @@ from dotfiles.commands import VerboseOption
 from dotfiles.commands import currency
 from dotfiles.commands import refresh_flag
 from dotfiles.commands import verbosity
-from dotfiles.output import CHANGE_COLOURS
+from dotfiles.output import CHANGE_COLORS
 from dotfiles.output import SUBJECT_COLUMN
 from dotfiles.output import VERDICT_COLUMN
 from dotfiles.output import console
@@ -424,7 +424,7 @@ def packages_apply(
     traceable to one GitHub owner, `--package` to one declared entry, repeatably.
 
     `--force` is the deliberate answer to one refusal, and the same word `symlinks
-    apply` uses for the same thing: authorisation to replace what this repo did not
+    apply` uses for the same thing: authorization to replace what this repo did not
     create. Here what it replaces is a package — a release declaring `supersedes` is
     refused for as long as another manager holds the name, because installing beside
     it would leave two copies of one daemon over one config directory. With the flag,
@@ -650,7 +650,7 @@ def symlinks_apply(
     """
     verbosity(verbose, quiet)
     # Above the run record and not inside the resource: this is a fact about how
-    # the command was typed, and the run it would authorise is the run that
+    # the command was typed, and the run it would authorize is the run that
     # happens anyway — so a record filed under it would answer for nothing.
     if force:
         session = Session.resolve(machine)
@@ -880,7 +880,7 @@ def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     A tool that *is* logged in is the answer to "did that work" straight after
     logging one in, and `check` is silent about it by design.
 
-    Rendered in the columns and colours `render_change` uses, because a reader
+    Rendered in the columns and colors `render_change` uses, because a reader
     moving between this and a `check` row is reading the same verdicts — a second
     palette would make one of them mean something else.
     """
@@ -893,8 +893,8 @@ def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
         emit_text(f'{session.machine_name} declares nothing under `auth:`')
         return
     for tool, credential in found.items():
-        colour = CHANGE_COLOURS[str(credential.verdict)]
-        console.print(f'[{colour}]{credential.verdict:<{VERDICT_COLUMN}}[/] {tool:<{SUBJECT_COLUMN}} {credential.detail}')
+        color = CHANGE_COLORS[str(credential.verdict)]
+        console.print(f'[{color}]{credential.verdict:<{VERDICT_COLUMN}}[/] {tool:<{SUBJECT_COLUMN}} {credential.detail}')
 
 
 credentials_app = typer.Typer(no_args_is_help=True, help='The git credential helpers this machine is configured with')
@@ -973,8 +973,8 @@ def credentials_show(
         emit_text('git is configured with no credential helper on this machine')
         return
     for entry, (answered, why) in zip(found, answers, strict=True):
-        colour = CHANGE_COLOURS[str(entry.verdict)]
-        console.print(f'[{colour}]{entry.verdict:<{VERDICT_COLUMN}}[/] {entry.helper.label:<{SUBJECT_COLUMN}} {entry.detail}')
+        color = CHANGE_COLORS[str(entry.verdict)]
+        console.print(f'[{color}]{entry.verdict:<{VERDICT_COLUMN}}[/] {entry.helper.label:<{SUBJECT_COLUMN}} {entry.detail}')
         console.print(f'{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} set in {entry.helper.origin}')
         if probe:
             console.print(f'{"":<{VERDICT_COLUMN}} {"":<{SUBJECT_COLUMN}} [{"green" if answered else "yellow"}]probe:[/] {why}')

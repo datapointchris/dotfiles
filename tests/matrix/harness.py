@@ -1,6 +1,6 @@
 """One synthetic machine, built from files, and the front door driven against it.
 
-Every knob here is one the code already honours. The declaration is a real
+Every knob here is one the code already honors. The declaration is a real
 `packages.yml` and a real manifest on disk; the installed tools are real
 executables on a real `PATH`; the upstream versions are a real release cache under
 a real `$XDG_CACHE_HOME`; the uv tools are real receipts under a real
@@ -91,7 +91,7 @@ LAZYGIT: dict[str, Any] = {'github_releases': [{'name': 'lazygit', 'repo': 'jess
 Here rather than in each module because a `--owner` row, a currency row and an
 asset probe all need the *same* entry to be comparable across modules — the owner
 is `jesseduffield`, and a module inventing its own repo silently stops testing the
-same thing its neighbour does.
+same thing its neighbor does.
 """
 
 DECLARES_LAZYGIT: dict[str, Any] = {**MINIMAL_MANIFEST, 'github_releases': ['lazygit']}
@@ -360,7 +360,7 @@ class Sandbox:
         The one to assert against for *nothing was written*, which is a stronger
         claim than *no record was filed*: `sinks.open_log` creates the `.jsonl`
         before anything fills it, and an empty one left behind is the exact leak
-        `no_run_artefacts_on_this_machine` counts in the real directory.
+        `no_run_artifacts_on_this_machine` counts in the real directory.
         """
         return sorted(self.runs.iterdir())
 
@@ -533,7 +533,7 @@ def unwrapped(text: str) -> str:
     Every row is rendered into a fixed-width console, so a sentence long enough to
     wrap carries a newline inside itself and no substring assertion against it
     holds. The width is the runner's rather than the code's, which makes an
-    un-normalised assertion one that passes in a wide terminal and fails in CI.
+    un-normalized assertion one that passes in a wide terminal and fails in CI.
 
     It cannot rejoin a *word* Rich broke, and a long path does get broken
     mid-token. `a_console_wide_enough_to_read` in the conftest is what prevents
@@ -686,7 +686,7 @@ def rebind_default(monkeypatch: pytest.MonkeyPatch, function: Any, parameter: st
 
     The position is computed from the signature rather than written down, so a
     parameter added before this one cannot silently move the value onto its
-    neighbour.
+    neighbor.
     """
     spec = inspect.getfullargspec(function)
     defaults = list(spec.defaults or ())

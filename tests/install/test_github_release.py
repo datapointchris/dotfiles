@@ -94,7 +94,7 @@ class TestClearsignedChecksums:
         assert github_release.checksum_for_asset(self.CLEARSIGNED, 'tool.tar.gz') == 'bbbb2222'
 
     def test_the_signature_block_is_not_mistaken_for_digests(self):
-        """The armoured signature is base64 and would otherwise be scanned as
+        """The armored signature is base64 and would otherwise be scanned as
         checksum lines, where a bare token on its own line is trusted when nothing
         else matches."""
         assert github_release.checksum_for_asset(self.CLEARSIGNED, 'absent.tar.gz') is None
@@ -235,7 +235,7 @@ class TestSidecarChecksums:
         text = f'{"a" * 64}\ndeadbeef  {self.ASSET}\n'
         assert github_release.checksum_for_asset(text, self.ASSET, from_sidecar=True) == 'deadbeef'
 
-    def test_every_sidecar_suffix_is_recognised_as_one(self):
+    def test_every_sidecar_suffix_is_recognized_as_one(self):
         for suffix in github_release.CHECKSUM_SIDECAR_SUFFIXES:
             names = ['tool.tar.gz', f'tool.tar.gz{suffix}']
             assert github_release.select_checksum_asset(names, 'tool.tar.gz').endswith(suffix)
@@ -643,7 +643,7 @@ class TestCredentialScope:
     It went on every request this module made, whatever the host — so
     `s3.amazonaws.com`, `releases.hashicorp.com`, `awscli.amazonaws.com` and
     `pypi.org` each received a GitHub PAT. S3 answered the one it did not
-    recognise with a 400, which is how it surfaced: `mount-s3` stopped installing
+    recognize with a 400, which is how it surfaced: `mount-s3` stopped installing
     on any machine whose environment carried a token.
     """
 
@@ -674,7 +674,7 @@ class TestCredentialScope:
 
     def test_the_client_strips_the_credential_across_a_redirect(self):
         """httpx2 pops `Authorization` when a redirect leaves the origin, which is
-        the behaviour a release download needs by design: that URL redirects to a
+        the behavior a release download needs by design: that URL redirects to a
         CDN, and a client carrying the header through leaks the credential on the
         request path that runs most often.
 

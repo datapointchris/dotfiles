@@ -1004,7 +1004,7 @@ def test_parsing_tolerates_real_env_syntax(line: str, expected: dict[str, str]) 
 
 @pytest.mark.parametrize('value', sorted(envfile.TRUTHY | envfile.FALSEY))
 def test_python_and_shell_agree_on_every_spelling(value: str) -> None:
-    """`flags.sh` and this module each hard-code the recognised spellings. A
+    """`flags.sh` and this module each hard-code the recognized spellings. A
     divergence means `check` accepts a value the shell then reads as the opposite,
     so this runs the real shell classifier rather than grepping for the literal —
     flags.sh spells them as character classes."""

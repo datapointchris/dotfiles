@@ -89,7 +89,7 @@ is the whole job a version has.
 Still 1, and honestly so — this file holds exactly what it held before the
 document grew rows, so anything already reading one keeps working. `runs.SCHEMA`
 is the same arrangement for the run record: one artifact, one number, moved when
-that artifact changes and never because a neighbour did.
+that artifact changes and never because a neighbor did.
 """
 
 VERSION = 2
@@ -125,7 +125,7 @@ def document(
     machine and keep different findings, and the bundle builder wants the plan's.
 
 
-    **`scope` names which resources it covers, and a reader has to honour it.** One
+    **`scope` names which resources it covers, and a reader has to honor it.** One
     shape comes from three widths, so without it a consumer diffing this against a
     declaration reads "not mentioned" as "this machine has nothing for it", which
     is a narrowing default reading as a deletion to anything that reconciles by

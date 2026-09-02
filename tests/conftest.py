@@ -11,7 +11,7 @@ import os
 
 # Before typer is imported, because typer.rich_utils reads both of these at
 # module scope and never again. `FORCE_TERMINAL` is True whenever GITHUB_ACTIONS
-# is set, so on a runner typer renders usage errors in colour and rich's
+# is set, so on a runner typer renders usage errors in color and rich's
 # highlighter splits the option name — `--source` arrives as
 # `-\x1b[0m\x1b[1;36m-source`, and `assert 'No such option: --source' in stderr`
 # cannot match. Locally it always matches, so the whole class of assertion passes
@@ -410,8 +410,8 @@ def no_stopping_this_machines_daemons(request, monkeypatch):
 
 
 @pytest.fixture(scope='session', autouse=True)
-def no_run_artefacts_on_this_machine(request):
-    """Fail the session if it left a run artefact in the real state directory.
+def no_run_artifacts_on_this_machine(request):
+    """Fail the session if it left a run artifact in the real state directory.
 
     The counterpart to `no_installing_on_this_machine`, covering the other thing
     a verb writes to the box it runs on. `sinks.open_log` swallows its own errors
@@ -441,7 +441,7 @@ def no_run_artefacts_on_this_machine(request):
     """
     from dotfiles import paths
 
-    def artefacts() -> set[str]:
+    def artifacts() -> set[str]:
         """New, empty, and this machine's — a record no run finished writing."""
         if not paths.RUNS_DIR.is_dir():
             return set()
@@ -455,10 +455,10 @@ def no_run_artefacts_on_this_machine(request):
         yield
         return
 
-    before = artefacts()
+    before = artifacts()
     yield
-    leaked = sorted(artefacts() - before)
-    assert not leaked, f'the suite wrote {len(leaked)} run artefact(s) into {paths.RUNS_DIR}, starting {leaked[:4]}'
+    leaked = sorted(artifacts() - before)
+    assert not leaked, f'the suite wrote {len(leaked)} run artifact(s) into {paths.RUNS_DIR}, starting {leaked[:4]}'
 
 
 def pytest_configure(config):
@@ -724,7 +724,7 @@ def tmux_socket() -> Iterator[Path]:
 
 @pytest.fixture
 def uv_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A scratch `$UV_TOOL_DIR`, which is the knob uv itself honours.
+    """A scratch `$UV_TOOL_DIR`, which is the knob uv itself honors.
 
     Here rather than beside the packages tests, because `tests/matrix/` builds the
     same directory as part of a whole synthetic machine and a fixture defined in

@@ -40,12 +40,12 @@ Terraform-shaped trio rather than three unrelated words.
 
 EXCEPTION_VERBS: dict[str, str] = {
     'unlink': 'symlinks: the inverse of apply, and it has no other spelling',
-    'create': 'bundle: builds an artefact rather than reconciling a machine',
+    'create': 'bundle: builds an artifact rather than reconciling a machine',
     'stage': 'bundle: unpacks a bundle without installing from it',
     'edit': 'machines, repo: opens $EDITOR, which is not a read or a write of state',
     'requirements': 'machines: the register supplied by hand, which show prints in passing and no other verb can name alone',
-    'prune': 'bundle: removes a staged artefact, not drift. Run records are never pruned',
-    'upload': 'bundle, status: sends an artefact to the remote. A direction, not a synonym for download',
+    'prune': 'bundle: removes a staged artifact, not drift. Run records are never pruned',
+    'upload': 'bundle, status: sends an artifact to the remote. A direction, not a synonym for download',
     'download': 'bundle, status: fetches one from the remote. The pair ifiles already spells, and both ends spell it the same',
     'latest': 'report: the common read, worth one word rather than `show $(… list)`',
     'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles upload "$(dotfiles report path)"`',

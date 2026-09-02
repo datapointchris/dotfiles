@@ -369,7 +369,7 @@ def server(tmux_rearrange, tmux_socket, monkeypatch):
 
     The stub above proves the decisions and cannot prove what tmux does with
     them, and every scope defect found in review lived in that gap. Two of
-    them turned on one command's error behaviour, which no fake can report.
+    them turned on one command's error behavior, which no fake can report.
 
     Addressed by socket path rather than `-L <name>`, so nothing has to invent a
     name two workers might both choose. `tmux_socket` is where that path comes

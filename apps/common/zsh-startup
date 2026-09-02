@@ -150,13 +150,13 @@ def sample(runs: int, env_overrides: dict[str, str] | None = None) -> list[float
     return [start_once(env_overrides)[0] * 1000 for _ in range(runs)]
 
 
-def summarise(timings: list[float]) -> tuple[float, float, float]:
+def summarize(timings: list[float]) -> tuple[float, float, float]:
     return statistics.median(timings), min(timings), max(timings)
 
 
 def report_runs(runs: int, as_json: bool) -> None:
     timings = sample(runs)
-    median, floor, ceiling = summarise(timings)
+    median, floor, ceiling = summarize(timings)
 
     if as_json:
         emit(
@@ -264,10 +264,10 @@ def report_flags(runs: int, as_json: bool) -> None:
         print('~/.env exports no SHELL_* or ZSHRC_* flag, so there is nothing to measure', file=sys.stderr)
         raise SystemExit(1)
 
-    baseline, _, _ = summarise(sample(runs))
+    baseline, _, _ = summarize(sample(runs))
     measured = []
     for flag in flags:
-        median, _, _ = summarise(sample(runs, {flag: 'false'}))
+        median, _, _ = summarize(sample(runs, {flag: 'false'}))
         measured.append((flag, median, baseline - median))
 
     if as_json:

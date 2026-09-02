@@ -21,7 +21,7 @@ def test_axes_and_the_dataclass_agree() -> None:
     Order as well as membership: `machine._from_axes` fills a dict by axis name,
     but `tests/symlinks/test_coordinate_directories.py` names the six enums
     positionally, and a reordered dataclass would silently pair each value with
-    its neighbour's type.
+    its neighbor's type.
     """
     fields = tuple(field.name for field in dc.fields(axes.Coordinates))
 
@@ -57,7 +57,7 @@ def test_the_windows_point_selects_the_winget_family() -> None:
 
 @pytest.mark.parametrize('manager', list(axes.PackageManager))
 def test_every_package_manager_names_an_installer_family(manager: axes.PackageManager) -> None:
-    """The row above, generalised: the next manager added is the one nobody
+    """The row above, generalized: the next manager added is the one nobody
     thinks to write a family for."""
     assert axes.INSTALLER_FAMILIES[manager]
 

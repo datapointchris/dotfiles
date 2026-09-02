@@ -157,7 +157,7 @@ def within(found: dict[str, Footprint], candidates: Iterable[str], modules: Iter
 def forced_contexts(modules: Sequence[str], tests: Sequence[str], repo: Path) -> subset.Contexts:
     """A context map that puts the whole run set in the room for every line of every module in scope.
 
-    Not the measured subset, deliberately. A mutation to a module constant changes behaviour for a test that never executes a line
+    Not the measured subset, deliberately. A mutation to a module constant changes behavior for a test that never executes a line
     of that module — coverage files import-time lines under no test at all — so selecting by the measured map would leave a real
     kill unobserved and a test looking emptier than it is. Running everybody against everything costs one subset run per mutant and
     removes the whole class.

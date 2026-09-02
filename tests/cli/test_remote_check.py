@@ -59,7 +59,7 @@ from dotfiles.vocabulary import ExitCode
 
 REQUIRED_ONLY = """
 [remote]
-root = "/artefacts"
+root = "/artifacts"
 
 [remote.transport]
 program = "relay"
@@ -174,14 +174,14 @@ def a_fresh_root(bench: Bench) -> None:
 
 def a_root_with_entries(bench: Bench) -> None:
     install_relay(bench.bin, bench.server)
-    (bench.server / 'artefacts' / 'bundles').mkdir(parents=True)
+    (bench.server / 'artifacts' / 'bundles').mkdir(parents=True)
     declare(bench.config)
 
 
 def no_mkdir_and_no_delete_declared(bench: Bench) -> None:
     """A working remote on a machine that declared neither optional operation."""
     install_relay(bench.bin, bench.server)
-    (bench.server / 'artefacts').mkdir(parents=True)
+    (bench.server / 'artifacts').mkdir(parents=True)
     bench.write_table(REQUIRED_ONLY)
 
 
@@ -232,13 +232,13 @@ STATES: dict[str, State] = {
         a_program_that_is_not_on_path,
         (('transport', False, True), ('configured', True, True)),
         ExitCode.ISSUE,
-        (True, '/artefacts', 'relay'),
+        (True, '/artifacts', 'relay'),
     ),
     'installed-and-not-answering': State(
         installed_and_not_answering,
         (('transport', True, True), ('configured', True, True), ('reachable', False, True)),
         ExitCode.ISSUE,
-        (True, '/artefacts', 'spy'),
+        (True, '/artifacts', 'spy'),
     ),
     'a-fresh-root': State(
         a_fresh_root,
@@ -251,7 +251,7 @@ STATES: dict[str, State] = {
             ('delete', True, False),
         ),
         ExitCode.CONVERGED,
-        (True, '/artefacts', 'relay'),
+        (True, '/artifacts', 'relay'),
     ),
     'a-root-with-entries': State(
         a_root_with_entries,
@@ -264,7 +264,7 @@ STATES: dict[str, State] = {
             ('delete', True, False),
         ),
         ExitCode.CONVERGED,
-        (True, '/artefacts', 'relay'),
+        (True, '/artifacts', 'relay'),
     ),
     'no-mkdir-and-no-delete-declared': State(
         no_mkdir_and_no_delete_declared,
@@ -277,7 +277,7 @@ STATES: dict[str, State] = {
             ('delete', False, False),
         ),
         ExitCode.CONVERGED,
-        (True, '/artefacts', 'relay'),
+        (True, '/artifacts', 'relay'),
     ),
     'a-root-that-will-not-list': State(
         a_root_that_will_not_list,
@@ -290,7 +290,7 @@ STATES: dict[str, State] = {
             ('delete', True, False),
         ),
         ExitCode.CONVERGED,
-        (True, '/artefacts', 'relay'),
+        (True, '/artifacts', 'relay'),
     ),
 }
 """Every state, and the number a caller branches on for each.

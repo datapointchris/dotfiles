@@ -164,7 +164,7 @@ def _narrow_to_level(config: pytest.Config, items: list[pytest.Item]) -> None:
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Honour `--environment`, and drop what `--installed` cannot mean.
+    """Honor `--environment`, and drop what `--installed` cannot mean.
 
     Only items carrying a `container` parameter are narrowed by environment, so
     nothing outside the container tiers is affected by asking for one.
@@ -172,7 +172,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     `--installed` additionally deselects the set tier, which is the difference
     between the rung the ladder documents and the one it delivered: `--installed`
     says assert against the install that is already there, and a set test cannot
-    honour that — `over_base` starts a fresh container and installs a section
+    honor that — `over_base` starts a fresh container and installs a section
     into it. Collected anyway, they made `tests/e2e --installed` take nine
     minutes where the tier is meant to answer in seconds, which is what pushes a
     question back up to the half-hour rung.

@@ -8,7 +8,7 @@ facts about launchd, so they are owned once rather than restated per caller.
 
 What is *not* here is the job itself. A schedule's `StartInterval` and a daemon's
 `KeepAlive` are what each caller is declaring, so each builds its own dict and hands
-it to `serialise`.
+it to `serialize`.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from dotfiles import effects
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 
-__all__ = ['agent_path', 'available', 'loaded', 'reload', 'serialise']
+__all__ = ['agent_path', 'available', 'loaded', 'reload', 'serialize']
 
 
 def available() -> bool:
@@ -38,19 +38,19 @@ def available() -> bool:
 def agent_path(label: str) -> Path:
     """Where launchd reads a per-user job, which is not an XDG path.
 
-    systemd honours `XDG_CONFIG_HOME`; launchd reads this directory and nowhere
+    systemd honors `XDG_CONFIG_HOME`; launchd reads this directory and nowhere
     else. Resolving the variable here would write the plist somewhere launchd
     never looks, on a Mac that happens to set it.
     """
     return Path.home() / 'Library' / 'LaunchAgents' / f'{label}.plist'
 
 
-def serialise(job: dict[str, Any]) -> bytes:
-    """The job as launchd reads it, serialised rather than written out as XML.
+def serialize(job: dict[str, Any]) -> bytes:
+    """The job as launchd reads it, serialized rather than written out as XML.
 
     A hand-written plist is XML to escape correctly forever, and comparing one
     means comparing text whose whitespace launchd does not care about but a diff
-    does. Serialising the same dict on both sides is what makes an observation an
+    does. Serializing the same dict on both sides is what makes an observation an
     exact answer.
     """
     return plistlib.dumps(job)

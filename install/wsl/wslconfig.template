@@ -17,7 +17,7 @@
 
 # Mirrored networking makes the VM share the host's interfaces, which is what
 # fixes DNS and routing behind a corporate VPN. Left off because it is a real
-# behaviour change and not a tuning knob: ports bound in Linux start colliding
+# behavior change and not a tuning knob: ports bound in Linux start colliding
 # with ports bound in Windows, and localhost forwarding stops applying. Turn it
 # on to solve a named networking problem, not speculatively.
 # networkingMode=mirrored

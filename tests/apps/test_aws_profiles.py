@@ -132,7 +132,7 @@ class TestMenu:
         long_row = next(line for line in menu.splitlines() if line.startswith(' 2)'))
         assert short_row.index('111') == long_row.index('111')
 
-    def test_the_label_column_disappears_when_nothing_is_labelled(self, aws_home, aws_profiles):
+    def test_the_label_column_disappears_when_nothing_is_labeled(self, aws_home, aws_profiles):
         settings = aws_home('[profile work]\nregion = us-east-1\n')
         menu = aws_profiles.render_menu(aws_profiles.build_rows(['work'], settings, {}), '')
         assert 'LABEL' not in menu
@@ -155,27 +155,27 @@ class TestMenu:
         assert len(marked.splitlines()[-3]) == len(unmarked.splitlines()[-3])
 
 
-class TestColour:
-    """Colour is a parameter, not an isatty call inside the renderer: pytest
+class TestColor:
+    """Color is a parameter, not an isatty call inside the renderer: pytest
     reinstalls the streams between fixture setup and the test body, so a gate
     read in there would pass for the wrong reason.
     """
 
-    def test_the_table_is_plain_unless_colour_is_asked_for(self, aws_home, aws_profiles):
+    def test_the_table_is_plain_unless_color_is_asked_for(self, aws_home, aws_profiles):
         settings = aws_home('[profile work]\nregion = us-east-1\naccount_label = Acme\n')
         menu = aws_profiles.render_menu(aws_profiles.build_rows(['work'], settings, {}), '')
         assert '\033' not in menu
 
     def test_padding_is_measured_before_the_escapes_are_added(self, aws_home, aws_profiles):
         # The trap print_help_row documents in formatting.sh: an escape counts
-        # toward a format spec's width, so colouring a cell before padding it
+        # toward a format spec's width, so coloring a cell before padding it
         # silently shortens the column. Stripping the escapes must give back
         # exactly the plain rendering.
         settings = aws_home('[profile a]\naccount_label = Short\n\n[profile a-much-longer-name]\naccount_label = A Longer Label\n')
         rows = aws_profiles.build_rows(list(settings), settings, {'a': {'account': '111', 'identity': 'user/x'}})
 
-        plain = aws_profiles.render_menu(rows, 'a', colour=False)
-        painted = aws_profiles.render_menu(rows, 'a', colour=True)
+        plain = aws_profiles.render_menu(rows, 'a', color=False)
+        painted = aws_profiles.render_menu(rows, 'a', color=True)
 
         assert '\033' in painted
         assert re.sub(r'\033\[[0-9;]*m', '', painted) == plain
@@ -183,18 +183,18 @@ class TestColour:
     def test_no_color_beats_a_terminal(self, aws_profiles, monkeypatch):
         # colors.sh's precedence: preference first, detection second.
         monkeypatch.setenv('NO_COLOR', '1')
-        assert aws_profiles.colour_enabled(io.StringIO()) is False
+        assert aws_profiles.color_enabled(io.StringIO()) is False
 
     def test_force_color_beats_a_pipe(self, aws_profiles, monkeypatch):
         monkeypatch.delenv('NO_COLOR', raising=False)
         monkeypatch.setenv('FORCE_COLOR', '1')
-        assert aws_profiles.colour_enabled(io.StringIO()) is True
+        assert aws_profiles.color_enabled(io.StringIO()) is True
 
-    def test_a_pipe_gets_no_colour(self, aws_profiles, monkeypatch):
+    def test_a_pipe_gets_no_color(self, aws_profiles, monkeypatch):
         monkeypatch.delenv('NO_COLOR', raising=False)
         monkeypatch.delenv('FORCE_COLOR', raising=False)
         # StringIO is not a tty, which is what a captured stderr looks like.
-        assert aws_profiles.colour_enabled(io.StringIO()) is False
+        assert aws_profiles.color_enabled(io.StringIO()) is False
 
     def test_a_role_profile_says_what_it_is_assumed_through(self, aws_home, aws_profiles):
         settings = aws_home('[profile work]\nregion = eu-west-1\n\n[profile admin]\nsource_profile = work\n')

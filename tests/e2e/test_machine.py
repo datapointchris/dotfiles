@@ -218,7 +218,7 @@ def test_every_networked_currency_read_answers_on_a_real_machine(machine: Machin
     refreshed copy listed eighteen.
 
     A firewalled environment is skipped whole. Its refresh cannot reach the archive,
-    so the seeded index answers — correct behaviour, and a different assertion.
+    so the seeded index answers — correct behavior, and a different assertion.
     """
     if machine.environment.firewalled:
         pytest.skip('a firewalled machine answers from the seeded index, which is a different assertion')

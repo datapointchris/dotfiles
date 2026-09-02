@@ -111,13 +111,13 @@ class Blocker:
     clears it.
 
     **Empty everywhere but the release provider, and that is the point.** A
-    superseded *package* is refused by the manager, and authorising this repo to
+    superseded *package* is refused by the manager, and authorizing this repo to
     overwrite what it did not create says nothing to pacman — so naming a flag
     there advertises a fix that turns a clear refusal into a failed transaction.
     """
 
     def standing(self, force: bool) -> Blocker | None:
-        """This blocker, or None where the run is authorised to clear it.
+        """This blocker, or None where the run is authorized to clear it.
 
         One owner for the rule, because the two readers must not disagree: `diff`
         decides whether `apply` may act, and the provider then acts. Split, a run
@@ -411,7 +411,7 @@ class Resource[ObservationT: Observation](Protocol):
     and a parameter is contravariant. Written as a plain `Observation` on both,
     every resource would be promising to diff any other resource's measurement —
     a promise none of them keeps, since each reads only its own fields. `Resource`
-    unparameterised means `Resource[Any]`, which is what the engine holds: it
+    unparameterized means `Resource[Any]`, which is what the engine holds: it
     pairs the two calls per resource and never carries one across.
     """
 
@@ -443,7 +443,7 @@ class Batched(Protocol):
     `defaults write` cost the same alone as in company.
 
     **One Outcome per Change, in the order given**, so a caller can zip them back
-    together. A provider that cannot honour that must not opt in.
+    together. A provider that cannot honor that must not opt in.
     """
 
     def perform_batch(self, session: Any, changes: Sequence[Change], privilege: Escalates) -> list[Outcome]:

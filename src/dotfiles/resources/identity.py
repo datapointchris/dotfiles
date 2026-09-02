@@ -231,7 +231,7 @@ def _layering_changes(observed: Observed) -> tuple[Change, ...]:
     Every one of these is `BY_HAND`. The entry point is the one file in that
     directory this repo deliberately does not own — `deploy.epilogue` says why —
     and a `~/.gitconfig` may hold the only copy of an address the repo does not
-    ship, so deleting it is a judgement rather than a repair.
+    ship, so deleting it is a judgment rather than a repair.
     """
     found = []
 

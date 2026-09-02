@@ -84,7 +84,7 @@ def git_config(sandbox: Sandbox, name: str, text: str) -> Path:
 
     Written under `$XDG_CONFIG_HOME`, which is where git looks for the global
     config and where `Sandbox.settle` puts the entry point. That is a real knob
-    git honours, so the configuration under test is assembled by git itself.
+    git honors, so the configuration under test is assembled by git itself.
     """
     path = sandbox.config / 'git' / name
     path.parent.mkdir(parents=True, exist_ok=True)

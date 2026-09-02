@@ -141,7 +141,7 @@ class Observed:
         just found the file absent. `check` is right to report converged, because
         either is `plan`'s drift rather than something wrong; the detail was the
         false half, and it is the half a reader keeps. A second predicate here
-        would be free to disagree with the rows it is summarising.
+        would be free to disagree with the rows it is summarizing.
 
         Only the package half names its total. Nine `system.yml` rows are few
         enough to read against the tally beside them, and a hundred packages are
@@ -228,7 +228,7 @@ class SystemResource:
         # this repo runs. `syspkg.REMOVE`'s own rule is that removal is inferred
         # nowhere: an uninstall worked out from what a declaration does not name
         # takes a package off a machine on the strength of a typo. Naming the
-        # package and leaving the judgement is the whole of what this row does.
+        # package and leaving the judgment is the whole of what this row does.
         undeclared = tuple(
             Change(
                 NAME,
@@ -350,7 +350,7 @@ def _undeclared_packages(session: Session) -> dict[str, Stray]:
         if chosen is None:
             continue
         declared = _declared_names(session.plan, manager)
-        installable, known = _catalogued_names(session.catalog, manager)
+        installable, known = _catalogd_names(session.catalog, manager)
         for name in chosen - declared:
             found[name] = Stray(manager, _standing(name, installable, known))
     return found
@@ -367,7 +367,7 @@ def _standing(name: str, installable: frozenset[str], known: frozenset[str]) -> 
     return Standing.OTHER_MANAGERS if name in known else Standing.UNKNOWN
 
 
-def _catalogued_names(catalogue: catalog.Catalog, manager: str) -> tuple[frozenset[str], frozenset[str]]:
+def _catalogd_names(catalog: catalog.Catalog, manager: str) -> tuple[frozenset[str], frozenset[str]]:
     """Every name `packages.yml` carries: those installable under this manager, and all of them.
 
     Both from `evidence.entry_names`, so the catalog side of the comparison spells a
@@ -377,7 +377,7 @@ def _catalogued_names(catalogue: catalog.Catalog, manager: str) -> tuple[frozens
     """
     installable: set[str] = set()
     known: set[str] = set()
-    for entries in catalogue.entries.values():
+    for entries in catalog.entries.values():
         for entry in entries:
             names = ev.entry_names(entry)
             installable.update(names.get(manager, ()))

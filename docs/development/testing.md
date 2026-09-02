@@ -110,7 +110,7 @@ rather than the property. Parametrized cases cost nothing and name themselves.
 `tests/shell/shells.py` is the whole harness: it runs a snippet in a fresh shell
 with one library sourced and hands back stdout, stderr and the exit code, kept
 apart. Fresh every time, because these libraries resolve things at *source* time
-— the colour gate most obviously — so a reused interpreter would answer with
+— the color gate most obviously — so a reused interpreter would answer with
 whatever the first test decided.
 
 ## Logic belongs in Python, and moving it is the cheaper fix
@@ -141,7 +141,7 @@ subprocess breaks on a reworded message.
 
 The package resource needs the same isolation for *installed-ness*, which is
 ambient rather than on disk. `tests/resources/test_packages.py` injects it
-through the knobs the code already honours — `PATH` and `UV_TOOL_DIR` — with
+through the knobs the code already honors — `PATH` and `UV_TOOL_DIR` — with
 `/usr/bin:/bin` kept behind the fake bin dir so the fixture's own helpers still
 resolve.
 
@@ -206,7 +206,7 @@ does not rebuild and a dropped package does. Rebuilt after two weeks regardless,
 because the digest cannot see which versions the distro shipped.
 
 **The harness never reads the product's environment.** It mounted
-`paths.REPO_ROOT`, which honours `$DOTFILES_DIR`, so every run launched from a
+`paths.REPO_ROOT`, which honors `$DOTFILES_DIR`, so every run launched from a
 worktree installed `main`'s code while reporting on the branch. Anchor on marker
 files, not on the product's own configuration and not on `parents[n]`.
 

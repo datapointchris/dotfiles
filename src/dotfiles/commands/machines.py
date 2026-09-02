@@ -363,8 +363,8 @@ def _render_findings(findings: tuple[validate.Finding, ...]) -> None:
     for section in sorted(by_section):
         console.print(f'\n[bold cyan]{section}[/]')
         for finding in by_section[section]:
-            colour = 'red' if finding.severity is validate.Severity.ERROR else 'yellow'
-            console.print(f'  [{colour}]{finding.severity:<7}[/] {finding.message}', highlight=False)
+            color = 'red' if finding.severity is validate.Severity.ERROR else 'yellow'
+            console.print(f'  [{color}]{finding.severity:<7}[/] {finding.message}', highlight=False)
 
     broken, warned = len(validate.errors(findings)), len(findings) - len(validate.errors(findings))
     console.print()

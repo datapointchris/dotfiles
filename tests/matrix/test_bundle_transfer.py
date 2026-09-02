@@ -40,21 +40,21 @@ from matrix.harness import Sandbox
 MACHINE = 'box'
 NEWEST = 'dotfiles-offline-v20260909T120000Z-box-linux-x86_64'
 OLDER = 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
-SHELF = '/artefacts/bundles/box'
+SHELF = '/artifacts/bundles/box'
 
 
 @pytest.fixture
 def server(sandbox: Sandbox) -> Path:
     """The directory the fake transport treats as the remote, with a shelf on it."""
     root = sandbox.root / 'server'
-    (root / 'artefacts' / 'bundles' / MACHINE).mkdir(parents=True)
+    (root / 'artifacts' / 'bundles' / MACHINE).mkdir(parents=True)
     install_relay(sandbox.bin, root)
     declare(sandbox.config)
     return root
 
 
 def shelf(server: Path) -> Path:
-    return server / 'artefacts' / 'bundles' / MACHINE
+    return server / 'artifacts' / 'bundles' / MACHINE
 
 
 def archive(at: Path, name: str, *, machine: str = MACHINE, sparse: bool = False, files: dict[str, str] | None = None) -> Path:
@@ -123,12 +123,12 @@ class TestUploading:
     ) -> None:
         """Never on the hostname. `paths.machine_id()` is an employer asset tag on
         the one machine this exists for, and it has no business on a shelf beside
-        personal artefacts."""
+        personal artifacts."""
         built = archive(sandbox.root, 'dotfiles-offline-v20260909T120000Z-elsewhere-linux-x86_64', machine='wsl-work-workstation')
 
         cli('bundle', 'upload', str(built))
 
-        assert (server / 'artefacts' / 'bundles' / 'wsl-work-workstation').is_dir()
+        assert (server / 'artifacts' / 'bundles' / 'wsl-work-workstation').is_dir()
 
     def test_an_archive_that_names_no_machine_is_refused_before_anything_moves(
         self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
@@ -408,7 +408,7 @@ class TestPruning:
         assert not (sandbox.staging / OLDER).exists()
 
     def test_a_limit_below_one_is_refused_rather_than_clamped(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-        """A flag the run cannot honour says so. Clamped in silence, `--keep 0`
+        """A flag the run cannot honor says so. Clamped in silence, `--keep 0`
         swept to one bundle while the caller believed it had asked for none."""
         (sandbox.staging / NEWEST).mkdir(parents=True)
         (sandbox.staging / NEWEST / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
@@ -582,7 +582,7 @@ class TestTheAutomaticPaths:
         ran = cli('apply', '--offline', catch_exceptions=True)
 
         assert ran.exit_code == ExitCode.CONVERGED
-        assert not (server / 'artefacts' / 'status').exists()
+        assert not (server / 'artifacts' / 'status').exists()
 
     def test_it_publishes_where_the_machine_asked_for_that(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
@@ -593,7 +593,7 @@ class TestTheAutomaticPaths:
         ran = cli('apply', '--offline', catch_exceptions=True)
 
         assert ran.exit_code == ExitCode.CONVERGED
-        assert len(list((server / 'artefacts' / 'status' / MACHINE).iterdir())) == 1
+        assert len(list((server / 'artifacts' / 'status' / MACHINE).iterdir())) == 1
 
     def test_a_failed_apply_publishes_nothing(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """A document from a failed apply describes a machine part way through
@@ -604,7 +604,7 @@ class TestTheAutomaticPaths:
         ran = cli('apply', '--offline', catch_exceptions=True)
 
         assert ran.exit_code == ExitCode.ISSUE
-        assert not (server / 'artefacts' / 'status').exists()
+        assert not (server / 'artifacts' / 'status').exists()
 
     def test_an_online_apply_never_publishes(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """The document exists to plan an offline bundle. A machine that reaches the
@@ -623,7 +623,7 @@ class TestTheAutomaticPaths:
         ran = cli('apply', *skipped, catch_exceptions=True)
 
         assert ran.exit_code == ExitCode.CONVERGED
-        assert not (server / 'artefacts' / 'status').exists()
+        assert not (server / 'artifacts' / 'status').exists()
 
 
 class TestResolvingLatestForASparseBuild:
@@ -636,7 +636,7 @@ class TestResolvingLatestForASparseBuild:
     """
 
     def published(self, server: Path, stamp: str, *, wrote: str = 'abcd1234') -> Path:
-        shelf = server / 'artefacts' / 'status' / MACHINE
+        shelf = server / 'artifacts' / 'status' / MACHINE
         shelf.mkdir(parents=True, exist_ok=True)
         written = shelf / f'{status_commands.PREFIX}{stamp}-{MACHINE}-{wrote}.json'
         written.write_text(json.dumps({'version': 2, 'machine': MACHINE, 'scope': ['packages'], 'resources': []}))
@@ -728,7 +728,7 @@ class TestResolvingLatestForASparseBuild:
         answer — it is the state of every machine before its first status is
         published, which is exactly when somebody runs this for the first time.
 
-        What makes the fallback safe is that it is announced and the artefact says
+        What makes the fallback safe is that it is announced and the artifact says
         it for itself: no `-sparse` in the name and `completeness: full` inside.
         The failure the feature exists to avoid is a bundle carrying everything
         while reporting itself sparse, and this path cannot produce one.
@@ -762,7 +762,7 @@ class TestReportingHowOldABundleIs:
     the one fact that prompt exists to convey."""
 
     def test_a_future_stamp_reads_as_no_time_at_all(self) -> None:
-        """`timedelta` normalises a negative by borrowing, so five minutes ahead is
+        """`timedelta` normalizes a negative by borrowing, so five minutes ahead is
         `days=-1, seconds=86100` and used to read as 23 hours ago. The builder
         stamps the name and the offline box renders it, so skew between two clocks
         is ordinary — and it misreported in the direction that argues against

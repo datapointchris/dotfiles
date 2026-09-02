@@ -130,7 +130,7 @@ def test_the_user_placeholder_is_filled_in(tmp_path: Path, granted: Privilege) -
 
 def test_content_that_is_not_a_template_survives_being_rendered() -> None:
     """`%I`, `$TERM` and a brace that means a brace. `str.format` would raise on
-    the third and silently eat the first two's neighbours."""
+    the third and silently eat the first two's neighbors."""
     entry = managed_file(path='/nowhere', content="ExecStart=-/sbin/agetty -o '-p -f -- \\u' %I $TERM {} {0}\n")
 
     assert sysconfig.rendered(entry) == "ExecStart=-/sbin/agetty -o '-p -f -- \\u' %I $TERM {} {0}\n"

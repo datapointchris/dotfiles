@@ -6,7 +6,7 @@ narrows it — `--skip`, `--through`, `--refresh`, `--owner`, `--json` — asser
 through the front door against the synthetic machine the sandbox builds.
 
 **Every selector is measured by what it removed, never by what it printed.** A
-`--skip` that quietly narrowed to nothing and a `--skip` that was honoured both
+`--skip` that quietly narrowed to nothing and a `--skip` that was honored both
 produce a converged run, so a row count or an exit code alone cannot tell them
 apart. The document's addresses say which resources were walked, the run record
 says which flags were recorded, and the install guard says whether a narrowing
@@ -105,7 +105,7 @@ def test_every_verb_files_a_run_record_naming_every_resource_it_examined(
     verb: str, sandbox: Sandbox, cli: Callable[..., Invocation]
 ) -> None:
     """The record is what answers "what did that run actually cover" afterwards, and
-    it is the only artefact `plan` and `check` share with `apply`."""
+    it is the only artifact `plan` and `check` share with `apply`."""
     cli(verb)
 
     filed = sandbox.latest_record
@@ -152,7 +152,7 @@ def test_skipping_every_resource_leaves_a_read_verb_with_nothing_to_report(verb:
     The asymmetry is deliberate rather than a defect, and the reason is what the
     caller wrote: naming all nine addresses is an unambiguous request to examine
     none of them, and an empty report is the true answer to it. `apply` refuses
-    because there is a *write* to authorise and no work in it — measured in
+    because there is a *write* to authorize and no work in it — measured in
     `test_an_apply_with_nothing_selected_refuses_rather_than_reporting_success`.
 
     An owner that matched nothing is not this case, and is a bug: see
@@ -350,7 +350,7 @@ def test_the_run_record_carries_the_ceiling_only_when_one_was_named(sandbox: San
 
 @pytest.mark.parametrize('verb', READ_VERBS, ids=list(READ_VERBS))
 def test_refresh_spends_the_network_on_a_tool_that_is_installed(verb: str, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """Both read verbs take the flag and both have to honour it. One that accepted
+    """Both read verbs take the flag and both have to honor it. One that accepted
     it and answered from the cache anyway is a verb silently distrusting the caller
     on the one question the flag exists to settle."""
     sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
@@ -525,7 +525,7 @@ INTERCHANGE_KEYS = {'version', 'verb', 'machine', 'checked', 'scope', 'verdict',
 def test_each_verb_emits_the_document_its_reader_wants(verb: str, keys: set[str], cli: Callable[..., Invocation]) -> None:
     """Two shapes, deliberately.
 
-    `plan` and `check` emit one versioned interchange document — the artefact a
+    `plan` and `check` emit one versioned interchange document — the artifact a
     network-blocked machine hands to one that can reach the network, so a partial
     bundle can be built from it — and it carries `verb` because the two keep
     different findings and a reader cannot otherwise tell which question produced

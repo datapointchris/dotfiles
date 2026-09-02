@@ -23,9 +23,9 @@ def make_checkout(root: Path) -> Path:
     return root
 
 
-def test_the_real_repo_is_recognised() -> None:
+def test_the_real_repo_is_recognized() -> None:
     """Guards every other test here: if the marker were wrong, all of them pass
-    while the recogniser recognises nothing."""
+    while the recognizer recognizes nothing."""
     assert paths._looks_like_repo(paths.REPO_ROOT)
 
 

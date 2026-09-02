@@ -42,14 +42,14 @@ HOSTNAMES = [
 @pytest.fixture
 def server(sandbox: Sandbox) -> Path:
     root = sandbox.root / 'server'
-    (root / 'artefacts').mkdir(parents=True)
+    (root / 'artifacts').mkdir(parents=True)
     install_relay(sandbox.bin, root)
     declare(sandbox.config)
     return root
 
 
 def shelf(server: Path) -> Path:
-    return server / 'artefacts' / 'reports' / MACHINE
+    return server / 'artifacts' / 'reports' / MACHINE
 
 
 @pytest.fixture
@@ -158,7 +158,7 @@ def test_a_box_with_no_records_of_its_own_refuses_and_writes_nothing(
 def publishing_server(sandbox: Sandbox) -> Path:
     """A remote this machine has asked to publish to after every apply."""
     root = sandbox.root / 'server'
-    (root / 'artefacts').mkdir(parents=True)
+    (root / 'artifacts').mkdir(parents=True)
     install_relay(sandbox.bin, root)
     declare(sandbox.config, extra='publish_reports_after_apply = true\n')
     return root
@@ -240,7 +240,7 @@ class TestReadingThemBack:
 
     A record says what an `apply` decided and what it ran, and on a box off the
     fleet's Syncthing the shelf holds the only copy anyone else can reach. Sent and
-    never fetched, the one artefact answering "what did that apply install" was
+    never fetched, the one artifact answering "what did that apply install" was
     unreachable from the machine that builds its bundles.
     """
 

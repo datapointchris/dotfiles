@@ -267,7 +267,7 @@ def _agent_path() -> Path:
 
 def _agent_content() -> bytes:
     """The job this repo declares for the scheduled check."""
-    return launchd.serialise(
+    return launchd.serialize(
         {
             'Label': LABEL,
             # --refresh for the reason in _service_content: it restates the default

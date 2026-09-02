@@ -36,7 +36,7 @@ from dotfiles import vocabulary
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
-from dotfiles.output import VERDICT_COLOURS
+from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
 from dotfiles.output import console
 from dotfiles.output import emit_json
@@ -142,7 +142,7 @@ def show(
     **What `--json` prints is what would be sent**, screened rows and all, because
     the advice on a refusal says exactly that and a document shown unscreened would
     make it false. Which rows were withheld is therefore not a key in it: the
-    document is the artefact, and a field describing the act of composing it would
+    document is the artifact, and a field describing the act of composing it would
     travel to the server as part of the thing it describes. A caller wanting the
     set diffs this against `plan --json`, which walks the same resources unscreened
     — and the *builder* needs nothing, because a row absent from the document is
@@ -166,13 +166,13 @@ def show(
         raise typer.Exit(ExitCode.ISSUE if screen.problems else ExitCode.CONVERGED)
 
     word = 'issue' if screen.problems else str(ResourceVerdict.CONVERGED)
-    console.print(section_line(VERDICT_MARKS[word], 'status', f'{found.machine} — {found.scope}', VERDICT_COLOURS[word]))
+    console.print(section_line(VERDICT_MARKS[word], 'status', f'{found.machine} — {found.scope}', VERDICT_COLORS[word]))
     for result in found.results:
         render_row(str(result.verdict), result.address, result.detail)
     for name in screen.withheld:
         render_row('withheld', name, 'it carries a name that identifies this machine, so the row stays here')
     for problem in screen.problems:
-        render_row('issue', 'unpublishable', problem, VERDICT_COLOURS['issue'])
+        render_row('issue', 'unpublishable', problem, VERDICT_COLORS['issue'])
     raise typer.Exit(ExitCode.ISSUE if screen.problems else ExitCode.CONVERGED)
 
 
@@ -204,7 +204,7 @@ def upload(
     render_note(f'covering {found.scope} and nothing else')
     # `warn`, not a note: `render_note` returns early under `-q`, so a publish that
     # dropped rows said nothing at all on the one invocation a script makes. A row
-    # that did not travel is a warning about the artefact rather than evidence
+    # that did not travel is a warning about the artifact rather than evidence
     # under a verdict.
     for withheld in screen.withheld:
         warn(f'{withheld} was left out of {name}: its version string names this machine')
@@ -270,7 +270,7 @@ def list_statuses(
         raise typer.Exit(ExitCode.CONVERGED)
 
     word = str(ResourceVerdict.CONVERGED)
-    console.print(section_line(VERDICT_MARKS[word], 'statuses', f'{len(listed)} for {named}', VERDICT_COLOURS[word]))
+    console.print(section_line(VERDICT_MARKS[word], 'statuses', f'{len(listed)} for {named}', VERDICT_COLORS[word]))
     for name in shown:
         render_row(publishing.age_column(name), name, '')
     if limit and len(listed) > limit:

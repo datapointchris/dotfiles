@@ -4,7 +4,7 @@ A real executable backed by a real directory, refusing what a real remote
 refuses: listing a directory that is not there, downloading a name that does not
 exist, uploading into a path nobody created. A fake that accepted everything
 would assert the caller's mental model rather than challenge it — and the
-constraint it exists for is the one that costs an artefact, an upload the
+constraint it exists for is the one that costs an artifact, an upload the
 transport reroutes somewhere no `list` will ever find it.
 
 One module rather than a copy per suite, because a second fake drifts from the
@@ -152,7 +152,7 @@ def recorded(record: Path) -> list[list[str]]:
     return [json.loads(line) for line in record.read_text().splitlines()] if record.exists() else []
 
 
-def declare(config_home: Path, *, program: str = 'relay', root: str = '/artefacts', extra: str = '') -> Path:
+def declare(config_home: Path, *, program: str = 'relay', root: str = '/artifacts', extra: str = '') -> Path:
     """Write a real config.toml where `settings.config_file()` will look for it.
 
     `extra` goes *inside* `[remote]` rather than after the whole table, because

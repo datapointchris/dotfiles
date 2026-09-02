@@ -1,12 +1,12 @@
 """Reading the debug stream a run emits, while it runs or long afterwards.
 
-Separate from `report` because the two artefacts are separate. A record is
+Separate from `report` because the two artifacts are separate. A record is
 *composed* — `sinks.record` walks the events and builds a typed `RunRecord` with
 a schema and a versioned reader — and what it composes is what survives being
 uploaded off the machine. A stream is *emitted* — whatever any module logged, at
 debug, in whatever shape that module chose — and it stays behind saying what the
 command actually printed. `docs/architecture/observability.md` places both among
-the artefacts a run leaves.
+the artifacts a run leaves.
 
 `show` rather than `read`, because one word does one job:
 `read` earns its place only where something is left over for `show` to say, and
@@ -290,7 +290,7 @@ def list_logs(limit: int = LimitOption, as_json: bool = JsonOption) -> None:
 
     Only this machine's, for the reason `show` gives. The whole fleet's records
     are `dotfiles report list`, which is a different question about a different
-    artefact.
+    artifact.
     """
     found = runs.list_event_logs(machine=paths.MACHINE_ID, limit=limit)
     if not found:

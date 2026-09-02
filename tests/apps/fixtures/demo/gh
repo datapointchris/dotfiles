@@ -6,7 +6,7 @@
 # shares a basename with one of yours, checks in each state, a review in each
 # state, and a PR the forge has decided nothing about that three reviewers have
 # posted on. Ages are relative to nothing — `created_at` is fixed, so the AGE column
-# grows as this fixture gets older, which is what makes the colour thresholds
+# grows as this fixture gets older, which is what makes the color thresholds
 # visible without editing anything.
 cat <<'JSON'
 {"data":{"search":{"nodes":[

@@ -75,7 +75,7 @@ none of it.
 
 See `docs/learnings/app-installation-patterns.md` for full details.
 
-**Standards First**: Prefer the industry-standard default over a local invention, and where you deviate, write the reason down. Conventional commits are enforced at `commit-msg` rather than preferred, so that one is not a judgement call.
+**Standards First**: Prefer the industry-standard default over a local invention, and where you deviate, write the reason down. Conventional commits are enforced at `commit-msg` rather than preferred, so that one is not a judgment call.
 
 **Generated Config — Never Hand-Edit** (⚠️ MANDATORY):
 

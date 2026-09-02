@@ -138,7 +138,7 @@ _get_color() {
     brightblue) echo "$COLOR_BRIGHT_BLUE" ;;
     brightcyan) echo "$COLOR_BRIGHT_CYAN" ;;
     brightmagenta | brightpurple) echo "$COLOR_BRIGHT_MAGENTA" ;;
-    brightblack | gray | grey) echo "$COLOR_BRIGHT_BLACK" ;;
+    brightblack | gray) echo "$COLOR_BRIGHT_BLACK" ;;
     brightwhite) echo "$COLOR_BRIGHT_WHITE" ;;
 
     # Extended colors
@@ -495,10 +495,10 @@ print_info() {
 # Help Screen Functions
 # ================================================================
 
-# Indented two-column row for help output, with the left column coloured.
+# Indented two-column row for help output, with the left column colored.
 # Usage: print_help_row 15 "--dry-run" "Show what would run" "$COLOR_BRIGHT_CYAN"
 #
-# The colour escapes are emitted around the padded field rather than inside it —
+# The color escapes are emitted around the padded field rather than inside it —
 # printf counts them toward the field width, which would break the alignment.
 # The escape also precedes the indent so the two spaces stay flush against the
 # name, which the CLI help tests grep for.
@@ -537,7 +537,7 @@ print_example_row() {
 #
 # help_row buffers rather than printing, so the flush can size the description
 # column from the longest row in the section — no call site types a width, and a
-# row that outgrows its neighbours re-flows the section instead of overrunning.
+# row that outgrows its neighbors re-flows the section instead of overrunning.
 # Two rules follow: close a screen with help_end, and use help_text rather than a
 # bare echo for prose, so pending rows flush ahead of it.
 
@@ -545,10 +545,10 @@ HELP_PENDING_ROWS=()
 HELP_SECTION_TITLE=""
 HELP_SECTION_INDEX=0
 
-# The three roles that appear in nearly every CLI get a fixed colour, so they
+# The three roles that appear in nearly every CLI get a fixed color, so they
 # become learnable across tools. App-specific headings rotate through the rest of
 # the palette by position, which keeps adjacent sections distinct without any
-# screen choosing — a single fallback colour made a screen whose headings are all
+# screen choosing — a single fallback color made a screen whose headings are all
 # app-specific, like `dotfiles`, render entirely monochrome.
 #
 # Spelled as a case rather than an array lookup: this file is sourced into zsh,
@@ -570,7 +570,7 @@ _help_section_color() {
   esac
 }
 
-# Rows are serialised on ASCII unit separator. It has to be a non-whitespace
+# Rows are serialized on ASCII unit separator. It has to be a non-whitespace
 # delimiter: `read` collapses runs of an IFS *whitespace* character, so a tab
 # would merge the two delimiters of a row with empty args and shift every field.
 HELP_FIELD_SEPARATOR=$'\x1f'
@@ -583,8 +583,8 @@ _help_flush_rows() {
   [[ ${#HELP_PENDING_ROWS[@]} -eq 0 ]] && return 0
 
   local row name args description left width=0 color="$COLOR_BRIGHT_CYAN"
-  # An example is a command you would type, so it reads in the command colour
-  # rather than the name colour used for a listing.
+  # An example is a command you would type, so it reads in the command color
+  # rather than the name color used for a listing.
   [[ "$(echo "$HELP_SECTION_TITLE" | tr '[:upper:]' '[:lower:]')" == "examples" ]] && color="$COLOR_CYAN"
 
   for row in "${HELP_PENDING_ROWS[@]}"; do
@@ -602,13 +602,13 @@ _help_flush_rows() {
   HELP_PENDING_ROWS=()
 }
 
-# The coloured name and the uncoloured args share one padded column, so the pad
+# The colored name and the uncolored args share one padded column, so the pad
 # is measured across both rather than handed to printf's field width.
 _help_print_row() {
   local width="$1" name="$2" args="$3" description="$4" color="$5"
   local left="$name${args:+ $args}"
 
-  # A continuation row carries no name, so it gets no colour escape either.
+  # A continuation row carries no name, so it gets no color escape either.
   [[ -z "$name" ]] && color=""
 
   # A row with nothing in the right column gets no padding, so a section of bare

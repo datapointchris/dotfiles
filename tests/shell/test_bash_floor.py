@@ -1,6 +1,6 @@
 """Nothing that lands on a Mac may use a bash 4 construct.
 
-macOS ships bash 3.2 and always will, because the licence changed to GPLv3.
+macOS ships bash 3.2 and always will, because the license changed to GPLv3.
 There `mapfile` is `command not found`, and under `set -e` the script dies on the
 spot — while an interactive zsh, which has no `mapfile` builtin either, reports
 it per call and carries on with the function half-run.

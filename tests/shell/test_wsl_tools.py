@@ -551,7 +551,7 @@ def test_every_windows_backed_filesystem_reads_as_slow(windows: Windows) -> None
         assert 'crosses to Windows' in note_for(windows, fstype).stdout
 
 
-def test_an_unrecognised_filesystem_is_skipped_not_guessed(windows: Windows) -> None:
+def test_an_unrecognized_filesystem_is_skipped_not_guessed(windows: Windows) -> None:
     """proc, sysfs, cgroup and tmpfs are most of the mount table and none of them
     answer where a file lives. A default arm would print thirty rows of noise."""
     result = note_for(windows, 'proc')

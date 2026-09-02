@@ -64,7 +64,7 @@ line-numbers = true
 side-by-side = true
 
 # Colors only — written by `theme apply`, and ignored by git while absent.
-# Must follow [delta] above so the palette wins over any colour set there.
+# Must follow [delta] above so the palette wins over any color set there.
 [include]
 path = ~/.config/delta/current.gitconfig
 

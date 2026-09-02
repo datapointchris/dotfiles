@@ -144,7 +144,7 @@ def test_supersedes_naming_this_entrys_own_package_is_a_declaration_error() -> N
 # one config directory and one port.
 #
 # Which is why this one clears under `--force` where the sioyek case above never
-# does. There the manager is the thing refusing, and authorising this repo to
+# does. There the manager is the thing refusing, and authorizing this repo to
 # replace what it did not create says nothing to pacman.
 
 
@@ -208,7 +208,7 @@ def test_the_advice_names_the_command_that_removes_it_and_the_one_that_migrates(
 
 
 def test_force_clears_the_blocker_so_apply_can_act_on_it() -> None:
-    """The flag `symlinks apply` already spells this way: authorisation to replace
+    """The flag `symlinks apply` already spells this way: authorization to replace
     what this repo did not create."""
     blocking = ev.superseded(release(supersedes=('syncthing',)), {'pacman': frozenset({'syncthing'})})
 

@@ -152,7 +152,7 @@ POSITIONS = [
         classify.RULE_EXCEPTION_MESSAGE,
     ),
     ('value error message', "raise ValueError('prose')\n", 'prose', classify.RENDERING, classify.RULE_EXCEPTION_MESSAGE),
-    ('style token', "colour = 'red'\n", 'red', classify.RENDERING, classify.RULE_RICH_STYLE),
+    ('style token', "color = 'red'\n", 'red', classify.RENDERING, classify.RULE_RICH_STYLE),
     (
         'what a comprehension inside a render call reads',
         "from rich.table import Table\nt = Table()\nt.add_row(*(str(row[k]) for k in ('total',)))\n",
@@ -220,13 +220,13 @@ def test_a_constant_is_bucketed_by_the_position_it_sits_in(name: str, source: st
 
 
 def test_every_constant_in_the_render_modules_is_rendering() -> None:
-    found = verdict_for("WIDTH = 11\nCOLOUR = 'anything'\n", 11, Path('src/dotfiles/banner.py'))
+    found = verdict_for("WIDTH = 11\nCOLOR = 'anything'\n", 11, Path('src/dotfiles/banner.py'))
     assert (found.bucket, found.rule) == (classify.RENDERING, classify.RULE_RENDER_MODULE)
 
 
 def test_the_status_vocabulary_is_logic_where_it_sits_beside_the_decoration() -> None:
-    """`output.py` holds the fleet's verdict words next to its colours. Marked a
-    render module it lost `MATCHED` and every `VERDICT_COLOURS` key from the
+    """`output.py` holds the fleet's verdict words next to its colors. Marked a
+    render module it lost `MATCHED` and every `VERDICT_COLORS` key from the
     score, and a test pinning one landed in PROSE-PINNED, which the gate refuses
     on. Its decoration is still caught, by the rules written for decoration."""
     found = verdict_for("MATCHED = 'matched'\n", 'matched', Path('src/dotfiles/output.py'))
@@ -241,7 +241,7 @@ def test_control_flow_is_logic_even_in_a_render_module() -> None:
     assert [(found.bucket, found.rule) for found in compares] == [(classify.LOGIC, classify.RULE_CONTROL_FLOW)]
 
 
-def test_an_unrecognised_position_defaults_to_logic() -> None:
+def test_an_unrecognized_position_defaults_to_logic() -> None:
     """The direction that matters: a misclassified logic string surfaces as a survivor, and a misclassified rendering string vanishes."""
     found = verdict_for("x = some_unknown_call('prose')\n", 'prose')
     assert found.bucket == classify.LOGIC

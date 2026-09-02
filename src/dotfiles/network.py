@@ -464,7 +464,7 @@ LANDED_COLUMN = 'LANDED'
 The header and not the rows, because the column is written only where a row
 redirected: a file where nothing redirected and one written before the column
 existed have identically shaped rows and mean opposite things. Named here because
-the code that writes the column is what should say how to recognise it."""
+the code that writes the column is what should say how to recognize it."""
 
 
 def _row(verdict: ProbeResult) -> str:

@@ -76,7 +76,7 @@ def emitted(result) -> list[dict]:
 
     Line by line rather than as one document: a stream that arrived as a single
     line, or with a separator printed into it, fails here rather than being
-    normalised away.
+    normalized away.
     """
     return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
 

@@ -97,7 +97,7 @@ class Verification(enum.IntEnum):
     UNLISTED = 3
     """A checksums file exists and this asset is not named in it.
 
-    Distinct from both its neighbours, and the distinction is the point. It is
+    Distinct from both its neighbors, and the distinction is the point. It is
     not FAILED — nothing was compared, so nothing was proven wrong, and deleting
     the download on that basis is what made `yq` uninstallable through the shared
     library. It is not UNPUBLISHED either: something *is* published, so a tool in
@@ -237,7 +237,7 @@ def github_token() -> str | None:
     Cached for the life of the process, which is the life of one invocation.
     Nothing rewrites `$GITHUB_TOKEN` after start and `gh` does not rotate a token
     out from under a command. A test that changes either between cases is the one
-    caller that needs the old behaviour, and `tests/conftest.py` clears this
+    caller that needs the old behavior, and `tests/conftest.py` clears this
     between every test rather than each test remembering to.
 
     **The memo alone does not make it once per run, and the caller that matters is
@@ -263,7 +263,7 @@ GITHUB_HOSTS = frozenset({'api.github.com', 'github.com'})
 Deliberately excludes the asset CDNs — `objects.githubusercontent.com` and its
 siblings — even though a release download lands there. They are S3-backed and
 serve a pre-signed URL that needs no credential of ours; `s3.amazonaws.com`
-answers a bearer token it does not recognise with a 400, and that is the *polite*
+answers a bearer token it does not recognize with a 400, and that is the *polite*
 failure. The impolite one is that the token was sent at all.
 """
 
@@ -288,7 +288,7 @@ def request(url: str, accept: str | None = None) -> bytes:
 
     **Redirects are the other half, and httpx2 already handles it**: it pops
     `Authorization` whenever the redirect target is not the same origin, which is
-    the behaviour a GitHub asset download needs by design — that URL redirects to a
+    the behavior a GitHub asset download needs by design — that URL redirects to a
     CDN, and a client that carried the header through would leak the credential on
     the request path that runs most often.
 

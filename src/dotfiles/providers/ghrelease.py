@@ -437,7 +437,7 @@ def agent_plist(agent: LaunchAgent, binary: Path) -> bytes:
     wants.
     """
     logs = Path.home() / 'Library' / 'Logs'
-    return launchd.serialise(
+    return launchd.serialize(
         {
             'Label': agent.label,
             'ProgramArguments': [str(binary), *agent.arguments],

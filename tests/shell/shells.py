@@ -7,7 +7,7 @@ so a real shell still runs the code; only the runner changed, from bats to
 pytest.
 
 Each call gets a fresh interpreter because every library here resolves something
-at source time. The colour palette is the clearest case: it is decided once, when
+at source time. The color palette is the clearest case: it is decided once, when
 the file is sourced, so a long-lived shell would answer every later test with
 whatever the first one decided.
 
@@ -30,7 +30,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 SHELL_DIR = REPO / 'configs' / 'common' / '.local' / 'shell'
 
-COLOUR_KNOBS = ('NO_COLOR', 'FORCE_COLOR', 'TERM')
+COLOR_KNOBS = ('NO_COLOR', 'FORCE_COLOR', 'TERM')
 """Scrubbed from every run unless a test names one, so the developer's own
 terminal cannot decide the answer."""
 
@@ -87,7 +87,7 @@ def shell_out(snippet: str, *args: str, shell: str = 'bash', **environment: str)
     how logging.sh's stderr routing regressed unnoticed: an assertion on the
     merged stream passes whichever stream the code chose.
     """
-    env = {key: value for key, value in os.environ.items() if key not in COLOUR_KNOBS}
+    env = {key: value for key, value in os.environ.items() if key not in COLOR_KNOBS}
     # formatting.sh prefers $SHELL_DIR over its own location when it looks for
     # colors.sh, and `.zshrc` exports it — so without this, a test run from a
     # normal shell would read the *deployed* copy under ~/.local/shell and pass

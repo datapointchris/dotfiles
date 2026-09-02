@@ -47,7 +47,7 @@ points at declined to touch it.
 """
 
 ARCHIVES = f'dotfiles-offline-*{ARCHIVE_SUFFIX}'
-"""What `bundle create` names its output, which is how one is recognised."""
+"""What `bundle create` names its output, which is how one is recognized."""
 
 
 class StagingError(Refusal):
@@ -551,7 +551,7 @@ def retention(names: tuple[str, ...], keep: int) -> Sweep:
 
     **The floor is not enforced here, deliberately.** `remote.read` and `bundle
     prune` both refuse a value below one, and a third clamp would silently hand a
-    caller passing zero a one with no sentence saying the flag was not honoured.
+    caller passing zero a one with no sentence saying the flag was not honored.
 
     Pure and taking names, so both remote sweeps and the cache sweep answer by the
     identical rule without holding a transport.

@@ -212,7 +212,7 @@ machine unset.
 The common-plus-coordinate scheme buys one shared edit reaching every platform.
 It charges one recurring question: does this belong in `configs/common/` or in a
 coordinate directory? Getting it wrong is quiet. A setting lands in `common/`
-that only one OS can honour, and the others carry it harmlessly until the day one
+that only one OS can honor, and the others carry it harmlessly until the day one
 does not.
 
 The test is whether the *other* platforms would want it if they could run it. A

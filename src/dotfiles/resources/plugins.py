@@ -315,7 +315,7 @@ def _unmanaged(item: DesiredItem, directory: str) -> Change:
     into the path, which fails against a directory that already exists, and doing
     it properly means removing whatever is there — which on a plugin somebody
     installed by another route may be the only copy of a local edit. Same
-    judgement `symlinks` makes about a foreign target, for the same reason.
+    judgment `symlinks` makes about a foreign target, for the same reason.
 
     Reported rather than tolerated because the alternative is silence: without a
     checkout `clone.behind` cannot fetch, so it answers None, and the plugin reads

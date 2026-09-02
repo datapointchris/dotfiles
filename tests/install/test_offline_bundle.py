@@ -228,7 +228,7 @@ def test_an_unreadable_archive_is_refused(tmp_path, staged) -> None:
 
 
 def test_apply_stages_the_archive_it_finds(tmp_path, home, staging, monkeypatch) -> None:
-    """The behaviour the bootstrap would otherwise supply by running the apply itself."""
+    """The behavior the bootstrap would otherwise supply by running the apply itself."""
     monkeypatch.chdir(tmp_path)
     archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
 
@@ -388,7 +388,7 @@ class TestSayingWhichBundle:
 
         assert reconcile._stage_bundle('', '') is None
 
-        # Whitespace-normalised: the row carries an absolute staging path, so where
+        # Whitespace-normalized: the row carries an absolute staging path, so where
         # the renderer folds the line moves with the terminal width and with the
         # length of the tmp directory pytest happened to hand out.
         said = ' '.join(capsys.readouterr().err.split())

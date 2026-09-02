@@ -28,9 +28,9 @@ PYPROJECT = PACKAGE.parent.parent / 'pyproject.toml'
 
 
 def declared() -> set[str]:
-    """The distribution names `[project.dependencies]` asks for, normalised.
+    """The distribution names `[project.dependencies]` asks for, normalized.
 
-    PEP 503 normalisation, because `PyYAML`, `pyyaml` and `py-yaml` are one name
+    PEP 503 normalization, because `PyYAML`, `pyyaml` and `py-yaml` are one name
     and the file is free to spell it any of those ways.
     """
     specifiers = tomllib.loads(PYPROJECT.read_text())['project']['dependencies']

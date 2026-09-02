@@ -4,7 +4,7 @@
 
 A `reportUnannotatedClassAttribute` warning kept appearing in Neovim on a Python project even
 after `reportUnannotatedClassAttribute = 'none'` was added to the `basedpyright` LSP settings in
-`configs/common/.config/nvim/lsp/basedpyright.lua`. The neighbouring `ignore = { '*' }` — which
+`configs/common/.config/nvim/lsp/basedpyright.lua`. The neighboring `ignore = { '*' }` — which
 should have suppressed every basedpyright diagnostic outright, since Ruff does the linting — was
 plainly not taking effect either.
 

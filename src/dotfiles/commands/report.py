@@ -33,7 +33,7 @@ from dotfiles import runs
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
-from dotfiles.output import VERDICT_COLOURS
+from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
@@ -206,8 +206,8 @@ def _render(path: Path, record: runs.RunRecord) -> None:
     # `[{verdict}]` reads as a Rich style tag, so the word this line exists to say
     # was parsed as markup and dropped — every header printed a trailing blank.
     verdict = 'converged' if record.converged else 'drift'
-    colour = VERDICT_COLOURS[verdict]
-    console.print(f'[bold]{record.id}[/]  {record.box}  {record.verb}  [{colour}]{verdict}[/]')
+    color = VERDICT_COLORS[verdict]
+    console.print(f'[bold]{record.id}[/]  {record.box}  {record.verb}  [{color}]{verdict}[/]')
     console.print(f'{record.started_at} · {record.duration_seconds:.1f}s')
     # What the reader wants the record *for* is usually to send it somewhere, and
     # the rendering that answers every other question about a run was the one place
@@ -235,7 +235,7 @@ def _render(path: Path, record: runs.RunRecord) -> None:
             commands.add_row(f'{seconds:.2f}', command)
         console.print(commands)
 
-    # The one place the two artefacts meet, so the one place worth naming the
+    # The one place the two artifacts meet, so the one place worth naming the
     # other command: the table above is read *out of* the stream, and a reader
     # who wants the rest of it would otherwise have to know that a separate noun
     # exists. `logs show` resolves a run id, which is what this rendering leads with.
@@ -260,7 +260,7 @@ def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
     commands appear only in the rendering. `reconcile.apply_machine` emits its
     `--json` by reading back the file it just wrote, precisely so that a piped
     apply and a later `report show --json` are the same bytes for one run.
-    Synthesising a field into one of them ends that, and the field would be
+    Synthesizing a field into one of them ends that, and the field would be
     derived rather than recorded — a second document assembled from two sources,
     which is the arrangement that property exists to refuse.
 
@@ -319,8 +319,8 @@ def list_runs(
     table.add_column('outcome')
     for path, record in _readable(found):
         wrong = _unsuccessful(record)
-        colour = 'red' if wrong else 'green'
-        table.add_row(path.stem, f'[{colour}]{wrong or "ok"}[/]')
+        color = 'red' if wrong else 'green'
+        table.add_row(path.stem, f'[{color}]{wrong or "ok"}[/]')
     console.print(table)
 
 

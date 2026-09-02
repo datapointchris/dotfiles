@@ -1,7 +1,7 @@
 """Reading the include chain git assembles a machine's configuration from.
 
 `--file` is the seam, the same way `GIT_CONFIG_GLOBAL` is in `test_identity.py`:
-a real knob git honours, so the parsing under test runs against configuration git
+a real knob git honors, so the parsing under test runs against configuration git
 itself resolved rather than against a fixture describing what it would have said.
 """
 
@@ -79,7 +79,7 @@ def test_two_files_each_adding_a_credential_helper_are_not_a_conflict(tmp_path: 
 def test_a_scoped_helper_accumulates_the_same_way_an_unscoped_one_does(tmp_path: Path) -> None:
     """The subsection keeps its case in a listing while the section and key are
     lowercased, so the pattern has to be matched case-insensitively or a helper
-    keyed on a capitalised host slips back through as a conflict."""
+    keyed on a capitalized host slips back through as a conflict."""
     (tmp_path / 'entry.cfg').write_text('[credential "https://GitHub.com"]\n\thelper = /usr/bin/true\n[include]\n\tpath = leaf.cfg\n')
     (tmp_path / 'leaf.cfg').write_text('[credential "https://GitHub.com"]\n\thelper = !gh auth git-credential\n')
 

@@ -2,7 +2,7 @@
 -- VSCode through vscode-neovim. Everywhere else the whole set loads.
 --
 -- An allowlist rather than a blocklist, because the spec list is not fully
--- enumerable here: colorscheme-manager.lua synthesises specs at startup by
+-- enumerable here: colorscheme-manager.lua synthesizes specs at startup by
 -- scanning the theme library, so a blocklist cannot name what it has never
 -- seen. That leaked — `cendre` and `sora` were loading in VSCode because
 -- nobody thought to block them when those themes were added.

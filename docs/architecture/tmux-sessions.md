@@ -1,6 +1,6 @@
 # tmux Sessions
 
-How the tmux workspace is organised: a session is a unit of work, and its windows are the places you
+How the tmux workspace is organized: a session is a unit of work, and its windows are the places you
 touch to do it.
 
 ## The Model
@@ -56,10 +56,10 @@ The status bar runs two lines, set in `configs/common/.config/tmux/tmux.conf`:
 | 2 | The focused session's windows |
 
 Both lines share one shape, so they read as a single bar rather than two competing designs. Entries
-are separated by whitespace alone, and the current entry is marked by colour and weight — green on
+are separated by whitespace alone, and the current entry is marked by color and weight — green on
 line 1 for the session you are in, yellow on line 2 for the window.
 
-Those two choices come out of visual-perception research rather than taste. Colour is the strongest
+Those two choices come out of visual-perception research rather than taste. Color is the strongest
 [preattentive channel](https://link.springer.com/article/10.3758/s13423-020-01859-9) — it is
 processed in parallel across the visual field before you focus on anything, which is what makes
 "where am I" answerable at a glance instead of by reading. And
@@ -68,9 +68,9 @@ the gap between entries being wider than the gaps inside a name is the entire me
 
 Dividers were tried and dropped. Padding plus a bar is two separators doing one job: it flattens
 the spacing so proximity carries no information, and the extra marks only make the line busier.
-Accenting the dividers was also tried — a tmux format loop has no lookahead, so an entry can colour
-the bar on one side of itself but not the one on its other side, which belongs to its neighbour.
-That leaves all bars accented or none, and the current entry's colour already carries the signal.
+Accenting the dividers was also tried — a tmux format loop has no lookahead, so an entry can color
+the bar on one side of itself but not the one on its other side, which belongs to its neighbor.
+That leaves all bars accented or none, and the current entry's color already carries the signal.
 
 tmux draws `status-format[0]` topmost and ships its own window row there, so the window row has to
 move down before the theme can claim line 1. `tmux-sessions install-status` does that relocation,
@@ -79,7 +79,7 @@ its stock value. The command is idempotent — on a config reload line 2 already
 and the copy is skipped.
 
 Line 1's format is generated per-theme by the `theme` CLI (`lib/generators/tmux.sh`), which owns
-status bar colour the same way it owns `pane-border-format`.
+status bar color the same way it owns `pane-border-format`.
 
 ## Switching
 
@@ -189,7 +189,7 @@ found heavy users' bars scrolling with titles too small to read.
 ## Interaction with sesh
 
 sesh names a session after the **basename** of its path (`dir_length` defaults to 1), or after the
-explicit `name` in a `[[session]]` block in `~/.config/sesh/sesh.toml`, sanitising the result by
+explicit `name` in a `[[session]]` block in `~/.config/sesh/sesh.toml`, sanitizing the result by
 replacing `.`, `:`, and runs of whitespace with `_`.
 
 That naming is the one place sesh and the work-session model pull against each other, since a
@@ -217,7 +217,7 @@ cannot answer "which session is that window in" — the gap `prefix w` exists to
 does something `prefix w` cannot: it creates sessions from zoxide directories, config entries, and
 `fd` results, so it reaches places that have no running session at all.
 
-One pre-existing sesh behaviour is worth knowing, because it shows up in the status line: since
+One pre-existing sesh behavior is worth knowing, because it shows up in the status line: since
 names come from the basename, two repos sharing one (`~/homelab` and `~/code/refs/homelab`)
 produce the same session name. Setting `dir_length = 2` in `sesh.toml` disambiguates them.
 
@@ -283,7 +283,7 @@ workspace only relocates where the argument named the window holding it. `tmux-r
 carries the forms.
 
 **The six-pane cap is imposed on the answer rather than requested of it.** A limit the model is
-merely told about is honoured most of the time. A limit applied afterwards is honoured always.
+merely told about is honored most of the time. A limit applied afterwards is honored always.
 
 **A new window opens with one pane, so any split at all was made by hand.** An even 188|188 is as
 deliberate as a dragged 183|193, and treating only the uneven case as intentional is what once
@@ -303,4 +303,4 @@ cite the same item, not that you want them apart.
 | `apps/common/tmux-sessions` | Switching, creation, promotion, reordering, status relocation |
 | `apps/common/tmux-rearrange` | Bulk regroup: scan, propose, render a script |
 | `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call |
-| `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colours |
+| `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colors |

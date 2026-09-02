@@ -284,11 +284,11 @@ def test_every_autoloaded_completion_is_generated_before_compinit_reads_fpath() 
     lines = uncommented()
     calls = [i for i, line in enumerate(lines) if CACHE_COMPLETION_CALL.search(line) and 'cache_completion()' not in line]
     joined = next(i for i, line in enumerate(lines) if line.startswith('fpath=("$ZSH_AUTOLOADED"'))
-    initialised = next(i for i, line in enumerate(lines) if line.startswith('compinit -d '))
+    initialized = next(i for i, line in enumerate(lines) if line.startswith('compinit -d '))
 
     assert calls, 'no cache_completion call was matched, so this asserts nothing'
-    assert joined < initialised, 'the generated functions are written where compinit will never index them'
-    late = [lines[i].strip() for i in calls if i > initialised]
+    assert joined < initialized, 'the generated functions are written where compinit will never index them'
+    late = [lines[i].strip() for i in calls if i > initialized]
     assert not late, f'these run after compinit and are never registered: {late}'
 
 

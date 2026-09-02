@@ -224,7 +224,7 @@ def _data_home(session: Session) -> Path:
     """`$XDG_DATA_HOME`, or this session's home with the default under it.
 
     The variable rather than the session alone, because it is a real knob every
-    tool here honours and a machine that sets it elsewhere would otherwise be read
+    tool here honors and a machine that sets it elsewhere would otherwise be read
     at a path nothing writes to.
     """
     declared = os.environ.get('XDG_DATA_HOME')
@@ -316,7 +316,7 @@ def _atuin_syncs(session: Session) -> bool:
     also a `ValueError`, and one that travels straight through the `OSError`
     guard in `_asked` and costs every other tool its measurement.
 
-    `ATUIN_CONFIG_DIR` is the knob atuin itself honours, and `atuin info` prints
+    `ATUIN_CONFIG_DIR` is the knob atuin itself honors, and `atuin info` prints
     it, so a machine that moves the config is read where it actually keeps it.
     """
     declared = os.environ.get('ATUIN_CONFIG_DIR')
@@ -447,7 +447,7 @@ def _bbkt(session: Session) -> Credential:
     own help — *connect to the instance and report who you are*. That makes it a
     round trip to an employer's Bitbucket from a check that runs on a timer,
     whether or not anyone is at the desk. `config path token` reads the config
-    file and prints where the token would be, which honours a `token_file`
+    file and prints where the token would be, which honors a `token_file`
     override this repo has no business guessing at.
     """
     if not shutil.which('bbkt'):
@@ -470,7 +470,7 @@ def _jira(session: Session) -> Credential:
     The one path here taken from upstream convention rather than measured, because
     jira is declared by the work box alone. `jira init --help` and
     `eza -1a ~/.config/.jira/` settle it there in one line each, and
-    `$JIRA_CONFIG_FILE` is honoured so a box that keeps it elsewhere reads correctly
+    `$JIRA_CONFIG_FILE` is honored so a box that keeps it elsewhere reads correctly
     whatever the default turns out to be.
 
     `jira me` is the networked answer and is not used, for the reason every other

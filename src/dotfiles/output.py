@@ -33,9 +33,9 @@ if TYPE_CHECKING:
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)
 
-VERDICT_COLOURS = {'converged': 'green', 'drift': 'yellow', 'issue': 'red'}
+VERDICT_COLORS = {'converged': 'green', 'drift': 'yellow', 'issue': 'red'}
 
-CHANGE_COLOURS = {'matched': 'green', 'missing': 'yellow', 'stale': 'yellow', 'undeclared': 'blue', 'unknown': 'magenta'}
+CHANGE_COLORS = {'matched': 'green', 'missing': 'yellow', 'stale': 'yellow', 'undeclared': 'blue', 'unknown': 'magenta'}
 
 MATCHED = 'matched'
 """The label an `Examined` row carries.
@@ -49,7 +49,7 @@ NEED_ATTENTION = 'need attention'
 
 Named because six sites across two modules render it, and the tests build their
 expected strings from it rather than repeating it — so rewording is this line and
-its neighbour, not a sweep. `attention` rather than a repairer is what the bucket
+its neighbor, not a sweep. `attention` rather than a repairer is what the bucket
 can honestly claim: `Change.declined` is the complement of "apply will act", so it
 carries `Repair.NONE` items with no by-hand route to point at."""
 
@@ -59,7 +59,7 @@ NEEDS_ATTENTION = 'needs attention'
 VERDICT_MARKS = {'converged': '✓', 'drift': '~', 'issue': '✗'}
 """What stands in front of a section's name, since the name itself is the heading.
 
-A mark and not colour alone: `NO_COLOR` is a preference this fleet honours, and a
+A mark and not color alone: `NO_COLOR` is a preference this fleet honors, and a
 verdict carried only in an escape code answers nothing on a machine that asked for
 none."""
 
@@ -83,7 +83,7 @@ advice line that hangs under both.
 
 `SUBJECT_COLUMN` is a floor rather than the width: a section sets its own from the
 longest item in it, so one long address cannot shove that row's detail past its
-neighbours'."""
+neighbors'."""
 
 SUBJECT_CEILING = 44
 """Where a section stops widening for one long item.
@@ -99,7 +99,7 @@ literal is a second copy nothing would notice going stale. A longer name —
 `packages/ghrelease`, a stage called `system_upgrade` — pushes its own detail right
 rather than being cut."""
 
-VERDICT_WIDTH = max(len(word) for word in VERDICT_COLOURS)
+VERDICT_WIDTH = max(len(word) for word in VERDICT_COLORS)
 """How wide the closing line's verdict word is: the longest of them, so the
 sentence after it starts in one place whatever the run answered."""
 
@@ -171,19 +171,19 @@ def tally(*counts: tuple[int, str]) -> str:
     return f'  ·  {", ".join(shown)}' if shown else ''
 
 
-def section_line(mark: str, name: str, detail: str, colour: str = '', trailer: str = '') -> str:
+def section_line(mark: str, name: str, detail: str, color: str = '', trailer: str = '') -> str:
     """One section's opening line as markup: a mark, the name of the thing, what it found.
 
     Returned rather than printed, because the reports sharing this geometry do not
     share a stream — a read verb's heading is stdout, an `apply`'s is stderr, and
-    `machines show`'s is data. Colour is optional: a listing has no verdict, and an
+    `machines show`'s is data. Color is optional: a listing has no verdict, and an
     empty style tag renders as one.
     """
-    marked = f'[{colour}]{mark}[/]' if colour else mark
+    marked = f'[{color}]{mark}[/]' if color else mark
     return f'{marked} [bold]{name:<{ADDRESS_COLUMN}}[/] {detail}{trailer}'
 
 
-def render_section(address: str, detail: str, seconds: float = 0.0, mark: str = '✓', colour: str = 'green') -> None:
+def render_section(address: str, detail: str, seconds: float = 0.0, mark: str = '✓', color: str = 'green') -> None:
     """One part of an `apply`: what it holds, or what is about to happen to it.
 
     No verdict on the measure pass. An apply is about to act on what it found, so
@@ -193,7 +193,7 @@ def render_section(address: str, detail: str, seconds: float = 0.0, mark: str = 
     """
     if not showing_evidence():
         return
-    err_console.print(section_line(mark, address, detail, colour, elapsed(seconds)))
+    err_console.print(section_line(mark, address, detail, color, elapsed(seconds)))
 
 
 def render_result(result: ResourceResult, stream: Console) -> None:
@@ -210,7 +210,7 @@ def render_result(result: ResourceResult, stream: Console) -> None:
     Keyed on the verdict's string value rather than the enum, so this module does
     not import `results` at runtime.
     """
-    colour = VERDICT_COLOURS[str(result.verdict)]
+    color = VERDICT_COLORS[str(result.verdict)]
     mark = VERDICT_MARKS[str(result.verdict)]
     # A summary may hold a newline where the resource measures more than one kind
     # of thing, and `system` joined its two with a comma into the longest row in
@@ -219,7 +219,7 @@ def render_result(result: ResourceResult, stream: Console) -> None:
     # since a tally wedged between two halves of a sentence separates them.
     lines = result.detail.split('\n')
     trailer = f'{tallies(result)}{elapsed(result.seconds)}'
-    stream.print(section_line(mark, result.address, lines[0], colour, trailer if len(lines) == 1 else ''))
+    stream.print(section_line(mark, result.address, lines[0], color, trailer if len(lines) == 1 else ''))
     for position, line in enumerate(lines[1:], start=2):
         stream.print(f'  {"":<{ADDRESS_COLUMN}} {line}{trailer if position == len(lines) else ""}')
 
@@ -236,19 +236,19 @@ def render_result(result: ResourceResult, stream: Console) -> None:
     stream.print()
 
 
-RULE_COLOUR = 'blue'
+RULE_COLOR = 'blue'
 """Explicit, because Rich draws a rule faint by default and faint is unreadable on
 half the terminal themes this fleet uses."""
 
 
 def render_rule(title: str, stream: Console) -> None:
-    stream.rule(f'[bold]{title}[/]', style=RULE_COLOUR, align='left')
+    stream.rule(f'[bold]{title}[/]', style=RULE_COLOR, align='left')
 
 
 def render_summary_row(verdict: str, name: str, detail: str, stream: Console) -> None:
     """A summary row is its own section heading again, so it goes through the same
     builder — a recap worded afresh makes the reader compare phrasings."""
-    stream.print(section_line(VERDICT_MARKS[verdict], name, detail, VERDICT_COLOURS[verdict]))
+    stream.print(section_line(VERDICT_MARKS[verdict], name, detail, VERDICT_COLORS[verdict]))
 
 
 def render_verdict(word: str, sentence: str, stream: Console) -> None:
@@ -260,7 +260,7 @@ def render_verdict(word: str, sentence: str, stream: Console) -> None:
     Ungated whatever `-q` says, because a run reporting by exit code alone is a
     worse command rather than a quieter one.
     """
-    stream.print(f'[{VERDICT_COLOURS[word]}]{word:<{VERDICT_WIDTH}}[/] {sentence}')
+    stream.print(f'[{VERDICT_COLORS[word]}]{word:<{VERDICT_WIDTH}}[/] {sentence}')
 
 
 def _listed(result: ResourceResult) -> tuple[tuple[Change, ...], tuple[Examined, ...]]:
@@ -315,7 +315,7 @@ def listing_everything() -> bool:
 
 
 SLOW_RESOURCE_SECONDS = 2.0
-"""Above this, a resource's own measurement is coloured rather than merely stated.
+"""Above this, a resource's own measurement is colored rather than merely stated.
 
 A reading threshold, not a performance one: long enough to have been waited on is
 what makes a row the one somebody came back to the screen to find.
@@ -326,7 +326,7 @@ def elapsed(seconds: float) -> str:
     """What one measurement cost, in the units a person compares.
 
     Minutes past sixty, nothing at all under a tenth of a second, and a slow one
-    coloured against a plain one rather than against faint — faint is unreadable
+    colored against a plain one rather than against faint — faint is unreadable
     on half the terminal themes this fleet uses.
     """
     if seconds < 0.1:
@@ -379,7 +379,7 @@ def render_change(change: Change, width: int = SUBJECT_COLUMN) -> None:
         return
     attribution = f' from {change.source}' if change.source else ''
     observed = f' (is {quoted(change.observed)}{attribution})' if change.observed else ''
-    render_row(str(change.verdict), change.item, f'{change.detail}{observed}', CHANGE_COLOURS[str(change.verdict)], width)
+    render_row(str(change.verdict), change.item, f'{change.detail}{observed}', CHANGE_COLORS[str(change.verdict)], width)
     # One row per line, because advice is now assembled from what a diagnosis
     # measured — the owning package, then the command that removes it — and a
     # reader scanning for the command wants it on a line of its own rather than
@@ -392,22 +392,22 @@ def render_examined(row: Examined, width: int = SUBJECT_COLUMN) -> None:
     """One item a resource looked at and was happy with, in the changes' columns.
 
     Sharing their columns is what makes a section one list of every item, with the
-    interesting ones coloured rather than segregated.
+    interesting ones colored rather than segregated.
     """
-    render_row(MATCHED, row.item, row.detail, CHANGE_COLOURS[MATCHED], width)
+    render_row(MATCHED, row.item, row.detail, CHANGE_COLORS[MATCHED], width)
 
 
-def render_row(label: str, subject: str, detail: str, colour: str = '', width: int = SUBJECT_COLUMN) -> None:
+def render_row(label: str, subject: str, detail: str, color: str = '', width: int = SUBJECT_COLUMN) -> None:
     """One evidence row: a label, the thing it is about, and what there is to say.
 
     The column contract in one place, since a section reads as one list only while
     every row agrees on the widths. Public because the bundle verbs render rows for
-    things that are not `Change`es, and synthesising one to reach a renderer would
+    things that are not `Change`es, and synthesizing one to reach a renderer would
     put a unit of work into the record vocabulary for a file listing.
     """
     if not showing_evidence():
         return
-    marked = f'[{colour}]{label:<{VERDICT_COLUMN}}[/]' if colour else f'{label:<{VERDICT_COLUMN}}'
+    marked = f'[{color}]{label:<{VERDICT_COLUMN}}[/]' if color else f'{label:<{VERDICT_COLUMN}}'
     # Padded only where a third field follows it. A row with nothing to say would
     # otherwise end in a column of blanks, and the trailing space is what a copied
     # filename carries into the next command.

@@ -1,10 +1,10 @@
--- Diff appearance, normalised across every colorscheme.
+-- Diff appearance, normalized across every colorscheme.
 --
 -- Neovim's four diff groups are set by whichever colorscheme is loaded, and the
 -- results are not comparable. Measured across fifteen of the themes in the
 -- library: slate paints added lines #5f875f and deleted lines a saturated
 -- magenta, carbonfox tints them so faintly they read as unchanged, and
--- OceanicNext gives all four groups one identical grey and separates them by a
+-- OceanicNext gives all four groups one identical gray and separates them by a
 -- foreground alone. Eight of the fifteen set that foreground, which overrides
 -- treesitter and flattens a whole hunk to one shade.
 --
@@ -13,7 +13,7 @@
 -- ratio, rather than blending by a fixed fraction that lands somewhere different
 -- on every palette. `band` below is that same solve, against the live highlight
 -- table instead of theme.yml, which is what reaches the nineteen themes whose
--- colours come from a plugin the tool does not generate.
+-- colors come from a plugin the tool does not generate.
 --
 -- The targets are delta's: 1.45:1 for a changed line, 2.2:1 for the emphasis
 -- inside it. DiffChange marks the line and DiffText marks the characters that
@@ -95,7 +95,7 @@ local function apply()
   vim.api.nvim_set_hl(0, 'DiffText', { bg = band(change, bg, EMPHASIS_CONTRAST) })
 
   -- Diffview copies DiffDelete into DiffviewDiffAddAsDelete, which is the group
-  -- that paints removed lines in its left pane, and it reads the colours rather
+  -- that paints removed lines in its left pane, and it reads the colors rather
   -- than linking to them. Its own ColorScheme handler registers when the plugin
   -- lazy-loads, so it already runs after this one; the call is here so the
   -- result does not depend on that ordering.
@@ -105,7 +105,7 @@ end
 
 vim.api.nvim_create_autocmd('ColorScheme', {
   desc = 'Diff: solve the diff groups against the incoming theme',
-  group = vim.api.nvim_create_augroup('diff-colours', { clear = true }),
+  group = vim.api.nvim_create_augroup('diff-colors', { clear = true }),
   pattern = '*',
   callback = apply,
 })

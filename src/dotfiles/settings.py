@@ -113,7 +113,7 @@ class Resolution:
     value: str
     source: str
     """Named because the value alone does not explain itself. A check reporting a
-    registry missing at a path nobody recognises is a different problem from one
+    registry missing at a path nobody recognizes is a different problem from one
     reporting it missing at the path the machine declared, and only the rung
     separates them, so the layer that supplied the value is reported with it.
     """

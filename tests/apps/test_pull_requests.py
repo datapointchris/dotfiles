@@ -230,7 +230,7 @@ def test_an_unauthenticated_gh_skips_github_rather_than_failing_the_run(run) -> 
 def test_a_pr_against_an_upstream_of_the_same_name_is_not_listed(run) -> None:
     """The search covers all of GitHub, so being a contributor to any project that
     shares a name with one of yours was enough to be admitted — `crate-ci/typos`
-    against the registry's `typos`. The row was mislabelled, and worse, the same
+    against the registry's `typos`. The row was mislabeled, and worse, the same
     basename lookup fed `path`, so `prs` fetched a pull ref from the wrong origin."""
     result = run(
         registry('github', ('typos', '~/code/typos')),

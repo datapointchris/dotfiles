@@ -59,7 +59,7 @@ double bars, a centered full-width line — and each carries `_success`, `_error
 message and prefix an icon, using the same icons as `logging.sh` and
 deliberately omitting the `[LEVEL]` prefix; picking between the two libraries is
 picking whether the output will be parsed. The **help** ones are the grammar
-below. The rest are separators, colour helpers, a `has_command` test, a
+below. The rest are separators, color helpers, a `has_command` test, a
 `center_text` that pads to `tput cols`, and a `formatting_demo` that prints a
 sample of the whole library.
 
@@ -83,12 +83,12 @@ show_help() {
 }
 ```
 
-No call site passes a width or a colour, and none should:
+No call site passes a width or a color, and none should:
 
 - **Widths are computed.** `help_row` buffers; the flush sizes the description column from the
-  longest row in the section. A row that outgrows its neighbours re-flows the section instead of
+  longest row in the section. A row that outgrows its neighbors re-flows the section instead of
   overrunning it, which is how the alignment drift in these screens kept happening.
-- **Colours come from the section name.** Commands/Verbs/Suites/Groups/Phases are bright cyan,
+- **Colors come from the section name.** Commands/Verbs/Suites/Groups/Phases are bright cyan,
   Options/Flags/Arguments/Environment Variables bright magenta, Examples bright yellow.
   App-specific headings rotate through the rest of the palette by position, so adjacent sections
   always differ.
@@ -109,7 +109,7 @@ from Rich instead.
 
 The underlying `print_help_row(width, name, [description], [color])` and
 `print_example_row(width, command, [comment])` remain available for a one-off row outside a help
-screen. They emit the colour escape *outside* the padded field — `printf` counts escape bytes
+screen. They emit the color escape *outside* the padded field — `printf` counts escape bytes
 toward a field width — and *before* the two-space indent, so the indent stays contiguous with the
 name for anything grepping the output for it.
 

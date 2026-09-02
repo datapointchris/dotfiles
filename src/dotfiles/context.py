@@ -13,7 +13,7 @@ settable variable, got read-only attribute"*, raised at the call sites that pass
 Session rather than here.
 
 **The four types are imported under `TYPE_CHECKING`.** This module is a
-declaration and has no runtime behaviour, so importing four modules to describe
+declaration and has no runtime behavior, so importing four modules to describe
 one would make a leaf into a hub. `Inventories` is the one that matters:
 `evidence` imports `resources`, and a runtime edge from here would put this module
 inside that graph.
@@ -53,7 +53,7 @@ class MachineContext(Protocol):
 
     @property
     def force(self) -> bool:
-        """Authorisation to destroy what this repo did not create."""
+        """Authorization to destroy what this repo did not create."""
         ...
 
     @property

@@ -20,7 +20,7 @@ it runs in. `server` acts on every pane; a session name acts on that session;
 `server` is reached as `=server`.
 
 The model is given one job -- which panes group, and what to call each group --
-because that is the half needing judgement over prose. Every geometric decision
+because that is the half needing judgment over prose. Every geometric decision
 is computed here, and the tmux commands are rendered here, so the half that can
 destroy work never comes back from a model. The six-pane cap is one of those
 decisions: the model is told it and the plan is rewritten to obey it.

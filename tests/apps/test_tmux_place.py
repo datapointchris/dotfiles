@@ -2,7 +2,7 @@
 
 `place()` is a pure function over window dimensions, the panes already there, and
 what is being placed. That is the whole reason the module is arranged this way:
-the size rule, pair adjacency and the coordinator's promotion are the behaviour
+the size rule, pair adjacency and the coordinator's promotion are the behavior
 worth pinning, and every one of them is reachable here for the cost of building a
 dataclass.
 
@@ -51,7 +51,7 @@ def layout(module, window_id: str, columns, width: int = WINDOW, height: int = H
     `(pane_id, role, pair)`.
 
     The two axes hand their remainder to opposite ends, and that is tmux's own
-    behaviour rather than an inconsistency here. Columns are reflowed left to
+    behavior rather than an inconsistency here. Columns are reflowed left to
     right by `resize-pane -x`, so the rightmost absorbs what is left over. A row
     is made by `split-window -v -l <n>`, which gives the new *bottom* pane that
     many rows and leaves the rest on the pane above -- so a worker is the taller

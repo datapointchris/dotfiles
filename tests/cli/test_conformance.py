@@ -71,7 +71,7 @@ ACCEPTED = {
 
 Built here rather than inside each test because five of them ask the same
 question of the whole tree, and a policy asserted against its own private copy of
-the surface is a policy that can disagree with its neighbour about what the
+the surface is a policy that can disagree with its neighbor about what the
 surface is.
 
 `secondary_opts` as well as `opts`, or a `--refresh/--cached` pair is half
@@ -188,7 +188,7 @@ def test_every_group_is_a_documented_noun(path: tuple[str, ...], group: click.Gr
 
 
 def test_every_documented_exception_is_actually_used() -> None:
-    """An exception nobody uses is a licence left lying around.
+    """An exception nobody uses is a license left lying around.
 
     The list is what a reviewer reads to decide whether a new verb is justified,
     so a stale entry makes the bar look lower than it is.
@@ -325,7 +325,7 @@ def test_no_read_verb_offers_a_ceiling() -> None:
 
 
 def test_no_read_verb_offers_force() -> None:
-    """`--force` authorises a write that cannot be undone — a foreign file replaced,
+    """`--force` authorizes a write that cannot be undone — a foreign file replaced,
     a package removed — so it belongs on the verb that writes and nowhere else.
     A flag appears only on the commands that read it.
 
@@ -344,7 +344,7 @@ def test_no_apply_offers_refresh_because_every_apply_already_refreshes() -> None
     the cached answer it would otherwise trust is the one it was just told to
     distrust.
 
-    That `apply` really does reach upstream is behaviour and cannot be derived from
+    That `apply` really does reach upstream is behavior and cannot be derived from
     the tree; `tests/matrix/test_composite.py` measures it.
     """
     for path, options in ACCEPTED.items():
@@ -621,7 +621,7 @@ def rebind(monkeypatch: pytest.MonkeyPatch, name: str, value: object) -> list[st
 def capture(monkeypatch: pytest.MonkeyPatch) -> io.StringIO:
     """Both consoles, writing into one buffer.
 
-    Neither the width nor the colour is pinned — a test asserts the value the
+    Neither the width nor the color is pinned — a test asserts the value the
     output was built from rather than the rendering, which refuses both, and a
     pinned width only picks which terminal the suite pretends to be. Rich answers
     `is_terminal` false for a `StringIO` and emits no escape sequence into one, so
@@ -747,7 +747,7 @@ def verdict_columns(monkeypatch: pytest.MonkeyPatch, width: int | None = None) -
         rebind(monkeypatch, 'VERDICT_WIDTH', width)
     buffer = capture(monkeypatch)
     found = {}
-    for word in output.VERDICT_COLOURS:
+    for word in output.VERDICT_COLORS:
         buffer.seek(0)
         buffer.truncate()
         output.render_verdict(word, DETAIL, output.console)
@@ -779,7 +779,7 @@ def test_every_verdict_word_shares_one_column(monkeypatch: pytest.MonkeyPatch) -
     verdict pads that one word to nothing and moves its sentence right.
 
     **It cannot fail while `VERDICT_WIDTH` is the maximum over
-    `VERDICT_COLOURS`**, and `render_verdict` raises `KeyError` on any word outside
+    `VERDICT_COLORS`**, and `render_verdict` raises `KeyError` on any word outside
     that dict, so no other word can reach the padding. What it catches is the
     derivation replaced by a literal, and it is the only thing that does:
     `VERDICT_WIDTH = 5` otherwise passes every test in the suite.
@@ -836,7 +836,7 @@ def attention_wordings(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
 
 
 def test_every_line_wording_attention_reads_it_from_one_constant(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The invariant centralising the wording created, asserted as what is printed.
+    """The invariant centralizing the wording created, asserted as what is printed.
 
     Six render sites across two modules became one owner, and the copies were
     themselves the guard: while six existed, rewording meant finding all six. A

@@ -31,7 +31,7 @@ under the cursor. That session did not write the code, which is exactly why it
 is the right one to ask.
 
 Python rather than shell because the work here is arithmetic: measuring cells,
-padding columns and colouring them. The previous version did that in jq inside a
+padding columns and coloring them. The previous version did that in jq inside a
 heredoc, where there is no padding primitive and a string repeated zero times
 comes back as null. fzf is still the picker — it is the picker everywhere else on
 this machine, and a reimplementation would be a worse one that also had to be
@@ -67,7 +67,7 @@ STALE = 7
 # Nerd Font glyphs, one per field. Never emoji: an emoji is two cells wide in
 # some terminals and one in others, so a column carrying one cannot be aligned.
 #
-# The icon for a field never changes with its state — only its colour does. Two
+# The icon for a field never changes with its state — only its color does. Two
 # different glyphs are not guaranteed the same cell width either, so a row
 # differing only in review state would sit a column off from the one above it.
 CHECKS_ICON = ''
@@ -88,7 +88,7 @@ MERGE_ICON = ''
 CHECK_STYLES = {'SUCCESS': 'green', 'FAILURE': 'red', 'ERROR': 'red'}
 REVIEW_STYLES = {'APPROVED': 'green', 'CHANGES_REQUESTED': 'red', 'REVIEW_REQUIRED': 'cyan'}
 
-# The state in words. A legend under the table made you carry a colour from the
+# The state in words. A legend under the table made you carry a color from the
 # bottom of the window back up to a glyph; saying it on the row costs a column
 # and removes the lookup entirely.
 CHECK_WORDS = {'SUCCESS': 'passing', 'FAILURE': 'failing', 'ERROR': 'failing', '': 'not run'}
@@ -236,7 +236,7 @@ def diff_column(prs: list[PullRequest]) -> list[Text]:
 
     Every style goes on its own span, never on the `Text` itself. A base style is
     merged into each span rather than overridden, so a base of `dim` here renders
-    the additions dim green — the one colour on the row that has to carry at a
+    the additions dim green — the one color on the row that has to carry at a
     glance.
     """
     counted = [pr for pr in prs if pr.additions is not None]
@@ -287,7 +287,7 @@ def title_cell(pr: PullRequest) -> Text:
 
 
 def checks_cell(pr: PullRequest) -> Text:
-    """CI state, in words. An unrecognised rollup is yellow rather than dim:
+    """CI state, in words. An unrecognized rollup is yellow rather than dim:
     GitHub adds states, and a new one is in flight rather than absent."""
     style = CHECK_STYLES.get(pr.checks, 'dim' if not pr.checks else 'yellow')
     cell = Text()
@@ -402,7 +402,7 @@ def compose(prs: list[PullRequest], *, width: int) -> tuple[Text, list[list[Text
 
     The status column carries one state per line in words — checks on the first,
     review on the second. It replaced a legend under the table, which made you
-    take a colour from the bottom of the window back up to a glyph. Saying it on
+    take a color from the bottom of the window back up to a glyph. Saying it on
     the row costs a column and removes the lookup.
 
     Everything else you scan by is on the first line: title, size, age, branch.
@@ -448,7 +448,7 @@ def compose(prs: list[PullRequest], *, width: int) -> tuple[Text, list[list[Text
 def to_lines(rows: list[Text], *, color: bool) -> list[str]:
     """Rendered rows, with the escape codes in or stripped out.
 
-    Colour is a parameter rather than a call to `isatty` in here, so the caller
+    Color is a parameter rather than a call to `isatty` in here, so the caller
     that knows whether it is writing to a pipe is the one that decides.
     """
     console = Console(force_terminal=color, no_color=not color, width=10_000, soft_wrap=True)
@@ -564,7 +564,7 @@ def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
             '--read0',
             # Paint no background of its own. fzf fills the list area with its
             # `bg` and leaves the padding to whatever is behind, so the padded
-            # frame came out a different colour from the rows inside it. `-1` is
+            # frame came out a different color from the rows inside it. `-1` is
             # terminal default for both, which is the popup's own background.
             '--color=bg:-1,gutter:-1,preview-bg:-1',
             '--delimiter=\t',
@@ -597,7 +597,7 @@ def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
             # current.
             # Empty, not a space. The gutter fzf paints down the left is as wide
             # as the pointer, and a space still reserves the column — which is the
-            # bar. It is coloured `bg+` by default, so it vanishes on whichever
+            # bar. It is colored `bg+` by default, so it vanishes on whichever
             # row is current and reads as a border everywhere else.
             '--pointer=',
             '--marker=',
@@ -791,7 +791,7 @@ def merge(pr: PullRequest, *, interactive: bool) -> int:
     Enter is yes. The prompt exists to show which PR is about to land, not to
     make landing one a chore, and a default of no meant typing a letter to
     confirm every merge that was never in doubt. Anything that is not yes aborts,
-    so a stray key still stops it — the safety is in the unrecognised answer
+    so a stray key still stops it — the safety is in the unrecognized answer
     rather than in the default.
 
     `--merge` is what makes this one prompt instead of four. Without a method gh

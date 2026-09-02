@@ -15,7 +15,7 @@ makes a row here the same row on any machine.
 **A bare `plan` is absent from this file for that reason.** It measures upstream
 without being asked, so every row it produced would be a statement about what
 GitHub published this morning. What it does instead — that the network is reached
-at all — is behaviour rather than a row, and `test_composite.py` measures it
+at all — is behavior rather than a row, and `test_composite.py` measures it
 against the guard.
 
 **Every `apply` below is an offline one, and that is forced rather than chosen.**
@@ -343,7 +343,7 @@ def test_the_flag_that_advice_names_is_one_this_verb_accepts(sandbox: Sandbox, c
 
     Asserted by reaching the guard rather than by reading help text: a flag can be
     accepted and dropped, and what makes the advice true is the request going out.
-    A flag the run cannot honour says so and never parses into silence, which is
+    A flag the run cannot honor says so and never parses into silence, which is
     the same failure from the other end.
     """
     machine(sandbox, CACHED[6])
@@ -564,7 +564,7 @@ def test_check_refuses_a_section_it_cannot_narrow_to(sandbox: Sandbox, cli: Call
     about is the one revised. That is exactly what happened: `SELECTORS` gained
     `--offline` with the new argument while this docstring still stated the old one
     as fact. A surface invariant is derived from the command tree, never listed in
-    a behavioural test.
+    a behavioral test.
 
     `--source` stays because nothing walks the tree for it. This literal is the
     only thing asserting that rule, and the rule reaches a policy with a derived

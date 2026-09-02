@@ -139,7 +139,7 @@ class TestPatternExpansion:
         # Go releases name the architecture amd64 where the kernel says x86_64.
         assert releases.expand_pattern('{os}_{go_arch}', 'v1', LINUX_X86) == 'linux_amd64'
         assert releases.expand_pattern('{os}_{go_arch}', 'v1', MACOS_ARM) == 'darwin_arm64'
-        # Capitalised kernel names (gum, lazydocker).
+        # Capitalized kernel names (gum, lazydocker).
         assert releases.expand_pattern('{Os}_{Arch}', 'v1', LINUX_X86) == 'Linux_x86_64'
         # The product name for Apple rather than the kernel name (jira-cli).
         assert releases.expand_pattern('{os_mac}', 'v1', MACOS_ARM) == 'macOS'
@@ -646,7 +646,7 @@ class TestWingetBundling:
 
     def test_a_third_asset_shape_is_refused_rather_than_renamed_to_an_exe(self, tmp_path, monkeypatch):
         """The zip branch and the exe branch are the whole vocabulary, so an
-        unrecognised suffix has to raise rather than take the copy path.
+        unrecognized suffix has to raise rather than take the copy path.
 
         A tarball renamed `rg.exe` passes every later assertion — the file is
         there, the manifest records it staged, the install copies it onto PATH —

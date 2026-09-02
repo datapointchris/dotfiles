@@ -48,7 +48,7 @@ omit = []
 # Without these a test that drives the CLI through `python -m dotfiles.main`
 # measures nothing: `commands/manage.py::update` read 0% while
 # `tests/cli/test_update.py` was exercising it against real git repositories.
-# pytest-cov 7 dropped its own subprocess support in favour of them.
+# pytest-cov 7 dropped its own subprocess support in favor of them.
 #
 # `subprocess` puts the serialized config in the environment, which the .pth file
 # coverage ships into site-packages reads at interpreter start. `parallel` above

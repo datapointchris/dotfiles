@@ -6,7 +6,7 @@ listing a directory that is not there, downloading a name that does not exist,
 uploading into a path nobody created. A fake that accepted everything would assert
 this module's mental model rather than challenge it — a fake enforces the
 service's constraints and never just replays responses — and
-the constraint it exists for is the one that costs an artefact: an upload the
+the constraint it exists for is the one that costs an artifact: an upload the
 transport reroutes lands where no `list` will ever find it.
 
 `spy` is the other kind, and it answers the only question a fake cannot: whether
@@ -37,7 +37,7 @@ from dotfiles.vocabulary import ExitCode
 
 TABLE = """
 [remote]
-root = "/artefacts"
+root = "/artifacts"
 
 [remote.transport]
 program = "{program}"
@@ -122,7 +122,7 @@ class TestReadingTheTable:
         found = transport.read()
 
         assert found.remote is not None
-        assert found.remote.root == '/artefacts'
+        assert found.remote.root == '/artifacts'
         assert found.remote.transport.program == 'relay'
         assert found.remote.keep_bundles == transport.DEFAULT_KEEP
         assert found.remote.fetch_bundle_when_none_is_staged is False
@@ -167,7 +167,7 @@ class TestReadingTheTable:
             config_home,
             """
             [remote]
-            root = "/artefacts"
+            root = "/artifacts"
 
             [remote.transport]
             program = "relay"
@@ -191,7 +191,7 @@ class TestReadingTheTable:
             config_home,
             """
             [remote]
-            root = "/artefacts"
+            root = "/artifacts"
 
             [remote.transport]
             program = "relay"
@@ -215,7 +215,7 @@ class TestReadingTheTable:
             config_home,
             """
             [remote]
-            root = "/artefacts"
+            root = "/artifacts"
 
             [remote.transport]
             program = "relay"
@@ -236,7 +236,7 @@ class TestReadingTheTable:
             config_home,
             """
             [remote]
-            root = "/artefacts"
+            root = "/artifacts"
 
             [remote.transport]
             program = "relay"
@@ -256,7 +256,7 @@ class TestReadingTheTable:
             config_home,
             """
             [remote]
-            root = "/artefacts"
+            root = "/artifacts"
 
             [remote.transport]
             program = "relay"
@@ -272,7 +272,7 @@ class TestReadingTheTable:
 
     def test_mkdir_and_delete_are_optional(self, config_home: Path) -> None:
         """A machine can decline to give this tool the ability to create or remove
-        things on a server, and still exchange artefacts."""
+        things on a server, and still exchange artifacts."""
         declare(config_home, TABLE.format(program='relay'))
 
         found = transport.read()
@@ -294,7 +294,7 @@ class TestReadingTheTable:
 class TestBuildingTheCommand:
     def test_each_operation_substitutes_exactly_its_own_placeholders(self, configured: transport.Remote) -> None:
         built = configured.transport
-        assert built.argv(transport.Operation.LIST, {'dir': '/artefacts/bundles'}) == ('relay', 'list', '/artefacts/bundles')
+        assert built.argv(transport.Operation.LIST, {'dir': '/artifacts/bundles'}) == ('relay', 'list', '/artifacts/bundles')
         assert built.argv(transport.Operation.UPLOAD, {'local': '/tmp/a.tar.gz', 'dir': '/x'}) == ('relay', 'upload', '/tmp/a.tar.gz', '/x')
         assert built.argv(transport.Operation.DOWNLOAD, {'remote': '/x/a', 'local': '/tmp/a'}) == ('relay', 'download', '/x/a', '/tmp/a')
 
@@ -308,8 +308,8 @@ class TestBuildingTheCommand:
     def test_a_directory_is_joined_under_the_root_with_the_remote_separator(self, configured: transport.Remote) -> None:
         """Never `Path`, which joins with a backslash on Windows — where this repo
         now has a machine, and where the remote has never heard of one."""
-        assert configured.directory('bundles', 'wsl-work-workstation') == '/artefacts/bundles/wsl-work-workstation'
-        assert configured.directory('/bundles/') == '/artefacts/bundles'
+        assert configured.directory('bundles', 'wsl-work-workstation') == '/artifacts/bundles/wsl-work-workstation'
+        assert configured.directory('/bundles/') == '/artifacts/bundles'
 
     def test_the_argv_reaching_the_transport_is_the_one_that_was_built(self, fake_bin: Path, tmp_path: Path, config_home: Path) -> None:
         """The fake cannot answer this: two different correct-looking commands both
@@ -319,40 +319,40 @@ class TestBuildingTheCommand:
         found = transport.read()
         assert found.remote is not None
 
-        transport.names(found.remote, '/artefacts/bundles')
+        transport.names(found.remote, '/artifacts/bundles')
 
-        assert recorded(record) == [['list', '/artefacts/bundles']]
+        assert recorded(record) == [['list', '/artifacts/bundles']]
 
 
 class TestListing:
     def test_every_line_is_one_name_and_order_is_the_transports(self, configured: transport.Remote, server: Path) -> None:
-        (server / 'artefacts').mkdir()
+        (server / 'artifacts').mkdir()
         for name in ('b.tar.gz', 'a.tar.gz'):
-            (server / 'artefacts' / name).write_text('x')
+            (server / 'artifacts' / name).write_text('x')
 
-        assert transport.names(configured, '/artefacts') == ('a.tar.gz', 'b.tar.gz')
+        assert transport.names(configured, '/artifacts') == ('a.tar.gz', 'b.tar.gz')
 
     def test_an_unreachable_directory_raises_rather_than_answering_empty(self, configured: transport.Remote) -> None:
         """Opposite findings. A caller that reconciles by sweep reads an empty
         answer as "everything was deleted", which is a narrowing default reading
         as a deletion to anything that reconciles by sweep."""
         with pytest.raises(transport.RemoteError) as refused:
-            transport.names(configured, '/artefacts/never-created')
+            transport.names(configured, '/artifacts/never-created')
 
         assert refused.value.code is ExitCode.ISSUE
         assert 'never-created' in str(refused.value)
 
     def test_an_empty_directory_answers_empty(self, configured: transport.Remote, server: Path) -> None:
         """The other half of the pair above: absence and emptiness must not collapse."""
-        (server / 'artefacts').mkdir()
+        (server / 'artifacts').mkdir()
 
-        assert transport.names(configured, '/artefacts') == ()
+        assert transport.names(configured, '/artifacts') == ()
 
     def test_exists_answers_without_raising(self, configured: transport.Remote, server: Path) -> None:
-        (server / 'artefacts').mkdir()
+        (server / 'artifacts').mkdir()
 
-        assert transport.exists(configured, '/artefacts') is True
-        assert transport.exists(configured, '/artefacts/nowhere') is False
+        assert transport.exists(configured, '/artifacts') is True
+        assert transport.exists(configured, '/artifacts/nowhere') is False
 
 
 class TestTellingAbsenceFromFailure:
@@ -365,33 +365,33 @@ class TestTellingAbsenceFromFailure:
     """
 
     def test_a_directory_that_lists_answers_with_its_rows(self, configured: transport.Remote, server: Path) -> None:
-        (server / 'artefacts').mkdir()
-        (server / 'artefacts' / 'a.tar.gz').write_text('x')
+        (server / 'artifacts').mkdir()
+        (server / 'artifacts' / 'a.tar.gz').write_text('x')
 
-        assert transport.listed(configured, '/artefacts') == ('a.tar.gz',)
+        assert transport.listed(configured, '/artifacts') == ('a.tar.gz',)
 
     def test_a_directory_that_was_never_created_answers_none(self, configured: transport.Remote, server: Path) -> None:
         """The probe answers and the listing does not, which is absence."""
-        (server / 'artefacts').mkdir()
+        (server / 'artifacts').mkdir()
 
-        assert transport.listed(configured, '/artefacts/never-created') is None
+        assert transport.listed(configured, '/artifacts/never-created') is None
 
     def test_a_shelf_nobody_has_published_to_is_absence_and_not_an_outage(self, configured: transport.Remote, server: Path) -> None:
         """The ordinary state of a machine whose peer has never uploaded. An
         ancestor lists, which proves the remote is reachable and the failure is
         scoped to the child."""
-        (server / 'artefacts').mkdir()
+        (server / 'artifacts').mkdir()
 
-        assert transport.listed(configured, '/artefacts/status/box') is None
+        assert transport.listed(configured, '/artifacts/status/box') is None
 
     def test_a_root_nothing_has_been_published_under_refuses_and_says_so(self, configured: transport.Remote, server: Path) -> None:
         """Indistinguishable from a denied listing, so it refuses rather than
         guessing, and the advice names the other reading. `push` creates the tree
         on the first upload, so this state does not persist."""
-        assert not (server / 'artefacts').exists()
+        assert not (server / 'artifacts').exists()
 
         with pytest.raises(transport.RemoteError) as refused:
-            transport.listed(configured, '/artefacts/status/box')
+            transport.listed(configured, '/artifacts/status/box')
 
         assert 'dotfiles remote check' in refused.value.advice
         assert 'nothing has been published' in refused.value.advice
@@ -407,7 +407,7 @@ class TestTellingAbsenceFromFailure:
         deny_listing(server)
 
         with pytest.raises(transport.RemoteError) as refused:
-            transport.listed(configured, '/artefacts/bundles/box')
+            transport.listed(configured, '/artifacts/bundles/box')
 
         assert refused.value.code is ExitCode.ISSUE
         assert 'box' in str(refused.value)
@@ -416,19 +416,19 @@ class TestTellingAbsenceFromFailure:
         shutil.rmtree(server)
 
         with pytest.raises(transport.RemoteError):
-            transport.listed(configured, '/artefacts/bundles/box')
+            transport.listed(configured, '/artifacts/bundles/box')
 
 
 class TestPushing:
     def test_a_file_lands_in_the_named_directory(self, configured: transport.Remote, server: Path, tmp_path: Path) -> None:
-        (server / 'artefacts').mkdir()
+        (server / 'artifacts').mkdir()
         local = tmp_path / 'bundle.tar.gz'
         local.write_text('payload')
 
-        landed = transport.push(configured, local, '/artefacts')
+        landed = transport.push(configured, local, '/artifacts')
 
-        assert landed == '/artefacts/bundle.tar.gz'
-        assert (server / 'artefacts' / 'bundle.tar.gz').read_text() == 'payload'
+        assert landed == '/artifacts/bundle.tar.gz'
+        assert (server / 'artifacts' / 'bundle.tar.gz').read_text() == 'payload'
 
     def test_a_missing_directory_with_no_declared_mkdir_refuses_before_any_bytes_move(
         self, configured: transport.Remote, server: Path, tmp_path: Path
@@ -440,11 +440,11 @@ class TestPushing:
         local.write_text('payload')
 
         with pytest.raises(transport.RemoteError) as refused:
-            transport.push(configured, local, '/artefacts/bundles')
+            transport.push(configured, local, '/artifacts/bundles')
 
         assert refused.value.code is ExitCode.ISSUE
         assert 'mkdir' in str(refused.value)
-        assert not (server / 'artefacts').exists()
+        assert not (server / 'artifacts').exists()
 
     def test_a_missing_directory_is_created_where_mkdir_is_declared(
         self, config_home: Path, relay: Path, server: Path, tmp_path: Path
@@ -455,27 +455,27 @@ class TestPushing:
         local = tmp_path / 'bundle.tar.gz'
         local.write_text('payload')
 
-        transport.push(found.remote, local, '/artefacts/bundles')
+        transport.push(found.remote, local, '/artifacts/bundles')
 
-        assert (server / 'artefacts' / 'bundles' / 'bundle.tar.gz').read_text() == 'payload'
+        assert (server / 'artifacts' / 'bundles' / 'bundle.tar.gz').read_text() == 'payload'
 
 
 class TestPulling:
     def test_a_file_arrives_at_the_named_path(self, configured: transport.Remote, server: Path, tmp_path: Path) -> None:
-        (server / 'artefacts').mkdir()
-        (server / 'artefacts' / 'bundle.tar.gz').write_text('payload')
+        (server / 'artifacts').mkdir()
+        (server / 'artifacts' / 'bundle.tar.gz').write_text('payload')
         destination = tmp_path / 'cache' / 'bundle.tar.gz'
 
-        transport.pull(configured, '/artefacts/bundle.tar.gz', destination)
+        transport.pull(configured, '/artifacts/bundle.tar.gz', destination)
 
         assert destination.read_text() == 'payload'
 
     def test_an_absent_remote_file_refuses(self, configured: transport.Remote, server: Path, tmp_path: Path) -> None:
-        (server / 'artefacts').mkdir()
+        (server / 'artifacts').mkdir()
         destination = tmp_path / 'cache' / 'bundle.tar.gz'
 
         with pytest.raises(transport.RemoteError) as refused:
-            transport.pull(configured, '/artefacts/bundle.tar.gz', destination)
+            transport.pull(configured, '/artifacts/bundle.tar.gz', destination)
 
         assert refused.value.code is ExitCode.ISSUE
         assert not destination.exists()
@@ -489,7 +489,7 @@ class TestPulling:
         assert found.remote is not None
 
         with pytest.raises(transport.RemoteError) as refused:
-            transport.pull(found.remote, '/artefacts/bundle.tar.gz', tmp_path / 'cache' / 'bundle.tar.gz')
+            transport.pull(found.remote, '/artifacts/bundle.tar.gz', tmp_path / 'cache' / 'bundle.tar.gz')
 
         assert refused.value.code is ExitCode.ISSUE
         assert 'wrote no file' in str(refused.value)
@@ -511,25 +511,25 @@ class TestRetention:
         assert transport.superseded(('a', 'b'), keep=5) == ()
 
     def test_removing_refuses_where_the_machine_declared_no_delete(self, configured: transport.Remote, server: Path) -> None:
-        (server / 'artefacts').mkdir()
-        (server / 'artefacts' / 'old.tar.gz').write_text('x')
+        (server / 'artifacts').mkdir()
+        (server / 'artifacts' / 'old.tar.gz').write_text('x')
 
         with pytest.raises(transport.RemoteError) as refused:
-            transport.remove(configured, '/artefacts/old.tar.gz')
+            transport.remove(configured, '/artifacts/old.tar.gz')
 
         assert refused.value.code is ExitCode.ISSUE
-        assert (server / 'artefacts' / 'old.tar.gz').exists()
+        assert (server / 'artifacts' / 'old.tar.gz').exists()
 
     def test_removing_works_where_it_is_declared(self, config_home: Path, relay: Path, server: Path) -> None:
         declare(config_home, TABLE.format(program='relay') + 'delete = ["delete", "{remote}"]\n')
         found = transport.read()
         assert found.remote is not None, found.problem
-        (server / 'artefacts').mkdir()
-        (server / 'artefacts' / 'old.tar.gz').write_text('x')
+        (server / 'artifacts').mkdir()
+        (server / 'artifacts' / 'old.tar.gz').write_text('x')
 
-        transport.remove(found.remote, '/artefacts/old.tar.gz')
+        transport.remove(found.remote, '/artifacts/old.tar.gz')
 
-        assert not (server / 'artefacts' / 'old.tar.gz').exists()
+        assert not (server / 'artifacts' / 'old.tar.gz').exists()
 
 
 class TestRequiring:
@@ -574,7 +574,7 @@ class TestMeasuring:
     def test_an_undeclared_optional_is_a_fact_rather_than_a_fault(self, config_home: Path, relay: Path, server: Path) -> None:
         """Otherwise `remote check` exits non-zero on every working remote that
         never needed a `mkdir`."""
-        (server / 'artefacts').mkdir()
+        (server / 'artifacts').mkdir()
         declare(config_home, TABLE.format(program='relay'))
 
         measured = transport.measure(transport.read())
@@ -620,7 +620,7 @@ class TestProbing:
         the root: a root that does not exist yet is the ordinary state of a fresh
         remote, and a probe that failed on it would report every first run as an
         outage."""
-        assert not (server / 'artefacts').exists()
+        assert not (server / 'artifacts').exists()
 
         assert transport.answered(configured, backoff=0).ok is True
 
@@ -684,4 +684,4 @@ class TestTheSharedEntryPoint:
     def test_a_reachable_remote_is_handed_back(self, configured: transport.Remote, server: Path) -> None:
         """Paired with both refusals, which a `reachable` that always raised would
         satisfy."""
-        assert transport.reachable().root == '/artefacts'
+        assert transport.reachable().root == '/artifacts'

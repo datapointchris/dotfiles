@@ -1,4 +1,4 @@
-"""Behaviour of the CLI itself: exit codes, stream discipline, and what apply covers.
+"""Behavior of the CLI itself: exit codes, stream discipline, and what apply covers.
 
 Nothing here stubs anything inside `src/dotfiles/`. The commands exercised either
 touch nothing (usage errors, which fail before any work), read only (`repo path`,

@@ -163,7 +163,7 @@ def test_a_devel_module_is_not_an_answer_either(monkeypatch, gobin) -> None:
 
 
 def test_a_go_binary_go_cannot_name_is_unknown_rather_than_its_banner(monkeypatch, gobin) -> None:
-    """`go` missing, or a binary it does not recognise, is "cannot say" — not a
+    """`go` missing, or a binary it does not recognize, is "cannot say" — not a
     reason to hand back the placeholder this whole path exists to avoid."""
     binary = gobin / 'gdu'
     monkeypatch.setattr(evidence.shutil, 'which', lambda name: str(binary) if name == 'gdu' else None)

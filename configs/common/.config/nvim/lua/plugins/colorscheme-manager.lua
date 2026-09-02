@@ -12,7 +12,7 @@ local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
 -- The colorscheme a theme's generated tree provides, read off disk rather than
 -- rebuilt from theme.yml.
 --
--- The name is not the theme id: a theme whose colours come from a plugin gets a
+-- The name is not the theme id: a theme whose colors come from a plugin gets a
 -- `theme-` prefix, because most of those ids are the plugin's own colorscheme
 -- name and two colors/kanagawa.lua on the runtimepath is a coin toss. That rule
 -- belongs to the generator, and reading the filename means it can change there
@@ -59,6 +59,8 @@ return {
           vim.o.background = 'dark'
           require('everforest').setup({
             background = 'hard',
+            -- everforest's own option name, spelled its way. An unknown key is
+            -- ignored in silence, so the American spelling reads as working.
             colours_override = function(palette) palette.bg0 = palette.bg_dim end,
           })
         end,

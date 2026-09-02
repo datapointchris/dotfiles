@@ -390,7 +390,7 @@ def test_a_file_the_repo_never_declared_is_left_alone(copying: Session, repo: Pa
 
 
 def test_a_copy_whose_source_is_gone_is_never_pruned(copying: Session, repo: Path, home: Path) -> None:
-    """The one thing this mechanism gives up, pinned as a behaviour rather than
+    """The one thing this mechanism gives up, pinned as a behavior rather than
     left to the docstring. A symlink into the repo says who made it, so a deleted
     source makes it an orphan to prune; a copy says nothing, so pruning would be
     guessing — and the thing guessed at is a file this repo cannot regenerate and

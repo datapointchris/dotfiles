@@ -1,9 +1,9 @@
-"""The colour gate in colors.sh.
+"""The color gate in colors.sh.
 
 The contract is that escape sequences are emitted only where something will
 render them, and that the decision is made once per process — which is what lets
 `theme --help > notes` write text while the same function in an interactive shell
-keeps its colours.
+keeps its colors.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ def palette(variable: str, **environment: str) -> str:
     return source('colors.sh', f'printf "%s" "${variable}"', **environment).stdout
 
 
-def test_a_pipe_gets_no_colour() -> None:
+def test_a_pipe_gets_no_color() -> None:
     assert palette('COLOR_RED') == ''
 
 
@@ -37,7 +37,7 @@ def test_no_color_outranks_force_color() -> None:
     assert palette('COLOR_RED', FORCE_COLOR='1', NO_COLOR='1') == ''
 
 
-def test_term_dumb_gets_no_colour() -> None:
+def test_term_dumb_gets_no_color() -> None:
     assert palette('COLOR_RED', TERM='dumb') == ''
 
 
@@ -60,13 +60,13 @@ def test_the_stored_value_is_a_literal_escape_not_a_resolved_esc_byte(shell: str
     assert result.stdout == r'\033[0;31m'
 
 
-def test_a_colour_function_renders_when_colour_is_on() -> None:
+def test_a_color_function_renders_when_color_is_on() -> None:
     result = source('colors.sh', 'color_red hello', FORCE_COLOR='1')
 
     assert result.stdout == '\x1b[0;31mhello\x1b[0m\n'
 
 
-def test_a_colour_function_degrades_to_plain_text_when_colour_is_off() -> None:
+def test_a_color_function_degrades_to_plain_text_when_color_is_off() -> None:
     result = source('colors.sh', 'color_red hello')
 
     assert result.stdout == 'hello\n'

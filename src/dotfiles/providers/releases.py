@@ -81,7 +81,7 @@ class LaunchAgent:
     install that as published, which is why Homebrew generates its own rather than
     shipping it.
 
-    Built with `plistlib` for `providers/schedule.py`'s reason: serialising the same
+    Built with `plistlib` for `providers/schedule.py`'s reason: serializing the same
     dict on both sides is what makes `check` an exact comparison rather than a diff
     of whitespace launchd does not care about.
     """
@@ -332,7 +332,7 @@ is what makes a `.terraform-version` file decide which binary runs.
 
 
 def tenv(tag: str, target: Target) -> ReleaseArtifact:
-    """Keeps the `v` in the asset name, and capitalises the platform."""
+    """Keeps the `v` in the asset name, and capitalizes the platform."""
     platform_name = 'Darwin' if target.is_darwin else 'Linux'
     arch = 'arm64' if target.is_arm else 'x86_64'
     return ReleaseArtifact(f'tenv_{tag}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='tenv', extras=TENV_PROXIES)
@@ -369,7 +369,7 @@ def tree_sitter(tag: str, target: Target) -> ReleaseArtifact:
 
 
 def trivy(tag: str, target: Target) -> ReleaseArtifact:
-    """`macOS-ARM64` and `Linux-64bit`: capitalisation and a bit-width, unique here."""
+    """`macOS-ARM64` and `Linux-64bit`: capitalization and a bit-width, unique here."""
     if target.is_darwin:
         suffix = 'macOS-ARM64' if target.is_arm else 'macOS-64bit'
     else:

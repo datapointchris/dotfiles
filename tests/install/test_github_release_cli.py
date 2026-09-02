@@ -357,7 +357,7 @@ def test_the_repo_and_tag_positionals_reach_the_release_they_name(tmp_path, gith
 
 
 def test_an_asset_the_published_file_does_not_list_exits_unlisted(tmp_path, github, no_github_credential):
-    """Distinct from both its neighbours on purpose: something is published, so
+    """Distinct from both its neighbors on purpose: something is published, so
     the tool is one upstream fix away from verifiable, and nothing was compared
     — which is why the download is kept rather than deleted."""
     payload = downloaded(tmp_path)

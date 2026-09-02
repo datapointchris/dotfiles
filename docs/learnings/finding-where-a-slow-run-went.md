@@ -17,7 +17,7 @@ visible from a verdict row:
 - **The PATH index.** `evidence.executables_on_path` resolved every name a PATH
   can reach to answer about the hundred a machine declares — 3400 entries on
   Arch, at three syscalls each. On WSL with `appendWindowsPath` left on, `$PATH`
-  carries `/mnt/c/Windows/System32` and its neighbours, every one of those
+  carries `/mnt/c/Windows/System32` and its neighbors, every one of those
   syscalls crosses drvfs, and the count is in the tens of thousands.
 - **Version probes.** One `<binary> --version` per installed tool with an
   upstream, strictly one after another. 69 process starts in series.
@@ -46,7 +46,7 @@ dotfiles check                  # a row per resource, with what measuring it cos
 dotfiles report latest          # the same, plus the run's slowest commands
 ```
 
-A slow resource is coloured on its verdict row. A slow command reports itself while
+A slow resource is colored on its verdict row. A slow command reports itself while
 the run is still going:
 
 ```text
@@ -77,7 +77,7 @@ duration, written for every run. The jq recipe that sorts it is in the docstring
   the same argument: the plugin fetches, 2.9s to 0.5s, and a `gh auth token`
   spawned once per request rather than once per run. Both had been there the whole
   time and neither showed on a verdict row, because the resource they belonged to
-  was fast enough not to be coloured.
+  was fast enough not to be colored.
 - **Suspect the platform's process cost before the code.** Every one of these was
   invisible on Arch and severe on WSL, and none of it is a difference the code
   can see.

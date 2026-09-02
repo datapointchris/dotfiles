@@ -532,9 +532,9 @@ def cause_line(lines: Iterable[str]) -> str:
 def explain(item: str, message: str) -> str:
     """A provider's failure message, plus what the machine says about it.
 
-    Returns the message unchanged when nothing here recognises it. That is the
+    Returns the message unchanged when nothing here recognizes it. That is the
     common case and it must stay cheap: no probe runs until a known failure is
-    matched *and* a path was found to ask about, so an unrecognised failure costs
+    matched *and* a path was found to ask about, so an unrecognized failure costs
     one regex.
 
     `item` is the address, whose first segment names the provider — which is what

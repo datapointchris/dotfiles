@@ -24,6 +24,6 @@ if require('zk.util').notebook_root(vim.fn.expand('%:p')) ~= nil then
   map('n', '<leader>zl', '<Cmd>ZkLinks<CR>', opts)
 
   -- Open the code actions for a visual selection (range is taken from the
-  -- selection; range_code_action() was removed from Neovim in favour of this).
+  -- selection; range_code_action() was removed from Neovim in favor of this).
   map('v', '<leader>za', ":'<,'>lua vim.lsp.buf.code_action()<CR>", opts)
 end

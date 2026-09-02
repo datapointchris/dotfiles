@@ -137,7 +137,7 @@ packages.yml, which guaranteed drift — the migration found ~70 duplicate packa
 and tools that existed in one list but not the other. Lesson: if two lists
 describe the same things, one of them is wrong.
 
-**Every installation type is catalogued, including custom installers.** There is
+**Every installation type is catalogd, including custom installers.** There is
 no auto-detection anywhere: `install.sh`, `dotfiles apply` and
 `src/dotfiles/create_bundle.py` all drive from the corresponding packages.yml
 section rather than listing directories. An entry nothing can install is a hard
@@ -157,7 +157,7 @@ not `v0.56.0`, `cli/v0.9.0` or `>=0.56.0`. The same release is spelled three
 different ways across this catalog, so resolving a version to a tag is the
 resolver's job rather than the declaration's.
 
-The three constraint keys, and why a section whose provider honours none of them
+The three constraint keys, and why a section whose provider honors none of them
 refuses the key outright, are the `Entry` docstring in `src/dotfiles/catalog.py`.
 
 ### Drift Detection
@@ -205,6 +205,6 @@ order is a dependency chain rather than a listing.
 ## Related Documents
 
 - [Shell Libraries](shell-libraries.md) - The libraries installers source
-- [Task Reference](../reference/tools/tasks.md) - How the Taskfile is organised
+- [Task Reference](../reference/tools/tasks.md) - How the Taskfile is organized
 - [App Installation Patterns](../learnings/app-installation-patterns.md) - Go apps vs shell scripts
 - [Resilient Installation Patterns](../learnings/resilient-installation-patterns.md) - Failure isolation and re-runnability

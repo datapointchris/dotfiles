@@ -62,7 +62,7 @@ Chord = tuple[frozenset[str], str]
 def canonical(modifiers: frozenset[str], base: str, *, source: str) -> Chord:
     """One spelling for a chord, whichever config wrote it.
 
-    Raises rather than skipping an unrecognised key. A translation table that
+    Raises rather than skipping an unrecognized key. A translation table that
     silently drops what it does not know reports agreement it never checked, and
     the collision this file exists to catch is itself silent.
     """
@@ -114,7 +114,7 @@ def aerospace_main_bindings() -> dict[Chord, str]:
     """Every chord AeroSpace claims in its ordinary mode.
 
     tomllib does the commenting-out for us: a commented line is not a key, so
-    nothing here has to recognise a `#`."""
+    nothing here has to recognize a `#`."""
     declaration = tomllib.loads(AEROSPACE_TOML.read_text(encoding='utf-8'))
     bindings = declaration['mode']['main']['binding']
     return {aerospace_chord(key): key for key in bindings}
@@ -149,7 +149,7 @@ def test_no_chord_is_claimed_by_both() -> None:
         ('C-M-h', (frozenset({'ctrl', 'alt'}), 'h')),
     ],
 )
-def test_a_tmux_key_normalises_to_the_chord_aerospace_would_spell(key: str, expected: Chord) -> None:
+def test_a_tmux_key_normalizes_to_the_chord_aerospace_would_spell(key: str, expected: Chord) -> None:
     assert tmux_chord(key) == expected
 
 
@@ -162,7 +162,7 @@ def test_a_tmux_key_normalises_to_the_chord_aerospace_would_spell(key: str, expe
         ('ctrl-shift-alt-h', (frozenset({'ctrl', 'shift', 'alt'}), 'h')),
     ],
 )
-def test_an_aerospace_key_normalises_to_the_chord_tmux_would_spell(key: str, expected: Chord) -> None:
+def test_an_aerospace_key_normalizes_to_the_chord_tmux_would_spell(key: str, expected: Chord) -> None:
     assert aerospace_chord(key) == expected
 
 

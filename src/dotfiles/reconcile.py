@@ -279,7 +279,7 @@ class NothingSelected(refusal.Refusal):
     An `--owner` no entry this machine declares answers to, or a `--skip` set
     covering every resource. A usage error rather than a verdict, for the reason
     `engine._valid` makes a misspelt `--skip` one: a run that accepts a scope it
-    cannot honour reports success for work it never looked at.
+    cannot honor reports success for work it never looked at.
     """
 
     code = ExitCode.USAGE
@@ -299,7 +299,7 @@ class Unreachable(refusal.Refusal):
 class NoBundle(refusal.Refusal):
     """`--offline`, with nothing on this machine to install from.
 
-    An Issue rather than a usage error, unlike its two neighbours: the flag is
+    An Issue rather than a usage error, unlike its two neighbors: the flag is
     typed correctly and the machine is the thing that cannot answer it, so retyping
     the command fixes nothing. Staging a bundle does, which is what `advice`
     carries at each raise site.
@@ -1006,13 +1006,13 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
     `NOTICE_MARK` on both, because one is drift and the other is an absence of
     evidence — borrowing `~` or `✗` would state something the run did not measure.
     """
-    for name, colour, group, why in (
+    for name, color, group, why in (
         (NEEDS_ATTENTION, 'yellow', deferred, 'differ, and apply is not what repairs them'),
         ('not measurable', 'magenta', unmeasured, 'have no evidence either way, so nothing was decided'),
     ):
         if not group:
             continue
-        render_section(name, f'{len(group)} item(s) {why}', mark=NOTICE_MARK, colour=colour)
+        render_section(name, f'{len(group)} item(s) {why}', mark=NOTICE_MARK, color=color)
         width = max([SUBJECT_COLUMN, *(len(change.item) for change in group)])
         for change in group:
             render_change(change, min(width, SUBJECT_CEILING))
@@ -1039,7 +1039,7 @@ def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
     for group in engine.batches(planned):
         changes = [event.payload for event in group if isinstance(event.payload, Change)]
         detail = f'{len(changes)} item(s) to converge{tally((len(privileged(changes)), "need a password"))}'
-        render_section(_address(group[0]), detail, mark=PROGRESS_MARK, colour='blue')
+        render_section(_address(group[0]), detail, mark=PROGRESS_MARK, color='blue')
         for event in engine.execute(session, group, privilege):
             _render(event)
             yield event
@@ -1066,9 +1066,9 @@ def _render(event: Event) -> None:
     if not isinstance(payload, Outcome):
         return
 
-    label, colour = OUTCOME_MARKS[payload.status]
+    label, color = OUTCOME_MARKS[payload.status]
     cause, *diagnosed = (payload.message or payload.change.item).splitlines() or ['']
-    render_row(label, payload.change.item, cause, colour)
+    render_row(label, payload.change.item, cause, color)
     # One row per line: a diagnosed failure carries the cause and the command that
     # fixes it under the provider's own message, and the command wants a line of its
     # own rather than a place inside a paragraph. Aligned through the shared
@@ -1086,7 +1086,7 @@ OUTCOME_MARKS = {
     OutcomeStatus.FAILED: ('failed', 'red'),
     OutcomeStatus.ABSENT: ('absent', 'red'),
 }
-"""The word each outcome carries in the verdict column, and its colour.
+"""The word each outcome carries in the verdict column, and its color.
 
 A word rather than a bare tick, dash or cross. Those three had to cover five
 statuses, so `refused` and `skipped` shared a dash and `failed` and `absent` shared
@@ -1094,7 +1094,7 @@ a cross — and the pairs are exactly the ones whose distinction decides where t
 and look. `ABSENT` means read the declaration where `FAILED` means read the command,
 which is a difference its own docstring spells out and the mark erased.
 
-A refusal keeps a colour that is not red: it wrote nothing and did nothing wrong,
+A refusal keeps a color that is not red: it wrote nothing and did nothing wrong,
 and an offline machine skipping a source the bundle was never built to stage must
 not read as a broken install."""
 

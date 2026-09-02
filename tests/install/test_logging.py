@@ -163,7 +163,7 @@ def test_every_http_logger_the_client_registers_is_pinned():
 
 def test_a_library_record_carries_the_name_of_what_wrote_it(tmp_path):
     """Why the miss above went unnoticed for the life of the log. Every event was
-    anonymous, so finding which library filled a stream meant recognising its
+    anonymous, so finding which library filled a stream meant recognizing its
     prose."""
     event_log = tmp_path / 'run.jsonl'
     dotfiles_logging.configure(event_log=event_log)

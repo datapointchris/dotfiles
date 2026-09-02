@@ -91,7 +91,7 @@ def test_a_pin_means_that_release_and_no_other(current: str, pinned: str, expect
         ('1.10', '1.10.0', False),
     ],
 )
-def test_a_version_above_the_newest_release_is_recognised(current: str, ceiling: str, expected: bool) -> None:
+def test_a_version_above_the_newest_release_is_recognized(current: str, ceiling: str, expected: bool) -> None:
     """A repo that re-versioned downwards strands a machine above every tag it
     publishes. `at_least` reads that as comfortably current, which is why the
     question has to be asked the other way round as well."""
@@ -100,6 +100,6 @@ def test_a_version_above_the_newest_release_is_recognised(current: str, ceiling:
 
 @pytest.mark.parametrize(('current', 'ceiling'), [('', '1.0'), ('built from source', '1.0'), ('1.0', 'unreadable')])
 def test_an_unreadable_version_exceeds_nothing(current: str, ceiling: str) -> None:
-    """False rather than None, unlike its neighbours: the caller falls through to
+    """False rather than None, unlike its neighbors: the caller falls through to
     `at_least` on the same two strings, which answers None for these already."""
     assert versions.exceeds(current, ceiling) is False

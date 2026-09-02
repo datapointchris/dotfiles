@@ -49,7 +49,7 @@ def test_every_manifest_in_the_repo_loads(name: str) -> None:
 
     The point has to be one a machine can *be*, which is not the same as one
     `PLATFORM_BUNDLES` names. A bundle is a shorthand that earned a name, so the
-    labelled points are a subset of the legal ones, and a manifest declaring its
+    labeled points are a subset of the legal ones, and a manifest declaring its
     six coordinates directly — the Windows box does — occupies a legal point with
     no label. Membership would refuse it.
 

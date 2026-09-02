@@ -152,7 +152,7 @@ class Kept(StrEnum):
 
     Every member names something that could still be lost, or something that could
     not be measured. `held_by` ends in a bare "remove", so an unanswerable check
-    resolving to a falsy value is a deletion authorised by a question nobody asked.
+    resolving to a falsy value is a deletion authorized by a question nobody asked.
     Five members exist only to stop that: SESSIONS_UNREADABLE, UNFETCHED_REMOTE,
     UNFETCHED_BASE, UNREADABLE_LANDING and REMOTE_UNREADABLE.
     """
@@ -358,9 +358,9 @@ class Spawned:
 
 
 def color_enabled(stream: TextIO) -> bool:
-    """Whether to colour output on `stream`.
+    """Whether to color output on `stream`.
 
-    NO_COLOR is the user saying they do not want colour and wins outright.
+    NO_COLOR is the user saying they do not want color and wins outright.
     FORCE_COLOR answers the different question "is this a terminal", which is what
     an fzf preview has to be able to say yes to.
     """
@@ -748,7 +748,7 @@ def held_by(worktree: Worktree, evidence: Evidence) -> Kept | None:
     Every check that can be unanswerable is tested for that first, and separately from
     being false. The two are one value in git's own vocabulary — an empty session list,
     a missing remote ref — and collapsing them here means an unreachable origin reads
-    as a deleted branch, which is the reading that authorises the removal.
+    as a deleted branch, which is the reading that authorizes the removal.
 
     What is in the branch is asked as *are its changes on the base branch*, never as
     *are its commits*. The commit count answers the second and is right about it; a
@@ -888,7 +888,7 @@ def show_sessions(worktree: Worktree) -> None:
 
 
 def capture_pane(pane: str) -> str | None:
-    """What is on a session's screen, colour included, or None if tmux cannot say."""
+    """What is on a session's screen, color included, or None if tmux cannot say."""
     if shutil.which('tmux') is None:
         return None
     result = run(['tmux', 'capture-pane', '-ep', '-t', pane])
@@ -1135,7 +1135,7 @@ def require_unoccupied(path: Path) -> None:
     """Refuse to put a second session into a worktree that already holds one.
 
     An unreadable registry refuses too. *Nobody is here* and *nobody could be asked* are
-    the same empty list, and reading the second as the first is what authorises the
+    the same empty list, and reading the second as the first is what authorizes the
     collision — the same split `held_by` keeps for its four unanswerable members.
     """
     sessions = sessions_at(live_sessions(), path)
@@ -1306,9 +1306,9 @@ def stack_beside(caller: str, width: str) -> None:
 
 
 def usable_width(value: str) -> bool:
-    """Whether tmux will actually honour this as a pane width: columns, or a percentage.
+    """Whether tmux will actually honor this as a pane width: columns, or a percentage.
 
-    The test is what it honours rather than what it parses, because those are different
+    The test is what it honors rather than what it parses, because those are different
     sets and only the first is useful. `abc`, `-5`, `0` and `999%` are each answered with
     exit 0 and then resolve to the 80-column default — the value `--width` exists to
     replace — so an unusable argument produces exactly the layout the flag was passed to
@@ -1918,7 +1918,7 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
         case 'spawn':
             # `--width` is spawn's own flag and `--below` is what voids it: a below split
             # leaves the layout alone, so main-pane-width would parse and reach nothing.
-            # A flag the run cannot honour says so, which makes that a usage
+            # A flag the run cannot honor says so, which makes that a usage
             # error rather than a silent no-op.
             if args.below and args.width is not None:
                 args.subparser.error('no --width with --below: a split below leaves the layout alone, so there is no main pane to size')

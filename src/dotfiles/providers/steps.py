@@ -1,7 +1,7 @@
 """Machine state with no shared mechanism behind it: one pair of functions per row.
 
 `~/Library` being visible is a file flag plus an extended attribute. The
-screenshot directory existing is a directory existing. The Xcode licence is the
+screenshot directory existing is a directory existing. The Xcode license is the
 one observation in the repo that genuinely needs root. OrbStack's plugin
 directory is a JSON merge into a user config. libpq is a formula Homebrew
 installs and deliberately does not link. The Windows font path is discovered by
@@ -16,7 +16,7 @@ sets match in both directions. A `check:`/`apply:` argv pair in the YAML would b
 a command language invented for a handful of rows, and most of them would not fit
 it.
 
-Every function here observes without escalating. `_xcode_licence` is the
+Every function here observes without escalating. `_xcode_license` is the
 exception the design predicted — `xcodebuild -license status` needs root to read
 — so it reports `UNKNOWN` with the reason rather than reaching for a password
 from the half of the run that must never prompt.
@@ -58,7 +58,7 @@ def _library_visible() -> State:
     """`~/Library` is hidden by two mechanisms and needs both undone.
 
     `UF_HIDDEN` is what `chflags nohidden` clears; the `FinderInfo` extended
-    attribute carries a second hidden bit Finder honours on its own. Clearing one
+    attribute carries a second hidden bit Finder honors on its own. Clearing one
     leaves the folder hidden, which is why the script ran two commands.
     """
     library = Path.home() / 'Library'
@@ -127,11 +127,11 @@ def _make_screenshots() -> Result:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# The Xcode licence — the one read that needs root
+# The Xcode license — the one read that needs root
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _xcode_licence() -> State:
+def _xcode_license() -> State:
     """The exception `check` is built to survive rather than to hide.
 
     `xcodebuild -license status` needs root, and `observe` is never handed an
@@ -139,14 +139,14 @@ def _xcode_licence() -> State:
     the half of the run that must never prompt. Two cheaper questions come first,
     because they settle it without root on every machine that has no full Xcode:
     no `xcodebuild` at all, or an active developer directory that is the Command
-    Line Tools, means there is no licence to accept.
+    Line Tools, means there is no license to accept.
     """
     if not _xcodebuild_present():
-        return State(Verdict.MATCHED, 'no Xcode command line tools, so no licence to accept')
+        return State(Verdict.MATCHED, 'no Xcode command line tools, so no license to accept')
 
     selected = run(['xcode-select', '-p'], output=Output.QUIET)
     if selected.ok and selected.stdout.strip() == COMMAND_LINE_TOOLS:
-        return State(Verdict.MATCHED, 'Command Line Tools only, which needs no licence')
+        return State(Verdict.MATCHED, 'Command Line Tools only, which needs no license')
 
     return State(Verdict.UNKNOWN, 'needs root to read (xcodebuild -license status)', repair=Repair.NONE)
 
@@ -155,21 +155,21 @@ def _xcodebuild_present() -> bool:
     return run(['xcodebuild', '-version'], output=Output.QUIET).returncode != 127
 
 
-def _accept_xcode_licence(privilege: Escalates) -> Result:
-    """Accept, then run the first-launch setup the licence gates.
+def _accept_xcode_license(privilege: Escalates) -> Result:
+    """Accept, then run the first-launch setup the license gates.
 
     `-runFirstLaunch` is unprivileged and frequently a no-op; it fails on an
     installation that has already done it, which is not a failure of this row.
     """
     try:
-        accepted = privilege.run(['xcodebuild', '-license', 'accept'], reason='accept the Xcode licence')
+        accepted = privilege.run(['xcodebuild', '-license', 'accept'], reason='accept the Xcode license')
     except PrivilegeUnavailable:
         return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
     if not accepted.ok:
         return Result(False, f'xcodebuild -license accept failed: {accepted.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
     run(['xcodebuild', '-runFirstLaunch'], output=Output.QUIET)
-    return Result(True, 'Xcode licence accepted', kind=Kind.APPLIED)
+    return Result(True, 'Xcode license accepted', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -308,7 +308,7 @@ def _windows_fonts() -> State:
     the run that was going to repair something anyway.
 
     Endpoint monitoring is the reason it matters rather than the cost. A Linux
-    process spawning `cmd.exe` to read `%USERNAME%` is user-discovery behaviour,
+    process spawning `cmd.exe` to read `%USERNAME%` is user-discovery behavior,
     and on a fixed interval it is a pattern rather than an event.
     """
     if not WINDOWS_MOUNT.is_dir():
@@ -421,7 +421,7 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
     'check-schedule': (schedule.observe, _unprivileged(schedule.apply)),
     'library-visible': (_library_visible, _unprivileged(_show_library)),
     'screenshot-directory': (_screenshots_exist, _unprivileged(_make_screenshots)),
-    'xcode-licence': (_xcode_licence, _accept_xcode_licence),
+    'xcode-license': (_xcode_license, _accept_xcode_license),
     'orbstack-docker-plugins': (_orbstack_plugins, _unprivileged(_add_orbstack_plugins)),
     'windows-fonts': (_windows_fonts, _unprivileged(_write_fontconfig)),
     'psql-linked': (_psql_linked, _unprivileged(_link_psql)),

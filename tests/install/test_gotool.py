@@ -347,9 +347,9 @@ def test_module_version_is_none_when_there_is_no_go_to_ask(monkeypatch) -> None:
     assert calls == []
 
 
-def test_module_version_is_none_when_go_does_not_recognise_the_binary(monkeypatch) -> None:
+def test_module_version_is_none_when_go_does_not_recognize_the_binary(monkeypatch) -> None:
     """Not every binary on the machine is one `go` built — `go version -m` exits
-    non-zero on one it does not recognise, and that failure is not a version."""
+    non-zero on one it does not recognize, and that failure is not a version."""
     stub_go(monkeypatch, returncode=1)
 
     assert gotool.module_version(Path('/usr/bin/rg')) is None

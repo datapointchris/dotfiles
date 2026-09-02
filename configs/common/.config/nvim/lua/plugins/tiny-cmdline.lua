@@ -1,4 +1,4 @@
--- Floats ui2's cmdline window in the centre of the editor while you type, and
+-- Floats ui2's cmdline window in the center of the editor while you type, and
 -- puts it back on CmdlineLeave so the message the command produces still lands
 -- at the bottom. ui2 reasserts the bottom position on every message it renders,
 -- which is why the float has to be per-cmdline rather than permanent.

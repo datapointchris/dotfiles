@@ -17,7 +17,7 @@ export EDITOR="nvim"
 # exports the same path for the same reason, which is duplication the deployment
 # cannot avoid: `configs/` merges nothing, and the two shells share no file.
 #
-# Read after the startup files, not before them: readline initialises on the
+# Read after the startup files, not before them: readline initializes on the
 # first prompt, so exporting it here is in time.
 export INPUTRC="$XDG_CONFIG_HOME/readline/inputrc"
 

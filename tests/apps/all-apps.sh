@@ -22,7 +22,7 @@ set -euo pipefail
 # ================================================================
 
 # MACHINE is read, never detected. A detector answered `linux` inside a container
-# modelling WSL, and then failed on a coordinate directory that machine never
+# modeling WSL, and then failed on a coordinate directory that machine never
 # deploys. It cannot answer the trust or capacity axes at all, because nothing on
 # a box knows them.
 if [[ -f "$HOME/.env" ]]; then

@@ -6,7 +6,7 @@
 -- - Enabling language servers
 -- - Completion settings (completeopt)
 -- - Diagnostic configuration
--- Buffer-local on-attach behaviour lives in core/autocmds.lua.
+-- Buffer-local on-attach behavior lives in core/autocmds.lua.
 
 -- Advertise blink.cmp's client capabilities (snippet support, resolve, etc.)
 -- to every server. Setting them on the '*' config means each server receives
@@ -39,7 +39,7 @@ vim.lsp.enable({
 })
 
 -- Inline color swatches (0.12 documentColor): paints the background of hex/rgb
--- values with the actual colour for servers that advertise it (e.g. cssls).
+-- values with the actual color for servers that advertise it (e.g. cssls).
 -- The global enable attaches to every supporting client; style defaults to
 -- 'background' (alternatives: 'foreground', 'virtual').
 vim.lsp.document_color.enable(true)
@@ -49,7 +49,7 @@ vim.lsp.document_color.enable(true)
 -- client that supports the method (e.g. the html server).
 vim.lsp.linked_editing_range.enable(true)
 
--- Buffer-local LSP behaviour on attach (K hover override, per-server capability
+-- Buffer-local LSP behavior on attach (K hover override, per-server capability
 -- tweaks) lives in the single LspAttach autocmd in core/autocmds.lua.
 
 -- Set completeopt for blink.cmp compatibility

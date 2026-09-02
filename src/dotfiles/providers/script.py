@@ -93,7 +93,7 @@ def run(
     """Fetch and run one vendor install script.
 
     An empty detail on success: the script's own output was streamed as it ran,
-    and it knows what it did in a way nothing here can restate. Summarising it
+    and it knows what it did in a way nothing here can restate. Summarizing it
     anyway is how the bash came to print `theme updated` over the top of
     `font already at latest` — a line that reads as a verdict and contradicts the
     one above it.

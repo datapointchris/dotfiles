@@ -60,7 +60,7 @@ to know a flag exists."""
 
 
 def choose_console(verbose: int = 0, quiet: bool = False) -> None:
-    """Record what `-v`/`-q` asked for, so every later `configure` honours it.
+    """Record what `-v`/`-q` asked for, so every later `configure` honors it.
 
     `-q` is WARNING rather than silence, because a run that printed nothing at
     all would hide the one thing the scheduled check exists to surface.
@@ -103,7 +103,7 @@ records from libraries too.
 
 `add_logger_name` is what makes a stream answerable about itself. Without it
 every event was anonymous, so the only way to find out which library was filling
-a 265KB apply log was to recognise the text — and nobody did, for as long as the
+a 265KB apply log was to recognize the text — and nobody did, for as long as the
 log existed. A stream that cannot say who wrote a line cannot be filtered by
 anyone reading it either."""
 

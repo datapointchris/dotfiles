@@ -1,6 +1,6 @@
 """What a run emits, and the only vocabulary its consumers share.
 
-One measurement, several readers. The console renders it, `--json` serialises it,
+One measurement, several readers. The console renders it, `--json` serializes it,
 the run record accumulates it and the summary folds it. A reader that reached
 into the walk and printed as it went would leave the run record nothing to
 accumulate, and the fold would be rewritten once per reader.

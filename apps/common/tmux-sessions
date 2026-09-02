@@ -161,7 +161,7 @@ find_window() {
 
   # The preview is the window's own live pane content rather than a directory
   # listing: two windows of one task often share a directory, so what is running
-  # in them is the only thing that tells them apart. -e keeps their colour.
+  # in them is the only thing that tells them apart. -e keeps their color.
   local selection
   selection="$(
     printf '%s\n' "$rows" | fzf-tmux -p 80%,70% \
@@ -210,9 +210,9 @@ rebuild_session() {
   tmux rename-session -t "=$scratch" "$name"
 }
 
-# Swap the focused session with its neighbour by rebuilding the shortest run of
+# Swap the focused session with its neighbor by rebuilding the shortest run of
 # sessions that produces the new order. Moving left leaves the focused session
-# alone and rebuilds the neighbour it jumped; moving right has to rebuild the
+# alone and rebuilds the neighbor it jumped; moving right has to rebuild the
 # focused one, since a rebuild can only ever send a session later.
 shift_session() {
   local direction=$1 current sessions=() i=-1 n

@@ -360,7 +360,7 @@ def test_a_plain_apply_refuses_a_binary_another_installer_left_in_local_bin(sand
     assert checked.exit_code == ExitCode.ISSUE
 
 
-def test_force_is_a_usage_error_where_a_copy_machine_cannot_honour_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+def test_force_is_a_usage_error_where_a_copy_machine_cannot_honor_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """A copy overwrites every target, so nothing is ever refused for the flag to
     answer — and it exits 0 having deployed what a bare apply deploys.
 
@@ -382,7 +382,7 @@ def test_force_is_a_usage_error_where_a_copy_machine_cannot_honour_it(sandbox: S
 
 def test_a_copy_machine_still_applies_without_the_flag(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """The other half, and the reason refusing costs nothing: the deployment the
-    flag would have authorised is the one an ordinary apply performs."""
+    flag would have authorized is the one an ordinary apply performs."""
     sandbox.declare(manifest=COPYING, machine='copybox')
     sandbox.declare()
     declare(sandbox)

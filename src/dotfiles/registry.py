@@ -135,7 +135,7 @@ class Provider:
 
         A declared `installed_path` beats any rule about the provider, because an
         entry saying where it lands is more specific than a rule about how its
-        neighbours are usually found. That override is here rather than in each
+        neighbors are usually found. That override is here rather than in each
         `measure` so it cannot be forgotten by one of them.
         """
         return ev.by_path(item) if item.evidence_path else self.measure(item, installed)
@@ -149,7 +149,7 @@ class Provider:
 
         A method rather than the flat field the design called for, because for
         half the registry the answer is per entry and already declared: macOS
-        preferences are user-level throughout and the Xcode licence is the one
+        preferences are user-level throughout and the Xcode license is the one
         step whose *read* needs root. A field here plus that field on the entry
         would be two sources for one fact, which is the disease this module
         exists to cure.
@@ -299,7 +299,7 @@ class ReleaseProvider(VendoredProvider):
         `supersedes` exists to prevent — two daemons over one config directory and
         one port.
 
-        A run that is not authorised to remove the package never reaches the removal —
+        A run that is not authorized to remove the package never reaches the removal —
         the blocker `measure` attaches makes the change `BY_HAND`.
         """
         if arrived := self._arrived(change, item):
@@ -328,7 +328,7 @@ class ReleaseProvider(VendoredProvider):
         return ghrelease.supervise(entry, coordinates.target_for(session.machine.coordinates))
 
     def _displace(self, session: MachineContext, item: DesiredItem, privilege: Escalates) -> providers.Result:
-        """Remove the superseded package where this run authorised it.
+        """Remove the superseded package where this run authorized it.
 
         Measured against `session.inventories`, which is the same reading `observe`
         decided from — so what `apply` removes is what `check` named, rather than a
@@ -977,7 +977,7 @@ class ToolchainProvider(Provider):
     The provider name has to be unique across the whole registry — `packages`
     already has a `go` and a `uv` — while this is what a person reads, and
     `dotfiles toolchains plan` has printed these four words since it existed. It
-    is also the `runtimes` key, so a floor declared for it starts being honoured
+    is also the `runtimes` key, so a floor declared for it starts being honored
     without anything here changing.
     """
 
@@ -1299,7 +1299,7 @@ def required_by(section: str) -> tuple[Provider, ...]:
     """Every provider whose items must exist before this section's can install.
 
     `needed_by` already declares that a toolchain is wanted *because* a section
-    resolved, and `resolve` honours it — the plan for a machine with
+    resolved, and `resolve` honors it — the plan for a machine with
     `cargo_packages` carries `rust-toolchain` too.
 
     Derived from the registry rather than listed, so a section that grows a
@@ -1325,7 +1325,7 @@ def required_by(section: str) -> tuple[Provider, ...]:
 def serving(section: str) -> tuple[Provider, ...]:
     """Every provider a run narrowed to one section needs, not only the one that installs it.
 
-    A selection that dropped the prerequisite honoured the declaration in the plan
+    A selection that dropped the prerequisite honored the declaration in the plan
     and ignored it in the run, so `packages apply --source cargo_packages` on a
     machine without rustup failed with `cargo binstall bat exited 127: cargo: No
     such file or directory` rather than installing what it needed.

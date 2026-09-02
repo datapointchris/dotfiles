@@ -609,7 +609,7 @@ macos_defaults:
     description: Reduce motion
 
 # Machine state with no shared mechanism behind it: a file flag, a directory, a
-# root-only licence read, a JSON merge, a keg-only formula's link, and a path
+# root-only license read, a JSON merge, a keg-only formula's link, and a path
 # discovered by asking Windows. The mechanics are one pair of functions each in
 # src/dotfiles/providers/steps.py, for the same reason custom_installers has no
 # engine.
@@ -633,8 +633,8 @@ steps:
     os_family: darwin
   # The one observation in the repo that genuinely needs root, so `check` reports
   # it unknown rather than prompting from the half that must never prompt.
-  - name: xcode-licence
-    description: The Xcode licence, where a full Xcode is installed
+  - name: xcode-license
+    description: The Xcode license, where a full Xcode is installed
     os_family: darwin
     needs_root: true
   - name: orbstack-docker-plugins

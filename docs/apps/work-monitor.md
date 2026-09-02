@@ -12,7 +12,7 @@ Bound to ++super+ctrl+w++. Workspace 9 is reachable with ++super+9++, and ++supe
 
 ## The Problem This Solves
 
-The personal desk and the work desk sit far enough apart that both screens cannot be read at once. Debugging a work WSL problem from the personal desk therefore means memorising error output and carrying it across the room. Running a cable from the Arch box to the work desk's spare monitor input removes that, and it does so over a pure video path — nothing crosses the corporate network.
+The personal desk and the work desk sit far enough apart that both screens cannot be read at once. Debugging a work WSL problem from the personal desk therefore means memorizing error output and carrying it across the room. Running a cable from the Arch box to the work desk's spare monitor input removes that, and it does so over a pure video path — nothing crosses the corporate network.
 
 The obstacle is what happens the rest of the time. Hyprland's catch-all `monitor = , preferred, auto, 1` rule adopts any output that appears, so a permanently connected second monitor means workspaces spread across two desks and windows open on a panel that is usually showing the work laptop instead.
 

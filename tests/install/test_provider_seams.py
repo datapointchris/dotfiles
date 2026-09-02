@@ -294,7 +294,7 @@ def test_an_item_nothing_declares_any_more_is_refused_without_reaching_the_provi
     desired item when the declaration dropped it underneath the run, and installing
     it would put a package back on a machine that just stopped asking for one.
 
-    The two neighbours are asserted alongside, because a refusal that also skipped
+    The two neighbors are asserted alongside, because a refusal that also skipped
     them would satisfy any assertion about the retracted one on its own.
     """
     provider = Recording(name='stub', resource='packages', stage=Stage.SYSTEM)
@@ -412,13 +412,13 @@ def test_a_sync_that_failed_silently_still_names_its_exit_status(fake_bin: Path)
 
 LAZY_LINES = [
     ('a task line', 'gitsigns.nvim | Running task install\n', '  gitsigns.nvim\n'),
-    ('a coloured task line', '\033[35mgitsigns.nvim\033[0m \033[2m| Running task install\033[0m\n', '  gitsigns.nvim\n'),
+    ('a colored task line', '\033[35mgitsigns.nvim\033[0m \033[2m| Running task install\033[0m\n', '  gitsigns.nvim\n'),
     ('git spew', 'Cloning into /home/chris/.local/share/nvim/lazy/blink.cmp...\n', None),
-    ('coloured git spew', '\033[31mfatal: unable to access\033[0m\n', None),
+    ('colored git spew', '\033[31mfatal: unable to access\033[0m\n', None),
 ]
 """One line each of what lazy writes headless, and what the filter shows for it.
 
-The second row is the one worth having. lazy colours its own prefix, so the raw
+The second row is the one worth having. lazy colors its own prefix, so the raw
 line separates prefix from message with `\\033[0m \\033[2m|` — the escape codes go
 first because the filter cannot see the ` | ` until they are gone. Reverse the two
 and this line matches nothing, is swallowed, and a fresh machine clones fifty

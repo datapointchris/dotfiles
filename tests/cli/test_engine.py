@@ -33,7 +33,7 @@ MACHINE = 'linux-lxc-server'
 
 
 class Fake:
-    """A resource with whatever behaviour a test needs, and nothing else."""
+    """A resource with whatever behavior a test needs, and nothing else."""
 
     def __init__(self, name: str, *, changes: tuple[Change, ...] = (), raises: Exception | None = None) -> None:
         self.name = name
@@ -203,7 +203,7 @@ def test_selection_keeps_convergence_order_not_the_caller_s(session: Session, mo
 def test_a_change_carries_the_stage_and_a_summary_does_not(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     """A summary is about the resource, not about one item, so it has no place in
     the convergence order — and stamping it with a stage would sort it among the
-    items it is summarising."""
+    items it is summarizing."""
     monkeypatch.setattr(engine, 'resources', lambda: {'packages': Fake('packages', changes=(change('a'),))})
 
     events = findings(list(engine.assess(session)))
@@ -311,7 +311,7 @@ def test_a_bare_resource_narrows_nothing_and_hands_over_the_same_plan(session: S
     assert selection.plan_for('plugins', session.plan) is session.plan
 
 
-def test_selecting_one_provider_removes_its_neighbours_from_the_plan(session: Session) -> None:
+def test_selecting_one_provider_removes_its_neighbors_from_the_plan(session: Session) -> None:
     """Structural, not a filter each resource has to remember: what was left out
     is not in the plan the resource is handed, so it cannot observe or act on it."""
     narrowed = engine.Selection.of('plugins/tpm').plan_for('plugins', session.plan)

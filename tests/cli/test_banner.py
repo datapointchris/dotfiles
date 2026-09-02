@@ -107,9 +107,9 @@ def test_the_widest_font_fits_a_conventional_terminal() -> None:
     assert max(banner.widest(art) for art in banner.FONTS) <= 80
 
 
-def test_every_ramp_colours_the_shortest_font_end_to_end() -> None:
+def test_every_ramp_colors_the_shortest_font_end_to_end() -> None:
     """The ramp is spread across the rows rather than indexed by row number, so a
-    three-row font shows all three colours instead of losing the last one."""
+    three-row font shows all three colors instead of losing the last one."""
     shortest = min(banner.FONTS, key=len)
 
     for ramp in banner.RAMPS:

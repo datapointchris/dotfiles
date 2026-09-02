@@ -57,7 +57,7 @@ compinit will not notice a change on its own. It reuses its dump on a **file cou
 
 ## Key Learnings
 
-- Wall-clock far exceeding user+sys means blocking on I/O or network, not slow code — measure both before optimising anything
+- Wall-clock far exceeding user+sys means blocking on I/O or network, not slow code — measure both before optimizing anything
 - A debug flag that reports *what ran* but not *how long* cannot find a performance bug; timing in the logger costs one function and no call-site churn
 - Intermittent stalls need a catch loop, not a single run — a mean across runs hides the tail that users actually experience
 - `zsh -i -c exit` skips prompt rendering and `zsh-vi-mode`'s deferred init; use a PTY (`script -q /dev/null zsh -i`) when those are suspect

@@ -37,7 +37,7 @@ from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
 from dotfiles.output import SUBJECT_COLUMN
-from dotfiles.output import VERDICT_COLOURS
+from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
 from dotfiles.output import console
 from dotfiles.output import elapsed
@@ -153,7 +153,7 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
     about one measurement.
 
     **The verdict is the enum rather than the two words spelled here.** Every other
-    caller of `VERDICT_MARKS` and `VERDICT_COLOURS` keys them on `str(...)` of a
+    caller of `VERDICT_MARKS` and `VERDICT_COLORS` keys them on `str(...)` of a
     member, and a literal that misses a rename lands as a `KeyError` on whoever runs
     this command. `output.MATCHED` is the shape a deliberate literal takes — a
     named constant with a test asserting it agrees with the member it stands in for
@@ -169,7 +169,7 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
             VERDICT_MARKS[verdict_word],
             'network',
             f'{reachable} reachable, {len(blocked)} blocked',
-            VERDICT_COLOURS[verdict_word],
+            VERDICT_COLORS[verdict_word],
             f'{tally((len(measurement.unprobed), "unprobed"))}{elapsed(seconds)}',
         )
     )

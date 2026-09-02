@@ -57,4 +57,4 @@ fd -HI -t d '__pycache__' . -x rm -rf {}  # where a non-interactive one does
   of nothing, and the tell is that re-running changes the number rather than reproducing it.
 - **The error text points at the code, and the code is fine.** Both caches produce findings that
   name real symbols and read as ordinary defects. Nothing in either output says a cache was
-  consulted, so the only defence is clearing before measuring rather than judging afterwards.
+  consulted, so the only defense is clearing before measuring rather than judging afterwards.

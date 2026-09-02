@@ -297,7 +297,7 @@ def target_for(declared: Coordinates) -> Target:
 def detect_arch(machine: str | None = None) -> Arch:
     """`uname -m`, reduced to the two the fleet runs.
 
-    Anything unrecognised answers x86_64 rather than raising: two architectures
+    Anything unrecognized answers x86_64 rather than raising: two architectures
     is the whole spread here, and a release installer that refused to guess would
     refuse to run at all on a box nobody has yet.
     """

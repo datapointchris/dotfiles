@@ -307,7 +307,7 @@ def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped(monkeyp
     Driven through a stubbed `sources` rather than through whichever declared
     installer happens to reach nothing today. awscli on a Mac was that example
     until it stopped being planned there at all, which left this asserting a
-    coincidence of the declaration rather than the behaviour.
+    coincidence of the declaration rather than the behavior.
     """
     monkeypatch.setattr(network.custom, 'sources', lambda entry, target: ())
 

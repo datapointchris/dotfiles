@@ -368,7 +368,7 @@ def link_ownership(target_path: Path, *roots: Path) -> Ownership:
     `roots`, including a broken one left by a deleted source — that is still
     this manager's to replace. `roots` carries the tree currently being linked,
     so a caller pointed at a tree that is not the installed repo still
-    recognises its own links.
+    recognizes its own links.
 
     Containment is compared by path component, never by string prefix.
     `~/dotfiles-backup` and `~/dotfiles.bak` both start with `~/dotfiles`, and

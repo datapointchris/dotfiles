@@ -205,8 +205,8 @@ def test_every_group_of_the_resolution_is_a_named_section(sandbox: Sandbox, cli:
     that report puts one in.
 
     The coordinates and the flags were the two that did not. Both were printed under
-    a heading of their own shape, so the two labelled stage groups below them read as
-    a different kind of thing from the two unlabelled ones above.
+    a heading of their own shape, so the two labeled stage groups below them read as
+    a different kind of thing from the two unlabeled ones above.
 
     The stage names are read off the resolution rather than typed, because which
     stages a machine reaches is a fact about its declaration.

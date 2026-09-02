@@ -160,7 +160,7 @@ def on_path(directory, name: str) -> None:
 
 def test_a_declared_install_path_beats_the_providers_own_rule(tmp_path) -> None:
     """An entry saying where it lands is more specific than a rule about how its
-    neighbours are usually found — and the override is on the base class so a new
+    neighbors are usually found — and the override is on the base class so a new
     provider cannot forget it."""
     landed = tmp_path / 'bashselfupdate'
     landed.write_text('')
@@ -455,7 +455,7 @@ def test_the_go_toolchain_is_answered_by_where_it_is_unpacked(tmp_path, monkeypa
     `/usr/local/go` did not exist — every Go tool then built against a runtime this
     repo had not put there, and nothing measuring the version noticed.
 
-    Still live on the fleet rather than a container artefact: an Arch box reached
+    Still live on the fleet rather than a container artifact: an Arch box reached
     over ssh resolves `/usr/bin/go` at go1.26.6 while `GO_ROOT` holds go1.26.5.
     """
     shadowing = tmp_path / 'bin'
@@ -509,7 +509,7 @@ def test_a_runtime_with_no_fixed_home_is_answered_by_path(tmp_path, monkeypatch)
 
 def test_a_section_carries_the_toolchain_it_needs() -> None:
     """`needed_by` says a runtime is wanted *because* a section resolved, and
-    `resolve` honours it — so a selection that dropped it honoured the declaration
+    `resolve` honors it — so a selection that dropped it honored the declaration
     in the plan and ignored it in the run.
 
     `packages apply --source cargo_packages` on a machine without rustup failed

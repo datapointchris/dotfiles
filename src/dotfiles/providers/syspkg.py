@@ -55,7 +55,7 @@ REMOVE: dict[str, str] = {
 Removal is inferred nowhere: a declaration names what a machine should have, and an
 uninstall worked out from what it does not name takes a package off the machine on
 the strength of a typo. The one removal this repo performs is the one that is
-*named* and then *authorised* — a release's `supersedes` row, reviewed in a commit,
+*named* and then *authorized* — a release's `supersedes` row, reviewed in a commit,
 with `--force` typed on the apply — and `UNINSTALL` below is what performs it.
 Everything else measures the need and stops, with the sentence it stops with built
 from here.
@@ -87,9 +87,9 @@ person or a prompt in front of a timer.
 
 **`dpkg --remove` rather than `apt-get remove -y`, and that is the second difference.**
 `pacman -R` refuses while another installed package needs the one being removed, so an
-authorisation to remove one name cannot take a set. apt resolves reverse dependencies
+authorization to remove one name cannot take a set. apt resolves reverse dependencies
 instead, and `-y` answers the confirmation that would have shown the list — so the same
-`--force` authorising one removal on Arch authorises an unbounded one on Debian. `dpkg
+`--force` authorizing one removal on Arch authorizes an unbounded one on Debian. `dpkg
 --remove` is apt's fail-safe spelling of the same act: same database, same package
 state, and it refuses exactly where pacman does. What it does not do is resolve
 dependencies, which is the whole point here — this is only ever handed one name that a
@@ -363,10 +363,10 @@ def stop_service(manager: str, package: str, unit: str) -> None:
 
 
 def uninstall(manager: str, names: Sequence[str], privilege: Escalates) -> Result:
-    """Take named packages off the machine, for a caller that was authorised to.
+    """Take named packages off the machine, for a caller that was authorized to.
 
     Nothing here decides that it should happen. `evidence.superseded` measures the
-    package, an entry's `supersedes` names it, and `--force` authorises it — so this
+    package, an entry's `supersedes` names it, and `--force` authorizes it — so this
     is handed a list somebody wrote down and confirmed, which is the whole of what
     separates it from the inference `REMOVE` refuses to make.
 
@@ -463,7 +463,7 @@ NETWORKED: frozenset[str] = frozenset({'flatpak', 'mas', 'aur', 'pacman', 'apt'}
 """Which currency reads reach the network, and so are the ones `--cached` declines.
 
 None has a local answer worth giving: Flathub's versions live on Flathub, the App
-Store has no offline catalogue, and `yay -Qu --aur` asks the AUR's RPC per package.
+Store has no offline catalog, and `yay -Qu --aur` asks the AUR's RPC per package.
 
 **`pacman` and `apt` look wrong here and are not.** Each names a read that
 refreshes a private index copy first, replacing a local answer that was worse than

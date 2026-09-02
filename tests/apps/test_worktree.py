@@ -245,7 +245,7 @@ def rewritten_worktree(clone: Path, roots: Path, run: Any, branch: str) -> Path:
 
 
 def plain(text: str) -> str:
-    """The text with its colour stripped, which is what an assertion reads."""
+    """The text with its color stripped, which is what an assertion reads."""
     return ANSI.sub('', text)
 
 
@@ -986,7 +986,7 @@ class TestHeldBy:
         resolve to a falsy value the next check walks past.
 
         This is the direction that costs work: `held_by` ends in *remove*, so a failed
-        read that returns an empty tuple or a missing ref authorises a deletion on the
+        read that returns an empty tuple or a missing ref authorizes a deletion on the
         strength of a question nobody managed to ask.
         """
         unanswerable = [
@@ -1668,19 +1668,19 @@ class TestChoose:
         fed = tmp_path / 'fed-to-fzf'
         argv = tmp_path / 'fzf-argv'
 
-        def _picker(cwd: Path, *args: str, behaviour: str = f"sed -n '2p' '{fed}'"):
-            write_stub(bin_dir, 'fzf', f"printf '%s\\n' \"$@\" > '{argv}'\ncat > '{fed}'\n{behaviour}")
+        def _picker(cwd: Path, *args: str, behavior: str = f"sed -n '2p' '{fed}'"):
+            write_stub(bin_dir, 'fzf', f"printf '%s\\n' \"$@\" > '{argv}'\ncat > '{fed}'\n{behavior}")
             return run(cwd, 'choose', *args), fed, argv
 
         return _picker
 
     def test_every_row_carries_its_path_in_front_of_what_is_displayed(self, fleet, populated, picker):
-        _, fed, _ = picker(fleet['primary'], behaviour='exit 130')
+        _, fed, _ = picker(fleet['primary'], behavior='exit 130')
 
         assert any(line.startswith(f'{populated}\t') for line in fed.read_text().splitlines())
 
     def test_the_header_is_the_first_row_and_fzf_is_told_to_hold_it(self, fleet, populated, picker):
-        _, fed, argv = picker(fleet['primary'], behaviour='exit 130')
+        _, fed, argv = picker(fleet['primary'], behavior='exit 130')
 
         assert fed.read_text().splitlines()[0].startswith('\tLOCATION')
         assert '--header-lines' in argv.read_text().splitlines()
@@ -1691,31 +1691,31 @@ class TestChoose:
         assert result.stdout.strip() == str(fleet['primary']), 'the checkout is the first row'
 
     def test_a_dismissed_picker_prints_nothing_and_exits_clean(self, fleet, populated, picker):
-        result, _, _ = picker(fleet['primary'], behaviour='exit 130')
+        result, _, _ = picker(fleet['primary'], behavior='exit 130')
 
         assert result.returncode == 0
         assert result.stdout == ''
 
     def test_the_preview_runs_show_against_the_path_field(self, fleet, populated, picker):
-        _, _, argv = picker(fleet['primary'], behaviour='exit 130')
+        _, _, argv = picker(fleet['primary'], behavior='exit 130')
 
         preview = next(line for line in argv.read_text().splitlines() if ' show ' in line)
 
         assert preview.endswith('{1}')
-        assert 'FORCE_COLOR=1' in preview, 'a preview is a pipe, so colour has to be asked for'
+        assert 'FORCE_COLOR=1' in preview, 'a preview is a pipe, so color has to be asked for'
         assert ' -q ' in preview, 'the pane previews a worktree, not the git reads behind it'
 
     def test_a_repo_argument_narrows_the_picker(self, fleet, populated, picker, run):
         run(fleet['other'], 'new', 'beta')
 
-        _, fed, _ = picker(fleet['primary'], 'primary', behaviour='exit 130')
+        _, fed, _ = picker(fleet['primary'], 'primary', behavior='exit 130')
         offered = fed.read_text()
 
         assert str(populated) in offered, "the named repo's own worktree is still offered"
         assert 'beta' not in offered
 
     def test_nothing_to_choose_is_a_refusal_not_an_empty_picker(self, fleet, picker):
-        result, fed, _ = picker(fleet['primary'], behaviour='exit 130')
+        result, fed, _ = picker(fleet['primary'], behavior='exit 130')
 
         assert result.returncode == 1
         assert result.stdout == ''
@@ -1965,7 +1965,7 @@ class TestSpawnCollision:
 
     def test_an_unreadable_registry_refuses_rather_than_reading_as_empty(self, fleet, run, spawn, bin_dir, rig, tmp_path):
         """The same split `held_by` makes: nobody is here and nobody could be asked are one
-        empty list, and reading the second as the first is what authorises the collision."""
+        empty list, and reading the second as the first is what authorizes the collision."""
         run(fleet['primary'], 'new', 'alpha')
         write_stub(bin_dir, 'claude-sessions', 'exit 1')
 
@@ -2216,7 +2216,7 @@ class TestSpawnRefusals:
         assert result.returncode == 1
 
     def test_width_with_below_is_a_usage_error(self, fleet, run, tmp_path):
-        """A flag the run cannot honour says so and never parses into
+        """A flag the run cannot honor says so and never parses into
         silence — a below split leaves the layout alone, so there is no main pane to size."""
         result = run(fleet['primary'], 'spawn', 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--below', '--width', '50')
 
@@ -2381,7 +2381,7 @@ class TestRefusalFaults:
 
 
 class TestUsableWidth:
-    """What tmux honours, which is a smaller set than what it parses.
+    """What tmux honors, which is a smaller set than what it parses.
 
     Every rejected value here was measured against real tmux answering exit 0 and then
     falling back to 80 columns — so `0` and `999%` are as unusable as `abc`, and only the

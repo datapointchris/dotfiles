@@ -811,7 +811,7 @@ check_defender() {
 # ================================================================
 
 # Timed here rather than read off dd's own summary: GNU time is not installed
-# everywhere, and dd's throughput line is localised and formatted differently
+# everywhere, and dd's throughput line is localized and formatted differently
 # across coreutils versions.
 write_speed() {
   local target="$1" start end nanoseconds
@@ -967,7 +967,7 @@ mounts() {
     note=$(mount_note "$fstype") || continue
 
     # Docker's layers are one mount each and there is a mount per image on the
-    # machine. They answer no question this verb is asked, and unsummarised they
+    # machine. They answer no question this verb is asked, and unsummarized they
     # are the entire output on any box that runs containers.
     if [[ "$fstype" == "overlay" ]]; then
       layers=$((layers + 1))

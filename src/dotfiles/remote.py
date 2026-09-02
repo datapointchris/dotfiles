@@ -1,8 +1,8 @@
-"""Moving an artefact between the machine that has a network and the one that does not.
+"""Moving an artifact between the machine that has a network and the one that does not.
 
 The transport is a program this repo never names. A machine declares which one in
 `[remote.transport]` and dotfiles builds an argv from the templates beside it, so
-the credential, the protocol and the retry behaviour all stay owned by the CLI
+the credential, the protocol and the retry behavior all stay owned by the CLI
 that owns them. A composer shells out to the other CLIs; it does not reimplement
 them.
 
@@ -161,7 +161,7 @@ class Transport:
 
 @dc.dataclass(frozen=True, slots=True)
 class Remote:
-    """Where artefacts go, how they get there, and how many are kept."""
+    """Where artifacts go, how they get there, and how many are kept."""
 
     root: str
     transport: Transport
@@ -194,7 +194,7 @@ class Remote:
 BUNDLES = 'bundles'
 STATUSES = 'status'
 REPORTS = 'reports'
-"""The three kinds of artefact under `root`, and dotfiles decides all of them.
+"""The three kinds of artifact under `root`, and dotfiles decides all of them.
 
 A *shelf* is one machine's directory inside one of these — `<root>/bundles/<manifest>`
 — which is what every `--machine` flag here reads and what `bundles_for`,
@@ -215,7 +215,7 @@ server.
 
 Keyed by *manifest* under each, never by hostname. `paths.machine_id()` is the
 bare hostname, and on the one machine this exists for that is an employer's asset
-tag — a name that has no business on a shelf beside personal artefacts. The
+tag — a name that has no business on a shelf beside personal artifacts. The
 manifest name is what a bundle is built for anyway, so it is also the right key.
 """
 
@@ -587,7 +587,7 @@ def push(remote: Remote, local: Path, directory: str) -> str:
     Where the listing fails and `mkdir` is declared, the directory is created and
     the push continues. Where it is not declared the push refuses, rather than
     uploading and hoping: a transport that silently roots an upload elsewhere puts
-    the artefact somewhere no `list` will ever find it, which reads as a lost
+    the artifact somewhere no `list` will ever find it, which reads as a lost
     upload rather than as a misconfiguration.
     """
     if not exists(remote, directory):
@@ -630,7 +630,7 @@ def pull(remote: Remote, path: str, local: Path) -> Path:
 
 
 def remove(remote: Remote, path: str) -> None:
-    """Delete one remote artefact, where the machine declared how to.
+    """Delete one remote artifact, where the machine declared how to.
 
     Never reached from an upload. Retention runs from `bundle prune` alone, so
     nothing this tool does on a schedule can remove bytes from a server — see
@@ -655,7 +655,7 @@ def superseded(listed: tuple[str, ...], keep: int) -> tuple[str, ...]:
     `delete` still say what has accumulated.
 
     Sorted lexicographically, which orders these names by time because every
-    artefact this tool writes carries a compact UTC timestamp — the reason
+    artifact this tool writes carries a compact UTC timestamp — the reason
     `create_bundle.bundle_name` stamps one to the second rather than to the day.
     """
     ordered = sorted(listed)

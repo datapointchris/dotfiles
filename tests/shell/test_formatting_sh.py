@@ -7,7 +7,7 @@ CLI's own help is Typer's and is pinned separately by the conformance suite.
 
 The alignment is asserted on the text with the escapes stripped, because the
 contract is that the escapes sit *outside* the padded field — printf counts them
-toward a field width, so a colour inside the pad shifts the column.
+toward a field width, so a color inside the pad shifts the column.
 """
 
 from __future__ import annotations
@@ -19,10 +19,10 @@ LIBRARY = 'formatting.sh'
 
 
 def screen(snippet: str) -> str:
-    """A help screen with colour forced on and then stripped back off.
+    """A help screen with color forced on and then stripped back off.
 
     Forced on because the padding is only interesting when there are escapes to
-    misplace: with colour off the two spellings of the bug produce identical
+    misplace: with color off the two spellings of the bug produce identical
     text.
     """
     return source(LIBRARY, snippet, FORCE_COLOR='1').plain
@@ -35,12 +35,12 @@ def screen(snippet: str) -> str:
 def test_a_status_row_carries_its_icon_and_degrades_to_plain_text(function: str, icon: str) -> None:
     """These had no test at all under bats — `windows-shell-sync.bats` only ever
     asserted `print_success` was *defined*."""
-    coloured = source(LIBRARY, f'{function} "a message"', FORCE_COLOR='1')
+    colored = source(LIBRARY, f'{function} "a message"', FORCE_COLOR='1')
     plain = source(LIBRARY, f'{function} "a message"')
 
     assert plain.stdout == f'  {icon} a message\n'
-    assert '\x1b[' in coloured.stdout
-    assert coloured.plain == plain.stdout
+    assert '\x1b[' in colored.stdout
+    assert colored.plain == plain.stdout
 
 
 def test_a_status_row_goes_to_stdout_where_its_caller_asked_for_it() -> None:
@@ -65,9 +65,9 @@ def test_a_name_past_the_field_width_pushes_the_description_rather_than_being_cu
     assert screen('print_help_row 0 "go-tools"') == '  go-tools\n'
 
 
-def test_an_example_row_is_coloured_differently_from_a_help_row() -> None:
-    """An example is a command you would type, so it reads in the command colour
-    rather than the name colour a listing uses."""
+def test_an_example_row_is_colored_differently_from_a_help_row() -> None:
+    """An example is a command you would type, so it reads in the command color
+    rather than the name color a listing uses."""
     assert screen('print_example_row 20 "./update.sh tools" "# only binaries"') == '  ./update.sh tools   # only binaries\n'
 
     help_row = source(LIBRARY, 'print_help_row 10 "name" "desc"', FORCE_COLOR='1').stdout
@@ -106,12 +106,12 @@ def test_a_longer_row_reflows_the_section_it_lands_in() -> None:
 
 
 @pytest.mark.parametrize('other', ['Options', 'Examples', 'Collections'])
-def test_a_section_is_coloured_by_its_name_not_its_position(other: str) -> None:
-    """So a screen cannot get the wrong colour by being the second Options block."""
+def test_a_section_is_colored_by_its_name_not_its_position(other: str) -> None:
+    """So a screen cannot get the wrong color by being the second Options block."""
     assert screen('help_section Commands') != screen(f'help_section {other}')
 
 
-def test_the_section_colour_is_case_insensitive() -> None:
+def test_the_section_color_is_case_insensitive() -> None:
     lower = screen('help_section commands').replace('commands', 'X')
     upper = screen('help_section COMMANDS').replace('COMMANDS', 'X')
 

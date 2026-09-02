@@ -70,7 +70,7 @@ class Evidence:
 def uv_tool_dir() -> Path:
     """Where `uv tool install` puts a tool's own environment.
 
-    From the environment, because that is the knob uv itself honours — which is
+    From the environment, because that is the knob uv itself honors — which is
     also what lets a test point it somewhere without patching anything.
     """
     return Path(os.environ.get('UV_TOOL_DIR') or Path.home() / '.local/share/uv/tools')
@@ -130,7 +130,7 @@ def executables_on_path(checkout: Path, search: str | None = None, wanted: froze
 
     **`wanted` bounds the three syscalls per entry, not the walk.** `is_file`,
     `access` and `realpath` are three round trips each. On WSL with Windows PATH
-    interop on, `$PATH` carries `/mnt/c/Windows/System32` and its neighbours, every
+    interop on, `$PATH` carries `/mnt/c/Windows/System32` and its neighbors, every
     syscall crosses drvfs, and the count is in the tens of thousands — none of them
     ever asked about.
 
@@ -356,7 +356,7 @@ def query(name: str, *, refresh: bool = False) -> frozenset[str] | None:
     behind. The second is prefixed, and the networked ones among them are the only
     reads `refresh` gates. A declined run has no answer for any of them rather than
     a cheap one, and for two different reasons: Flathub, the App Store and the AUR
-    have no offline catalogue at all, while pacman and apt have one that is as old
+    have no offline catalog at all, while pacman and apt have one that is as old
     as the last sync and so answers the question wrong.
 
     Every read verb passes `refresh=True`, so declining is something a caller asked
@@ -505,7 +505,7 @@ DISPLACE = 'dotfiles packages apply --package {name} --force'
 """How a release entry says it will take over from the package still holding its name.
 
 Narrowed to the one entry rather than spelled `packages apply --force`, because the
-flag reaches everything the run covers and a reader pasting the wider form authorises
+flag reaches everything the run covers and a reader pasting the wider form authorizes
 a removal per superseded entry on the machine. An error is the help screen for the
 failure in hand, which is what makes it a command rather than a mention of the flag.
 """
@@ -648,7 +648,7 @@ def reported_version(executable: str) -> str | None:
     """What a binary says its version is, or None when it will not say.
 
     **A non-zero exit is None, never "whatever it printed".** A tool that does not
-    recognise the probe prints usage, which is full of numbers `versions.parse`
+    recognize the probe prints usage, which is full of numbers `versions.parse`
     reads as a version and reports as behind.
 
     A `go install`-ed binary is asked its toolchain first and its own banner only

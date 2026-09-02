@@ -2,7 +2,7 @@
 # ================================================================
 # Logging Library
 # ================================================================
-# Dual-purpose: coloured and iconned for a human reading the terminal, and
+# Dual-purpose: colored and iconned for a human reading the terminal, and
 # [LEVEL]-prefixed so logsift and the log aggregators can parse the same line.
 #
 # Streams

@@ -108,7 +108,7 @@ def test_a_zip_distributed_tool_comes_out_executable(over_base: Machine) -> None
 
 def test_a_download_from_a_third_party_host_is_not_sent_a_github_token(over_base: Machine) -> None:
     """mount-s3 comes from an S3 bucket, and S3 answers a bearer token it does not
-    recognise with a 400. The credential was going to every host this repo fetches
+    recognize with a 400. The credential was going to every host this repo fetches
     from, so an authenticated machine could not install it at all."""
     needing(over_base, 'custom_installers', 'mount-s3')
     code, output = apply_section(over_base, 'custom_installers')

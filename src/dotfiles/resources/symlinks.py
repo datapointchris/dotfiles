@@ -103,7 +103,7 @@ class Link:
     """
 
     root: Path
-    """The tree being linked, so `link_ownership` recognises this manager's own
+    """The tree being linked, so `link_ownership` recognizes this manager's own
     links when the caller is pointed at a tree that is not the installed repo."""
 
     @property
@@ -126,7 +126,7 @@ class Observed:
     because `_verdict` is the pure half: everything it decides from has to have
     been observed. It is also what `summary` counts through, so a mode read
     somewhere other than here would be a second opinion free to disagree with the
-    rows it is summarising.
+    rows it is summarizing.
     """
 
     ownership: dict[Path, core.Ownership]
@@ -211,7 +211,7 @@ class Observed:
 
         Counted through `_verdict`, which is what decides the same question for
         every row below. A second predicate here would be free to disagree with the
-        rows it is summarising.
+        rows it is summarizing.
         """
         in_place = sum(1 for link in self.links if _verdict(link, self) is None)
         return f'{in_place} of {len(self.links)} declared {"copies" if self.copying else "symlinks"} in place'
@@ -298,14 +298,14 @@ class ForceUnavailable(refusal.Refusal):
     """`--force` at a machine that deploys by copy, where the flag decides nothing.
 
     A usage error rather than a warning, because a warning leaves the run's answer
-    unchanged and the exit code is the part a caller reads. `--force` authorises
+    unchanged and the exit code is the part a caller reads. `--force` authorizes
     replacing a target this manager did not create, and `core.link_ownership`
     answers `FOREIGN` for every regular file a copy machine has — so the refusal
     the flag exists to answer is one that is never raised there. Accepted, it
     exits 0 having deployed exactly what a bare apply deploys, and nothing at the
     terminal separates that from the flag having worked.
 
-    Unlike the other unreachable-on-copy behaviour, this one has a person behind
+    Unlike the other unreachable-on-copy behavior, this one has a person behind
     it. `FOREIGN_ADVICE` going unprinted costs nobody anything; a flag typed on
     purpose and silently discarded is a question that was asked and not answered.
 
@@ -517,7 +517,7 @@ def remove_copies(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
 
     The copy twin of `core.remove_symlinks`, and it is driven by the declaration
     where that one is driven by a walk of `$HOME`. A link says where it came from,
-    so the link pass can sweep the home directory and recognise its own; a copy
+    so the link pass can sweep the home directory and recognize its own; a copy
     says nothing, which is the same missing provenance that leaves `orphans`
     empty. What remains enumerable is what the repo declares — and that is the
     whole of it, because every path this mechanism has ever written is one.

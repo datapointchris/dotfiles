@@ -243,7 +243,7 @@ def chose(index: int, key: str = '') -> str:
 
 
 def plain(line: str) -> str:
-    """The line with its colour stripped, which is what an assertion reads."""
+    """The line with its color stripped, which is what an assertion reads."""
     return ANSI.sub('', line)
 
 
@@ -275,8 +275,8 @@ def listed(lines: list[str]) -> list[str]:
     return blocks
 
 
-def test_the_columns_are_labelled(listing) -> None:
-    """Unlabelled columns read as a log line. `gh pr list` and `bbkt pr list`
+def test_the_columns_are_labeled(listing) -> None:
+    """Unlabeled columns read as a log line. `gh pr list` and `bbkt pr list`
     both label theirs, and the comparison against gh is the reported complaint."""
     header = plain(next(line for line in listing(pr('dotfiles', 1, 'a-branch')) if line.strip()))
 
@@ -311,7 +311,7 @@ def test_a_repo_this_machine_has_not_cloned_says_so(listing) -> None:
 
 
 def test_both_status_lines_say_their_state_in_words(listing) -> None:
-    """This replaced a legend under the table, which made you carry a colour from
+    """This replaced a legend under the table, which made you carry a color from
     the bottom of the window back up to a glyph."""
     only = listed(listing(pr('doit', 1, 'a-branch', checks='SUCCESS', review='CHANGES_REQUESTED')))[0]
 
@@ -425,7 +425,7 @@ def test_a_pr_is_never_marked_as_stacked_on_itself(listing) -> None:
 
 
 def test_the_listing_is_plain_when_it_is_not_a_terminal(listing) -> None:
-    """stdout is data. Colour written into a pipe is escape codes in whatever
+    """stdout is data. Color written into a pipe is escape codes in whatever
     reads it next."""
     lines = listing(pr('doit', 1, 'a-branch', checks='SUCCESS'))
 
@@ -502,7 +502,7 @@ def test_enter_answers_the_merge_confirm(session) -> None:
 
 def test_an_answer_that_is_not_yes_leaves_the_pr_alone(session) -> None:
     """Enter being yes only works if a stray key is still no. Treating anything
-    unrecognised as agreement would make a mistimed keypress a merge."""
+    unrecognized as agreement would make a mistimed keypress a merge."""
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),), answer='x\n')
 
     assert 'left alone' in run.stdout

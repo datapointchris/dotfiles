@@ -185,7 +185,7 @@ def report(cells: list[Cell], into: Path, wall: float) -> Path:
 def main(argv: list[str] | None = None) -> int:
     known = ', '.join(f'{level.number}/{level.name}' for level in levels.LEVELS)
     # `allow_abbrev=False` is load-bearing, not tidiness. Everything this does not
-    # recognise is forwarded to pytest, and argparse's prefix matching claims any
+    # recognize is forwarded to pytest, and argparse's prefix matching claims any
     # unambiguous abbreviation of an option defined here — so `--keep`, meant for
     # pytest, was silently consumed as `--keep-going` and never forwarded. A whole
     # level-4 run's containers were then destroyed at teardown, and the rung that

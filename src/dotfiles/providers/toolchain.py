@@ -369,7 +369,7 @@ FNM_HOME = Path('.local/share/fnm')
 FNM_ALIAS_BIN = Path('aliases/default/bin')
 """fnm's default alias, relative to whichever fnm home a run resolved.
 
-Relative rather than absolute because `install_node` honours an `FNM_DIR`
+Relative rather than absolute because `install_node` honors an `FNM_DIR`
 override and `TOOL_PATH_DIRS` cannot — one names the directory a run was told to
 use, the other the directory `.zshenv` hardcodes.
 """

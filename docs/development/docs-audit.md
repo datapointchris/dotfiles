@@ -363,7 +363,7 @@ naming the module. `architecture/custom-installers.md` is the model: 162 lines t
 `architecture/index.md` was named the page to watch. It was stale again, and
 three of its claims were false: a manifest example declaring `function_groups:`
 and `alias_groups:`, which `rg -uu` finds nowhere in the repo; a `npm_globals:`
-list triggering nvm, retired in favour of fnm; and an optional per-platform
+list triggering nvm, retired in favor of fnm; and an optional per-platform
 Neovim config layer that has never existed. That is failure twice, and the test
 says delete.
 
@@ -429,6 +429,6 @@ the target existing.
 
 And run it on this page. Three blind reviewers of the change that produced this
 record found four wrong figures in the table above — a line count, a shingle
-subtotal labelled as a corpus, a deletion enumeration, and a commit message.
+subtotal labeled as a corpus, a deletion enumeration, and a commit message.
 No two reviewers found the same one. The instrument was applied to the whole of
 `docs/` and never to the page prescribing it.

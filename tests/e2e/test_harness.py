@@ -193,7 +193,7 @@ def test_asking_for_one_environment_collects_only_that_one() -> None:
 
 def test_the_set_tier_is_not_collected_when_nothing_may_install() -> None:
     """`--installed` means assert against the install already there, and a set
-    test cannot honour it — `over_base` starts a container and installs into it.
+    test cannot honor it — `over_base` starts a container and installs into it.
 
     Collected anyway they were the whole difference between the tier the ladder
     documents and the one it delivered: nine minutes against the seconds that
@@ -503,7 +503,7 @@ class TestGitCredential:
 
 
 def test_the_container_gets_the_checkout_the_tests_came_from() -> None:
-    """`paths.REPO_ROOT` honours `$DOTFILES_DIR`, which `.zshenv` exports to
+    """`paths.REPO_ROOT` honors `$DOTFILES_DIR`, which `.zshenv` exports to
     ~/dotfiles — so an e2e run from a git worktree mounted the wrong repo and
     installed main's code while reporting on the branch.
 
@@ -569,7 +569,7 @@ class TestContainerName:
 
         assert harness.container_name('wsl') == 'dotfiles-e2e-wsl-feature-wsl-scripts'
 
-    def test_the_main_worktree_is_recognised_by_git_rather_than_by_path(self, monkeypatch) -> None:
+    def test_the_main_worktree_is_recognized_by_git_rather_than_by_path(self, monkeypatch) -> None:
         monkeypatch.setattr(harness.subprocess, 'run', _answering('.git\n'))
 
         assert harness.linked_worktree(Path('/anywhere')) is None
@@ -628,7 +628,7 @@ def test_a_declared_path_is_looked_for_on_disk() -> None:
 
 def test_a_declared_path_beats_a_binary_of_the_same_name() -> None:
     """The same precedence `Provider.evidence` applies: an entry saying where it
-    lands is more specific than a rule about how its neighbours are found."""
+    lands is more specific than a rule about how its neighbors are found."""
     assert probe_of(desired(evidence_path='/opt/task')).startswith('[ -e ')
 
 

@@ -538,7 +538,7 @@ def beneath(windows: Sequence[Window], request: Request) -> Placement:
 def alongside(windows: Sequence[Window], request: Request) -> Placement:
     """A worker, in a new column of whichever window still has room for one.
 
-    Three branches in order, and the order is the behaviour. Pack an existing
+    Three branches in order, and the order is the behavior. Pack an existing
     window up to its ceiling first. Then free a column by promoting the
     coordinator, which is what turns the coordinator's window into three pairs
     rather than two pairs and an overflow. Only then open a window.
@@ -894,7 +894,7 @@ def execute(placement: Placement, command: Sequence[str], cwd: str, window_name:
     the pane it was given, and the pane at the top of a stacked pair occupies only
     the upper half of its column -- so the new pane arrives beside that half while
     the reviewer underneath keeps spanning the original width. Measured: a second
-    pair placed that way came out 125x20 with its neighbour's reviewer 251 columns
+    pair placed that way came out 125x20 with its neighbor's reviewer 251 columns
     wide across two columns. It also reflows every column in the window, which is
     why `eligible()` refuses a window holding a pane this tool did not place. It
     is never used on a stacked split, where it would span the window and take the

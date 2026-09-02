@@ -10,7 +10,7 @@ brew's argv log is what proves. The forced run itself is not here: it resolves a
 tag before it removes anything, and a matrix row that reached GitHub would be
 measuring the network.
 
-The behaviour under `perform` is `tests/resources/test_packages.py` — including the
+The behavior under `perform` is `tests/resources/test_packages.py` — including the
 ordering, which is where a failed fetch is shown to leave the package installed.
 The blocker and its advice are `tests/resources/test_superseded_packages.py`. What
 is here is what a person typing the verb sees.

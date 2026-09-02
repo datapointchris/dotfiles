@@ -13,7 +13,7 @@
 #
 # Two rungs, in that order: $DOTFILES_REPOS_REGISTRY, then `repos_registry` in
 # dotfiles' own config. `src/dotfiles/settings.py` SHARED_PATHS declares both for
-# this one setting, and a reader honouring only one of them answers differently
+# this one setting, and a reader honoring only one of them answers differently
 # from `dotfiles config show` while both look right.
 #
 # The config carries the machine's answer rather than a variable alone: ~/.env is

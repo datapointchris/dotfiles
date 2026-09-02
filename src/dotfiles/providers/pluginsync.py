@@ -323,7 +323,7 @@ def _lazy_line(line: str) -> str | None:
     Its headless output is every plugin's raw git and build spew, which is far too
     much to watch — and sending all of it to a file left a fresh install cloning
     fifty repos with nothing on screen for minutes. The escape codes go first
-    because lazy colours its own prefix, and the filter cannot see the ` | `
+    because lazy colors its own prefix, and the filter cannot see the ` | `
     separating prefix from message until they are gone.
     """
     plain = re.sub(r'\033\[[0-9;]*m', '', line)
@@ -334,7 +334,7 @@ def _lazy_line(line: str) -> str | None:
 
 
 def listed(names: tuple[str, ...], limit: int = 4) -> str:
-    """Enough names to recognise the problem by, and a count for the rest.
+    """Enough names to recognize the problem by, and a count for the rest.
 
     A fresh machine is missing every plugin lazy knows about, and a row naming
     fifty of them is a row nobody reads to the end.
