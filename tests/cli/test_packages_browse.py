@@ -11,7 +11,7 @@ an exit code. `declaration.main(argv)` is the same door with the click group
 taken off, and it is the only way to reach `sections`, `stats` and `tags`, which
 the `dotfiles` CLI does not expose at all.
 
-**In process rather than in a subprocess.** `tests/apps/test_packages_list.py`
+**In process rather than in a subprocess.** `tests/tools/test_packages_list.py`
 drives `python -m dotfiles.declaration`, which measures the same behaviour and
 reports no coverage for any of it — so every branch here read as unexecuted
 while three tests were passing over it.

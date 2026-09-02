@@ -571,6 +571,13 @@ def aws_profiles():
 
 @pytest.fixture(scope='session')
 def tmux_rearrange():
+    """The module itself, so a test can call into it and patch what it imported.
+
+    A fixture rather than an import in each file, because that is how several
+    hundred assertions already spell it. Imported inside the body rather than at
+    the top of this file: the guard above holds `dotfiles.paths` out of
+    `sys.modules` until `DOTFILES_DIR` is pinned, and a fixture runs long after.
+    """
     from dotfiles import tmux_rearrange as module
 
     return module
