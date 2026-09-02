@@ -907,7 +907,7 @@ class TestARunThatNeverStarted:
 
     **The refusal's own sentence is not asserted here, and the exit code stands
     for it.** `NoBundle` is the only Issue reachable on this path — its two
-    neighbours in `reconcile` are usage errors — and its message interpolates
+    neighbors in `reconcile` are usage errors — and its message interpolates
     the staging directory, the working directory and `$HOME`, so matching it
     makes the result a function of how long the operator's paths are. That the
     refusal carries its remedy is `tests/cli/test_boundary.py`'s subject, over a
