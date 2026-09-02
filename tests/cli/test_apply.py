@@ -890,7 +890,7 @@ class TestTheClosingLine:
 
 
 class TestARunThatNeverStarted:
-    """A refusal closes on `refusal.report`'s shape rather than on a verdict line.
+    """A refusal closes on `boundary.report`'s shape rather than on a verdict line.
 
     The verdict line is composed from counts of what this walk decided, and a run
     refused before the walk has none — so a verdict word in front of a sentence

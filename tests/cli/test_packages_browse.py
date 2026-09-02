@@ -6,7 +6,7 @@ listable while it is being fixed. `MALFORMED` below is what measures that claim.
 
 Two doors, both real. `dotfiles packages list|show|search` goes through
 `CliRunner` into the typer app, which reaches `declaration.main` in process via
-`bridge.declaration` — so a `Refusal` travels to `refusal.Boundary` and becomes
+`bridge.declaration` — so a `Refusal` travels to `boundary.Boundary` and becomes
 an exit code. `declaration.main(argv)` is the same door with the click group
 taken off, and it is the only way to reach `sections`, `stats` and `tags`, which
 the `dotfiles` CLI does not expose at all.
@@ -617,7 +617,7 @@ def test_the_front_door_shows_one_package_as_json(declared: Path, capsys: pytest
 
 def test_the_console_script_reports_a_refusal_rather_than_raising_it(declared: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """`main` raises so the typer boundary can carry the code; `cli` is the other
-    door and has no boundary, so it reports through the same `refusal.report`.
+    door and has no boundary, so it reports through the same `boundary.report`.
     Without it a misspelt name printed a traceback and exited 1."""
     monkeypatch.setattr(sys, 'argv', ['packages', 'show', 'nothing-declares-this'])
 

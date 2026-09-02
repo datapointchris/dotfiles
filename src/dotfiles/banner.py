@@ -22,9 +22,9 @@ from typing import Any
 
 from rich.text import Text
 
+from dotfiles.boundary import Boundary
 from dotfiles.output import err_console
 from dotfiles.output import showing_evidence
-from dotfiles.refusal import Boundary
 
 FONTS: tuple[tuple[str, ...], ...] = (
     # ansi_regular — 5 rows x 60 cols

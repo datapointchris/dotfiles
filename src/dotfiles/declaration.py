@@ -24,8 +24,8 @@ import yaml
 
 import dotfiles
 from dotfiles import catalog
+from dotfiles import output
 from dotfiles import paths
-from dotfiles import refusal
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
@@ -607,15 +607,18 @@ def cli() -> None:
     """The `packages` console script, which is the other door onto `main`.
 
     `main` raises `Refusal` and does not report it, because the `dotfiles` CLI
-    calls it in-process and wants the refusal to travel to `refusal.Boundary`.
+    calls it in-process and wants the refusal to travel to `boundary.Boundary`.
     This door has no click group to carry one, so it reports here — through the
-    same `refusal.report` the boundary uses, so a misspelt package name reads
+    same `output.report` the boundary uses, so a misspelt package name reads
     identically whichever binary was typed.
+
+    Reaching `output.report` rather than `boundary` is what keeps this door free
+    of typer and click. `tests/test_dependencies.py` pins it.
     """
     try:
         main()
     except Refusal as refused:
-        sys.exit(refusal.report(refused))
+        sys.exit(output.report(refused))
 
 
 def main(argv: list[str] | None = None) -> None:
