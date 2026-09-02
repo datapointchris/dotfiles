@@ -18,8 +18,8 @@ top, which is whoever stashed most recently — not necessarily this worktree.
 This repo is unusually exposed to it. `CLAUDE.md` requires branch work to happen in a worktree
 (`worktree new <slug>`, under `~/.worktrees/`), precisely so a branch cannot deploy itself over the
 machine, so two or three simultaneous worktrees is the normal state rather than an unusual one.
-Every repo now shares that exposure, since a second concurrent session isolates the same way —
-`standards/git-workflow.md` § "Concurrent sessions isolate with a worktree".
+Every repo now shares that exposure, since a second concurrent session isolates the same way, in
+a worktree of its own.
 
 Measured 2026-08-10: three worktrees each ran `git stash` to take a clean pytest baseline. One
 popped another's work-in-progress into its own tree, a third found its own edits missing from

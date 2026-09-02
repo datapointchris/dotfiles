@@ -397,8 +397,8 @@ def _listing(named: list[str]) -> str:
 
     `--section` is this bridge's own flag and the front door spells it `--source`,
     so advice built from the internal name named a command the CLI rejects with
-    exit 2 — `standards/help.md` § "Audit help from outside the source" calls that
-    the Paste fault, an example that does not run as written.
+    exit 2. Help audited from outside the source catches that as the Paste fault,
+    an example that does not run as written.
 
     One section or none, because `--source` takes a value rather than a list and a
     repeated flag would keep only the last. Where a noun owns several the narrowing
@@ -638,7 +638,7 @@ def main(argv: list[str] | None = None) -> None:
     subparsers = parser.add_subparsers(dest='command')
 
     def reading(name: str, help: str) -> argparse.ArgumentParser:
-        """A read verb, which speaks `--json` — standards/api-design.md § "`--json` on every read"."""
+        """A read verb, which speaks `--json` as every read does."""
         added = subparsers.add_parser(name, help=help)
         added.add_argument('--json', action='store_true', help='Output as JSON')
         return added

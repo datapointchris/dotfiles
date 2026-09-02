@@ -788,10 +788,9 @@ def _undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Pat
     out, because `pacman -Qo` answers that in one bounded call the run can make
     itself.
 
-    One command per stray and nothing beside it, per `standards/help.md` § "An
-    error is the help screen for the failure in hand". Changing the declaration
-    is a repo edit rather than a repair of this machine, so it is not an
-    alternative offered here.
+    One command per stray and nothing beside it, because an error is the help
+    screen for the failure in hand. Changing the declaration is a repo edit rather
+    than a repair of this machine, so it is not an alternative offered here.
 
     Every path is asked about separately. Two strays for one tool are two
     different packages more often than not, and one removal command covering both

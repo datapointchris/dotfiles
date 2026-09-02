@@ -3,21 +3,20 @@
 The transport is a program this repo never names. A machine declares which one in
 `[remote.transport]` and dotfiles builds an argv from the templates beside it, so
 the credential, the protocol and the retry behaviour all stay owned by the CLI
-that owns them — standards/cli-design.md § "A composer shells out to the other
-CLIs; it does not reimplement them".
+that owns them. A composer shells out to the other CLIs; it does not reimplement
+them.
 
 **The whole contract is that `list` prints one name per line on stdout.** No JSON
 dialect, no field mapping, no output-format key. Everything a caller needs to rank
 a bundle and describe it is in the name and the sidecar beside it, so nothing here
 parses the transport's own metadata. That is what keeps `[remote]` a document
-rather than a program under standards/configuration.md § "Keep the config a
-document, not a program": a fixed argv with one substituted placeholder carries no
+rather than a program: a fixed argv with one substituted placeholder carries no
 conditional, no reference between keys and no evaluation order.
 
-`root` has no compiled-in default and cannot have one — standards/data.md § "A
-shared file is named in config; only the tool's own default is compiled in". A
-machine that names nothing has no remote, which is an ordinary state for every box
-that never exchanges a bundle.
+`root` has no compiled-in default and cannot have one. A shared file is named in
+config, and only a tool's own default is ever compiled in. A machine that names
+nothing has no remote, which is an ordinary state for every box that never
+exchanges a bundle.
 """
 
 from __future__ import annotations
@@ -171,11 +170,11 @@ class Remote:
     """Which of these the `[remote]` table set, as against this tool's defaults.
 
     Carried rather than inferred from the values, because a machine that declares
-    the same value as the default is indistinguishable by comparison — and
-    standards/configuration.md § "A resolved value reports which layer set it"
-    names that exactly: *"the failure this prevents is not a wrong value, it is a
-    plausible one."* One set rather than a boolean per key, so a setting added
-    later reports its layer without anyone remembering to add a second field.
+    the same value as the default is indistinguishable by comparison. A resolved
+    value reports which layer set it, because the failure this prevents is not a
+    wrong value but a plausible one. One set rather than a boolean per key, so a
+    setting added later reports its layer without anyone remembering to add a
+    second field.
     """
 
     fetch_bundle_when_none_is_staged: bool = False
@@ -281,8 +280,8 @@ def _fields(part: str) -> list[tuple[str, str | None, str | None, str | None]]:
     """Every replacement field in one argv fragment, as `str.format` sees them.
 
     Asked of the formatter rather than matched with a regex, so a template that
-    dotfiles accepts is exactly one `argv` will not raise on — standards/python.md
-    § "Ask whatever owns a fact; never work it out a second time".
+    dotfiles accepts is exactly one `argv` will not raise on. Ask whatever owns a
+    fact; never work it out a second time.
 
     Raises `ValueError` on an unbalanced brace, which the caller turns into one
     more problem string. Uncaught it escapes `dotfiles config show`, and that is
@@ -499,8 +498,8 @@ def names(remote: Remote, directory: str) -> tuple[str, ...]:
 
     A failure raises rather than answering empty. An unreachable remote and an
     empty directory are opposite findings, and a caller that reconciles by sweep
-    reads the second as "everything was deleted" — standards/cli-design.md § "A
-    narrowing default reads as a deletion to anything that reconciles by sweep".
+    reads the second as "everything was deleted". A narrowing default reads as a
+    deletion to anything that reconciles by sweep.
     """
     ran = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory})
     if not ran.ok:
@@ -689,10 +688,10 @@ def measure(found: Configured) -> tuple[Reach, ...]:
     """Every condition `remote check` reports, in the order they have to hold.
 
     Presence of the program is measured *and* an actual listing is attempted,
-    because presence is not readiness — standards/configuration.md § "A declared
-    requirement states what has to be true, not only that the thing exists". A
-    machine with the binary installed and no credential for it is exactly the state
-    that otherwise reports converged and fails at the first upload.
+    because presence is not readiness. A declared requirement states what has to
+    be true, not only that the thing exists. A machine with the binary installed
+    and no credential for it is exactly the state that otherwise reports converged
+    and fails at the first upload.
     """
     if found.problem:
         return tuple(Reach('config', False, line) for line in found.problem.splitlines())

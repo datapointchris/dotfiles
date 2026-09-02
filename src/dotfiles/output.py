@@ -338,8 +338,8 @@ def elapsed(seconds: float) -> str:
 def announce(address: str, detail: str) -> None:
     """Say what is being measured, before it is.
 
-    Two gates. `showing_evidence` is `-q`, per cli-design.md § "Quieten the
-    evidence, never the answer". The terminal test is not about volume: this is
+    Two gates. `showing_evidence` is `-q`, which quietens the evidence and never
+    the answer. The terminal test is not about volume: this is
     read *during* the wait, and a scheduled or `--json` run has nobody sitting
     through one.
     """

@@ -25,9 +25,8 @@ the created-at and platform headers are not in both.
 
 That second question is the one a sparse bundle turns on. A bundle that carries
 fewer files and a bundle that failed to carry more are indistinguishable from the
-rows alone, and reading the first as the second is the failure
-standards/cli-design.md § "A narrowing default reads as a deletion to anything
-that reconciles by sweep" measures.
+rows alone, and reading the first as the second is a narrowing default reading as
+a deletion to anything that reconciles by sweep.
 """
 
 from __future__ import annotations
@@ -134,8 +133,8 @@ class Description:
     Every field defaults, and the defaults are what an unreadable or absent
     `bundle.json` reads as. `FULL` is the conservative one of the two
     completenesses — it makes an absent entry a reported gap rather than a silent
-    pass — per standards/python.md § "Dispatch over a closed vocabulary names
-    every member", whose fallthrough "returns the conservative answer".
+    pass. Dispatch over a closed vocabulary names every member, and its fallthrough
+    returns the conservative answer.
     """
 
     created: str = ''

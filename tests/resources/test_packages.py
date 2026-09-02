@@ -1037,7 +1037,7 @@ BREW_HOLDING_SYNCTHING = '#!/bin/sh\n[ "$1" = list ] || exit 0\ncase "$2" in --f
 The `--formula`/`--cask` split is the real client's, and encoding it is what stops
 the fake agreeing with every question put to it: answered for both, one installed
 package reads as two and the blocker is reported under whichever list was asked
-first. `standards/testing.md` § "A fake enforces the service's constraints".
+first. A fake enforces the service's constraints.
 """
 
 
@@ -1059,8 +1059,8 @@ def removals(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, list[str]]]:
     """Record what would be removed, instead of taking a package off this machine.
 
     Patched at `syspkg` rather than at the provider, so what is asserted is the
-    manager and the names the engine resolved — `standards/testing.md` § "Assert
-    invariants by spying on argv, not by inspecting the result".
+    manager and the names the engine resolved: invariants are asserted by spying
+    on argv, not by inspecting the result.
     """
     attempted: list[tuple[str, list[str]]] = []
 

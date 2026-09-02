@@ -274,10 +274,10 @@ def describe(extracted: Path | None = None) -> Staging:
 SIDECAR_SUFFIX = '.json'
 """What a bundle's record on the remote is called: the archive's name plus this.
 
-Derived from the archive rather than kept in an index file. An index is one
-object several machines write, which is the collision standards/data.md § "In a
-synced directory, every machine writes its own file" exists to make unreachable —
-and it goes stale against the directory listing that is the actual truth.
+Derived from the archive rather than kept in an index file. An index is one object
+several machines write, and having every machine write its own file is what makes
+that collision unreachable — and it goes stale against the directory listing that
+is the actual truth.
 """
 
 
@@ -315,8 +315,8 @@ def peek(archive: Path) -> bundle.Description:
     """What an archive says it is, read out of the tarball without unpacking it.
 
     Every member is checked for the name rather than one being joined onto the
-    known member directory, per standards/python.md § "Ask the library where it
-    wrote; never rebuild the path" — the archive's own top-level name is the
+    known member directory: ask the library where it wrote, and never rebuild the
+    path — the archive's own top-level name is the
     bundler's business and this must not depend on it.
     """
     try:

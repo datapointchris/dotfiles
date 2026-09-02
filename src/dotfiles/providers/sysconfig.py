@@ -305,8 +305,8 @@ returned `enabled`, `systemctl --user enable` wrote the symlink, and
 fatal meant `apply` reported `systemd/ntfy-client.service` did not converge having
 attempted nothing, and the machine kept neither the reload nor the symlink.
 
-`{cause}` carries what the reload actually said, per `python.md` § "Fail fast
-instead of defaulting": a fallback taken silently is one nobody can diagnose. A
+`{cause}` carries what the reload actually said, because failing fast beats
+defaulting: a fallback taken silently is one nobody can diagnose. A
 unit file systemd will not parse and a polkit refusal both fail this call, and
 without the transcript they read identically to the missing bus this exists for.
 

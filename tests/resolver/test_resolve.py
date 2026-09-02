@@ -368,8 +368,8 @@ def narrowed_to(
 
 
 def test_a_package_narrowing_keeps_the_runtime_that_entry_needs(tmp_path: Path) -> None:
-    """`cli-design.md` § "A narrowing flag reaches the whole run, or what it cannot
-    reach is left out of the run": narrowing to `task` and dropping Go asks for
+    """A narrowing flag reaches the whole run, or what it cannot
+    reach is left out of the run: narrowing to `task` and dropping Go asks for
     something that cannot install, which is the failure `--source` already had and
     `registry.required_by` already answers.
 

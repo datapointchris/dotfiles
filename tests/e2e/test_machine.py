@@ -180,9 +180,8 @@ CURRENCY_PROBE = (
 `shutil.which(OUTDATED[name][0])` measured whatever the environment happened to
 hold: on a box with pacman and yay but no `checkupdates` it yielded `['aur']`
 alone, printed `PROBE aur=0`, and passed — so a `pacman-contrib` that failed to
-install satisfied the row written to catch exactly that. `common-errors.md` § "A
-check that resolves its subject from the environment measures whatever the
-environment says".
+install satisfied the row written to catch exactly that. A check that resolves its
+subject from the environment measures whatever the environment says.
 
 The coordinates are the right subject because they say what this machine installs
 *through*, so a manager missing from PATH is a failure rather than a case to skip.

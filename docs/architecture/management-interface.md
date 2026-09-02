@@ -234,8 +234,8 @@ sections at once.
 overrules what measuring concluded. One flag carrying both — `--reinstall
 lazygit` — puts a scope somewhere no other resource can see, so none of them can
 honour the force. Bare, `--reinstall` covers the whole run, which is expensive
-and not dangerous, and is the case `cli-design.md` § "Scope is structural: the
-argument's presence selects it, never a flag" sanctions a set-wide act for.
+and not dangerous. Scope is structural — the argument's presence selects it,
+never a flag — and an absent argument is what sanctions a set-wide act.
 
 ### Install and update are one act
 

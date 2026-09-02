@@ -70,8 +70,8 @@ task test:redundancy -- <test file>      # prove a test catches nothing another 
 number believable, and how a deletion is proved rather than argued. It is not in
 this nav because it sits beside the code it describes and is read there.
 
-**It is wired into nothing.** Neither pre-commit nor CI runs it, per
-`standards/ci.md` § "Don't wire a slow integration hook into pre-commit" — a full
+**It is wired into nothing.** Neither pre-commit nor CI runs it, because a slow
+integration hook does not belong in pre-commit — a full
 run is tens of minutes. `task test:mutation:diff` over one branch's changed lines
 is the shape that could be, and `targets.THRESHOLD` is the floor waiting for
 something to enforce it.

@@ -796,10 +796,10 @@ def merge(pr: PullRequest, *, interactive: bool) -> int:
 
     `--merge` is what makes this one prompt instead of four. Without a method gh
     runs its own wizard: which method, whether to delete the branch, then a
-    submit step. Every answer is already settled — the merge commit is
-    `standards/git-workflow.md` § "A PR lands as a merge commit, not a squash or
-    a rebase", and forge sets `delete_branch_on_merge` on the repo, so the forge
-    deletes the remote branch and nothing here touches the local one.
+    submit step. Every answer is already settled — a PR lands as a merge commit
+    rather than a squash or a rebase, and forge sets `delete_branch_on_merge` on
+    the repo, so the forge deletes the remote branch and nothing here touches the
+    local one.
     """
     if interactive:
         answer = input(f'merge {pr.slug} #{pr.number} — {pr.title}?  [Y/n] ')

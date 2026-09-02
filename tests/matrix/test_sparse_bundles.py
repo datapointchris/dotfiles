@@ -2,9 +2,9 @@
 
 The whole point of `bundle.json`: under a full bundle an absent tool is a gap,
 and reading a sparse bundle's deliberate omissions the same way reports a working
-machine as missing most of itself. That is the sweep-as-deletion failure
-`standards/cli-design.md` measures on todoui, and these are the tests that keep
-this side of it closed.
+machine as missing most of itself. That is the sweep-as-deletion failure a
+narrowing default causes, and these are the tests that keep this side of it
+closed.
 
 Four states, each asserted separately because they are what the others must not
 collapse into:

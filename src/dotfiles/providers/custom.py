@@ -62,8 +62,7 @@ class Request:
     There is no force flag and nowhere for one to attach: currency is measured
     before an installer is called, so reaching a function below means the machine
     needs it. A flag overriding that could only mean "write despite the
-    measurement", which `cli-design.md` § "A flag never decides whether the command
-    writes" rules out.
+    measurement", and a flag never decides whether the command writes.
     """
 
     entry: catalog.CustomInstaller

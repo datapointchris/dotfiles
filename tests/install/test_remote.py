@@ -4,20 +4,20 @@ Two kinds of double, for two different questions. `relay` is a **fake**: a real
 executable backed by a real directory that refuses what a real remote refuses —
 listing a directory that is not there, downloading a name that does not exist,
 uploading into a path nobody created. A fake that accepted everything would assert
-this module's mental model rather than challenge it (standards/testing.md § "A
-fake enforces the service's constraints; it never just replays responses"), and
+this module's mental model rather than challenge it — a fake enforces the
+service's constraints and never just replays responses — and
 the constraint it exists for is the one that costs an artefact: an upload the
 transport reroutes lands where no `list` will ever find it.
 
 `spy` is the other kind, and it answers the only question a fake cannot: whether
 the argv this module *builds* is the one the transport was meant to receive. A
 successful upload through the fake is satisfied by two different correct-looking
-commands — standards/testing.md § "Assert invariants by spying on argv, not by
-inspecting the result".
+commands, so invariants are asserted by spying on argv rather than by inspecting
+the result.
 
 Config is read through `remote.read` over a real `config.toml`, never by
-constructing a `Remote` by hand, per standards/testing.md § "Read the tool's own
-files through the tool's own loader".
+constructing a `Remote` by hand: the tool's own files are read through the tool's
+own loader.
 """
 
 from __future__ import annotations
@@ -334,9 +334,8 @@ class TestListing:
 
     def test_an_unreachable_directory_raises_rather_than_answering_empty(self, configured: transport.Remote) -> None:
         """Opposite findings. A caller that reconciles by sweep reads an empty
-        answer as "everything was deleted", which is the failure
-        standards/cli-design.md § "A narrowing default reads as a deletion to
-        anything that reconciles by sweep" measures on todoui."""
+        answer as "everything was deleted", which is a narrowing default reading
+        as a deletion to anything that reconciles by sweep."""
         with pytest.raises(transport.RemoteError) as refused:
             transport.names(configured, '/artefacts/never-created')
 
@@ -434,8 +433,8 @@ class TestPushing:
     def test_a_missing_directory_with_no_declared_mkdir_refuses_before_any_bytes_move(
         self, configured: transport.Remote, server: Path, tmp_path: Path
     ) -> None:
-        """Paired with the positive fact, per standards/testing.md § "An assertion
-        that nothing happened is satisfied by a crash": the refusal carries ISSUE
+        """Paired with the positive fact, because an assertion
+        that nothing happened is satisfied by a crash: the refusal carries ISSUE
         and names the directory, and nothing was written under it."""
         local = tmp_path / 'bundle.tar.gz'
         local.write_text('payload')
@@ -552,9 +551,8 @@ class TestRequiring:
 
 class TestMeasuring:
     def test_presence_of_the_program_is_not_reported_as_readiness(self, config_home: Path, fake_bin: Path, tmp_path: Path) -> None:
-        """The state standards/configuration.md § "A declared requirement states
-        what has to be true" describes: the binary is there and the remote answers
-        nothing."""
+        """A declared requirement states what has to be true, not only that the
+        thing exists: the binary is there and the remote answers nothing."""
         spying(fake_bin, tmp_path, code=1)
         declare(config_home, TABLE.format(program='spy'))
 

@@ -208,7 +208,7 @@ def test_the_sentence_a_reader_gets_asks_before_it_removes(fake_bin: Path) -> No
 
 
 def test_a_removal_runs_the_managers_own_uninstall(fake_bin: Path, unprivileged) -> None:
-    """Spied on argv rather than the result, per `standards/testing.md`: what is
+    """Spied on argv rather than the result: what is
     being asserted is the command the engine built, and brew's own answer is about
     the machine the suite happens to run on."""
     log = fake_bin / 'argv'

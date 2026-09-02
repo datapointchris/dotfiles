@@ -199,7 +199,7 @@ def test_a_blocked_release_is_refused_rather_than_installed_beside_the_package()
 
 def test_the_advice_names_the_command_that_removes_it_and_the_one_that_migrates() -> None:
     """Two next steps because there are two, and the second is what an apply does.
-    `standards/help.md` § "An error is the help screen for the failure in hand"."""
+    An error is the help screen for the failure in hand."""
     blocking = ev.superseded(release(supersedes=('syncthing',)), {'pacman': frozenset({'syncthing'})})
     advice = advice_for(release(), Repair.BY_HAND, blocking)
 

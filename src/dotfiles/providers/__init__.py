@@ -23,8 +23,8 @@ class Kind(enum.StrEnum):
 
     `detail` stays prose, interpolating the entry, the URL and the path. A member
     carries what prose is bad at: telling two branches of one installer apart
-    without matching English — `standards/testing.md` § "Never assert on rendered
-    output".
+    without matching English, which is what lets a test avoid asserting on
+    rendered output.
 
     **Deliberately coarse.** A member earns its place by being a condition
     something could act on differently, never by being a different sentence.

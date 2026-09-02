@@ -5,8 +5,8 @@ box; this moves the one thing that has to come back — what it already has — 
 machine with a network can build it a bundle carrying only what it lacks.
 
 **No new document type.** `docs/architecture/observability.md` already settled
-that the interchange document is what `plan --json` and `check --json` emit, and
-`help.md` § "One concept, one word" makes a third word for that record a defect.
+that the interchange document is what `plan --json` and `check --json` emit. One
+concept takes one word, so a third word for that record is a defect.
 What is new is the *width*: this one covers the resources a bundle builder can act
 on, and `scope` in the document says so. One schema, one version, one word.
 
@@ -185,9 +185,8 @@ def upload(
     """Send this machine's status to the remote, so a bundle can be built from it.
 
     The gate runs before anything moves. A refusal here leaves nothing on the
-    server, which is the property `standards/cli-design.md` § "Everything that can
-    refuse runs before the first byte of data" states about stdout and means the
-    same about a remote.
+    server: everything that can refuse runs before the first byte of data, which
+    holds for a remote exactly as it holds for stdout.
     """
     verbosity(verbose, quiet)
     where = transport.reachable()
@@ -290,10 +289,8 @@ def download(
     """Fetch a machine's status into the local cache, to build a sparse bundle from.
 
     No confirmation, deliberately: this is a few kilobytes and it overwrites
-    nothing a person authored. `standards/cli-design.md` § "Destructive operations
-    require an explicit flag" scales the friction to the blast radius, and there
-    is none here — the same reasoning its own Known-gaps section records for
-    `ifiles shares rm`.
+    nothing a person authored. A destructive operation requires an explicit flag,
+    which scales the friction to the blast radius, and there is none here.
     """
     verbosity(verbose, quiet)
     where = transport.reachable()

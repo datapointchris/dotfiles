@@ -463,7 +463,7 @@ def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     routine sync from a kernel bump.
 
     UNKNOWN's three causes take different repairs, so each is an `Unmeasured`
-    member — `code-quality.md` § "A failure mode gets a name callers can branch on".
+    member. A failure mode gets a name callers can branch on.
 
     **The manager and its reader are two questions.** `INSTALL[name][0]` is the
     manager and `OUTDATED[name][0]` is whatever answers its currency, which since
@@ -506,9 +506,8 @@ DISPLACE = 'dotfiles packages apply --package {name} --force'
 
 Narrowed to the one entry rather than spelled `packages apply --force`, because the
 flag reaches everything the run covers and a reader pasting the wider form authorises
-a removal per superseded entry on the machine. `standards/help.md` § "An error is the
-help screen for the failure in hand" is what makes it a command rather than a mention
-of the flag.
+a removal per superseded entry on the machine. An error is the help screen for the
+failure in hand, which is what makes it a command rather than a mention of the flag.
 """
 
 
@@ -541,8 +540,8 @@ def blocker(item: DesiredItem, installed: Inventory, answered: Sequence[str], *,
     present beside it is then a fact about the machine that no longer decides
     anything.
 
-    `under_force` has no default, per `standards/python.md` § "Fail fast instead of
-    defaulting": both answers are live, and a site that did not say which would
+    `under_force` has no default, because failing fast beats defaulting here: both
+    answers are live, and a site that did not say which would
     silently answer for whichever caller was written first.
     """
     taken_over = getattr(item.entry, 'supersedes', ())
@@ -654,9 +653,8 @@ def reported_version(executable: str) -> str | None:
 
     A `go install`-ed binary is asked its toolchain first and its own banner only
     where the toolchain resolved a commit. Asking the banner first and falling back
-    on a parse failure is what `standards/release.md` § "Never detect a dev build
-    from a version string" names: `0.0.0` parses, so it wins, and the tool reports
-    permanently behind.
+    on a parse failure is detecting a dev build from a version string, which never
+    works: `0.0.0` parses, so it wins, and the tool reports permanently behind.
 
     **Neither record is authoritative, and preferring the module unconditionally
     moves the fault.** `go install` never passes the `-ldflags -X` a release build

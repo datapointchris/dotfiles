@@ -64,8 +64,8 @@ PACKAGES_FILE = INSTALL_DIR / 'packages.yml'
 MANIFESTS_DIR = INSTALL_DIR / 'manifests'
 FLAGS_FILE = INSTALL_DIR / 'flags.yml'
 
-# State by data.md's test: it survives runs, nobody authored it, and deleting it
-# changes what the tool can answer rather than costing a recompute. Its own
+# State rather than cache or data: it survives runs, nobody authored it, and
+# deleting it changes what the tool can answer rather than costing a recompute. Its own
 # Syncthing folder, so the fleet shares run history and the work box — which is
 # not on Syncthing — keeps its own by construction rather than by a rule.
 #
@@ -79,8 +79,8 @@ RUNS_DIR = STATE_HOME / 'runs'
 def machine_id() -> str:
     """Which *box* wrote a file, for the ones the fleet shares a directory for.
 
-    The bare lowercased hostname, per standards/data.md § "Machine identity
-    is a bare lowercased hostname".
+    The bare lowercased hostname, which is what machine identity is everywhere
+    in this tool.
 
     **Never `$MACHINE`, which names the *manifest*.** Two machines legitimately
     share one, so keying on it puts their status files at a single path in a synced

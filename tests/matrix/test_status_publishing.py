@@ -92,7 +92,7 @@ NAMED = {'this machine name': 'wkstn01x', 'the account this runs as': 'a-work-ac
 A test that reads `paths.machine_id()` and `getpass.getuser()` can only assert
 against whatever machine it runs on, and the two overlap differently everywhere:
 this counted two problems at a desk and three on a runner whose hostname contains
-its username. `standards/testing.md` § "Never assert on rendered output" is the
+its username. Never asserting on rendered output is the
 same failure one layer up — assert the value, and choose the inputs.
 """
 

@@ -88,8 +88,8 @@ def test_a_go_installed_binary_answers_from_the_toolchain_whatever_its_banner_sa
 
     Letting the banner win wherever it parses, and asking `go version -m` only
     where it does not, interrogates a version string about whether it is a real
-    version — the move `standards/release.md` § "Never detect a dev build from a
-    version string" forbids, for the reason it gives there: a valid-looking string
+    version — which is detecting a dev build from a version string, and never
+    works, for one reason: a valid-looking string
     carries no evidence about what produced it.
 
     The three ids are the whole argument. `go install` never passes the

@@ -376,7 +376,7 @@ def test_a_failed_reload_still_enables_the_unit_where_no_manager_holds_an_older_
 def test_the_caveat_carries_what_the_reload_said(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
     """A unit file systemd will not parse and a polkit refusal both fail this call,
     and without the transcript they read identically to the missing bus this
-    tolerates. `python.md` § "Fail fast instead of defaulting" asks for the path and
+    tolerates. Failing fast rather than defaulting asks for the path and
     the error, and the branch kept only the path."""
     log = tmp_path / 'systemctl-calls'
     systemctl_that(fake_bin, log, reload_fails=True)

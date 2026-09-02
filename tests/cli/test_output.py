@@ -365,8 +365,8 @@ def test_a_small_resource_names_its_items_rather_than_counting_them(capsys: pyte
 
 def test_a_large_resource_keeps_its_count_until_verbose_asks(capsys: pytest.CaptureFixture) -> None:
     """Above the threshold the summary is a genuine collapse rather than a list in
-    disguise, and `-v` is the flag that expands it — cli-design.md § "`-a` is not a
-    substitute for `-v`", since the work is identical either way."""
+    disguise, and `-v` is the flag that expands it. `-a` is not a substitute for
+    `-v`, since the work is identical either way."""
     result = ResourceResult(
         address='symlinks',
         verdict=ResourceVerdict.CONVERGED,
@@ -453,8 +453,8 @@ def narrated(monkeypatch: pytest.MonkeyPatch, *, quiet: bool) -> str:
 
 
 def test_quiet_removes_the_progress_line(monkeypatch: pytest.MonkeyPatch) -> None:
-    """cli-design.md § "Quieten the evidence, never the answer" names the progress
-    headings as exactly what `-q` removes. Ungated, `dotfiles apply -q` was louder
+    """`-q` quietens the evidence and never the answer, and the progress headings
+    are evidence. Ungated, `dotfiles apply -q` was louder
     after these lines were added than before them."""
     assert narrated(monkeypatch, quiet=True) == ''
 
@@ -579,8 +579,8 @@ class TestTheBrowsingPathResolvesColourTheSameWayAsEverythingElse:
     That is deliberate; answering the colour question differently from the rest
     of the fleet is not.
 
-    standards/cli-design.md § "Colour resolves once, and `NO_COLOR` outranks
-    `FORCE_COLOR`": preference, then override, then detection. Checking only the
+    Colour resolves once, and `NO_COLOR` outranks
+    `FORCE_COLOR`: preference, then override, then detection. Checking only the
     TTY — which this did — silently ignored both variables.
     """
 

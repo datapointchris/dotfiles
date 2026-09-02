@@ -52,8 +52,8 @@ reason `paths.STATE_HOME` already gives: it is its own Syncthing folder, so the
 fleet shares one history and every machine reports the same data. A directory in
 the repo would be per-clone, gitignored, and lost with the worktree.
 
-State and not data by `data.md`'s test, which the product's runs are filed under
-too: it survives runs, nobody authored it, and deleting it costs an answer rather
+State rather than data, which is how the product's runs are filed too: it survives
+runs, nobody authored it, and deleting it costs an answer rather
 than a recompute. Two things of one kind belong in one place.
 
 Which machine and which checkout a run came from therefore has to be *in* the

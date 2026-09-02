@@ -127,8 +127,8 @@ def answered(capsys: pytest.CaptureFixture[str], *argv: str) -> Any:
     """One read verb's `--json` document.
 
     The counts and the `show` fields are values the command computed, so they are
-    asked for rather than recovered from the table it printed — standards/testing.md
-    § "Never assert on rendered output".
+    asked for rather than recovered from the table it printed, since no test asserts
+    on rendered output.
     """
     declaration.main([*argv, '--json'])
     return json.loads(capsys.readouterr().out)
@@ -598,8 +598,8 @@ def test_the_front_door_and_the_console_script_list_the_same_declaration(declare
 
 
 def test_the_front_door_shows_one_package_as_json(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """`show` is a read verb, so the flag `list` beside it carries reaches it too
-    — standards/api-design.md § "`--json` on every read".
+    """`show` is a read verb, so the flag `list` beside it carries reaches it too:
+    `--json` is on every read.
 
     Both doors, because the leaf only forwards: the declaration renders the
     document either way, so a difference between the two is the bridge

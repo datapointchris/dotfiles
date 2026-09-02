@@ -130,8 +130,8 @@ def discriminator(trust: axes.NetworkTrust) -> str:
     """What tells this box apart from the others sharing its manifest.
 
     Two machines legitimately share one, so a filename keyed on the manifest alone
-    has one overwrite the other — standards/data.md § "In a synced directory, every
-    machine writes its own file".
+    has one overwrite the other. Every machine writing its own file is what makes
+    that collision unreachable, because the replication has no merge step.
 
     **The trust coordinate decides which answer**, because the constraint does. On
     the fleet the hostname is not a secret and is what a reader wants. Anything
@@ -225,8 +225,8 @@ def published_by(document: object, name: str = '') -> str:
     """Which box a status document came from, preferring what it says over its name.
 
     A file can be renamed or moved, and `--against` takes whatever path it is
-    given, so the identity has to survive inside the bytes — `data.md` § "A reader
-    of a shared directory selects by the key that made the writes unique".
+    given, so the identity has to survive inside the bytes. A reader of a shared
+    directory selects by the key that made the writes unique.
 
     The name answers for a document carrying no such field.
     """
@@ -309,9 +309,9 @@ def identifying(trust: axes.NetworkTrust) -> dict[str, str]:
     string the same document carries one key over. One coordinate decides both
     halves. The account name is on the list everywhere.
 
-    Separate from `redacted` so the decision is pure and the reads sit at the edge
-    — standards/python.md § "Structure effects as impure -> pure -> impure". Read
-    inside the gate, it can only be tested against the machine the suite runs on.
+    Separate from `redacted` so the decision is pure and the reads sit at the edge,
+    which structures the effects as impure -> pure -> impure. Read inside the
+    gate, it can only be tested against the machine the suite runs on.
     """
     named = {'the account this runs as': getpass.getuser()}
     if trust is axes.NetworkTrust.FLEET:
@@ -454,8 +454,8 @@ def _named(row: Any) -> str:
 def publishable(document: Any, trust: axes.NetworkTrust) -> Screened:
     """The document as it may travel, or a refusal naming every reason at once.
 
-    Called before the bytes move, per `standards/cli-design.md` § "Everything that
-    can refuse runs before the first byte of data".
+    Called before the bytes move, because everything that can refuse runs before
+    the first byte of data.
 
     **Answers the screened document rather than checking the caller's**, or a caller
     publishing the one it already held sends the rows this took out.

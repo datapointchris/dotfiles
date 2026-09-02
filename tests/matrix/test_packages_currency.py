@@ -300,8 +300,8 @@ def test_declaring_a_release_unaskable_stops_its_placeholder_reading_as_behind(s
 
     A tool one version behind and one printing `0.0.0` produce the identical row,
     which the test above pins as the limit. Nothing can read the difference off the
-    string — that is the move `standards/release.md` forbids, and widening the
-    parse would misread a project genuinely at 0.0.0.
+    string — detecting a dev build from a version string never works, and widening
+    the parse would misread a project genuinely at 0.0.0.
 
     So the difference is declared. An entry saying its artifact cannot be asked is
     never compared, so the churn stops — a tool reinstalled on every apply because
@@ -343,8 +343,8 @@ def test_the_flag_that_advice_names_is_one_this_verb_accepts(sandbox: Sandbox, c
 
     Asserted by reaching the guard rather than by reading help text: a flag can be
     accepted and dropped, and what makes the advice true is the request going out.
-    `cli-design.md` § "A flag the run cannot honour says so; it never parses into
-    silence" is the same failure from the other end.
+    A flag the run cannot honour says so and never parses into silence, which is
+    the same failure from the other end.
     """
     machine(sandbox, CACHED[6])
 
@@ -563,8 +563,8 @@ def test_check_refuses_a_section_it_cannot_narrow_to(sandbox: Sandbox, cli: Call
     duplication until the policy moves, and then whichever copy the author knew
     about is the one revised. That is exactly what happened: `SELECTORS` gained
     `--offline` with the new argument while this docstring still stated the old one
-    as fact. See `standards/testing.md` § "A surface invariant is derived from the
-    command tree, never listed in a behavioural test".
+    as fact. A surface invariant is derived from the command tree, never listed in
+    a behavioural test.
 
     `--source` stays because nothing walks the tree for it. This literal is the
     only thing asserting that rule, and the rule reaches a policy with a derived

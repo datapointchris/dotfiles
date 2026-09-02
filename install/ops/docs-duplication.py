@@ -7,9 +7,9 @@
 The number is six-word runs a page shares with any docstring under `src/dotfiles/`
 or `apps/`. A page carrying decisions scores in the single digits whatever its
 length; a page walking through a mechanism the code already explains scores in
-the hundreds. `standards/documentation.md` § "A page never restates a module
-docstring" is the rule, and `docs/development/docs-audit.md` § "Third pass" is
-the measurement this threshold came from.
+the hundreds. A page never restates a module docstring, and
+`docs/development/docs-audit.md` § "Third pass" is the measurement this threshold
+came from.
 
 `--pages` points it at another directory of prose and `--code` is repeatable,
 which is how the mutation harness's README is ranked against the package it sits

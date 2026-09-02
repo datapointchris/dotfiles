@@ -3,8 +3,8 @@
 The counterpart to `machines requirements`, which reads the *declaration*: this
 reads the *resolution*. A register entry can be answered at three rungs and the
 value alone does not say which one won, so a machine pointed at a stale registry
-by an export somebody made in October behaves perfectly and reports nothing —
-standards/configuration.md § "A resolved value reports which layer set it".
+by an export somebody made in October behaves perfectly and reports nothing. A
+resolved value reports which layer set it.
 
 Only `check` printed the attribution before, and only on a finding, so a machine
 where everything resolved had no way to ask which rung it resolved through.
@@ -123,11 +123,11 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
 def _layer(found: transport.Remote, key: str) -> str:
     """Which layer decided one setting, the way the registers above say it.
 
-    standards/configuration.md § "A resolved value reports which layer set it" —
-    the failure it prevents is a plausible value rather than a wrong one. These
-    govern deletion from a server and whether a document leaves the machine
-    unasked, and unattributed beside rows that all carry `from {source}` they read
-    as declared on a machine that declared nothing.
+    A resolved value reports which layer set it, and the failure this prevents is a
+    plausible value rather than a wrong one. These govern deletion from a server and
+    whether a document leaves the machine unasked, and unattributed beside rows that
+    all carry `from {source}` they read as declared on a machine that declared
+    nothing.
     """
     return f'from {transport.TABLE}.{key}' if key in found.from_table else 'this tool’s default'
 

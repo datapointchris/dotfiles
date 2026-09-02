@@ -10,8 +10,8 @@ developer's own Mac, shellcheck says nothing, and only a runner using the system
 bash ever disagrees. `notes` carried `mapfile` in two of its four commands for as
 long as nobody ran `notes new` from a shell that was not Homebrew's.
 
-A grep rather than a real interpreter, deliberately: `standards/shell.md` calls
-this the proportionate guard, against re-execing every script under a bash 5 —
+A grep rather than a real interpreter, deliberately: this is the proportionate
+guard, against re-execing every script under a bash 5 —
 which would put a dependency on the very thing being avoided at the top of each
 one.
 """

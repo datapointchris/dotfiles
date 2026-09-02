@@ -6,9 +6,8 @@ nothing anywhere — not to the machine and not to the remote.
 
 **Presence of the transport is not readiness, so both are measured.** A box with
 `ifiles` installed and no credential for it answers `command -v` perfectly and
-fails at the first upload, which is exactly the state standards/configuration.md
-§ "A declared requirement states what has to be true, not only that the thing
-exists" describes. The listing is therefore attempted rather than inferred.
+fails at the first upload. A declared requirement states what has to be true, not
+only that the thing exists, so the listing is attempted rather than inferred.
 """
 
 from __future__ import annotations

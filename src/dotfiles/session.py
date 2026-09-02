@@ -5,8 +5,8 @@ files it reads are loaded lazily, because most invocations — `--help`,
 `report latest`, `repo path` — never ask about a machine at all, and parsing
 `packages.yml` costs 78ms of a run that was going to print one line.
 
-Interactivity is a field rather than a probe, per `python.md` § "Inject terminal
-detection; never monkeypatch it": a test that wants a non-interactive run builds
+Interactivity is a field rather than a probe, so terminal detection is injected and
+never monkeypatched: a test that wants a non-interactive run builds
 a Session that says so.
 """
 
@@ -129,8 +129,8 @@ class Session:
     reinstall: bool = False
     """Install again whatever measuring concludes, for everything this run covers.
 
-    A boolean, never a set of names: scope is `--package`'s job, per `cli-design.md`
-    § "Scope is structural: the argument's presence selects it, never a flag".
+    A boolean, never a set of names: scope is `--package`'s job, and scope is
+    structural — the argument's presence selects it, never a flag.
 
     Bare it means everything the run covers, which is expensive rather than
     dangerous. Distinct from `force`, which authorises destroying something

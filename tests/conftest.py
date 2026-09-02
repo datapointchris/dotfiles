@@ -214,8 +214,8 @@ reads a unit test may legitimately want and only the second word separates them.
 
 Removals are deliberately absent, and so are the two supervisors. Every test that
 drives one puts a fake `brew`, `pacman`, `launchctl` or `systemctl` on PATH and
-asserts the argv it was handed — which is the pattern `standards/testing.md` asks
-for, and a denylisted pair blocks it whether the binary on PATH is real or not. The
+asserts the argv it was handed — which is what spying on argv means, and a
+denylisted pair blocks it whether the binary on PATH is real or not. The
 one call that pattern does not reach is `no_stopping_this_machines_daemons`.
 """
 

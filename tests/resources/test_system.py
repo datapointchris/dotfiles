@@ -1019,8 +1019,8 @@ def test_an_unnamed_precondition_refuses_rather_than_passing() -> None:
 
     The `cast` is that value. `Precondition('...')` raises, so no unseen member is
     constructible and the branch has no other door. It is not a hypothetical
-    branch: `python.md` § "Dispatch over an enum names every member" requires the
-    fall-through to return the conservative answer, and `False` here is what makes
+    branch: dispatch over an enum names every member, its fall-through returns the
+    conservative answer, and `False` here is what makes
     `repair_for` gate the item rather than install it.
     """
     met = Preconditions(**{field.name: True for field in dc.fields(Preconditions)})

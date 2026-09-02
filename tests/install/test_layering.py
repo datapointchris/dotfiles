@@ -2,8 +2,8 @@
 
 A gate on a graph that is clean today prints exactly what a misconfigured one
 prints, so three of the four cases here hand `lint-imports` a layer order this
-package is known to violate and require it to go red — `standards/testing.md`
-§ "A guard is proved by breaking what it names and watching it go red".
+package is known to violate and require it to go red. A guard is proved by
+breaking what it names and watching it go red.
 
 **Every mutation is the declared contract with one layer moved, read off disk
 rather than restated.** That exercises the whole tool — the config parser,

@@ -242,7 +242,7 @@ def render(run: Run, comparison: Comparison | None = None) -> list[str]:
         f'survived      : {counts.survived}',
         f'timed out     : {counts.timed_out}   counted as killed: a hang is a difference every run detects',
         f'rendering     : {counts.rendering}   planted, excluded from the score',
-        f'PROSE-PINNED  : {counts.prose_pinned}   rendering mutants a test killed, which testing.md forbids',
+        f'PROSE-PINNED  : {counts.prose_pinned}   rendering mutants a test killed, which no test may do',
         f'skipped       : {counts.skipped}',
         f'harness errors: {counts.harness_errors}   pytest exited 2-5: never counted as a kill',
     ]

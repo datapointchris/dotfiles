@@ -31,8 +31,8 @@ git checkout-index -a -f                 # restore the working tree from the ind
 `pre_commit/staged_files_only.py` diffs `git write-tree` against the working tree through
 `git diff-index`. What it stashes is whatever the working tree holds that the index does not.
 Staged files match that tree and are never stashed. Unstaged edits are stashed whether or not the
-commit named a pathspec. Commit by pathspec for the reason in `standards/git-workflow.md` § "Commit
-by pathspec; the index is shared with every session in the checkout", not for this one.
+commit named a pathspec. Commit by pathspec because the index is shared with every session in
+the checkout — not because of the stash.
 
 ## Key Learnings
 
@@ -45,5 +45,5 @@ by pathspec; the index is shared with every session in the checkout", not for th
 
 ## Related
 
-- `standards/shell.md` § "A script that works at the top level guards on `BASH_SOURCE`, and
-  the guard is never opt-in" — the root cause of the hang that led here
+- A script that works at the top level guards on `BASH_SOURCE`, and the guard is never
+  opt-in — the root cause of the hang that led here

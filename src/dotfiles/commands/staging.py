@@ -69,8 +69,8 @@ KeepOption = typer.Option(
 )
 """Interpolated rather than typed, so changing the default cannot leave the help wrong.
 
-standards/help.md § "Never write a sentence a later release will make false" — a
-copied constant is a sentence with nothing checking it."""
+Never write a sentence a later release will make false — a copied constant is a
+sentence with nothing checking it."""
 
 ArchOption = typer.Option(None, '--arch', help='CPU of the machine that will install this bundle')
 """Module scope because the annotation is an enum.
@@ -84,10 +84,10 @@ is."""
 def _asking(interactive: bool | None) -> bool:
     """Whether there is somebody to put a question to.
 
-    Injected rather than detected, per standards/python.md § "Inject terminal
-    detection; never monkeypatch it". A test patching the stream has it reinstalled
-    by pytest's capture between fixture setup and the test body, so the gate reads
-    the real terminal and every case passes for the wrong reason.
+    Injected rather than detected, and never monkeypatched. A test patching the
+    stream has it reinstalled by pytest's capture between fixture setup and the
+    test body, so the gate reads the real terminal and every case passes for the
+    wrong reason.
 
     `None` keeps the detection as the default, so no call site carries an argument
     it has no opinion about.
@@ -253,8 +253,8 @@ def _status_for(named: str | None, machine: str) -> Path | None:
     if len(published) > 1:
         # Every candidate with the box that wrote it, rather than the newest
         # pre-filled. Pasting one made the refusal's own remedy the route into the
-        # ambiguity it had just declined to resolve — `help.md` § "An example says
-        # what it is for, not just what to type".
+        # ambiguity it had just declined to resolve. An example says what it is
+        # for, not just what to type.
         newest_per_box = {publishing.wrote(name): name for name in reversed(listed)}
         offered = '\n'.join(f'  {box or "an unrecognised box"}: --status {name}' for box, name in sorted(newest_per_box.items()))
         raise typer.BadParameter(
@@ -312,8 +312,8 @@ def upload(
 ) -> None:
     """Send a bundle to the remote, so the machine it is for can fetch it.
 
-    Its own verb rather than a flag on `create`, per standards/cli-design.md § "A
-    flag never decides whether the command writes" — a push is a second effect
+    Its own verb rather than a flag on `create`, because a flag never decides
+    whether the command writes — a push is a second effect
     rather than a parameter of the build, and a flag whose help has to explain
     what the command *becomes* is a verb. Nothing is lost to the split: this finds
     the newest archive itself, so the loop is `bundle create && bundle upload`
@@ -373,8 +373,8 @@ def _report_retention(where: transport.Remote, machine: str) -> None:
 
     **Caught and said, never caught and swallowed.** A box whose shelf listing has
     been failing for months would otherwise upload cleanly every time and never
-    learn the nudge stopped running — `python.md` § "Fail fast instead of
-    defaulting" allows degrading and not degrading silently.
+    learn the nudge stopped running. Failing fast rather than defaulting allows
+    degrading, and not degrading silently.
 
     Counted through `on_remote` and `retention`, which is what `prune --remote`
     will use, so the number named here is the number that command acts on.
@@ -513,9 +513,8 @@ def download(
 def _describe(name: str, record: offline_bundle.Record, held: int) -> None:
     """The block a person decides from: what this is, when, and how big.
 
-    Nudge density rather than browse density — identity, urgency and the command
-    — per standards/cli-design.md § "A nudge is a different density from a browse
-    view".
+    Nudge density rather than browse density — identity, urgency and the command.
+    A nudge is a different density from a browse view.
     """
     described = record.description
     err_console.print(f'[bold]{name}[/]')
@@ -541,10 +540,9 @@ def _confirmed(question: str, would_have: str, *, yes: bool, no_input: bool, int
     `n`. The caller still owns what happens next; what is shared is how the
     question is put and what a machine without a terminal is told instead.
 
-    Default no everywhere. Two of the three are destructive by the test
-    standards/cli-design.md § "Destructive operations require an explicit flag"
-    applies, and the third protects a transfer that is minutes on the network this
-    exists for.
+    Default no everywhere. Two of the three are destructive, and a destructive
+    operation requires an explicit flag; the third protects a transfer that is
+    minutes on the network this exists for.
     """
     if yes:
         return True

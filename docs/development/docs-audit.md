@@ -351,8 +351,8 @@ second and third in the corpus behind a page nothing was wrong with. Both had
 been trimmed by tens of lines in the first pass. Neither had been counted after.
 
 **The fix is not deletion.** A decision belongs in both places when the constraint
-is one an editor must meet, which `standards/documentation.md` § "Document a
-constraint at the edit site" requires. What comes out is the *mechanism* — the
+is one an editor must meet, because a constraint is documented at the edit site.
+What comes out is the *mechanism* — the
 walkthrough, the per-field account, the measurements — replaced by one sentence
 naming the module. `architecture/custom-installers.md` is the model: 162 lines to
 48, holding the routing test and three rejected protocols, with
@@ -394,16 +394,16 @@ the branch point is the list; this is where each went.
   `reference/platforms/differences.md` into `reference/platforms/tools.md`, and
   `apps/font.md` into `apps/theme.md`. Each was the third failure mode the first
   audit named — one subject in two places, disagreeing.
-- **Two to the fleet standards**: the failure-registry lesson became
-  `cli-design.md` § "A value the caller needs back is returned, never parsed back
-  out of a stream", and the bootstrap-dependency lesson became `testing.md` §
-  "An end-to-end environment is the production image, not an approximation of
-  it". Both are rules every repo can break; neither was about dotfiles.
+- **Two became general rules rather than pages here**: from the failure-registry
+  lesson, that a value the caller needs back is returned and never parsed back
+  out of a stream; and from the bootstrap-dependency lesson, that an end-to-end
+  environment is the production image rather than an approximation of it. Both
+  are rules every repo can break; neither was about dotfiles.
 - **`architecture/tool-composition.md` was deleted rather than moved.** Its
   central claim — never build the picker in, compose at the shell — is a
-  position the fleet has since reversed. `cli-design.md` § "The interactive
-  picker is `choose`, and it is never `apply`" names `theme choose` and
-  `doit labs choose` as the shape. A page can go stale by being overtaken rather
+  position since reversed: the interactive picker is `choose` and never `apply`,
+  with `theme choose` and `doit labs choose` as the shape. A page can go stale by
+  being overtaken rather
   than by being wrong about its own repo, and nothing mechanical finds that
   either.
 
@@ -424,8 +424,8 @@ two owners costs the same double edit and scores zero here.
 **A pointer is the other thing it cannot see.** Every page that gave up a
 mechanism gained a sentence naming the module that holds it, and the score does
 not move when that sentence is wrong. Six of those were wrong in this pass, and
-the rule they broke is `standards/documentation.md` § "A pointer is verified
-against its target, not against the target existing".
+the rule they broke is that a pointer is verified against its target, not against
+the target existing.
 
 And run it on this page. Three blind reviewers of the change that produced this
 record found four wrong figures in the table above — a line count, a shingle

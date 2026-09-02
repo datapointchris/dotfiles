@@ -635,9 +635,9 @@ def test_declining_the_network_leaves_a_clone_measured_on_presence_alone(sandbox
 
     The absence is asserted alongside the clone being *matched*. On its own it is
     satisfied by a usage error, a traceback, or `--cached` being silently dropped —
-    and the last of those is the one failure this row exists to catch, which
-    `testing.md` § "An assertion that nothing happened is satisfied by a crash"
-    names by this shape. A matched row is what says the walk reached this clone and
+    and the last of those is the one failure this row exists to catch: an assertion
+    that nothing happened is satisfied by a crash.
+    A matched row is what says the walk reached this clone and
     decided about it.
 
     The run is DRIFT rather than converged, and for something else: this fixture
@@ -860,8 +860,8 @@ def test_narrowing_to_one_entry_keeps_the_runtime_that_entry_needs(
     """`--package` is the same narrowing one row below `--source`, so it answers
     `needed_by` the same way.
 
-    `cli-design.md` § "A narrowing flag reaches the whole run, or what it cannot
-    reach is left out of the run" is what decides it: a run narrowed to `ripgrep`
+    A narrowing flag reaches the whole run, or what it cannot
+    reach is left out of the run: a run narrowed to `ripgrep`
     on a machine with no rustup would otherwise plan a cargo install and nothing
     that can perform one. `resolve._named` keeps the runtime because
     `registry.required_by` says the section needs it, and the frame the guard
