@@ -89,6 +89,27 @@ that computes its expectation the way the code does cannot disagree with it.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def wants_colour(monkeypatch: pytest.MonkeyPatch, *, wanted: bool) -> None:
+    """State the preference in the environment, then re-run the module's own read of it.
+
+    `NO_COLOR` and `FORCE_COLOR` are the knobs `use_color` documents, and setting
+    one alone is not enough: `USE_COLOR = use_color()` runs at import, so the
+    constant already answers whatever started pytest. The derivation is re-run
+    rather than reimplemented — `use_color()` is the module's own call — so the
+    order it defends stays what decides, and a change to that order reaches every
+    caller below with no edit here.
+
+    Both variables are cleared first because the chain is not a precedence over a
+    default: `NO_COLOR` set by a desk's shell beats a `FORCE_COLOR` this asks for,
+    and the pair inherited together is a row of `COLOUR_PREFERENCES` rather than
+    something a renderer test means to exercise.
+    """
+    for variable in ('NO_COLOR', 'FORCE_COLOR'):
+        monkeypatch.delenv(variable, raising=False)
+    monkeypatch.setenv('FORCE_COLOR' if wanted else 'NO_COLOR', '1')
+    monkeypatch.setattr(declaration, 'USE_COLOR', declaration.use_color())
+
+
 def point_at(root: Path, packages: dict[str, Any] | None, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A checkout holding one `packages.yml`, with `paths` re-derived over it.
 
@@ -101,9 +122,9 @@ def point_at(root: Path, packages: dict[str, Any] | None, monkeypatch: pytest.Mo
     `packages` of None writes no file, which is how a test reaches the refusal
     `get_packages_file` raises when a checkout has no declaration.
 
-    `USE_COLOR` is pinned off because it is read at import too, from the
-    developer's own `$FORCE_COLOR` — left alone, every parser below reads ANSI
-    escapes on one desk and plain text on the next.
+    Colour is declined for the whole file, because every parser below reads the
+    rendered surface — left to the desk's own `$FORCE_COLOR` they would find ANSI
+    escapes on one machine and plain text on the next.
     """
     (root / 'install').mkdir(parents=True, exist_ok=True)
     if packages is not None:
@@ -114,7 +135,7 @@ def point_at(root: Path, packages: dict[str, Any] | None, monkeypatch: pytest.Mo
     monkeypatch.setattr(paths, 'REPO_ROOT', derived)
     monkeypatch.setattr(paths, 'INSTALL_DIR', derived / 'install')
     monkeypatch.setattr(paths, 'PACKAGES_FILE', derived / 'install' / 'packages.yml')
-    monkeypatch.setattr(declaration, 'USE_COLOR', False)
+    wants_colour(monkeypatch, wanted=False)
     return derived
 
 
@@ -951,9 +972,9 @@ def test_a_stated_preference_outranks_an_inherited_override(
 
 
 def test_a_status_carries_its_colour_only_where_colour_is_wanted(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(declaration, 'USE_COLOR', True)
+    wants_colour(monkeypatch, wanted=True)
     lit = declaration.format_status(InstallStatus.INSTALLED, '/somewhere/bin/lazygit')
-    monkeypatch.setattr(declaration, 'USE_COLOR', False)
+    wants_colour(monkeypatch, wanted=False)
     plain = declaration.format_status(InstallStatus.INSTALLED, '/somewhere/bin/lazygit')
 
     assert plain is not None, 'only NOT_AVAILABLE formats to nothing'
@@ -965,7 +986,7 @@ def test_a_status_carries_its_colour_only_where_colour_is_wanted(monkeypatch: py
 def test_only_an_unavailable_package_formats_to_no_status_row_at_all(monkeypatch: pytest.MonkeyPatch, status: InstallStatus) -> None:
     """`show` prints the Status line only when this returns something, so None is
     how "not for this machine" is said without a row claiming it is missing."""
-    monkeypatch.setattr(declaration, 'USE_COLOR', False)
+    wants_colour(monkeypatch, wanted=False)
 
     formatted = declaration.format_status(status, '/somewhere/bin/lazygit')
 
