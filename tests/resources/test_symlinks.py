@@ -153,6 +153,19 @@ def test_a_name_project_scripts_declares_is_never_linked(session: Session, repo:
     assert [link.target.name for link in symlinks.RESOURCE.observe(session, session.plan).links] == ['notes']
 
 
+def test_a_reserved_name_outside_the_apps_tree_is_linked_anyway(session: Session, repo: Path, home: Path) -> None:
+    """`~/.local/bin` is the only directory a console script lands in, and the
+    apps tree is the only one that deploys there. A `configs/` or `shell/` file
+    of the same name arrives somewhere else, so nothing is competing for a path
+    and dropping it would delete a deployment to buy nothing."""
+    declare(repo, 'configs/common/.config/demo/dotfiles')
+    declare(repo, 'shell/common/dotfiles')
+
+    targets = {link.target for link in symlinks.RESOURCE.observe(session, session.plan).links}
+
+    assert targets == {home / '.config/demo/dotfiles', home / '.local/shell/dotfiles'}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # What check reports
 # ─────────────────────────────────────────────────────────────────────────────

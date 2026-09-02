@@ -21,7 +21,7 @@ the subject and every answer is a fixture.
 The grouping itself is not asserted here -- `validate()` owns the one invariant
 that matters about an answer, and it is pure.
 
-Run with: pytest tests/tools/test_tmux_rearrange.py
+Run with: pytest tests/apps/test_tmux_rearrange.py
 """
 
 from __future__ import annotations

@@ -20,7 +20,7 @@ the end drive a real tmux server started for the test, because a stub proves the
 decisions and cannot prove what tmux does with them -- every defect that reached
 review lived in that gap.
 
-Run with: pytest tests/tools/test_tmux_place.py
+Run with: pytest tests/apps/test_tmux_place.py
 """
 
 from __future__ import annotations

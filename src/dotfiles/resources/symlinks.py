@@ -11,9 +11,11 @@ can only report how many it made, so the undeployed file reads as converged.
 Two refusals are load-bearing and are carried here unchanged. A target this
 manager did not create is never replaced without `--force`, because the write is
 an unlink and `uv tool install` puts real executables in the same `~/.local/bin`
-the apps tree links into. And a name `[project.scripts]` declares is skipped
-outright, force or not — the two are competing for one path, the declaration
-wins, and linking over it would replace the executable currently running.
+the apps tree links into. And an apps-tree file whose name `[project.scripts]`
+declares is skipped outright, force or not — the two are competing for one path,
+the declaration wins, and linking over it would replace the executable currently
+running. Only the apps tree deploys into that directory, so the same name under
+`configs/` or `shell/` is a different file going somewhere else and is linked.
 
 A machine declaring `deploy_by_copy` reaches every one of those decisions over a
 different mechanism: the file is copied rather than linked, because admin policy
@@ -240,6 +242,15 @@ axis in the path there costs nothing and makes a sourced file say which
 coordinate asked for it.
 """
 
+APPS_TREE = 'apps'
+"""The one tree a `[project.scripts]` name can take a path from.
+
+A console script is installed into `~/.local/bin`, which is where this tree
+deploys and nowhere else does. So the reservation is scoped to links headed
+there: a `configs/` file named `dotfiles` lands in `$HOME` and a `shell/` one in
+`~/.local/shell`, and neither is competing with the declaration for anything.
+"""
+
 DEPLOY_BY_COPY = 'deploy_by_copy'
 """The manifest boolean that swaps the link for a copy, in the `FEATURES` family.
 
@@ -332,6 +343,7 @@ def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...
     """Every link this machine should have. Pure: a walk of the repo, no `$HOME` reads."""
     reserved = core.console_script_names(session.repo / 'pyproject.toml')
     home = session.home.resolve()
+    claimable = home.joinpath(*next(below for tree, below, _ in TREES if tree == APPS_TREE))
 
     links = []
     for source_dir, destination, origin in sources(session.repo, coordinates, home):
@@ -341,7 +353,9 @@ def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...
             if not (item.is_file() or item.is_symlink()):
                 continue
             relative = item.relative_to(source_dir)
-            if core.should_exclude(relative) or relative.name in reserved:
+            if core.should_exclude(relative):
+                continue
+            if destination == claimable and relative.name in reserved:
                 continue
             links.append(Link(source=item, target=destination / relative, origin=origin, root=source_dir))
     return tuple(links)

@@ -129,6 +129,7 @@ test_cmd "claude-sessions help" "claude-sessions --help"
 test_cmd "notes help" "notes --help"
 test_cmd "packup help" "packup --help"
 test_cmd "printcolors available" "command -v printcolors"
+test_cmd "tmux-place help" "tmux-place --help"
 test_cmd "tmux-rearrange help" "tmux-rearrange --help"
 test_cmd "worktree help" "worktree --help"
 
