@@ -242,16 +242,22 @@ repos:
 # > custom:after:all - Drift checks and test suites specific to dotfiles
   - repo: local
     hooks:
-      # Whether the deployed machine still works. Every app it invokes is a
+      # Whether the deployed machine still works. Most of what it invokes is a
       # symlink out of `apps/`, and the libraries and configs it asserts on are
-      # deployed from `shell/` and `configs/`. Nothing it reaches comes from
-      # `src/`, so a commit there cannot change its answer.
+      # deployed from `shell/` and `configs/`.
+      #
+      # `pyproject.toml` is in the trigger because two of the commands it invokes
+      # are console scripts rather than symlinks, and `[project.scripts]` is the
+      # declaration that puts them on PATH. Nothing under `src/` is: an editable
+      # install points at the working tree, so the code behind a console script is
+      # whatever the checkout holds and a commit there cannot change whether the
+      # command exists.
       - id: test-all-apps
         name: Test all apps can be invoked
         entry: bash tests/apps/all-apps.sh
         language: system
         pass_filenames: false
-        files: ^(apps/|shell/|configs/)
+        files: ^(apps/|shell/|configs/|pyproject\.toml$)
         stages: [pre-commit]
 
       # Drift check: packages.yml ↔ manifests ↔ what can install them
