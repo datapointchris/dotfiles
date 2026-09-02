@@ -50,7 +50,7 @@ from dotfiles.output import render_verdict
 from dotfiles.output import section_line
 from dotfiles.output import success
 from dotfiles.output import tally
-from dotfiles.reconcile import ResourceVerdict
+from dotfiles.results import ResourceVerdict
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 

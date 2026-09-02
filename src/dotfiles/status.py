@@ -29,7 +29,7 @@ from dotfiles import remote as transport
 from dotfiles import vocabulary
 from dotfiles.output import hint
 from dotfiles.output import warn
-from dotfiles.reconcile import ResourceResult
+from dotfiles.results import ResourceResult
 
 
 def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:

@@ -39,6 +39,7 @@ from dotfiles.commands import status as status_commands
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import render_result
+from dotfiles.results import Lens
 from dotfiles.vocabulary import ExitCode
 
 answered = functools.partial(render_result, stream=console)
@@ -200,7 +201,7 @@ def plan(
     named = commands.resolved(machine).machine_name
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
-    lens = reconcile.Lens.PLAN
+    lens = Lens.PLAN
     walked = reconcile.survey(
         lens,
         skipped,
@@ -270,7 +271,7 @@ def check(
     identity = runs.begin(checked_machine, 'check')
     when = identity.started
     sinks.open_log(identity)
-    lens = reconcile.Lens.CHECK
+    lens = Lens.CHECK
     walked = reconcile.survey(lens, skipped, machine, refresh=refreshing, offline=offline, report=None if as_json else answered)
     results = walked.results
     # `refresh` for the reason `plan` records it, and more sharply: this is the verb

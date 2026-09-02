@@ -49,7 +49,9 @@ from dotfiles.output import render_row
 from dotfiles.output import section_line
 from dotfiles.output import success
 from dotfiles.output import warn
-from dotfiles.reconcile import ResourceVerdict
+from dotfiles.results import Lens
+from dotfiles.results import ResourceResult
+from dotfiles.results import ResourceVerdict
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='What this machine has installed, for the machine that builds its bundles')
@@ -68,7 +70,7 @@ class Composed:
     """
 
     document: dict[str, object]
-    results: tuple[reconcile.ResourceResult, ...]
+    results: tuple[ResourceResult, ...]
     machine: str
     trust: axes.NetworkTrust
     """Which answer `discriminator` gives, resolved here because the session is here.
@@ -118,7 +120,7 @@ def composed(machine: str | None) -> Composed:
     # fail and the rows vanish: 25 examined entries, none of them a version, none
     # of them a release binary. Offline the same walk reports 36, with versions,
     # which is exactly what a builder diffs against.
-    walked = reconcile.survey(reconcile.Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
+    walked = reconcile.survey(Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
     trust = session.machine.coordinates.network_trust
     document = status_document.document(walked.results, named, began, verb='plan', written_by=publishing.discriminator(trust))
     return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named, trust)

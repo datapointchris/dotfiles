@@ -48,8 +48,8 @@ from dotfiles.output import render_row
 from dotfiles.output import section_line
 from dotfiles.output import success
 from dotfiles.output import warn
-from dotfiles.reconcile import ResourceVerdict
 from dotfiles.refusal import Refusal
+from dotfiles.results import ResourceVerdict
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 

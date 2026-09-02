@@ -367,7 +367,7 @@ def redacted(document: Any, identities: Mapping[str, str]) -> tuple[str, ...]:
 
 
 ROW_KEYS = ('others', 'findings', 'examined', 'invalid')
-"""Every per-item list `reconcile.ResourceResult.as_dict` emits.
+"""Every per-item list `results.ResourceResult.as_dict` emits.
 
 All four rather than the three that carry an `observed`, because the set has to
 be the emitter's rather than a guess about which lists can hold a relayed string.

@@ -32,10 +32,10 @@ from dotfiles.providers import Kind
 from dotfiles.providers import gotool
 from dotfiles.providers import schedule
 from dotfiles.providers import steps
-from dotfiles.reconcile import ResourceResult
-from dotfiles.reconcile import ResourceVerdict
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.results import ResourceResult
+from dotfiles.results import ResourceVerdict
 from dotfiles.vocabulary import ExitCode
 
 WHEN = dt.datetime(2026, 8, 8, 12, 0, tzinfo=dt.UTC)
