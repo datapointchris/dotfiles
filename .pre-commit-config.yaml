@@ -199,14 +199,14 @@ repos:
         name: ruff format (uv run scripts)
         types: [text]
         types_or: [file]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/zsh-startup)$'
+        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/worktree|apps/common/zsh-startup)$'
       - id: ruff-check
         alias: ruff-check-scripts
         name: ruff check (uv run scripts)
         args: [--fix]
         types: [text]
         types_or: [file]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/zsh-startup)$'
+        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/worktree|apps/common/zsh-startup)$'
 
   # A separate hook from the repo-wide mypy rather than a wider selection on it.
   # That one runs `mypy .` with pass_filenames: false, and mypy collects a
@@ -224,7 +224,7 @@ repos:
         entry: uv run mypy --scripts-are-modules --install-types --non-interactive
         language: system
         types: [text]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/zsh-startup)$'
+        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/worktree|apps/common/zsh-startup)$'
 
 # generated:lua - Lua
   - repo: https://github.com/JohnnyMorganz/StyLua
@@ -242,22 +242,16 @@ repos:
 # > custom:after:all - Drift checks and test suites specific to dotfiles
   - repo: local
     hooks:
-      # Whether the deployed machine still works. Most of what it invokes is a
+      # Whether the deployed machine still works. Every app it invokes is a
       # symlink out of `apps/`, and the libraries and configs it asserts on are
-      # deployed from `shell/` and `configs/`.
-      #
-      # `pyproject.toml` is in the trigger because two of the commands it invokes
-      # are console scripts rather than symlinks, and `[project.scripts]` is the
-      # declaration that puts them on PATH. Nothing under `src/` is: an editable
-      # install points at the working tree, so the code behind a console script is
-      # whatever the checkout holds and a commit there cannot change whether the
-      # command exists.
+      # deployed from `shell/` and `configs/`. Nothing it reaches comes from
+      # `src/`, so a commit there cannot change its answer.
       - id: test-all-apps
         name: Test all apps can be invoked
         entry: bash tests/apps/all-apps.sh
         language: system
         pass_filenames: false
-        files: ^(apps/|shell/|configs/|pyproject\.toml$)
+        files: ^(apps/|shell/|configs/)
         stages: [pre-commit]
 
       # Drift check: packages.yml ↔ manifests ↔ what can install them

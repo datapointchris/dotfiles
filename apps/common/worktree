@@ -1,0 +1,1971 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = ["rich>=13.0.0"]
+# ///
+"""Give a session its own index, and land it on main without a PR.
+
+    worktree new <slug>    isolate before touching a repo another session is in
+    worktree spawn [slug]  start a Claude session in a pane; a slug gives it a worktree
+    worktree land          rebase, push onto the default branch, then clean up
+    worktree sweep         dispose of every worktree whose work already merged
+    worktree list          every worktree on this machine, or one repo's
+    worktree show          what one worktree carries, and who is in it
+    worktree choose        pick one with fzf; prints the path it chose
+
+A working tree is shared state. Every session standing in one shares its index,
+its untracked files, and the tree pre-commit assembles to run hooks against — so
+a second session commits the first one's staged work, and whole-repo hooks lint a
+tree that neither session ever had. See standards/git-workflow.md § "Concurrent
+sessions isolate with a worktree".
+
+The branch `new` creates is not a proposal. `land` pushes it straight onto main
+as a fast-forward, so a single commit stays a single commit and the resulting
+history is identical to having committed on main directly. A PR is still there
+for work that grew into a large feature — push the branch and open one — which is
+why the landing decision is made at the end rather than guessed at the start.
+
+A worktree that went the PR route is finished somewhere this tool never sees: the
+merge happens on the forge and the branch is deleted there, so `land` never runs
+and nothing disposes of the directory. `sweep` is what collects them, from wherever
+you are standing, and it removes one only when the tree is clean, no session is in
+it, its changes are already on the base branch, and the remote branch it was pushed
+to is gone. `drop` remains the verb for work you are abandoning rather than
+finishing.
+
+`list`, `show` and `choose` read every repo on the machine rather than the one you
+happen to be standing in: the worktrees exist because several sessions are running
+at once, and the one you want is as often in another repo as in this one.
+$WORKTREE_ROOT is the whole index — a repo has a directory there exactly when it
+has a worktree — and each one's checkout is read back out of git. No registry of
+repos is consulted, because this app is deployed to machines that have none.
+
+`spawn` is `new` with a session in it. The dozen steps between deciding a repo
+needs an agent and having one — cut the worktree, open a pane, launch `claude`
+against a written brief, wait for the registry to name it — are one command, so
+a caller's next move is a message to the name it returns. A slug is the branch,
+so `spawn <slug>` is a worker with a worktree and `spawn` with no slug is a
+session standing in the primary checkout with no branch at all. That second form
+is what a reviewer needs: it reads a pull request from any checkout, and a
+session inside a worktree is refused any `git -C` that leaves it.
+
+An occupied worktree refuses and an occupied checkout warns. A worktree exists to
+hold one session; a checkout holding others is the normal condition of every repo
+anyone is working in, so refusing there would make a review impossible whenever
+the repo is busy. What makes sharing one tolerable is that the no-slug session
+gets no branch, and has nothing of its own to commit.
+
+It never merges and never starts anything that merges. The chain it enables ends
+at a pull request that is ready. Merging is a separate act, and green checks are
+not permission for it.
+
+stdout carries what a command produced: the table, the JSON, the path `choose`
+picked, the path `new` created, the session name `spawn` started. Everything
+written for a human to read goes to stderr, so `cd "$(worktree choose)"` cannot
+pick up a warning instead of a path.
+
+Every subprocess is echoed to stderr before it runs, indented and green, exactly
+as it could be re-typed. A fetch, a rebase and a push onto the default branch are
+what `land` is, and a tool that moves branches on your behalf should say which
+ones it moved. `-q` on any command hides them; the verdict keeps its channel.
+
+Python rather than shell because the work stopped being control flow: measuring
+columns, matching sessions to worktrees by path, and emitting one set of rows as
+both a table and JSON. The shell version padded columns in awk and passed records
+on the ASCII unit separator to stop `read` from eating empty fields.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from collections.abc import Sequence
+from dataclasses import dataclass
+from enum import StrEnum
+from pathlib import Path
+from typing import Any
+from typing import TextIO
+
+from rich.console import Console
+from rich.markup import escape
+
+CHECK = '✓'
+CROSS = '✗'
+WARNING = '▲'
+INFO = '●'
+
+COLUMNS = ('LOCATION', 'BRANCH', 'AHEAD', 'STATE', 'SESSION')
+
+# What a caller retries with different arguments, as against a run that failed on its own terms.
+# argparse already exits 2 for a flag it cannot parse; a refusal whose remedy is a flag is the
+# same answer reached later, and collapsing it into 1 loses the only distinction that matters.
+USAGE_ERROR = 2
+
+# fzf splits the row it is given, hands back the whole row, and searches only the
+# fields it displays. The path rides in front as the handle, the rendered line
+# behind it as the thing a human reads and types against.
+FZF_DELIMITER = '\t'
+
+BRIEF_PROMPT = 'Read {brief} and carry out the work it describes. It names the session to report to.'
+"""What the spawned pane runs `claude` with.
+
+A brief is pages long and does not survive being quoted into a command line, so the
+prompt is a pointer and the file carries the work. The second sentence is what makes
+the session look for its reporting address rather than finishing in silence.
+"""
+
+REGISTRATION_TIMEOUT = 60.0
+"""How long a spawn waits to be told the name of the session it just started.
+
+Registration is not instant — measured at about sixteen seconds — and the name is the
+whole reason a caller runs this rather than `tmux split-window` itself.
+"""
+
+POLL_SECONDS = 1.0
+
+MAIN_PANE_WIDTH = '66%'
+"""The caller's share of the window once panes are stacked beside it.
+
+A percentage rather than a column count, because tmux resolves it against whatever
+window the caller is in and holds it across a resize. Two thirds because the caller's
+pane is being read continuously and the spawned ones are being watched — so the larger
+share goes to the one carrying prose. tmux's own default is 80 columns, which is the
+value that made this worth setting.
+"""
+
+
+class State(StrEnum):
+    CLEAN = 'clean'
+    DIRTY = 'dirty'
+
+
+class Kept(StrEnum):
+    """Why a sweep left a worktree standing.
+
+    Every member names something that could still be lost, or something that could
+    not be measured. `held_by` ends in a bare "remove", so an unanswerable check
+    resolving to a falsy value is a deletion authorised by a question nobody asked.
+    Five members exist only to stop that: SESSIONS_UNREADABLE, UNFETCHED_REMOTE,
+    UNFETCHED_BASE, UNREADABLE_LANDING and REMOTE_UNREADABLE.
+    """
+
+    DIRTY = 'uncommitted changes'
+    SESSION = 'a session is standing in it'
+    SESSIONS_UNREADABLE = 'claude-sessions could not say whether anyone is in it'
+    DETACHED = 'a detached HEAD, so it has no branch to have merged'
+    UNFETCHED_REMOTE = 'its origin could not be reached, so nothing about the remote is known'
+    UNFETCHED_BASE = 'its base branch has never been fetched, so nothing can be counted'
+    UNREADABLE_LANDING = 'git could not say whether its changes are on the base branch'
+    UNLANDED = 'the base branch does not match it at the paths it touched'
+    UNPUBLISHED = 'never pushed under its own name'
+    REMOTE_LIVE = 'its remote branch still exists'
+    REMOTE_UNREADABLE = "git could not list origin's branches"
+
+
+class Pane(StrEnum):
+    """What tmux says about a pane a spawn is waiting on.
+
+    DEAD and GONE are the same event seen with and without a corpse. `spawn` turns
+    `remain-on-exit` on for the pane it made, so a command that fails to start leaves
+    its exit status behind to be read; a pane destroyed before that option lands has
+    nothing left to say. Collapsing them would throw away the only diagnosis available
+    for the failure that is otherwise invisible.
+    """
+
+    RUNNING = 'running'
+    DEAD = 'dead'
+    GONE = 'gone'
+
+
+class Registration(StrEnum):
+    """How the wait for a spawned session ended.
+
+    Only REGISTERED produces a name, and a name is the whole product of the command.
+    The rest are apart because they need different things done about them: a dead pane is
+    a launch that failed, a timeout is a session that may yet appear, an unreadable
+    registry is a question that was never answered, and a registry that answered without
+    a pid is a sibling app whose output changed shape.
+
+    That last one would otherwise present as a timeout blaming `claude`, since the pane is
+    healthy and the wait simply never resolves. The producer is `claude-sessions`, and
+    nothing here can make it emit a field — but the report can at least name it.
+    """
+
+    REGISTERED = 'registered'
+    PANE_DIED = 'pane_died'
+    TIMED_OUT = 'timed_out'
+    REGISTRY_UNREADABLE = 'registry_unreadable'
+    NO_PID_IN_REGISTRY = 'no_pid_in_registry'
+
+
+class Fault(StrEnum):
+    """What a refusal *is*, apart from the sentence describing it.
+
+    A caller branching on a refusal, and a test asserting one, otherwise have only the
+    prose — so rewording an error changes what they match. The sentence is written for a
+    person and is free to change; the member is what anything else compares against.
+    """
+
+    NO_TMUX = 'no_tmux'
+    TOOL_MISSING = 'tool_missing'
+    BRIEF_MISSING = 'brief_missing'
+    BRIEF_EMPTY = 'brief_empty'
+    WORKTREE_OCCUPIED = 'worktree_occupied'
+    SESSIONS_UNREADABLE = 'sessions_unreadable'
+    NOT_A_WORKTREE = 'not_a_worktree'
+    SPLIT_REFUSED = 'split_refused'
+
+
+class Refused(Exception):
+    """A refusal a human has to read: the reason, then anything that unblocks it.
+
+    `fault` is absent on the refusals that predate it, which is why it is optional rather
+    than required — a verb adopting it is a change to that verb.
+    """
+
+    def __init__(self, reason: str, *hints: str, fault: Fault | None = None) -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.hints = hints
+        self.fault = fault
+
+
+@dataclass(frozen=True)
+class Session:
+    """A live Claude Code session, as claude-sessions reports it."""
+
+    name: str
+    status: str
+    waiting: str | None
+    cwd: Path
+    tmux: str | None
+    # The process the registry is keyed on. Optional because only `spawn` reads it, and a
+    # row is worth having in a listing whether or not it carried one.
+    pid: int | None = None
+
+
+@dataclass(frozen=True)
+class Worktree:
+    """One working tree, either a checkout or something cut from it."""
+
+    repo: str
+    path: Path
+    checkout: bool
+    branch: str
+    base: str
+    ahead: int | None
+    behind: int | None
+    state: State
+    # None when claude-sessions could not be asked, () when it answered and nobody is here.
+    # A reader that gates on this needs the two apart; `ahead` carries the same split.
+    sessions: tuple[Session, ...] | None
+    # A detached HEAD has no branch, so nothing can be asked about where its commits are.
+    detached: bool = False
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            'repo': self.repo,
+            'path': str(self.path),
+            'checkout': self.checkout,
+            'branch': self.branch,
+            'base': self.base,
+            'ahead': self.ahead,
+            'behind': self.behind,
+            'state': str(self.state),
+            'detached': self.detached,
+            'sessions': None
+            if self.sessions is None
+            else [
+                {
+                    'name': session.name,
+                    'status': session.status,
+                    'waiting': session.waiting,
+                    'cwd': str(session.cwd),
+                    'tmux': session.tmux,
+                    'pid': session.pid,
+                }
+                for session in self.sessions
+            ],
+        }
+
+
+@dataclass(frozen=True)
+class Destination:
+    """Where a spawned session stands, and what it may commit on.
+
+    `created` separates a worktree this run cut from one it attached to, which is the
+    only thing that decides whether a later failure may take it away again.
+    """
+
+    path: Path
+    branch: str | None
+    worktree: bool
+    created: bool = False
+
+
+@dataclass(frozen=True)
+class Arrival:
+    """How the wait for a session ended, and whatever the pane said if it died.
+
+    Not `Landing`, which would put a second subject on `land` in the one file where that
+    verb already means pushing a branch onto the default branch.
+
+    `status` and `output` are only ever set on PANE_DIED, and either can still be absent
+    there — a pane destroyed before `remain-on-exit` took hold leaves neither.
+    """
+
+    registration: Registration
+    session: str | None = None
+    status: int | None = None
+    output: str = ''
+
+
+@dataclass(frozen=True)
+class Spawned:
+    """One session this command started, and everything a caller needs to reach it."""
+
+    repo: str
+    path: Path
+    branch: str | None
+    worktree: bool
+    pane: str
+    brief: Path
+    arrival: Arrival
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            'repo': self.repo,
+            'path': str(self.path),
+            'branch': self.branch,
+            'worktree': self.worktree,
+            'pane': self.pane,
+            'brief': str(self.brief),
+            'session': self.arrival.session,
+            # Why a null `session` is null, for a caller that has to say something about it.
+            # No `registered` boolean beside it: `session` already carries whether there is
+            # one, and a second field saying the same thing is one more that can disagree.
+            'registration': str(self.arrival.registration),
+            'exit_status': self.arrival.status,
+        }
+
+
+def color_enabled(stream: TextIO) -> bool:
+    """Whether to colour output on `stream`.
+
+    NO_COLOR is the user saying they do not want colour and wins outright.
+    FORCE_COLOR answers the different question "is this a terminal", which is what
+    an fzf preview has to be able to say yes to.
+    """
+    if os.environ.get('NO_COLOR'):
+        return False
+    if os.environ.get('FORCE_COLOR'):
+        return True
+    return stream.isatty()
+
+
+def build_console(stream: TextIO) -> Console:
+    """A console that never wraps: the caller has already sized every column, and
+    a terminal narrower than a row should scroll rather than reflow it."""
+    color = color_enabled(stream)
+    return Console(file=stream, force_terminal=color, no_color=not color, width=10_000, soft_wrap=True)
+
+
+OUT = build_console(sys.stdout)
+ERR = build_console(sys.stderr)
+
+
+def say_ok(message: str) -> None:
+    ERR.print(f'  [green]{CHECK}[/] {escape(message)}', highlight=False)
+
+
+def say_info(message: str) -> None:
+    ERR.print(f'  [blue]{INFO}[/] {escape(message)}', highlight=False)
+
+
+def say_warning(message: str) -> None:
+    ERR.print(f'  [yellow]{WARNING}[/] {escape(message)}', highlight=False)
+
+
+def say_error(message: str) -> None:
+    first, _, rest = message.partition('\n')
+    ERR.print(f'  [red]{CROSS}[/] {escape(first)}', highlight=False)
+    if rest:
+        ERR.print(escape(rest), highlight=False)
+
+
+ECHO = True
+
+
+def set_echo(enabled: bool) -> None:
+    global ECHO
+    ECHO = enabled
+
+
+def run(argv: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    """The only place a subprocess starts, so none of them can run unannounced.
+
+    The line is `shlex.join`ed and carries absolute paths, which makes it the
+    command itself rather than a description of one: a run that stopped somewhere
+    unexpected is replayed by pasting the line back. `-q` is what turns it off,
+    and the fzf preview passes it because a preview pane is a rendered artifact.
+    """
+    if ECHO:
+        ERR.print(f'    [green]$ {escape(shlex.join(argv))}[/]', highlight=False)
+    return subprocess.run(argv, capture_output=True, text=True, **kwargs)
+
+
+def git(cwd: Path, *args: str) -> str:
+    """Run git in `cwd` and return its stdout, raising on a non-zero exit."""
+    return run(['git', '-C', str(cwd), *args], check=True).stdout.strip()
+
+
+def git_optional(cwd: Path, *args: str) -> str | None:
+    """The same read, answering None when git refuses.
+
+    Only for a read whose absence is itself a fact — a remote ref nothing has
+    fetched, a HEAD symref a --no-tags clone never received. Anywhere else a git
+    failure means a broken worktree, and that has to be seen rather than defaulted.
+    """
+    result = run(['git', '-C', str(cwd), *args])
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def git_effect(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run git for its effect, handing the result back for the caller to judge."""
+    return run(['git', '-C', str(cwd), *args])
+
+
+def worktree_root() -> Path:
+    """Where every worktree this tool makes lives, and the only index of them."""
+    return Path(os.environ.get('WORKTREE_ROOT') or Path.home() / '.worktrees')
+
+
+def briefs_dir() -> Path:
+    """Where a spawned session's brief is kept, per standards/data.md § "Every path a
+    tool writes is an XDG base directory".
+
+    State rather than cache or data: nothing recomputes a brief, no human authored it,
+    and deleting one changes what a session was told rather than costing a rebuild. Not
+    a synced store either — a brief is about one spawn on one machine, and replicating
+    it to every box would put another machine's instructions in this one's directory.
+    """
+    state = Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local' / 'state')
+    return state / 'worktree' / 'briefs'
+
+
+def display_path(path: Path) -> str:
+    """`~`-relative, which is how a path reads in a table."""
+    home = Path.home()
+    return f'~/{path.relative_to(home)}' if path.is_relative_to(home) else str(path)
+
+
+def primary_checkout(path: Path) -> Path | None:
+    """The checkout that owns .git, which `git worktree list` prints first by
+    definition. None when `path` is not inside a git repository at all."""
+    listing = git_optional(path, 'worktree', 'list', '--porcelain')
+    if not listing or not listing.startswith('worktree '):
+        return None
+    return Path(listing.splitlines()[0].removeprefix('worktree '))
+
+
+def default_branch(path: Path) -> str:
+    """origin's own idea of its default branch, so a repo that never adopted `main`
+    still lands where it should.
+
+    The remote HEAD is absent on a clone made with --no-tags, or on one whose ref
+    was never set, hence the fallback.
+    """
+    ref = git_optional(path, 'symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD')
+    return ref.rsplit('/', 1)[-1] if ref else 'main'
+
+
+def in_linked_worktree(path: Path) -> bool:
+    return git(path, 'rev-parse', '--git-dir') != git(path, 'rev-parse', '--git-common-dir')
+
+
+def divergence(path: Path, base: str) -> tuple[int | None, int | None]:
+    """Commits behind and ahead of origin/<base>.
+
+    (None, None) where that ref does not exist: a clone that has never fetched has
+    no answer, and reporting zero would read as up to date.
+    """
+    counts = git_optional(path, 'rev-list', '--left-right', '--count', f'origin/{base}...HEAD')
+    if counts is None:
+        return None, None
+    behind, ahead = counts.split()
+    return int(behind), int(ahead)
+
+
+def live_sessions() -> tuple[Session, ...] | None:
+    """Live Claude Code sessions, from the tool that owns the registry, or None when
+    the question could not be asked at all.
+
+    claude-sessions does the pid liveness test, and does it on the box where a pid
+    means something.
+
+    None rather than an empty tuple, which is the same split `ahead` makes and for a
+    heavier reason. `list` only annotates rows with this, so an unanswerable read
+    costs it a column. `sweep` gates a removal on it, and an empty tuple there reads
+    as *nobody is in this worktree* — which is exactly the sentence that is not known.
+    """
+    if shutil.which('claude-sessions') is None:
+        return None
+    result = run(['claude-sessions', '--json'])
+    if result.returncode != 0:
+        say_warning('claude-sessions failed; the sessions in each worktree are unknown')
+        return None
+    return tuple(
+        Session(
+            name=row['name'],
+            status=row['status'],
+            waiting=row.get('waiting'),
+            cwd=Path(row['cwd']),
+            tmux=row.get('tmux'),
+            pid=row.get('pid'),
+        )
+        for row in json.loads(result.stdout)
+    )
+
+
+def sessions_at(sessions: Sequence[Session] | None, path: Path) -> tuple[Session, ...] | None:
+    """The sessions standing in one worktree, or None when nobody could be asked.
+
+    A session's cwd descends below the directory it started in, so a worktree
+    claims everything at or under its own path.
+    """
+    if sessions is None:
+        return None
+    return tuple(session for session in sessions if session.cwd == path or path in session.cwd.parents)
+
+
+def scan(root: Path, repo_filter: str | None) -> list[tuple[str, bool, Path]]:
+    """Every worktree on the machine, as (repo, is_checkout, path).
+
+    Ordered by repo, with each checkout ahead of the worktrees cut from it. The
+    checkout is read back out of git rather than guessed from the path, because
+    $WORKTREE_ROOT names the repo and nothing else — where that repo is cloned is
+    a fact only git holds.
+    """
+    checkouts: dict[Path, str] = {}
+    linked: list[tuple[str, Path]] = []
+
+    for candidate in sorted(root.glob('*/*')):
+        if not (candidate / '.git').exists():
+            continue
+        checkout = primary_checkout(candidate)
+        if checkout is None:
+            continue
+        repo = checkout.name
+        if repo_filter and repo != repo_filter:
+            continue
+        checkouts[checkout] = repo
+        linked.append((repo, candidate))
+
+    rows = [(repo, True, checkout) for checkout, repo in checkouts.items()]
+    rows += [(repo, False, path) for repo, path in linked]
+    return sorted(rows, key=lambda row: (row[0], not row[1], str(row[2])))
+
+
+def describe(repo: str, path: Path, checkout: bool, sessions: Sequence[Session] | None) -> Worktree:
+    base = default_branch(path)
+    behind, ahead = divergence(path, base)
+    branch = git(path, 'rev-parse', '--abbrev-ref', 'HEAD')
+    return Worktree(
+        repo=repo,
+        path=path,
+        checkout=checkout,
+        branch=branch,
+        base=base,
+        ahead=ahead,
+        behind=behind,
+        state=State.DIRTY if git(path, 'status', '--porcelain') else State.CLEAN,
+        sessions=sessions_at(sessions, path),
+        # What --abbrev-ref answers for a HEAD pointing at a commit rather than a ref. There is no
+        # branch behind it, so `published` and the ahead count are answers about nothing.
+        detached=branch == 'HEAD',
+    )
+
+
+def describe_all(rows: Sequence[tuple[str, bool, Path]], sessions: Sequence[Session] | None) -> list[Worktree]:
+    """Every scanned row as a Worktree, skipping any git refuses to speak about."""
+    found = []
+    for repo, checkout, path in rows:
+        try:
+            found.append(describe(repo, path, checkout, sessions))
+        except subprocess.CalledProcessError as error:
+            say_warning(f'skipping {display_path(path)}: git refused ({error.stderr.strip() or error})')
+    return found
+
+
+def discover(repo_filter: str | None) -> list[Worktree]:
+    """Read the world once: every worktree, with what it carries and who is in it.
+
+    Local reads only. `sweep` fetches before it describes, and does it in the open
+    rather than behind a flag here, because the failures of that fetch decide
+    whether its verdicts mean anything.
+    """
+    return describe_all(scan(worktree_root(), repo_filter), live_sessions())
+
+
+def fetch_checkouts(rows: Sequence[tuple[str, bool, Path]]) -> set[Path]:
+    """Update every checkout with --prune, returning the ones git could not reach.
+
+    The failures are the return value because they are load-bearing. Every remote
+    fact below is read out of refs/remotes/origin, which outlives a branch deleted
+    on the remote until a prune, so a checkout whose fetch failed can only produce
+    a verdict about the remote it never reached.
+    """
+    failed = set()
+    for _, checkout, path in rows:
+        if checkout and git_effect(path, 'fetch', '--prune', '--quiet', 'origin').returncode != 0:
+            failed.add(path)
+    return failed
+
+
+def remote_branches(checkout: Path) -> frozenset[str] | None:
+    """Every branch origin still carries, or None when git could not be asked.
+
+    One read per repo rather than a probe per worktree: the answer is the same for
+    every worktree cut from the same checkout. lstrip=3 drops `refs/remotes/origin`
+    and leaves the branch, slashes in its name included.
+    """
+    listing = git_optional(checkout, 'for-each-ref', '--format=%(refname:lstrip=3)', 'refs/remotes/origin/')
+    if listing is None:
+        return None
+    return frozenset(listing.splitlines())
+
+
+def published(path: Path, branch: str) -> bool:
+    """Whether the branch was ever pushed under its own name.
+
+    `new` cuts the branch from origin/<base>, and git's branch.autoSetupMerge points
+    it at origin/<base> rather than at itself. `git push -u origin HEAD` is what moves
+    the upstream onto the branch's own ref. So a branch still tracking the base never
+    left this machine, and its remote branch cannot have been deleted because it never
+    existed.
+    """
+    merge = git_optional(path, 'config', '--get', f'branch.{branch}.merge')
+    return merge == f'refs/heads/{branch}'
+
+
+def landed(path: Path, base: str) -> bool | None:
+    """Whether this branch's work is already on origin/<base>, by ancestry or by content.
+
+    Ancestry is asked first and is the whole answer whenever it holds: a tip reachable
+    from origin/<base> is the same history, so nothing here is anywhere else. That is
+    the ordinary merge, and it is the case the commit count was already right about.
+
+    A history rewritten on its way onto the base branch is the case it was wrong about.
+    A squash collapses the branch into one commit. GitHub's "update branch with rebase"
+    replays it onto a newer base, server-side, where nothing can move the local ref.
+    Either way the landed work carries new shas and this ref still points at the
+    originals. `origin/<base>..HEAD` then counts those originals for as long as the
+    branch exists, so work merged months ago cannot be told apart from work that never
+    left the machine.
+
+    Content is what tells them apart. The paths come from the merge base, so work the
+    base branch gained elsewhere is not counted against this branch, and the comparison
+    is against origin/<base> as it stands, so a path the base has since moved on from
+    reads as unlanded. Both of those err toward keeping the worktree, which is the
+    direction a deletion has to err in.
+
+    `--no-renames` for the same reason. A detected rename is reported as the new path
+    alone, and the old one then never enters the comparison — so a base branch that
+    took the addition without the deletion reads as having the whole change. Turning
+    detection off lists both halves and asks about both.
+
+    The listing is read `-z` and split on NUL, because git's default output is not the
+    names. It C-quotes any path holding a non-ASCII byte, a quote, a backslash or a
+    control character, so a name carrying an accent comes back wrapped in quotes with
+    that character spelled as two backslash escapes. A leading or trailing space is lost
+    separately, to the strip that reads a normal git answer. A name that no longer
+    selects its own file selects nothing, the comparison finds no difference, and the
+    worktree is deleted holding the only copy of the work.
+
+    `:(literal)` on each path so a name is never read as a pattern. Nothing measured
+    turns on it: a `*` or a `[` in a filename widens the pathspec rather than missing
+    the file, and widening errs toward keeping. It is here because the pathspec is data
+    and the default is to interpret it, not because a case was found.
+
+    A branch whose commits net out to no change has nothing to lose, so it has landed.
+    The commits go with the directory and what they carried is nothing. None wherever
+    git could not be asked, which is a third answer rather than a false one: both
+    `--is-ancestor` and `--quiet` exit 1 for *no* and above that for a failure, and
+    reading a failure as a *no* would keep a worktree on a question nobody answered —
+    while reading it as a *yes* would delete one on the same.
+    """
+    ancestry = git_effect(path, 'merge-base', '--is-ancestor', 'HEAD', f'origin/{base}')
+    if ancestry.returncode == 0:
+        return True
+    if ancestry.returncode > 1:
+        return None
+
+    fork = git_optional(path, 'merge-base', f'origin/{base}', 'HEAD')
+    if fork is None:
+        return None
+    listing = git_effect(path, 'diff', '-z', '--no-renames', '--name-only', fork, 'HEAD')
+    if listing.returncode != 0:
+        return None
+    paths = [name for name in listing.stdout.split('\0') if name]
+    if not paths:
+        return True
+    comparison = git_effect(path, 'diff', '--quiet', f'origin/{base}', 'HEAD', '--', *(f':(literal){name}' for name in paths))
+    if comparison.returncode > 1:
+        return None
+    return comparison.returncode == 0
+
+
+@dataclass(frozen=True)
+class Evidence:
+    """Everything read from git or the machine before a sweep decides anything.
+
+    Gathering it up here is what makes `held_by` a function of its arguments: the
+    decision to delete a directory is then reachable in a test that has no repository
+    behind it, and every branch of it can be reached on purpose rather than by
+    building the state that happens to produce it.
+    """
+
+    published: bool
+    fetched: bool
+    remote: frozenset[str] | None
+    landed: bool | None
+
+
+def held_by(worktree: Worktree, evidence: Evidence) -> Kept | None:
+    """Why this worktree survives a sweep, or None when every check clears it.
+
+    Pure. Ordered so the reason a reader is given is the one they would have named
+    themselves: what is in the tree, then who is in it, then what is in the branch.
+
+    Every check that can be unanswerable is tested for that first, and separately from
+    being false. The two are one value in git's own vocabulary — an empty session list,
+    a missing remote ref — and collapsing them here means an unreachable origin reads
+    as a deleted branch, which is the reading that authorises the removal.
+
+    What is in the branch is asked as *are its changes on the base branch*, never as
+    *are its commits*. The commit count answers the second and is right about it; a
+    branch rewritten on its way onto the base branch keeps a count above zero for the
+    rest of its life, and no later check can undo a keep the count already decided.
+    """
+    if worktree.state is State.DIRTY:
+        return Kept.DIRTY
+    if worktree.sessions is None:
+        return Kept.SESSIONS_UNREADABLE
+    if worktree.sessions:
+        return Kept.SESSION
+    if worktree.detached:
+        return Kept.DETACHED
+    if not evidence.fetched:
+        return Kept.UNFETCHED_REMOTE
+    if worktree.ahead is None:
+        return Kept.UNFETCHED_BASE
+    if evidence.landed is None:
+        return Kept.UNREADABLE_LANDING
+    if not evidence.landed:
+        return Kept.UNLANDED
+    if not evidence.published:
+        return Kept.UNPUBLISHED
+    if evidence.remote is None:
+        return Kept.REMOTE_UNREADABLE
+    if worktree.branch in evidence.remote:
+        return Kept.REMOTE_LIVE
+    return None
+
+
+def session_cell(worktree: Worktree) -> str:
+    """`?` where nobody could be asked, the same mark an unreadable ahead count gets."""
+    if worktree.sessions is None:
+        return '?'
+    return ', '.join(f'{session.name} ({session.status})' for session in worktree.sessions)
+
+
+def cells(worktree: Worktree) -> tuple[str, ...]:
+    ahead = '?' if worktree.ahead is None else str(worktree.ahead)
+    return (display_path(worktree.path), worktree.branch, ahead, str(worktree.state), session_cell(worktree))
+
+
+def render_table(worktrees: Sequence[Worktree]) -> list[str]:
+    """The listing, column-aligned, with its header first.
+
+    Widths come from the rows in hand rather than from constants: a listing of
+    every repo is as wide as its longest path and a single repo's is not, so a
+    fixed width either truncates the one or pads the other. The last column is
+    left unpadded — nothing follows it, and session names run long.
+    """
+    rows = [COLUMNS, *(cells(worktree) for worktree in worktrees)]
+    widths = [max(len(row[column]) for row in rows) for column in range(len(COLUMNS) - 1)]
+    return ['  '.join([*(cell.ljust(width) for cell, width in zip(row, widths, strict=False)), row[-1]]).rstrip() for row in rows]
+
+
+def cmd_list(repo_filter: str | None, as_json: bool) -> int:
+    worktrees = discover(repo_filter)
+
+    if as_json:
+        OUT.print(json.dumps([worktree.as_json() for worktree in worktrees], indent=2), markup=False, highlight=False)
+        return 0
+
+    if not worktrees:
+        scope = f' for {repo_filter}' if repo_filter else ''
+        say_info(f'No worktrees{scope} under {display_path(worktree_root())}')
+        return 0
+
+    for line in render_table(worktrees):
+        OUT.print(line, markup=False, highlight=False)
+    return 0
+
+
+def resolve_worktree(argument: str | None) -> Worktree:
+    """The worktree a `show` is about: the one named, or the one you are standing in."""
+    path = Path(argument).expanduser().resolve() if argument else Path.cwd()
+    if not path.is_dir():
+        raise Refused(f'No such directory: {path}')
+    checkout = primary_checkout(path)
+    if checkout is None:
+        raise Refused(f'Not a git worktree: {path}')
+    top = Path(git(path, 'rev-parse', '--show-toplevel'))
+    return describe(checkout.name, top, top == checkout, live_sessions())
+
+
+def cmd_show(argument: str | None) -> int:
+    worktree = resolve_worktree(argument)
+    label = worktree.repo if worktree.checkout else f'{worktree.repo}/{worktree.path.name}'
+    ahead = '?' if worktree.ahead is None else worktree.ahead
+    behind = '?' if worktree.behind is None else worktree.behind
+
+    OUT.print(f'[cyan]{escape(label)}[/]', highlight=False)
+    OUT.print(display_path(worktree.path), markup=False, highlight=False)
+    OUT.print(f'{worktree.branch} — {ahead} ahead, {behind} behind {worktree.base}, {worktree.state}', markup=False, highlight=False)
+
+    section('changes', git(worktree.path, 'status', '--porcelain'))
+    section('commits', git_optional(worktree.path, 'log', '--oneline', f'origin/{worktree.base}..HEAD'))
+    show_sessions(worktree)
+    return 0
+
+
+def section(heading: str, body: str | None) -> None:
+    if not body:
+        return
+    OUT.print('')
+    OUT.print(f'[cyan]{heading}[/]', highlight=False)
+    for line in body.splitlines():
+        OUT.print(f'  {line}', markup=False, highlight=False)
+
+
+def show_sessions(worktree: Worktree) -> None:
+    """The session block, ending in each session's live pane.
+
+    The pane rather than a summary, for the same reason tmux-sessions previews
+    one: two sessions in one worktree are told apart by what is on their screens
+    and by nothing else.
+    """
+    OUT.print('')
+    OUT.print('[cyan]session[/]', highlight=False)
+    if worktree.sessions is None:
+        OUT.print('  unknown — claude-sessions could not be asked', markup=False, highlight=False)
+        return
+    if not worktree.sessions:
+        OUT.print('  none', markup=False, highlight=False)
+        return
+
+    for session in worktree.sessions:
+        detail = [session.status]
+        if session.waiting:
+            detail.append(f'waiting on {session.waiting}')
+        if session.tmux:
+            detail.append(session.tmux)
+        OUT.print(f'  {session.name} — {", ".join(detail)}', markup=False, highlight=False)
+        pane = capture_pane(session.tmux) if session.tmux else None
+        for line in (pane or '').splitlines():
+            OUT.print(f'  {line}', markup=False, highlight=False)
+
+
+def capture_pane(pane: str) -> str | None:
+    """What is on a session's screen, colour included, or None if tmux cannot say."""
+    if shutil.which('tmux') is None:
+        return None
+    result = run(['tmux', 'capture-pane', '-ep', '-t', pane])
+    return result.stdout.rstrip() if result.returncode == 0 else None
+
+
+def preview_command() -> str:
+    """`show`, addressed to the fzf field carrying the path.
+
+    sys.executable rather than the script itself: this process already resolved
+    the dependencies into an environment, and going back through the shebang would
+    make uv resolve them again on every keystroke that moves the cursor.
+
+    `-q` because the pane is a rendered artifact rather than a session: the git
+    reads behind a preview say nothing about the worktree it is previewing, and
+    they would be redrawn on every keystroke that moves the cursor.
+    """
+    interpreter = shlex.quote(sys.executable)
+    script = shlex.quote(str(Path(__file__).resolve()))
+    return f'FORCE_COLOR=1 {interpreter} {script} show -q {{1}}'
+
+
+def cmd_choose(repo_filter: str | None) -> int:
+    if shutil.which('fzf') is None:
+        raise Refused("fzf is not installed — 'worktree list' is the read that needs no terminal")
+
+    worktrees = discover(repo_filter)
+    if not worktrees:
+        scope = f' for {repo_filter}' if repo_filter else ''
+        raise Refused(f'No worktrees{scope} under {display_path(worktree_root())}')
+
+    header, *rendered = render_table(worktrees)
+    rows = [f'{FZF_DELIMITER}{header}', *(f'{w.path}{FZF_DELIMITER}{line}' for w, line in zip(worktrees, rendered, strict=True))]
+
+    picker = 'fzf-tmux' if os.environ.get('TMUX') and shutil.which('fzf-tmux') else 'fzf'
+    result = run(
+        [
+            picker,
+            '--delimiter',
+            FZF_DELIMITER,
+            '--with-nth',
+            '2..',
+            '--header-lines',
+            '1',
+            '--no-sort',
+            '--ansi',
+            '--border-label',
+            ' worktrees ',
+            '--prompt',
+            '  ',
+            '--bind',
+            'tab:down,btab:up',
+            '--preview-window',
+            'down,65%,wrap,border-top',
+            '--preview',
+            preview_command(),
+        ],
+        input='\n'.join(rows),
+    )
+
+    chosen = result.stdout.strip()
+    if result.returncode != 0 or not chosen:
+        return 0
+    OUT.print(chosen.split(FZF_DELIMITER, 1)[0], markup=False, highlight=False)
+    return 0
+
+
+def require_checkout(cwd: Path) -> Path:
+    checkout = primary_checkout(cwd)
+    if checkout is None:
+        raise Refused('Not inside a git repository')
+    return checkout
+
+
+def require_clean(cwd: Path) -> None:
+    dirty = git(cwd, 'status', '--porcelain')
+    if not dirty:
+        return
+    raise Refused(
+        f'This worktree has uncommitted changes\n{dirty}',
+        "Commit them (git commit -m ... -- <paths>) or 'worktree drop --force'",
+    )
+
+
+def prune_repo_dir(path: Path) -> None:
+    """`git worktree remove` takes the leaf and leaves the repo directory behind, so
+    $WORKTREE_ROOT silently accumulates empty shells of repos carrying nothing."""
+    parent = path.parent
+    if parent.is_dir() and not any(parent.iterdir()):
+        parent.rmdir()
+
+
+class Disposal(StrEnum):
+    """Which half of a disposal happened, so a caller can say the true sentence.
+
+    The directory and the ref go separately, and after BRANCH_KEPT the directory is
+    already gone. A single failure value cannot express that, and both callers then
+    report a worktree still standing when what survived was the branch.
+    """
+
+    DONE = 'done'
+    NOT_REMOVED = 'not_removed'
+    BRANCH_KEPT = 'branch_kept'
+
+
+def dispose(checkout: Path, path: Path, branch: str, *, force: bool) -> tuple[Disposal, str]:
+    """Remove a worktree and delete its branch. The member says how far it got.
+
+    Neither result is discarded. A removal that fails silently is how a worktree
+    outlives the landing that announced success — the commits reach the base branch,
+    the directory stays, and $WORKTREE_ROOT grows a tree whose work is already
+    elsewhere.
+
+    `force` removes a tree carrying changes, which only a caller that has offered to
+    lose them may ask for.
+
+    -D rather than -d, in every caller, and the evidence is the caller's rather than
+    git's. `branch -d` asks whether the branch is merged into the *checkout's* HEAD,
+    and the checkout is a different tree whose local base branch is only as current as
+    its last pull. It refuses a branch that merged on the remote hours ago, and it
+    accepts one merged into a base that has since been rewritten. Every caller here
+    proves the branch's changes are already on `origin/<base>` — the branch they were
+    actually merged into — immediately before calling.
+    """
+    removal = git_effect(checkout, 'worktree', 'remove', *(['--force'] if force else []), str(path))
+    if removal.returncode != 0:
+        return Disposal.NOT_REMOVED, removal.stderr.strip() or 'git refused to remove the worktree'
+
+    prune_repo_dir(path)
+    deletion = git_effect(checkout, 'branch', '--quiet', '-D', branch)
+    if deletion.returncode != 0:
+        return Disposal.BRANCH_KEPT, deletion.stderr.strip() or f'git refused to delete {branch}'
+    return Disposal.DONE, ''
+
+
+def confirm(question: str) -> bool:
+    """A y/N a human has to type, on stderr beside everything else written for one.
+
+    Only ever called behind an isatty check. Nothing here invents an answer: a caller
+    with no terminal to ask is refused rather than defaulted either way.
+    """
+    ERR.print(f'  {escape(question)} [y/N] ', end='', highlight=False)
+    return sys.stdin.readline().strip().lower() in ('y', 'yes')
+
+
+def declares_setup(path: Path) -> bool:
+    """Whether the repo declares a `setup` target to make a checkout runnable.
+
+    Asked of the tree rather than of a registry, because the target is the
+    declaration — a repo opts in by having one and there is nothing else to keep
+    in step. Every way of not having one answers False: no `task` installed, no
+    Taskfile, a Taskfile that does not declare it.
+    """
+    if shutil.which('task') is None:
+        return False
+    listed = run(['task', '--list-all', '--json'], cwd=path)
+    if listed.returncode != 0:
+        return False
+    try:
+        tasks = json.loads(listed.stdout).get('tasks', [])
+    except json.JSONDecodeError:
+        return False
+    return any(task.get('name') == 'setup' for task in tasks)
+
+
+def provision(path: Path) -> None:
+    """Run the repo's own `task setup` in a new worktree.
+
+    A worktree is a clean checkout, so everything gitignored is absent — the
+    virtualenv, node_modules, and whatever else has no manifest. What that means
+    is the repo's to say; this only decides when to ask.
+
+    It blocks, and on a large front end it blocks for a minute. That is the
+    right trade: the alternative is handing back a path that looks ready and
+    fails at the first command the session runs in it.
+
+    A failure is reported rather than raised. The worktree exists either way,
+    and destroying it would lose the isolation that was the point.
+    """
+    if not declares_setup(path):
+        return
+    say_info('Provisioning — running `task setup`')
+    if run(['task', 'setup'], cwd=path).returncode != 0:
+        say_warning('task setup failed; the worktree exists but is not provisioned')
+
+
+def create_worktree(cwd: Path, checkout: Path, slug: str) -> Path:
+    """Cut a worktree off origin's default branch, provision it, and return its path.
+
+    Shared by `new` and `spawn` so the two cannot drift: a session started by `spawn`
+    would otherwise be the one landing in a tree that `task setup` never ran in, and
+    nothing about that failure would name the branch they took differently.
+    """
+    path = worktree_root() / checkout.name / slug
+
+    if path.exists():
+        raise Refused(f'Already exists: {path}')
+
+    base = default_branch(cwd)
+    git_effect(cwd, 'fetch', '--quiet', 'origin')
+    created = git_effect(cwd, 'worktree', 'add', '--quiet', str(path), '-b', slug, f'origin/{base}')
+    if created.returncode != 0:
+        raise Refused(created.stderr.strip() or f'git could not create {path}')
+
+    provision(path)
+    return path
+
+
+def cmd_new(slug: str) -> int:
+    cwd = Path.cwd()
+    checkout = require_checkout(cwd)
+    path = create_worktree(cwd, checkout, slug)
+
+    say_ok(f'Isolated at {path}')
+    OUT.print(str(path), markup=False, highlight=False)
+    return 0
+
+
+def require_tool(name: str, why: str) -> None:
+    if shutil.which(name) is None:
+        raise Refused(f'{name} is not installed', why, fault=Fault.TOOL_MISSING)
+
+
+def require_caller_pane() -> str:
+    """The pane a spawn splits, which is the caller's own.
+
+    tmux exports $TMUX_PANE into everything it starts, so a session's shell already
+    carries the address of the pane that session is in and nothing has to be passed.
+    Outside tmux there is no pane to split, and a session started anyway would be a
+    process nobody can see — which is the failure this refuses rather than produces.
+    """
+    require_tool('tmux', 'A spawned session is a tmux pane, and there is nowhere else to put one')
+    pane = os.environ.get('TMUX_PANE')
+    if not os.environ.get('TMUX') or not pane:
+        raise Refused(
+            'Not inside tmux, so there is no pane to split',
+            'Run this from a session that is itself in a tmux pane',
+            fault=Fault.NO_TMUX,
+        )
+    return pane
+
+
+def require_unoccupied(path: Path) -> None:
+    """Refuse to put a second session into a worktree that already holds one.
+
+    An unreadable registry refuses too. *Nobody is here* and *nobody could be asked* are
+    the same empty list, and reading the second as the first is what authorises the
+    collision — the same split `held_by` keeps for its four unanswerable members.
+    """
+    sessions = sessions_at(live_sessions(), path)
+    if sessions is None:
+        raise Refused(
+            f'Cannot tell whether a session is already in {display_path(path)}',
+            'claude-sessions is what answers that, and two sessions in one worktree is the collision this tool exists to prevent',
+            fault=Fault.SESSIONS_UNREADABLE,
+        )
+    if sessions:
+        raise Refused(
+            f'{display_path(path)} already holds {", ".join(session.name for session in sessions)}',
+            'Spawn under a different slug, or send that session a message instead of a second session',
+            fault=Fault.WORKTREE_OCCUPIED,
+        )
+
+
+def resolve_destination(cwd: Path, checkout: Path, slug: str | None) -> Destination:
+    """Where the session will stand: a worktree of its own, or the checkout itself.
+
+    The absent slug is `cli-design.md` § "Scope is structural: the argument's presence
+    selects it, never a flag".
+
+    An existing worktree is attached to rather than refused, and its branch is read back
+    out of git rather than assumed to be the slug: a session standing there may have
+    moved it.
+    """
+    if slug is None:
+        occupants = sessions_at(live_sessions(), checkout)
+        if occupants:
+            names = ', '.join(session.name for session in occupants)
+            say_warning(f'{display_path(checkout)} already holds {names}, and this session will share its index')
+            say_info('Give it a slug if it will commit; with none it gets no branch, which is what makes sharing a checkout safe')
+        return Destination(checkout, None, worktree=False)
+
+    path = worktree_root() / checkout.name / slug
+    if not path.exists():
+        return Destination(create_worktree(cwd, checkout, slug), slug, worktree=True, created=True)
+
+    if primary_checkout(path) is None:
+        raise Refused(
+            f'{display_path(path)} exists but is not a worktree', 'Remove it, or spawn under a different slug', fault=Fault.NOT_A_WORKTREE
+        )
+    require_unoccupied(path)
+    return Destination(path, git(path, 'rev-parse', '--abbrev-ref', 'HEAD'), worktree=True)
+
+
+def unwind(checkout: Path, where: Destination) -> None:
+    """Take back a worktree this run cut, after something later refused.
+
+    Only ever called for one this run created, and never for one it attached to: the
+    second holds work somebody else is doing. `dispose` is the same removal `land` and
+    `drop` use, and its result is reported rather than raised — the caller is already
+    raising the refusal that brought us here, and a failed cleanup must not replace it.
+    """
+    if where.branch is None:
+        return
+    outcome, detail = dispose(checkout, where.path, where.branch, force=True)
+    if outcome is Disposal.DONE:
+        say_info(f'Removed {display_path(where.path)}, which this run had just created')
+        return
+    say_warning(f'{display_path(where.path)} was created by this run and is still here: {detail}')
+
+
+def keep_brief(source: Path, repo: str, slug: str | None) -> Path:
+    """Copy the brief somewhere it outlives its author, and return the copy.
+
+    The session reads its brief once, at launch, so the file has to survive only until
+    then — but the caller writing it has no way to know when that is, and a coordinator
+    writing briefs into its own scratch directory would be racing its agents' startup.
+
+    Kept rather than deleted afterwards because it is the only record of what a session
+    was told, which is what a later reader needs to tell a wrong agent from a wrong brief.
+
+    `mkstemp` mints the name rather than a timestamp, because two spawns in one second
+    have no distinguishing part left — and that is not a rare case. A coordinator
+    dispatches several reviewers at once, none of them carries a slug, and they all name
+    the same repo. The loser's brief is overwritten and the winner's session is launched
+    against instructions written for somebody else.
+    """
+    stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
+    briefs_dir().mkdir(parents=True, exist_ok=True)
+    handle, minted = tempfile.mkstemp(dir=briefs_dir(), prefix=f'{repo}-{slug or "checkout"}-{stamp}-', suffix='.md')
+    os.close(handle)
+
+    destination = Path(minted)
+    destination.write_text(source.read_text())
+    return destination
+
+
+def open_pane(caller: str, workdir: Path, prompt: str, *, below: bool) -> str:
+    """Split the caller's pane, start a session in it, and return the new pane's id.
+
+    -d leaves the focus where it was. The caller is mid-turn when it runs this, and a
+    spawn that moves the cursor interrupts whoever is reading that pane.
+
+    -P -F is tmux's own answer for which pane it just made, so nothing has to be matched
+    back afterwards by comparing pane lists before and against after.
+
+    `remain-on-exit` is turned on immediately after, and it is what makes a failed
+    launch diagnosable: without it a command that cannot start destroys its pane in
+    milliseconds, leaving no error text, no exit status and no pane — so the only
+    symptom is a session that never registers. Setting it can itself lose that race,
+    which is why `pane_state` still has a GONE to report.
+    """
+    created = run(
+        [
+            'tmux',
+            'split-window',
+            '-d',
+            '-v' if below else '-h',
+            '-P',
+            '-F',
+            '#{pane_id}',
+            '-t',
+            caller,
+            '-c',
+            str(workdir),
+            f'claude {shlex.quote(prompt)}',
+        ]
+    )
+    if created.returncode != 0:
+        raise Refused(created.stderr.strip() or 'tmux refused to split the pane', fault=Fault.SPLIT_REFUSED)
+
+    pane = created.stdout.strip()
+    run(['tmux', 'set-option', '-p', '-t', pane, 'remain-on-exit', 'on'])
+    return pane
+
+
+def stack_beside(caller: str, width: str) -> None:
+    """Put the caller in the large left pane, with everything spawned stacked right.
+
+    tmux halves the pane it splits, so a coordinator that dispatched four agents would
+    be reading its own work in a sixteenth of the window. `main-vertical` collapses that
+    into one stack, and the width says how much of the window the reading pane keeps —
+    without it tmux uses its own `main-pane-width` default of 80 columns, which puts the
+    narrow pane on the side that carries prose.
+
+    `main-vertical` assigns the main pane **by index**, so the caller is swapped into the
+    window's first slot beforehand or the large pane goes to whichever pane happens to
+    lead the window. That is not an edge case: a session is rarely the first pane of the
+    window it is in. The swap is no more intrusive than the layout it precedes, which
+    re-tiles every pane in the window either way.
+
+    Only ever called for a split beside. A split below is a reviewer deliberately placed
+    under its author, and this layout would lift it into the right-hand stack.
+
+    A failure here is reported and not raised. The session is already running by this
+    point, and losing it over a cosmetic call would be the worse outcome.
+    """
+    window = run(['tmux', 'display-message', '-p', '-t', caller, '#{window_id}'])
+    if window.returncode != 0:
+        say_warning('tmux could not name the window, so the layout is left as it is')
+        return
+
+    target = window.stdout.strip()
+    leader = run(['tmux', 'list-panes', '-t', target, '-F', '#{pane_id}'])
+    first = leader.stdout.splitlines()[0] if leader.returncode == 0 and leader.stdout.strip() else caller
+    if first != caller:
+        run(['tmux', 'swap-pane', '-s', caller, '-t', first])
+
+    run(['tmux', 'set-window-option', '-t', target, 'main-pane-width', width])
+    if run(['tmux', 'select-layout', '-t', target, 'main-vertical']).returncode != 0:
+        say_warning('tmux refused the layout, so the panes are left as the split arranged them')
+        return
+
+    report_width(caller, width)
+
+
+def usable_width(value: str) -> bool:
+    """Whether tmux will actually honour this as a pane width: columns, or a percentage.
+
+    The test is what it honours rather than what it parses, because those are different
+    sets and only the first is useful. `abc`, `-5`, `0` and `999%` are each answered with
+    exit 0 and then resolve to the 80-column default — the value `--width` exists to
+    replace — so an unusable argument produces exactly the layout the flag was passed to
+    avoid. No return code anywhere in the sequence carries the failure, which makes this
+    the only place it can be caught.
+    """
+    number = value.removesuffix('%')
+    if not number.isdigit() or int(number) < 1:
+        return False
+    return int(number) <= 100 if value.endswith('%') else True
+
+
+def report_width(caller: str, width: str) -> None:
+    """Say so when the caller did not end up with the share it asked for.
+
+    Every tmux call above returns 0 whatever it was handed, `main-pane-width` included —
+    so the only evidence that the layout did what it was told is the geometry afterwards.
+    Without this the three ways it can go wrong all produce the outcome it exists to
+    prevent, silently: the caller in the narrow pane and the run exiting 0.
+    """
+    measured = run(['tmux', 'display-message', '-p', '-t', caller, '#{pane_width} #{window_width}'])
+    if measured.returncode != 0 or len(measured.stdout.split()) != 2:
+        return
+
+    got, window = (int(part) for part in measured.stdout.split())
+    wanted = window * int(width.rstrip('%')) // 100 if width.endswith('%') else int(width)
+    if abs(got - wanted) > max(2, wanted // 10):
+        say_warning(f'This pane is {got} columns of {window}, not the {wanted} that --width asked for')
+
+
+def pane_state(pane: str) -> tuple[Pane, int | None]:
+    """Whether a pane is running, dead with a status to read, or gone entirely.
+
+    `display-message` cannot answer the first question: it exits 0 and prints an empty
+    line for a pane that no longer exists, so a check built on it reads every dead pane
+    as healthy. `list-panes` refuses, and that refusal is the existence test.
+
+    It answers for the whole window the pane is in rather than for the pane, so the row
+    has to be found by id — a window's other panes are the caller's own and say nothing
+    about this one.
+    """
+    listed = run(['tmux', 'list-panes', '-t', pane, '-F', '#{pane_id} #{pane_dead} #{pane_dead_status}'])
+    if listed.returncode != 0:
+        return Pane.GONE, None
+
+    for row in listed.stdout.splitlines():
+        pane_id, _, rest = row.partition(' ')
+        if pane_id != pane:
+            continue
+        dead, _, status = rest.partition(' ')
+        if dead != '1':
+            return Pane.RUNNING, None
+        return Pane.DEAD, int(status) if status.strip().isdigit() else None
+    return Pane.GONE, None
+
+
+def last_words(pane: str) -> str:
+    """What a dead pane printed before it died, scrollback included.
+
+    Without `-S -` the capture starts at the top of the visible pane, and a command that
+    wrote one line and exited leaves that line above the window — so the capture comes
+    back as blank lines and tmux's own "Pane is dead" notice, which says nothing the
+    exit status has not already said.
+    """
+    captured = run(['tmux', 'capture-pane', '-p', '-S', '-', '-E', '-', '-t', pane])
+    if captured.returncode != 0:
+        return ''
+    return '\n'.join(line for line in captured.stdout.splitlines() if line.strip())
+
+
+def pane_process(pane: str) -> int | None:
+    """The pid of the process tmux started in a pane, or None where it cannot be read.
+
+    For a pane this command made, that pid is the `claude` process itself, which is what
+    the session registry is keyed on. tmux runs a pane command through `sh -c`, and a
+    simple command is exec'd rather than forked, so the pid survives the shell.
+
+    It is not the session's pid for a pane someone typed `claude` into — there it is the
+    shell, and the session is its child. That is exactly why this is only ever asked about
+    a pane this command just created, and never used to identify a session in general.
+    """
+    found = run(['tmux', 'display-message', '-p', '-t', pane, '#{pane_pid}'])
+    process = found.stdout.strip()
+    return int(process) if found.returncode == 0 and process.isdigit() else None
+
+
+def claimants(sessions: Sequence[Session], pane: str) -> list[Session]:
+    """Every registered session claiming one pane, by the only part of the address that
+    survives the pane being moved.
+
+    The registry spells a pane as `<tmux session>:@<window>.%<pane>`, and only the last
+    field is compared. The other two rot when the pane moves. `tmux break-pane` gives it a
+    new window and `tmux join-pane` can give it a new tmux session, while the registry
+    keeps the address it recorded at startup — so the address as a whole names a place the
+    pane has left.
+
+    A tmux session name may itself contain a dot, so the split has to come from the right.
+    """
+    return [session for session in sessions if session.tmux and session.tmux.rsplit('.', 1)[-1] == pane]
+
+
+def session_in_pane(sessions: Sequence[Session], pane: str, pane_pid: int | None) -> str | None:
+    """The registered session running in one pane.
+
+    Not matched on the working directory, which is ambiguous by design here. A session
+    with no slug stands in the primary checkout on purpose, and that is the one directory
+    several sessions share — so a directory match returns whichever of them the registry
+    lists first. Handing a caller the wrong name sends a real instruction to a session that
+    never asked for it.
+
+    A pane id does not identify a session on its own. Two things break it. A `claude`
+    started from inside another session's pane inherits that pane's $TMUX_PANE and
+    registers against it, so one pane can carry a second row for as long as that child
+    lives. And ids are numbered per tmux server rather than per machine, so a row left by
+    a session whose server is gone resolves to a live pane on another server belonging to
+    someone else.
+
+    The pid separates them wherever tmux will give one up, and it is compared rather than
+    used as a tiebreak — a claimant that registers before the real session would otherwise
+    be answered with, and the caller's next act is to send that name an instruction.
+
+    Where `pane_pid` could not be read the pane alone decides, which is the fallback and
+    not the rule. It is reached when tmux will not report a pid for the pane, which almost
+    always means the pane is already gone — and the wait has a pane check of its own for
+    exactly that.
+    """
+    for session in claimants(sessions, pane):
+        if pane_pid is None or session.pid == pane_pid:
+            return session.name
+    return None
+
+
+def await_registration(pane: str, timeout: float) -> Arrival:
+    """Wait for the new session to appear in the registry, and name it.
+
+    The name is the product of the whole command: a caller's next move is a message
+    addressed to it, and there is nothing to address until the session has registered.
+
+    The pane is watched alongside, because a launch that failed to start leaves no
+    session to wait for — and without this the whole timeout is spent to report nothing
+    but that the timeout elapsed. The corpse is read for its exit status and then killed,
+    since `remain-on-exit` would otherwise leave a dead pane in the window forever.
+
+    The command echo is off for the loop. It is one `claude-sessions` per second, and a
+    reader watching for a name does not need sixty copies of the same line.
+    """
+    say_info('Waiting for the session to register')
+    deadline = time.monotonic() + timeout
+    echoing = ECHO
+    set_echo(False)
+    try:
+        # Read once, before anything has had time to move: the pane's process does not
+        # change for its lifetime, and it is what tells the session apart from any other
+        # row claiming the same pane.
+        pane_pid = pane_process(pane)
+        while time.monotonic() < deadline:
+            time.sleep(POLL_SECONDS)
+
+            sessions = live_sessions()
+            if sessions is None:
+                return Arrival(Registration.REGISTRY_UNREADABLE)
+            name = session_in_pane(sessions, pane, pane_pid)
+            if name:
+                return Arrival(Registration.REGISTERED, session=name)
+
+            # A row claiming this pane and carrying no pid at all is the producer's output
+            # having changed shape, not a session still starting. Waiting it out would
+            # spend the whole timeout and then blame `claude` for a pane that is healthy.
+            if pane_pid is not None and any(claimant.pid is None for claimant in claimants(sessions, pane)):
+                return Arrival(Registration.NO_PID_IN_REGISTRY)
+
+            state, status = pane_state(pane)
+            if state is Pane.RUNNING:
+                continue
+            output = last_words(pane) if state is Pane.DEAD else ''
+            run(['tmux', 'kill-pane', '-t', pane])
+            return Arrival(Registration.PANE_DIED, status=status, output=output)
+    finally:
+        set_echo(echoing)
+
+    return Arrival(Registration.TIMED_OUT)
+
+
+def announce(spawned: Spawned, timeout: float) -> None:
+    """Everything a human reads about a spawn, on stderr beside the rest of it."""
+    say_ok(f'Spawned in pane {spawned.pane}, {display_path(spawned.path)}')
+    if spawned.branch:
+        say_info(f'branch {spawned.branch}')
+    say_info(f'brief {display_path(spawned.brief)}')
+
+    arrival = spawned.arrival
+    match arrival.registration:
+        case Registration.REGISTERED:
+            say_ok(f'Session {arrival.session}')
+        case Registration.PANE_DIED:
+            status = 'an unreadable status' if arrival.status is None else f'status {arrival.status}'
+            say_error(f'`claude` exited with {status} before a session registered')
+            if arrival.output:
+                say_info('what the pane printed:')
+                ERR.print(escape(arrival.output), highlight=False)
+        case Registration.TIMED_OUT:
+            say_error(f'No session registered in {spawned.pane} within {timeout:g}s')
+            say_info('The pane is still running; `claude-sessions` will name it if it registers late')
+        case Registration.REGISTRY_UNREADABLE:
+            say_error('claude-sessions stopped answering, so the session in that pane cannot be named')
+        case Registration.NO_PID_IN_REGISTRY:
+            say_error('claude-sessions reported a session in that pane with no pid, so it cannot be told from a nested one')
+            say_info('The pane is running; the field this needs is `pid` in claude-sessions --json')
+
+
+def cmd_spawn(slug: str | None, brief: str, *, below: bool, width: str, timeout: float, as_json: bool) -> int:
+    """Start a Claude session in a pane of its own, and name it.
+
+    Everything that can refuse is settled before anything is created, per
+    `cli-design.md` § "Everything that can refuse runs before the first byte of data" —
+    a missing tmux, an absent brief or an occupied worktree costs nothing to discover
+    and would otherwise be found after a pane, a branch and a directory already exist.
+    """
+    caller = require_caller_pane()
+    require_tool('claude', 'It is the session this starts')
+    require_tool('claude-sessions', 'It is what names the session that lands in the pane')
+
+    source = Path(brief).expanduser()
+    if not source.is_file():
+        raise Refused(
+            f'No brief at {source}',
+            'Write the brief to a file — a prompt long enough to be one does not survive quoting',
+            fault=Fault.BRIEF_MISSING,
+        )
+    if not source.read_text().strip():
+        raise Refused(f'{source} is empty', 'A session given nothing to read will ask what it is for', fault=Fault.BRIEF_EMPTY)
+
+    cwd = Path.cwd()
+    checkout = require_checkout(cwd)
+    # Copied before the worktree is cut, so the one thing a later refusal can leave
+    # behind is a file in a state directory rather than a branch and a checkout.
+    kept = keep_brief(source, checkout.name, slug)
+    where = resolve_destination(cwd, checkout, slug)
+
+    # A split can still be refused after the worktree exists — tmux runs out of room in a
+    # full window, which is the everyday case for a coordinator dispatching a fourth
+    # agent. What it would leave is a branch and a provisioned checkout that `sweep` will
+    # not collect, because nothing was ever pushed and it is held as UNPUBLISHED. So the
+    # one thing this command created gets unwound before the refusal reaches the caller.
+    try:
+        pane = open_pane(caller, where.path, BRIEF_PROMPT.format(brief=kept), below=below)
+    except Refused:
+        if where.created:
+            unwind(checkout, where)
+        raise
+
+    if not below:
+        stack_beside(caller, width)
+
+    spawned = Spawned(
+        repo=checkout.name,
+        path=where.path,
+        branch=where.branch,
+        worktree=where.worktree,
+        pane=pane,
+        brief=kept,
+        arrival=await_registration(pane, timeout),
+    )
+
+    # The prose first, so a terminal interleaving the two streams reads in the order the
+    # run happened rather than ending on the line it opened with.
+    announce(spawned, timeout)
+
+    if as_json:
+        OUT.print(json.dumps(spawned.as_json(), indent=2), markup=False, highlight=False)
+    elif spawned.arrival.session:
+        OUT.print(spawned.arrival.session, markup=False, highlight=False)
+
+    # Non-zero without a name, because the caller's next move is a message to it. A spawn
+    # reported as success with nothing to address is the failure that reads as working.
+    return 0 if spawned.arrival.registration is Registration.REGISTERED else 1
+
+
+def cmd_land() -> int:
+    cwd = Path.cwd()
+    checkout = require_checkout(cwd)
+    if not in_linked_worktree(cwd):
+        raise Refused(
+            "Not in a worktree — 'land' is what hands one back to the primary checkout",
+            "Run 'worktree new <slug>' first, or commit directly if no other session is here",
+        )
+    require_clean(cwd)
+
+    base = default_branch(cwd)
+    branch = git(cwd, 'rev-parse', '--abbrev-ref', 'HEAD')
+    path = Path(git(cwd, 'rev-parse', '--show-toplevel'))
+
+    git_effect(cwd, 'fetch', '--quiet', 'origin')
+    ahead = int(git(cwd, 'rev-list', '--count', f'origin/{base}..HEAD'))
+    # Not `ahead == 0`, which a branch rewritten on its way onto the base branch never
+    # reaches. The rebase below would replay patches whose content is already there,
+    # and the push would put a second copy of merged work on the base branch.
+    #
+    # True refuses and both False and None proceed, which is the opposite of what the
+    # other two callers do with None. They decide a deletion off the measurement; this
+    # one does not. `dispose` runs after a push that returned zero, so what proves the
+    # commits are elsewhere is the push rather than anything measured here. A landing
+    # git could not read costs a rebase that finds nothing to replay.
+    if landed(cwd, base) is True:
+        raise Refused(f'Nothing to land: the work here is already on origin/{base}')
+
+    # Never abort on our own initiative: a conflicted rebase holds the only copy of
+    # the resolution in progress, and the standard resolves a conflict inside the
+    # commit that caused it rather than by discarding and retrying.
+    if git_effect(cwd, 'rebase', '--quiet', f'origin/{base}').returncode != 0:
+        raise Refused(
+            "Rebase stopped on a conflict — resolve it here, then run 'worktree land' again",
+            'Repair everything the commit broke before `git rebase --continue`',
+        )
+
+    if git_effect(cwd, 'push', '--quiet', 'origin', f'HEAD:{base}').returncode != 0:
+        raise Refused(f"Push rejected — origin/{base} moved again; run 'worktree land' to retry")
+
+    say_ok(f'Landed {ahead} commit(s) on {base}')
+    outcome, detail = dispose(checkout, path, branch, force=False)
+    if outcome is Disposal.NOT_REMOVED:
+        say_warning(f'{display_path(path)} is still here: {detail}')
+    elif outcome is Disposal.BRANCH_KEPT:
+        say_warning(f'Removed {display_path(path)}, but branch {branch} is still here: {detail}')
+
+    catch_up_checkout(checkout, base)
+    say_info(f'cd {checkout}')
+    return 0
+
+
+def catch_up_checkout(checkout: Path, base: str) -> None:
+    """The checkout is now behind, and in dotfiles a checkout is deployed machine
+    state — so leaving it stale is not cosmetic.
+
+    Fast-forward it only when it is clean and on the branch we landed on: another
+    session may be working there, and its tree is not ours to move.
+    """
+    head = git(checkout, 'rev-parse', '--abbrev-ref', 'HEAD')
+    if head != base:
+        say_warning(f'{checkout} is on {head}, not {base} — catch it up yourself')
+        return
+    if git(checkout, 'status', '--porcelain'):
+        say_warning(f'{checkout} has local changes — run `git fetch origin && git rebase origin/{base}` there when free')
+        return
+
+    git_effect(checkout, 'fetch', '--quiet', 'origin')
+    git_effect(checkout, 'rebase', '--quiet', f'origin/{base}')
+    say_ok(f'Caught up {checkout}')
+
+
+def cmd_drop(force: bool) -> int:
+    cwd = Path.cwd()
+    checkout = require_checkout(cwd)
+    if not in_linked_worktree(cwd):
+        raise Refused('Not in a worktree')
+
+    base = default_branch(cwd)
+    branch = git(cwd, 'rev-parse', '--abbrev-ref', 'HEAD')
+    path = Path(git(cwd, 'rev-parse', '--show-toplevel'))
+
+    if not force:
+        require_clean(cwd)
+        # The same question `sweep` asks, for the same reason: a count above zero is a
+        # rewritten history as often as it is unlanded work, and the two need opposite
+        # answers. This one runs on local refs alone, so a base branch nobody has
+        # fetched since the merge reads as unlanded — which refuses, and refusing is
+        # the half of this that costs nothing to be wrong about.
+        elsewhere = landed(cwd, base)
+        if elsewhere is None:
+            raise Refused(
+                f'Cannot tell whether the work here is already on origin/{base}',
+                "Fetch and look; 'worktree drop --force' drops it either way",
+            )
+        if not elsewhere:
+            unlanded = int(git(cwd, 'rev-list', '--count', f'origin/{base}..HEAD'))
+            raise Refused(
+                f'{unlanded} commit(s) here, and origin/{base} does not match them at the paths they touch',
+                f"'git cherry origin/{base} HEAD' if they landed under new shas; "
+                "'worktree land' to keep them, 'worktree drop --force' to lose them",
+            )
+
+    outcome, detail = dispose(checkout, path, branch, force=True)
+    if outcome is Disposal.NOT_REMOVED:
+        raise Refused(f'Could not drop {display_path(path)}: {detail}')
+    if outcome is Disposal.BRANCH_KEPT:
+        # The drop itself happened, so this is a warning rather than a refusal.
+        say_warning(f'Branch {branch} is still here: {detail}')
+
+    say_ok(f'Dropped {path}')
+    say_info(f'cd {checkout}')
+    return 0
+
+
+def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
+    """Dispose of every worktree whose work is finished, from wherever you are standing.
+
+    `land` and `drop` both read Path.cwd() and refuse outside a linked worktree, so
+    neither can reach one you are not in. Work that goes through a PR is merged on the
+    forge and the remote branch deleted there, and nothing ever runs `drop` — so the
+    directories accumulate, and every tool that reports branch state reports each one
+    forever.
+    """
+    rows = scan(worktree_root(), repo_filter)
+    unreached = fetch_checkouts(rows)
+    worktrees = describe_all(rows, live_sessions())
+
+    # Owner by path rather than by `repo`, which is a directory basename and so is not
+    # unique across a machine: ~/code/thing and ~/tools/thing are two repos with one
+    # name. This is the command that deletes, so it asks git which checkout owns each
+    # tree rather than joining on a string that can collide.
+    owners: dict[Path, Path] = {}
+    remotes: dict[Path, frozenset[str] | None] = {}
+    for worktree in worktrees:
+        if worktree.checkout:
+            continue
+        owner = primary_checkout(worktree.path)
+        if owner is None:
+            continue
+        owners[worktree.path] = owner
+        if owner not in remotes:
+            remotes[owner] = remote_branches(owner)
+
+    finished: list[Worktree] = []
+    kept: list[tuple[Worktree, Kept]] = []
+    for worktree in worktrees:
+        if worktree.checkout or worktree.path not in owners:
+            continue
+        owner = owners[worktree.path]
+        evidence = Evidence(
+            published=published(worktree.path, worktree.branch),
+            fetched=owner not in unreached,
+            remote=remotes[owner],
+            landed=landed(worktree.path, worktree.base),
+        )
+        reason = held_by(worktree, evidence)
+        if reason is None:
+            finished.append(worktree)
+        else:
+            kept.append((worktree, reason))
+
+    for worktree, reason in kept:
+        say_info(f'{display_path(worktree.path)} — kept, {reason}')
+
+    if not finished:
+        scope = f' of {repo_filter}' if repo_filter else ''
+        say_ok(f'Nothing to sweep: {len(kept)} worktree(s){scope} checked, none merged with its remote branch deleted')
+        return 0
+
+    ERR.print('')
+    for worktree in finished:
+        ERR.print(f'  [red]remove[/] {escape(display_path(worktree.path))}  [dim]{escape(worktree.branch)}[/]', highlight=False)
+    ERR.print('')
+
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            # Usage, not failure: the remedy is an argument, and only that is worth
+            # reinvoking with. Exit 1 here would be the code a half-finished removal
+            # also returns, which a caller has to tell apart to know whether to retry.
+            say_error(f'Refusing to remove {len(finished)} worktree(s) with no terminal to ask')
+            say_info('Pass --yes to sweep unattended')
+            return USAGE_ERROR
+        if not confirm(f'Remove {len(finished)} worktree(s) and delete their branches?'):
+            say_info('Nothing removed')
+            return 0
+
+    swept = 0
+    for worktree in finished:
+        # Re-read against the branch these changes actually merged into, immediately
+        # before the write. Everything above was measured during the scan, and a session
+        # that committed into the worktree since then would lose the only copy. Anything
+        # other than a plain True holds the tree, so a read that failed cannot pass for
+        # a branch with nothing left to lose — and it keeps its own reason here, as it
+        # does on the scan path, because the two send a reader to different places.
+        still_landed = landed(worktree.path, worktree.base)
+        if still_landed is not True:
+            reason = Kept.UNLANDED if still_landed is False else Kept.UNREADABLE_LANDING
+            say_warning(f'{display_path(worktree.path)} — kept, {reason}')
+            continue
+
+        outcome, detail = dispose(owners[worktree.path], worktree.path, worktree.branch, force=False)
+        if outcome is Disposal.NOT_REMOVED:
+            say_warning(f'{display_path(worktree.path)} is still here: {detail}')
+            continue
+        if outcome is Disposal.BRANCH_KEPT:
+            say_warning(f'Removed {display_path(worktree.path)}, but branch {worktree.branch} is still here: {detail}')
+            continue
+        swept += 1
+
+    say_ok(f'Swept {swept} of {len(finished)} worktree(s)')
+    return 0 if swept == len(finished) else 1
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog='worktree',
+        description='Give a session its own index, and land it on main without a PR.',
+        epilog=(
+            'Worktrees live under $WORKTREE_ROOT (default ~/.worktrees/<repo>/<slug>). '
+            "'list' and 'choose' read every repo there. "
+            'Every command it runs is echoed to stderr as you could re-type it; -q hides them. '
+            "For work that grew into a large feature, 'git push -u origin HEAD' and open a PR instead."
+        ),
+    )
+    commands = parser.add_subparsers(dest='command', metavar='<command>')
+
+    # argparse parses a group's options before the subcommand name, so a -q
+    # declared on `parser` turns `worktree land -q` into an unrecognized argument.
+    # A parent puts it on every leaf, which is where it is typed.
+    quiet = argparse.ArgumentParser(add_help=False)
+    quiet.add_argument('-q', '--quiet', action='store_true', help='hide the commands this runs')
+
+    new = commands.add_parser(
+        'new',
+        parents=[quiet],
+        help="isolate a session off origin's default branch, run the repo's `task setup`, print the path",
+    )
+    new.add_argument('slug', help='names both the directory and the branch')
+
+    spawn = commands.add_parser(
+        'spawn',
+        parents=[quiet],
+        help='start a Claude session in a pane: with a slug in a worktree, without one in the checkout',
+        description=(
+            "Split the caller's pane, launch `claude` against a written brief, and print the name the session "
+            'registered under. '
+            'A slug names the branch, so `spawn <slug>` creates or attaches a worktree and puts the session in '
+            'it, and `spawn` with no slug stands the session in the primary checkout with no branch — which is '
+            'what a reviewer needs, since a session inside a worktree is refused any `git -C` that leaves it. '
+            'The brief is copied and the session reads the copy, whose path `--json` returns. '
+            'It exits non-zero when no session registered, because the name is the product.'
+        ),
+    )
+    spawn.add_argument(
+        'slug', nargs='?', help='names the directory and the branch; without it the session stands in the checkout and gets no branch'
+    )
+    spawn.add_argument(
+        '--brief', required=True, metavar='PATH', help='the file the session is told to read; it is copied, and the copy is what it reads'
+    )
+    spawn.add_argument('--below', action='store_true', help='split under the caller rather than beside it, and leave the layout alone')
+    # No default here, so an absent flag is distinguishable from one spelling the default
+    # out. `cli-design.md` § "A sentinel never steals a value the caller can mean" —
+    # with the default as the sentinel, `--below --width 66%` reads as no --width at all.
+    # argparse also runs a help string through %-formatting, so a literal percent in the
+    # default has to arrive doubled or `--help` dies rather than the command.
+    spawn.add_argument(
+        '--width',
+        metavar='WIDTH',
+        help=f"the caller's share of the window after the split, in columns or a percentage (default {MAIN_PANE_WIDTH.replace('%', '%%')})",
+    )
+    spawn.add_argument(
+        '--timeout',
+        type=float,
+        default=REGISTRATION_TIMEOUT,
+        metavar='SECONDS',
+        help=f'how long to wait for the session to register (default {REGISTRATION_TIMEOUT:g})',
+    )
+    spawn.add_argument('--json', action='store_true', dest='as_json', help='the session, pane, path, branch and brief for a script to read')
+    spawn.set_defaults(subparser=spawn)
+
+    commands.add_parser('land', parents=[quiet], help='rebase, push onto the default branch, then clean up')
+
+    drop = commands.add_parser('drop', parents=[quiet], help='abandon the worktree you are in, without landing it')
+    drop.add_argument('--force', action='store_true', help='throw the work away, commits included')
+
+    # `sweep` is the counterpart to `drop`, not a bulk spelling of it. `drop` abandons
+    # work that was never landed and needs you standing in it; `sweep` disposes of work
+    # that is already merged, anywhere on the machine, and refuses anything unlanded.
+    sweep = commands.add_parser(
+        'sweep',
+        parents=[quiet],
+        help='remove every finished worktree on the machine: merged, and deleted on the remote',
+        description=(
+            'Remove every worktree whose work is finished, and delete its branch. '
+            'A worktree qualifies only when its tree is clean, no session is standing in it, '
+            'its changes are already on origin/<base>, and the branch it was pushed to '
+            'under its own name has since been deleted on the remote. Everything else is kept, '
+            'with the reason printed. '
+            'It lists what it will remove and asks first; without a terminal it removes nothing '
+            'unless --yes is passed.'
+        ),
+    )
+    sweep.add_argument('repo', nargs='?', help='narrow to one repo')
+    sweep.add_argument('--yes', action='store_true', help='remove without asking; required when there is no terminal')
+
+    listing = commands.add_parser('list', parents=[quiet], help="every worktree on this machine, or one repo's")
+    listing.add_argument('repo', nargs='?', help='narrow to one repo')
+    listing.add_argument('--json', action='store_true', dest='as_json', help='the same rows for a script to read')
+    # Scope is structural here: `list` is the whole machine and `list <repo>` is
+    # one repo. --all is caught rather than left to argparse's "unrecognized
+    # arguments", because it is the spelling a flag-shaped habit reaches for and
+    # the error is the only chance to teach the argument.
+    listing.add_argument('--all', action='store_true', help=argparse.SUPPRESS)
+    listing.set_defaults(subparser=listing)
+
+    show = commands.add_parser('show', parents=[quiet], help='what one worktree carries, and which session is in it')
+    show.add_argument('path', nargs='?', help='defaults to the worktree you are standing in')
+
+    choose = commands.add_parser('choose', parents=[quiet], help='pick one with fzf; prints the path it chose')
+    choose.add_argument('repo', nargs='?', help='narrow to one repo')
+
+    return parser
+
+
+def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    match args.command:
+        case 'new':
+            return cmd_new(args.slug)
+        case 'spawn':
+            # `--width` is spawn's own flag and `--below` is what voids it: a below split
+            # leaves the layout alone, so main-pane-width would parse and reach nothing.
+            # `cli-design.md` § "A flag the run cannot honour says so" makes that a usage
+            # error rather than a silent no-op.
+            if args.below and args.width is not None:
+                args.subparser.error('no --width with --below: a split below leaves the layout alone, so there is no main pane to size')
+            # Validated here rather than downstream, because tmux takes anything and then
+            # falls back to the 80 columns this flag exists to replace.
+            if args.width is not None and not usable_width(args.width):
+                args.subparser.error(f'--width takes columns or a percentage, like 120 or {MAIN_PANE_WIDTH}, not {args.width!r}')
+            return cmd_spawn(
+                args.slug,
+                args.brief,
+                below=args.below,
+                width=args.width or MAIN_PANE_WIDTH,
+                timeout=args.timeout,
+                as_json=args.as_json,
+            )
+        case 'land':
+            return cmd_land()
+        case 'drop':
+            return cmd_drop(args.force)
+        case 'sweep':
+            return cmd_sweep(args.repo, args.yes)
+        case 'list':
+            if args.all:
+                args.subparser.error("no --all: 'worktree list' is already every repo, and 'worktree list <repo>' narrows it")
+            return cmd_list(args.repo, args.as_json)
+        case 'show':
+            return cmd_show(args.path)
+        case 'choose':
+            return cmd_choose(args.repo)
+        case _:
+            parser.print_help()
+            return 0
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    set_echo(not getattr(args, 'quiet', False))
+    try:
+        return dispatch(parser, args)
+    except Refused as refusal:
+        say_error(refusal.reason)
+        for hint in refusal.hints:
+            say_info(hint)
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
