@@ -20,6 +20,7 @@ dependencies = [
 [project.scripts]
 dotfiles = "dotfiles.main:app"
 packages = "dotfiles.declaration:cli"
+worktree = "dotfiles.worktree.cli:main"
 
 
 # ---------- Tool Configurations ---------- #

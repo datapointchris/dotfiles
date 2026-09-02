@@ -508,7 +508,7 @@ def resolve_interpreters(config, items):
     """Skip what needs a missing interpreter, or refuse the whole run.
 
     `tests/shell` drives real bash and zsh, `tests/install/test_pluginsync.py` a
-    real tmux, and `tests/apps/test_worktree.py` a real tmux server. A machine
+    real tmux, and `tests/tools/test_worktree.py` a real tmux server. A machine
     without one should skip those cases and still run the rest; CI must do the
     opposite, because a runner image that has no zsh reports green having run a
     third of that directory. Both readings are right for their runner, which is
@@ -567,11 +567,6 @@ def load_app(name: str, platform: str = 'common') -> ModuleType:
 @pytest.fixture(scope='session')
 def aws_profiles():
     return load_app('_aws-profiles')
-
-
-@pytest.fixture(scope='session')
-def worktree_app():
-    return load_app('worktree')
 
 
 @pytest.fixture(scope='session')

@@ -14,6 +14,7 @@ touches the machine.
 from __future__ import annotations
 
 import ast
+import tomllib
 from pathlib import Path
 
 import click
@@ -394,7 +395,31 @@ def test_no_check_offers_a_narrowing(flag: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-SOURCE = sorted((Path(dotfiles.__file__).parent).rglob('*.py'))
+PACKAGE = Path(dotfiles.__file__).parent
+
+
+def sibling_commands() -> set[Path]:
+    """The tools this package ships that are not the `dotfiles` CLI.
+
+    Each is a top-level module or subpackage named by a `[project.scripts]` entry,
+    and each is its own CLI with its own grammar — argparse rather than typer, its
+    own exit codes, its own prompt. The rules in this file are about the tree
+    `dotfiles.main:app` builds, so a sibling satisfying them would be coincidence
+    and a sibling breaking one is not a finding.
+
+    Derived from the declaration rather than listed, so a tool added later is out
+    of scope on the day it arrives. `dotfiles` and `packages` name no module at
+    this level — they resolve into `main.py` and `declaration.py` — so nothing the
+    CLI owns is excluded by asking this question.
+    """
+    scripts = tomllib.loads((PACKAGE.parent.parent / 'pyproject.toml').read_text())['project']['scripts']
+    roots = (PACKAGE / name.replace('-', '_') for name in scripts)
+    return {root for root in roots if root.is_dir()} | {root.with_suffix('.py') for root in roots if root.with_suffix('.py').is_file()}
+
+
+SIBLINGS = sibling_commands()
+
+SOURCE = sorted(path for path in PACKAGE.rglob('*.py') if path not in SIBLINGS and not any(parent in SIBLINGS for parent in path.parents))
 
 
 def exit_arguments() -> list[tuple[str, int, ast.expr | None]]:
