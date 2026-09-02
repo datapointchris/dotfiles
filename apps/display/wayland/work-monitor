@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# work-monitor - Route this machine's spare HDMI output to the work desk monitor
+# work-monitor - Route this machine's spare HDMI output to a second desk's monitor
 #
 # The output stays disabled in hyprland.conf so Hyprland never treats it as a
 # second monitor. This enables it on demand, parks workspace 9 on it, and
@@ -27,7 +27,7 @@ SCALE="${WORK_MONITOR_SCALE:-1}"
 WORKSPACE="9"
 
 # Intent has to be tracked here rather than read back from `hyprctl monitors`:
-# whenever the Dell is showing the work laptop's input it drops hotplug detect,
+# whenever the Dell is showing the other machine's input it drops hotplug detect,
 # so an enabled output vanishes from that list. Querying it would make toggle
 # fail in exactly the situation this tool exists for.
 STATE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/work-monitor/enabled"
@@ -49,7 +49,7 @@ enable_output() {
   hyprctl dispatch workspace "$WORKSPACE" >/dev/null
   mkdir -p "$(dirname "$STATE_FILE")"
   touch "$STATE_FILE"
-  print_success "$OUTPUT enabled — workspace $WORKSPACE is on the work desk monitor"
+  print_success "$OUTPUT enabled — workspace $WORKSPACE is on the second desk's monitor"
 
   # Hyprland accepts the rule for a connector with no signal yet, so a warning
   # beats an error: selecting the input on the Dell is what completes it.

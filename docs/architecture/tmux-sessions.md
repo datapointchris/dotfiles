@@ -207,7 +207,7 @@ kill and rebuild because nothing in it holds work. That is exactly what a config
 well. sesh has no pane key — `[[window]]` carries only `name`, `startup_script` and `path`, and
 issue #198 asking for panes was closed without them — so the split runs inline in
 `startup_command` via `tmux split-window`. It replaced a bash app that did the same thing in 150
-lines, and the file lives in `configs/trust/fleet/`, so the coordinate keeps it off the work box
+lines, and the file lives in `configs/trust/fleet/`, so the coordinate keeps it off nonfleet machines
 without the app's `command -v` probing.
 
 `prefix s` and `prefix w` are not two versions of the same picker. They sit at different levels,

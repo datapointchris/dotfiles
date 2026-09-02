@@ -10,7 +10,7 @@ lifecycle — see `tests/e2e/`.
 it takes. The shape is a two-tier image strategy, and that is the part worth
 explaining:
 
-1. Base OS (`ubuntu:26.04`, matching the work WSL)
+1. Base OS (`ubuntu:26.04`, matching the WSL machine)
 2. A reusable image with system packages already installed
 
 Tier 2 is why a run takes seconds to start rather than minutes: the expensive

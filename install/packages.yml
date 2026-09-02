@@ -166,7 +166,7 @@ system_packages:
   # Stays in system_packages, NOT cargo_packages: upstream (XAMPPRocky/tokei)
   # stopped attaching release binaries after v13.0.0-alpha.0, so `cargo binstall`
   # finds nothing and falls back to compiling from source — slow on workstations
-  # and broken on the offline/firewalled WSL work box. pacman/brew ship maintained
+  # and broken on the offline/firewalled WSL box. pacman/brew ship maintained
   # binaries. See docs/learnings/cargo-binstall-needs-release-binaries.md
   - name: tokei
     pacman: tokei
@@ -504,7 +504,7 @@ system_packages:
     description: Network scanner
 
   # apt-only: mount-cifs in shell/host/wsl/wsl.sh and the named wrappers around it in
-  # the work box's machine-local ~/.local/shell/local.sh are the only consumers.
+  # a nonfleet box's machine-local ~/.local/shell/local.sh are the only consumers.
   # Supplies mount.cifs and cifs.upcall — without the latter the kernel
   # cannot resolve a share's hostname and the mount fails as "no route to host"
   # rather than as a missing helper.
@@ -686,7 +686,8 @@ system_packages:
 
   # No `apt:` key deliberately. Upstream's Linux build is a Debian package
   # served from its own apt repo, so an apt entry would work — and would put a
-  # personal Anthropic account's desktop app on the work box. AUR-only keeps it
+  # personal Anthropic account's desktop app on a machine off the fleet. AUR-only
+  # keeps it
   # on the fleet. The PKGBUILD repackages that same official .deb payload from
   # downloads.claude.ai with pinned checksums, so nothing here is a third-party
   # build of the app.
@@ -985,7 +986,7 @@ github_releases:
     requires_wsl_host: true
     # reports_version: it takes `-o` and `-i` and nothing else. Both `--version` and
     # `version` exit 1 onto its usage text, so currency is a question the binary has
-    # no way to answer and the work box carried an UNKNOWN row for it on every check.
+    # no way to answer and the WSL box carried an UNKNOWN row for it on every check.
     reports_version: false
     checksum: unpublished
     description: Windows clipboard bridge for WSL (enables Neovim/tmux clipboard integration)
@@ -1267,7 +1268,7 @@ cargo_packages:
 #
 # `repo` and `asset` are required, not annotation. They are the GitHub coordinate
 # the offline channel installs from, and the machine that needs these most cannot
-# reach winget at all — its employer network blocks the Store outright. A row
+# reach winget at all — its network blocks the Store outright. A row
 # added without them stages nothing there, on the one machine with no other
 # install route. `create_bundle.add_winget_binaries` reads both;
 # `providers.winget.stage` expands `{version}` and `{version_num}` in `asset`.
@@ -1444,7 +1445,7 @@ npm_globals:
     # tree-sitter-cli is a github_releases entry above, NOT an npm package. npm's
     # post-install script downloads the binary from GitHub directly, bypassing the
     # offline-cache path, and that download fails on a firewalled machine (the WSL
-    # work box). The github_releases provider integrates with the offline bundle, so
+    # box). The github_releases provider integrates with the offline bundle, so
     # it works online AND offline. Do not re-migrate to npm.
 
 # ================================================================
@@ -1699,7 +1700,7 @@ go_tools:
 
   # {Os_mac} exists for this asset naming: upstream capitalizes the kernel name
   # but ships macOS rather than Darwin. Without a binary_pattern the offline
-  # bundler skips the tool, and the work box then falls through to `go install`
+  # bundler skips the tool, and the offline box then falls through to `go install`
   # — which its firewall intercepts.
   - name: ascii-image-converter
     package: github.com/TheZoraiz/ascii-image-converter

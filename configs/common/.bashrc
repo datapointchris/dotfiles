@@ -32,7 +32,7 @@ unset layer_file
 # Machine-local file, after the layers so it can build on what they exported.
 # Guarded where the layers above are not, and for the opposite reason: this one
 # is declared in `install/flags.yml` and never deployed, because it holds shell
-# code that deliberately stays out of this repo — employer hostnames and the
+# code that deliberately stays out of this repo — internal hostnames and the
 # like. safekeep restores it, so it is legitimately absent between an apply and
 # that restore, and `dotfiles check` is what reports it rather than this line.
 [[ -f "$SHELL_DIR/local.sh" ]] && source "$SHELL_DIR/local.sh"

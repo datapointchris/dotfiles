@@ -174,7 +174,7 @@ class Flag:
 class Requirement:
     """A machine-local value or file the repo declares and never contains.
 
-    An employer's hostname and an account name are not the repo's to know, so it
+    An internal hostname and an account name are not the repo's to know, so it
     declares that a machine needs one and `check` reports it missing. `path` is
     empty for a value and set for a file, which is the only difference between
     the two and not worth a second class.
@@ -232,7 +232,7 @@ class Requirement:
 
     Resolved against *this machine's* register, so a name it does not declare is a
     precondition that does not apply rather than one that failed. `local.sh` is
-    required on both halves of the work laptop and only the WSL half declares
+    required on both halves of one laptop and only the WSL half declares
     `WINDOWS_USER`; the Windows half is native, reaches no `/mnt/c`, and needs
     nothing.
     """
@@ -307,7 +307,7 @@ class Machine:
     Its own field rather than a `SUBSCRIPTIONS` entry, because there is no catalog
     section behind it — the same shape as `FEATURES`. Half the roster is installed
     outside this repo entirely (`aws` through a custom installer, `bbkt` by hand on
-    the work box), so a field on a `packages.yml` row could never reach them.
+    one machine), so a field on a `packages.yml` row could never reach them.
 
     Which tools, and nothing about how each is asked: `resources/auth.py` holds the
     probes and a test asserts the two sets match in both directions.

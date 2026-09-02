@@ -6,7 +6,7 @@ so the bootstrap has nothing to call. What is deliberately not duplicated is
 where a staged bundle lives — `paths.staging_dir()` answers that on both sides.
 
 This exists because staging and converging stopped being one act. install.sh
-ended in `exec dotfiles apply` until a bare run converged a work box nobody had
+ended in `exec dotfiles apply` until a bare run converged a machine nobody had
 asked to converge, and the split that fixed it left `apply --offline` refusing on
 a machine whose only fault was a bundle still in its tarball — with the
 bootstrap, which reinstalls uv and the whole CLI, as the only thing that would

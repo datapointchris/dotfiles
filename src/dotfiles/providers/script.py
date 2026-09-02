@@ -141,7 +141,7 @@ def failure(name: str, completed: effects.Completed) -> str:
     five lines of advice after it, so the tail of a rejected certificate is `please
     visit the webpage mentioned above` and `unable to get local issuer certificate`
     — the text `diagnose.explain` matches on — falls outside the budget. Measured on
-    the work box, 2026-08-17: eight applies recorded a claude-code failure whose
+    a proxied box, 2026-08-17: eight applies recorded a claude-code failure whose
     every line was curl's boilerplate, and the CA advice written for that machine
     never once reached it.
     """

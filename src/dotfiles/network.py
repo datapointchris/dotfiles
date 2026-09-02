@@ -491,8 +491,8 @@ def render(machine: machines.Machine, measurement: Measurement, *, when: str, sy
 
     **The header names the manifest and the kernel, and neither the hostname nor
     the account.** This file is committed, and the one machine whose measurement it
-    carries is behind an employer's firewall — where `socket.gethostname()` is an
-    asset tag and `getpass.getuser()` is a work account. Neither is needed to read
+    carries is behind a corporate firewall — where `socket.gethostname()` is an
+    asset tag and `getpass.getuser()` is an issued account. Neither is needed to read
     a row: what a reader has to know to interpret a block is which manifest was
     resolved and which OS asked, and the manifest name already says which box.
 

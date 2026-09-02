@@ -12,13 +12,13 @@ order: what to type where the network is, and what to type at the blocked box.
 
 ## Two machines and one exchange
 
-The personal box has a network. The work box does not reach GitHub. Everything
-here follows from those two facts and a third: the work box is read-only with
-respect to the personal fleet, so the channel back has to be narrow enough to
-describe in a sentence.
+The connected box has a network. The restricted box does not reach GitHub.
+Everything here follows from those two facts and a third: the restricted box is
+read-only with respect to the fleet, so the channel back has to be narrow enough
+to describe in a sentence.
 
 ```text
-  PERSONAL BOX                                      WORK BOX
+  CONNECTED BOX                                  RESTRICTED BOX
 
   status download ──┐                     ┌── status show   packages, toolchains
         (pull)      │                     │        │
@@ -95,7 +95,7 @@ trust coordinate decides which names count.
 Three `[remote]` settings close the loop with nothing typed: fetching a bundle,
 publishing a status, publishing a run's record. All three default false.
 
-Read that as one decision rather than three. The employer network is what
+Read that as one decision rather than three. The restricted network is what
 decides it: the fault worth avoiding there is a machine reaching a server nobody
 pointed it at. Each leg's module records what its own setting gates —
 `src/dotfiles/reconcile.py`, `src/dotfiles/commands/status.py` and

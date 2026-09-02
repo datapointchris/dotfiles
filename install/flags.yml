@@ -28,7 +28,7 @@
 
 # Machine-local values that must be set by hand below the OVERRIDES marker. The
 # repo knows a machine needs them; it must never know their values, because they
-# are account names, employee IDs, and the like.
+# are account names, issued IDs, and the like.
 #
 # Each entry may narrow to a machine, or to any coordinate axis, or to neither —
 # in which case it applies everywhere. Narrow on the axis that actually decides
@@ -189,10 +189,10 @@ required_files:
   # below and arrived at from the other side of it. There, the consumer is itself
   # `configs/trust/nonfleet/`; here both consumers sit in `configs/common/`, so
   # every machine deploys one and the two nonfleet machines are the two halves of
-  # one work laptop. Naming `wsl-work-workstation` had the Windows half declare no
+  # one laptop. Naming a single machine had the Windows half declare no
   # need for a file it reads: `check` never asked whether it was there and
   # `machines requirements --safekeep` emitted no block to restore it, while the
-  # shell code it holds names the same employer either side of the WSL boundary.
+  # shell code it holds names the same network either side of the WSL boundary.
   # WINDOWS_USER is the WSL half's precondition and not the Windows half's. The
   # file's own wrappers reach the Windows-side home through $winchris, which
   # `shell/host/wsl/wsl.sh` builds from WINDOWS_USER — so on WSL the file can be
@@ -201,7 +201,7 @@ required_files:
   # the precondition resolves as not applicable there rather than as unmet.
   - name: local.sh
     path: ~/.local/shell/local.sh
-    description: Employer infrastructure — the named CIFS mounts and Okta login
+    description: This machine's own infrastructure — the named CIFS mounts and SSO login
     network_trust: nonfleet
     requires_values:
       - WINDOWS_USER
@@ -211,7 +211,7 @@ required_files:
 
   # The default identity off the fleet, where the default is not the personal one.
   # Declared rather than shipped for the same reason as the values above: it names
-  # an employer. Absence is silent in the way that earns a place here — git ignores
+  # an organisation. Absence is silent in the way that earns a place here — git ignores
   # a missing include without a word, so the machine would fall through to
   # useConfigOnly and refuse every commit while naming nothing.
   #
@@ -222,7 +222,7 @@ required_files:
   - name: local.gitconfig
     path: ~/.config/git/local.gitconfig
     description: This machine's default git identity, for repos that are not personal
-    restore: "restore it with safekeep, or rename ~/.config/git/employer.gitconfig if the machine still has one"
+    restore: "restore it with safekeep, or rename whatever the machine already carries as its non-personal identity"
     network_trust: nonfleet
     consumers:
       - configs/trust/nonfleet/.config/git/nonfleet.gitconfig

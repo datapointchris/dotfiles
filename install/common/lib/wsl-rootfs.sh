@@ -23,7 +23,7 @@
 
 WSL_ROOTFS_RELEASES_BASE="https://releases.ubuntu.com"
 
-# The release the work machine runs. Both the image manager and the e2e test read
+# The release the WSL machine runs. Both the image manager and the e2e test read
 # it from here so there is one place to bump when that machine moves again.
 export DEFAULT_UBUNTU_VERSION="26.04"
 

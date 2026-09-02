@@ -2,7 +2,7 @@
 
 ## Problem
 
-The offline WSL work box died at the node phase with `fnm not found`, even though
+The offline WSL box died at the node phase with `fnm not found`, even though
 `fnm` had a full `cargo_packages` entry in `packages.yml` — github repo, binary
 pattern, description, tags. Three independent faults stacked up behind that one
 message:
