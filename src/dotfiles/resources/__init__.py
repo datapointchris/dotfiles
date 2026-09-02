@@ -18,11 +18,14 @@ before the report was printed and before anything upstream in the stage order
 installed a toolchain, so the state it decided from may be minutes old. It
 refuses rather than forces.
 
-`Escalates` is a parameter of `perform` and of nothing else, which is what makes
-"the read-only verbs never escalate" structural rather than a promise: `observe`
-is not handed one, so the code to ask for a password is not reachable from the
-half `plan` and `check` run. Every resource but `system` ignores it, and that is
-the point — an unused parameter is cheaper than a subsystem that has to be trusted.
+`Escalates` is a parameter of the two writing verbs, `perform` and
+`Batched.perform_batch`, and of neither reading verb. That is what makes "the
+read-only verbs never escalate" structural rather than a promise: `observe` and
+`diff` are not handed one, so the code to ask for a password is not reachable
+from the half `plan` and `check` run. Every resource but `system` ignores it, and
+that is the point — an unused parameter is cheaper than a subsystem that has to be
+trusted. `tests/resources/test_privilege.py` reads the signatures and fails when a
+reading verb grows one, because a sentence here cannot.
 
 **The run is `Any` in the three signatures that name it, and only here.** This
 module reads no member off one, and it cannot import a type that describes one:

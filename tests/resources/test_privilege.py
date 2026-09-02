@@ -73,6 +73,33 @@ def test_only_privilege_py_contains_the_string_sudo() -> None:
     assert not offenders, 'only privilege.py may escalate; these pass sudo as a literal: ' + ', '.join(offenders)
 
 
+WRITING = ('perform', 'perform_batch')
+"""The verbs an authorization reaches. Everything else in `resources/` reads."""
+
+
+def test_no_reading_verb_is_handed_an_authorization() -> None:
+    """What makes "the read-only verbs never escalate" structural.
+
+    `observe` and `diff` are the whole of `plan` and `check`, so a parameter they
+    are not given is a subsystem those verbs cannot reach. The module docstring in
+    `resources/__init__.py` states that; this is what holds it, because a sentence
+    goes on reading true after the signature beneath it changes.
+
+    Read off the parameter names rather than their annotations, so a rename of the
+    protocol does not quietly stop this from matching anything.
+    """
+    offenders: list[str] = []
+    for module in sorted((paths.REPO_ROOT / 'src' / 'dotfiles' / 'resources').rglob('*.py')):
+        tree = ast.parse(module.read_text())
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef) or node.name in WRITING:
+                continue
+            named = [arg.arg for arg in node.args.args if arg.arg == 'privilege']
+            offenders.extend(f'{module.relative_to(paths.REPO_ROOT)}:{node.lineno} {node.name}' for _ in named)
+
+    assert not offenders, 'only ' + ' and '.join(WRITING) + ' take an authorization; these also do: ' + ', '.join(offenders)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Acquiring root
 # ─────────────────────────────────────────────────────────────────────────────

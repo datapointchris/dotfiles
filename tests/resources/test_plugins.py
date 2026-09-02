@@ -234,8 +234,8 @@ def test_one_plugin_provider_is_an_address_not_a_stage_sieve(tmp_path: Path, ups
     performed = [event.payload for event in engine.execute(live, planned, Privilege(offer=False))]
 
     # `isinstance` before `.ok`, because a Refusal is an Exception and carries
-    # neither — read as `.ok` alone this raised AttributeError on the one outcome
-    # it exists to catch, naming the attribute rather than the plugin that failed.
+    # neither. It is what makes a refused plugin fail this line and name itself,
+    # rather than raise AttributeError naming an attribute.
     assert all(isinstance(payload, Outcome) and payload.ok for payload in performed), performed
 
     assert (live.home / '.config' / 'zsh' / 'plugins' / 'forgit').is_dir()

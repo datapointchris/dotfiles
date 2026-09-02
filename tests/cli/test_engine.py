@@ -482,9 +482,9 @@ def test_a_batched_resource_is_handed_its_whole_run_at_once(session: Session, mo
     performed = [event.payload for event in engine.execute(session, list(engine.assess(session)), Privilege(offer=False))]
     outcomes = [payload for payload in performed if isinstance(payload, Outcome)]
 
-    # A Refusal is an Exception and carries no `change`, so reading it off the
-    # payload directly raised AttributeError where the batch had failed — the one
-    # case the item order below is here to prove did not happen.
+    # A Refusal is an Exception and carries no `change`. This line is what makes a
+    # failed batch fail here, rather than raise from the item order below — which
+    # is the one case that order exists to rule out.
     assert outcomes == performed, performed
     assert writer.transactions == [['a', 'b', 'c']]
     assert [outcome.change.item for outcome in outcomes] == ['a', 'b', 'c']
