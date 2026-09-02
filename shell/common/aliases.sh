@@ -36,10 +36,12 @@ else
 fi
 
 # Long format, human-readable, with directory trailing '/'
-alias ll="ls -lhF --color"
+# --color carries its value: eza reads a bare --color as taking the next word,
+# so `ll somedir` would hand it the path and exit 2.
+alias ll="ls -lhF --color=always"
 
 # Long format, human-readable, include hidden, with directory trailing '/'
-alias la="ls -lhAF --color"
+alias la="ls -lhAF --color=always"
 
 # List only directories
 # alias lsdir="ls -ldh *"
