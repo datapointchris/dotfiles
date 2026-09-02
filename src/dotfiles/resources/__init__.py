@@ -25,13 +25,16 @@ half `plan` and `check` run. Every resource but `system` ignores it, and that is
 the point — an unused parameter is cheaper than a subsystem that has to be trusted.
 
 **The run is `Any` in the three signatures that name it, and only here.** This
-module reads no member off one, and it cannot name the type that does: `evidence`
-imports this module for `Verdict` and `Blocker`, so importing a session type back
-would close a cycle. A member-less `Protocol` is the wrong shape for the same
-slot — every implementation annotates the real `Session`, which is narrower than
-"any object", so the protocol would reject all nine of them on contravariance.
-`Any` is compatible in both directions and rejects none. The concrete resources
-carry the real type, and the checking happens there.
+module reads no member off one, and it cannot import a type that describes one:
+`evidence` imports this module for `Verdict` and `Blocker`, so an import back
+closes a cycle.
+
+A member-less `Protocol` is the wrong shape for the slot, and it is the first
+thing anyone reaches for. Such a protocol is satisfied by everything, so it is a
+*supertype* of `Session`; every implementation annotates that narrower type and
+none of them then conforms. `Any` is compatible in both directions and rejects
+none. The concrete resources carry the real type, and the checking happens
+there.
 """
 
 from __future__ import annotations
