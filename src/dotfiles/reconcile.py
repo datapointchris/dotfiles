@@ -6,7 +6,7 @@ CLI layer is deliberate: the walk, the verdict composition and the exit-code rul
 are the parts worth testing directly, and a `CliRunner` around them tests argument
 parsing at the same time as logic.
 
-The order work happens in is `resolve.Stage`, and nothing here restates it. A
+The order work happens in is `plan.Stage`, and nothing here restates it. A
 second list of the convergence order is a list that can disagree with the first,
 and the disagreement is silent: a provider missing from it installs nothing and
 the run reports success.
@@ -67,9 +67,9 @@ from dotfiles.output import render_verdict
 from dotfiles.output import retract
 from dotfiles.output import tally
 from dotfiles.output import warn
+from dotfiles.plan import Plan
+from dotfiles.plan import Stage
 from dotfiles.providers import bundle
-from dotfiles.resolve import Plan
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
@@ -952,9 +952,9 @@ def _gating(broken: tuple[validate.Finding, ...], selection: engine.Selection) -
     all of them, but because it was traced to none, and a fault nobody can
     attribute is one nobody can rule out.
     """
-    # Imported here for the reason `resolve.plan_for` gives: the providers build
-    # item types defined in `resolve`, so asking for the registry at module scope
-    # closes the loop.
+    # Imported here for the reason `resolve.resolve` gives: the registry reaches
+    # back through `evidence` and `resources` to the `Session` that resolves a
+    # plan, so asking for it at module scope closes that loop.
     from dotfiles import registry
 
     owner = {provider.section: provider.resource for provider in registry.PROVIDERS if provider.section}

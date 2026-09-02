@@ -24,12 +24,12 @@ from dotfiles import coordinates as axes
 from dotfiles import evidence as ev
 from dotfiles import providers
 from dotfiles import registry
+from dotfiles.plan import Precondition
+from dotfiles.plan import Preconditions
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import bootstrap
 from dotfiles.providers import syspkg
-from dotfiles.resolve import Precondition
-from dotfiles.resolve import Preconditions
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -525,7 +525,7 @@ def test_a_package_this_machine_has_no_manager_for_is_refused_not_claimed(tmp_pa
     """Reporting it installed would leave a run claiming a converged machine it
     never touched.
 
-    Built by hand rather than planned, because `resolve.available` filters a
+    Built by hand rather than planned, because `plan.available` filters a
     brew-only entry off an apt machine before it can reach a provider — so this
     asserts what the guard does, at the only level it is reachable from.
     """

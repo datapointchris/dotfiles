@@ -428,7 +428,7 @@ NARROWED: list[tuple[str, dict[str, Any], dict[str, Any], bool]] = [
     ('a-row-behind-a-feature-the-manifest-sets', {'feature': 'configure_zsh'}, {'configure_zsh': True}, True),
     ('a-row-behind-a-feature-the-manifest-omits', {'feature': 'configure_zsh'}, {}, False),
 ]
-"""Every key `resolve.configures` narrows on, in both directions.
+"""Every key `plan.configures` narrows on, in both directions.
 
 A `system.yml` row is not subscribed to the way a package section is — no manifest
 names a group membership — so what decides one is a coordinate, a feature, or

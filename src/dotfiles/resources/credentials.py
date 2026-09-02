@@ -47,9 +47,9 @@ from dotfiles.effects import NOT_FOUND
 from dotfiles.effects import TIMED_OUT
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.plan import Plan
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
-from dotfiles.resolve import Plan
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome

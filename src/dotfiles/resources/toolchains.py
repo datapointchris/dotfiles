@@ -21,11 +21,11 @@ from dotfiles import catalog
 from dotfiles import evidence as ev
 from dotfiles import registry
 from dotfiles import versions
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Plan
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import toolchain
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Plan
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome

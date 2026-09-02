@@ -46,6 +46,7 @@ from dotfiles import versions
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
+from dotfiles.plan import DesiredItem
 from dotfiles.providers import bundle as bundle_format
 from dotfiles.providers import cargo
 from dotfiles.providers import ghrelease
@@ -54,7 +55,6 @@ from dotfiles.providers import releases
 from dotfiles.providers import toolchain
 from dotfiles.providers import winget
 from dotfiles.refusal import Refusal
-from dotfiles.resolve import DesiredItem
 
 log = logging.getLogger('create-bundle')
 

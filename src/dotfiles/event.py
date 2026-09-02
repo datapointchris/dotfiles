@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 
-from dotfiles.resolve import Stage
+from dotfiles.plan import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome

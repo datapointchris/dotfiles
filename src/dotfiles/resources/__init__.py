@@ -35,12 +35,12 @@ from typing import runtime_checkable
 
 from dotfiles import diagnose
 from dotfiles import providers
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Plan
+from dotfiles.plan import Precondition
+from dotfiles.plan import Preconditions
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Plan
-from dotfiles.resolve import Precondition
-from dotfiles.resolve import Preconditions
-from dotfiles.resolve import Stage
 from dotfiles.session import Session
 
 

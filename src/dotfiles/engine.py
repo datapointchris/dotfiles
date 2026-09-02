@@ -25,10 +25,10 @@ from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Started
 from dotfiles.event import Summary
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Plan
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Plan
-from dotfiles.resolve import Stage
 from dotfiles.resources import Batched
 from dotfiles.resources import Change
 from dotfiles.resources import Resource
@@ -222,7 +222,7 @@ def stage_named(name: str) -> Stage:
 
     Here rather than in `vocabulary.py` for the reason address validation is: that
     module holds the closed grammar of nouns and verbs, and what a stage is called
-    belongs to `resolve.Stage`. Read off the enum rather than listed, so a stage
+    belongs to `plan.Stage`. Read off the enum rather than listed, so a stage
     added there is spellable the day it exists.
 
     The names were already an *output* vocabulary — `machines show` groups by

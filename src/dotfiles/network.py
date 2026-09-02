@@ -29,6 +29,7 @@ from dotfiles import coordinates
 from dotfiles import diagnose
 from dotfiles import effects
 from dotfiles import machine as machines
+from dotfiles import plan as planning
 from dotfiles import resolve
 from dotfiles.coordinates import Target
 from dotfiles.providers import custom
@@ -218,7 +219,7 @@ def derive(machine: machines.Machine) -> Derived:
     )
 
 
-def _entries(plan: resolve.Plan, kind: type[catalog.Entry]) -> tuple[catalog.Entry, ...]:
+def _entries(plan: planning.Plan, kind: type[catalog.Entry]) -> tuple[catalog.Entry, ...]:
     """Every declaration row of one type the plan resolved, deduplicated by name.
 
     A tool can enter the plan more than once — a runtime is pulled in by each tool
@@ -232,7 +233,7 @@ def _entries(plan: resolve.Plan, kind: type[catalog.Entry]) -> tuple[catalog.Ent
     return tuple(seen.values())
 
 
-def _release_probes(plan: resolve.Plan) -> tuple[Probe, ...]:
+def _release_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     """`/releases/latest` per tool, then the API and an asset off the first one.
 
     Release pages live on github.com but assets redirect to a separate host, so a
@@ -255,7 +256,7 @@ def _release_probes(plan: resolve.Plan) -> tuple[Probe, ...]:
     )
 
 
-def _clone_probes(plan: resolve.Plan) -> tuple[Probe, ...]:
+def _clone_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     """This repo, then every tool and plugin installed by cloning one.
 
     Kept separate from the release rows even though both name github.com: at the
@@ -271,7 +272,7 @@ def _clone_probes(plan: resolve.Plan) -> tuple[Probe, ...]:
     return cloned
 
 
-def _custom_installer_probes(plan: resolve.Plan, target: Target) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
+def _custom_installer_probes(plan: planning.Plan, target: Target) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
     """Whatever each installer says it reaches, asked of the installer.
 
     `providers.custom.sources` is the answer rather than a `source_type` word here,
@@ -328,7 +329,7 @@ would happily serve.
 """
 
 
-def _registry_probes(plan: resolve.Plan) -> tuple[Probe, ...]:
+def _registry_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     """A registry is probed only where the plan actually resolved tools using it.
 
     `git_uv_tools` and `uv_tools` both reach pypi.org, so the same URL can be

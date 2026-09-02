@@ -56,7 +56,7 @@ This setup follows some opinionated principles that make maintenance easier:
 
 **Fail Fast in the Provider, Keep Going in the Engine**: a provider returns a result rather than raising, so one blocked download costs that row and nothing else. `src/dotfiles/engine.py` turns a provider that does raise into a refusal and finishes the plan. You get the full error context for what broke AND a working system with just a few missing pieces.
 
-**Linear and Predictable**: stages run in the order `src/dotfiles/resolve.py` declares, and `--through STAGE` stops part way. Ordering is a property of the work rather than of a command, which is why it lives on the stage and not on either resource it constrains.
+**Linear and Predictable**: stages run in the order `src/dotfiles/plan.py` declares, and `--through STAGE` stops part way. Ordering is a property of the work rather than of a command, which is why it lives on the stage and not on either resource it constrains.
 
 **Reconcile, Don't Script**: `plan` says what `apply` would change, `apply` changes it, and `check` reports what is *wrong* — which a machine merely behind on versions is not. `dotfiles --help` shows where those three verbs sit.
 

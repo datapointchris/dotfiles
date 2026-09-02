@@ -21,16 +21,16 @@ from dotfiles import status
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Precondition
+from dotfiles.plan import Reason
+from dotfiles.plan import Stage
 from dotfiles.providers import bundle as bundle_manifest
 from dotfiles.providers import cargo
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import releases
 from dotfiles.providers import winget
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Precondition
-from dotfiles.resolve import Reason
-from dotfiles.resolve import Stage
 
 
 def planned(entry, section):

@@ -18,6 +18,7 @@ import typer
 from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import plan as planning
 from dotfiles import resolve as resolver
 from dotfiles import validate
 from dotfiles.commands import QuietOption
@@ -36,7 +37,7 @@ from dotfiles.vocabulary import ExitCode
 app = typer.Typer(no_args_is_help=True, help='Machine manifests: what each machine declares')
 
 
-def precondition_note(precondition: resolver.Precondition) -> str:
+def precondition_note(precondition: planning.Precondition) -> str:
     """The `[amd_gpu]` suffix on a row, or '' where the item has no precondition.
 
     A named function rather than an f-string inside the render loop, because the
@@ -135,7 +136,7 @@ def show_machine(
     _render(plan)
 
 
-def _plan(name: str, owner: str | None = None) -> resolver.Plan:
+def _plan(name: str, owner: str | None = None) -> planning.Plan:
     """Resolve, turning either loader's refusal into the report it is.
 
     A traceback would be the wrong shape for both: an invalid declaration is a
@@ -162,7 +163,7 @@ def _section(name: str, detail: str) -> None:
     console.print(section_line(' ', name, detail))
 
 
-def _render(plan: resolver.Plan) -> None:
+def _render(plan: planning.Plan) -> None:
     machine = plan.machine
     console.print(f'[bold]{machine.name}[/]  {machine.platform_label}')
 
@@ -179,7 +180,7 @@ def _render(plan: resolver.Plan) -> None:
         for requirement in machine.requirements:
             console.print(f'{EVIDENCE_INDENT}{requirement.path or requirement.name} — {requirement.description}')
 
-    for stage in resolver.Stage:
+    for stage in planning.Stage:
         items = plan.for_stage(stage)
         if not items:
             continue

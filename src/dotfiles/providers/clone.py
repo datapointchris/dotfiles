@@ -16,9 +16,9 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.plan import DesiredItem
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
-from dotfiles.resolve import DesiredItem
 
 SHELL_PLUGIN_DIR = Path('.config/zsh/plugins')
 """Where `.zshrc` sources them from. Not declared per entry in `packages.yml`,

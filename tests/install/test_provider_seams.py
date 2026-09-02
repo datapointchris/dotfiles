@@ -31,6 +31,10 @@ from dotfiles import effects
 from dotfiles import registry
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Precondition
+from dotfiles.plan import Reason
+from dotfiles.plan import Stage
 from dotfiles.privilege import Authorization
 from dotfiles.privilege import Privilege
 from dotfiles.privilege import PrivilegeUnavailable
@@ -38,10 +42,6 @@ from dotfiles.privilege import refusal
 from dotfiles.providers import Kind
 from dotfiles.providers import pluginsync
 from dotfiles.providers import syspkg
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Precondition
-from dotfiles.resolve import Reason
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus

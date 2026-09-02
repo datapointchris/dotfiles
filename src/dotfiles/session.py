@@ -22,6 +22,7 @@ from dotfiles import catalog as catalogs
 from dotfiles import envfile
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import plan as planning
 from dotfiles import resolve as resolver
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
@@ -164,7 +165,7 @@ class Session:
         return machines.load(self.machine_name, self.repo)
 
     @functools.cached_property
-    def plan(self) -> resolver.Plan:
+    def plan(self) -> planning.Plan:
         return resolver.resolve(self.catalog, self.machine, owner=self.owner, packages=self.packages or None)
 
     @functools.cached_property
@@ -185,7 +186,7 @@ class Session:
         return evidence.Inventories(refresh=self.refresh)
 
     @functools.cached_property
-    def preconditions(self) -> resolver.Preconditions:
+    def preconditions(self) -> planning.Preconditions:
         """Which preconditions this machine meets, answered once for the whole run.
 
         On the Session for the reason `inventories` is: more than one resource
