@@ -525,7 +525,7 @@ def test_a_package_this_machine_has_no_manager_for_is_refused_not_claimed(tmp_pa
     """Reporting it installed would leave a run claiming a converged machine it
     never touched.
 
-    Built by hand rather than planned, because `resolve.available` filters a
+    Built by hand rather than planned, because `plan.available` filters a
     brew-only entry off an apt machine before it can reach a provider — so this
     asserts what the guard does, at the only level it is reachable from.
     """

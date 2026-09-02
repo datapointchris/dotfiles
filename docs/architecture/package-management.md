@@ -199,7 +199,7 @@ from the code.
 
 `install.sh` is a POSIX bootstrap whose only job is reaching the CLI. It stops
 once the package is installed and prints the `dotfiles apply` that installs the
-machine. What that apply does is the whole plan, sorted by `resolve.Stage`, whose
+machine. What that apply does is the whole plan, sorted by `plan.Stage`, whose
 order is a dependency chain rather than a listing.
 
 ## Related Documents

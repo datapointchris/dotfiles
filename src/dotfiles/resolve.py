@@ -16,8 +16,7 @@ from __future__ import annotations
 
 from dotfiles import catalog
 from dotfiles import machine as machines
-from dotfiles.plan import DesiredItem
-from dotfiles.plan import Plan
+from dotfiles import plan as planning
 
 
 def resolve(
@@ -26,7 +25,7 @@ def resolve(
     *,
     owner: str | None = None,
     packages: frozenset[str] | None = None,
-) -> Plan:
+) -> planning.Plan:
     """Everything `machine` should have, in the order it has to be installed.
 
     One loop over the registry, and the registry's order *is* the two passes: a
@@ -45,13 +44,15 @@ def resolve(
     instruction and one no caller means by not passing the flag.
 
     The registry is asked for inside the call because it reaches back to this
-    module: `registry` imports `evidence`, `evidence` takes its vocabulary from
-    `resources`, and `resources` builds the `Session` that resolves a plan.
-    Naming it at import time closes that loop and no entry point starts.
+    module by two routes, and naming it at import time closes both. `registry`
+    imports `session` outright, and a `Session` resolves a plan. It also imports
+    `evidence`, which takes its vocabulary from `resources`, which builds that
+    same `Session`. Cutting either one on its own leaves the other, so a reader
+    testing this by deleting one import will still find no entry point starts.
     """
     from dotfiles import registry
 
-    items: list[DesiredItem] = []
+    items: list[planning.DesiredItem] = []
     for provider in registry.PROVIDERS:
         if owner is not None and not provider.ownable:
             continue
@@ -62,10 +63,10 @@ def resolve(
 
     if packages is not None:
         items = _named(items, packages)
-    return Plan(machine=machine, items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))))
+    return planning.Plan(machine=machine, items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))))
 
 
-def _named(items: list[DesiredItem], packages: frozenset[str]) -> list[DesiredItem]:
+def _named(items: list[planning.DesiredItem], packages: frozenset[str]) -> list[planning.DesiredItem]:
     """The entries `--package` named, plus whatever those entries need to install.
 
     The prerequisite is kept rather than dropped, per `cli-design.md` § "A
