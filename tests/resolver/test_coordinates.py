@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
+import dataclasses as dc
 from pathlib import Path
 
 import pytest
 
 from dotfiles import coordinates as axes
+
+
+def test_axes_and_the_dataclass_agree() -> None:
+    """A seventh axis has to reach three places, and nothing else notices two of them.
+
+    `AXIS_TYPES` is the name-to-enum map every loader walks, and `Coordinates` is
+    what a resolved point actually is. A field added to one and not the other
+    surfaces as a `TypeError` from `Coordinates(**values)` deep in manifest
+    loading, on whichever machine first declares the new axis.
+
+    Order as well as membership: `machine._from_axes` fills a dict by axis name,
+    but `tests/symlinks/test_coordinate_directories.py` names the six enums
+    positionally, and a reordered dataclass would silently pair each value with
+    its neighbour's type.
+    """
+    fields = tuple(field.name for field in dc.fields(axes.Coordinates))
+
+    assert fields == axes.AXES
+    assert set(axes.AXIS_DIRS) == set(axes.AXES)
 
 
 def test_a_package_manager_selects_a_family_not_one_installer() -> None:
@@ -82,11 +102,21 @@ def test_a_machine_selects_one_directory_per_axis_in_axis_order() -> None:
         (('winget', 'windows', 'wayland', 'native', 'nonfleet', 'workstation'), 'wayland is a Linux display stack'),
     ],
 )
-def test_a_point_no_machine_can_be_is_named_as_such(point: tuple[str, ...], expected_problem: str) -> None:
+def test_a_point_no_machine_can_be_is_named_as_such(point: tuple[str, str, str, str, str, str], expected_problem: str) -> None:
     """Six independent axes is what makes a fifth machine cheap, and also what
     lets a manifest name a machine that cannot exist. `platform:` could not — it
     was four hand-written tuples — so nothing has ever had to check this."""
-    found = axes.incoherent(axes.Coordinates(*(axes.AXIS_TYPES[axis](value) for axis, value in zip(axes.AXES, point, strict=True))))
+    manager, family, display, host, trust, capacity = point
+    found = axes.incoherent(
+        axes.Coordinates(
+            axes.PackageManager(manager),
+            axes.OSFamily(family),
+            axes.DisplayStack(display),
+            axes.Host(host),
+            axes.NetworkTrust(trust),
+            axes.Capacity(capacity),
+        )
+    )
 
     assert any(expected_problem in problem for problem in found), found
 

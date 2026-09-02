@@ -1008,16 +1008,23 @@ def test_the_probe_is_the_kernel_driver_node_rather_than_a_test_flag(monkeypatch
     assert ev.have_amd_gpu() is ev.AMD_KFD.exists()
 
 
-def test_an_unnamed_precondition_refuses_rather_than_passing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_unnamed_precondition_refuses_rather_than_passing() -> None:
     """The fall-through decides what a *future* enum member means, and it must not
     mean "satisfied". Adding a `Precondition` is one line in the enum; a dispatch
     that absorbs it silently stops gating the install the precondition exists to
-    gate. Asserted with a member this dispatch has never seen.
-    """
-    invented = 'a_precondition_nobody_wrote_a_branch_for'
-    met = Preconditions(github_auth=True, amd_gpu=True)
+    gate.
 
-    assert met.holds(invented) is False, 'an unnamed precondition must fail closed'
+    Read off a machine that meets every precondition it has a field for, so the
+    only thing that can answer False is a member no branch names. Handing `holds`
+    an invented string tested the same fall-through and could not be a
+    `Precondition` — `Precondition('...')` raises — so it asserted against a value
+    the signature forbids and nothing checked the call.
+    """
+    met = Preconditions(**{field.name: True for field in dc.fields(Preconditions)})
+
+    unnamed = [precondition.name for precondition in Precondition if not met.holds(precondition)]
+
+    assert unnamed == [], f'no branch in Preconditions.holds names {unnamed}, so each one silently fails closed'
     assert met.holds(Precondition.NONE) is True, 'NONE answers True by being named'
 
 

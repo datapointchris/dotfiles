@@ -53,7 +53,18 @@ from nothing else."""
 
 ENTRIES = tuple(sorted(providers.ASSETS))
 
-DECLARED = {entry.name: entry for entry in catalog.load().section('github_releases')}
+_ROWS = catalog.load().section('github_releases')
+
+DECLARED = {entry.name: entry for entry in _ROWS if isinstance(entry, catalog.GithubRelease)}
+"""Name → the declared release row, narrowed to the class the section builds.
+
+`section` answers `Entry`, so without the narrowing every read of `repo` here is
+against the base class. The length check below is what keeps that narrowing from
+being a silent filter: a row the loader built as something else drops out of the
+dict and every case parametrised from it would simply not run.
+"""
+
+assert len(DECLARED) == len(_ROWS), 'every github_releases row loads as a GithubRelease'
 
 CORPUS = tuple((entry, target) for entry in ENTRIES for target in TARGETS)
 

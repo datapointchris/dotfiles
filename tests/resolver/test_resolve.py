@@ -424,8 +424,11 @@ def test_owner_narrows_to_one_github_owner(declaration: catalog.Catalog) -> None
     hand-maintained restatement of a fact already in the data."""
     plan = planned(declaration, 'archlinux-personal-workstation', owner='datapointchris')
 
+    owned = [item.entry for item in plan.items if item.entry is not None]
+
     assert plan.items
-    assert {item.entry.owner for item in plan.items} == {'datapointchris'}
+    assert len(owned) == len(plan.items), 'an --owner plan carries only items whose entry declared that owner'
+    assert {entry.owner for entry in owned} == {'datapointchris'}
 
 
 def test_owner_leaves_registry_sourced_sections_empty(declaration: catalog.Catalog) -> None:

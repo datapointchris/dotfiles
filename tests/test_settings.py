@@ -278,7 +278,10 @@ def test_one_reading_answers_every_name_in_a_snapshot(config_home: Path) -> None
 
     config.write_text(f'{KEY} = "/repaired.json"\n')
 
-    assert snapshot.of(DECLARED).value == '/from/config.json'
+    answered = snapshot.of(DECLARED)
+
+    assert answered is not None, 'the config rung answered when the snapshot was taken'
+    assert answered.value == '/from/config.json'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

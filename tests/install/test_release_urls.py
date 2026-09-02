@@ -273,7 +273,10 @@ def _fleet_install_urls() -> list[tuple[str, str]]:
     vendor decides what that path serves, and pretending otherwise would fail the
     test for something no commit here can fix.
     """
-    entries = catalog.load(PACKAGES_YML).section('custom_installers')
+    rows = catalog.load(PACKAGES_YML).section('custom_installers')
+    entries = [entry for entry in rows if isinstance(entry, catalog.CustomInstaller)]
+    assert len(entries) == len(rows), 'every custom_installers row loads as a CustomInstaller'
+
     prefix = 'https://raw.githubusercontent.com/datapointchris/'
     return sorted((entry.name, entry.install_url) for entry in entries if entry.install_url.startswith(prefix))
 
@@ -339,7 +342,10 @@ STATE_FOR_DECLARATION = {
 
 
 def declared_checksum_states() -> dict[str, str]:
-    return {entry.name: entry.checksum for entry in catalog.load(PACKAGES_YML).section('github_releases')}
+    rows = catalog.load(PACKAGES_YML).section('github_releases')
+    states = {entry.name: entry.checksum for entry in rows if isinstance(entry, catalog.GithubRelease)}
+    assert len(states) == len(rows), 'every github_releases row loads as a GithubRelease'
+    return states
 
 
 def checksum_state(repo: str, tag: str, asset_name: str, assets: dict[str, int]) -> str:

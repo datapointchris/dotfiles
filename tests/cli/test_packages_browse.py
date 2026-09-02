@@ -956,6 +956,7 @@ def test_a_status_carries_its_colour_only_where_colour_is_wanted(monkeypatch: py
     monkeypatch.setattr(declaration, 'USE_COLOR', False)
     plain = declaration.format_status(InstallStatus.INSTALLED, '/somewhere/bin/lazygit')
 
+    assert plain is not None, 'only NOT_AVAILABLE formats to nothing'
     assert lit == f'{Color.GREEN.value}{plain}{Color.RESET.value}'
     assert Color.RESET.value not in plain
 

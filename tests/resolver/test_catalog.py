@@ -237,8 +237,10 @@ def test_a_bare_tag_string_is_refused_where_a_list_is_read(tmp_path: Path) -> No
 
 def test_a_mas_app_id_stays_an_integer(tmp_path: Path) -> None:
     loaded = catalog.load(write(tmp_path, {'mas_apps': [{'name': 'Xcode', 'id': 497799835}]}))
+    xcode = loaded.find('mas_apps', 'Xcode')
 
-    assert loaded.find('mas_apps', 'Xcode').id == 497799835
+    assert isinstance(xcode, catalog.MasApp)
+    assert xcode.id == 497799835
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -40,7 +40,7 @@ and fails on every runner.
 """
 
 
-def result(verdict: Verdict, address: str = 'packages') -> ResourceResult:
+def result(verdict: ResourceVerdict, address: str = 'packages') -> ResourceResult:
     return ResourceResult(address, verdict, 'detail')
 
 

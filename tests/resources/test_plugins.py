@@ -22,6 +22,7 @@ from dotfiles.privilege import Privilege
 from dotfiles.providers import clone
 from dotfiles.providers import pluginsync
 from dotfiles.resources import Change
+from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -230,7 +231,12 @@ def test_one_plugin_provider_is_an_address_not_a_stage_sieve(tmp_path: Path, ups
 
     planned = list(engine.assess(live, engine.Selection.of('plugins/shell-plugin')))
     assert [event.payload.item for event in planned if isinstance(event.payload, Change)] == ['shell-plugin/forgit']
-    assert all(event.payload.ok for event in engine.execute(live, planned, Privilege(offer=False)))
+    performed = [event.payload for event in engine.execute(live, planned, Privilege(offer=False))]
+
+    # `isinstance` before `.ok`, because a Refusal is an Exception and carries
+    # neither — read as `.ok` alone this raised AttributeError on the one outcome
+    # it exists to catch, naming the attribute rather than the plugin that failed.
+    assert all(isinstance(payload, Outcome) and payload.ok for payload in performed), performed
 
     assert (live.home / '.config' / 'zsh' / 'plugins' / 'forgit').is_dir()
     assert not (live.home / '.config' / 'tmux' / 'plugins' / 'tpm').is_dir()
@@ -406,8 +412,8 @@ def test_the_managers_are_skipped_whole_under_an_owner(tmp_path: Path) -> None:
     """A plugin manager's list belongs to nobody here, so `--mine` must not turn
     into a tmux server starting up — filtering instead would drop these for
     answering `owner is None`, which is the wrong reason."""
-    assert not registry.named('tmux-sync').ownable
-    assert not registry.named('nvim-sync').ownable
+    assert not registry.BY_NAME['tmux-sync'].ownable
+    assert not registry.BY_NAME['nvim-sync'].ownable
 
 
 def test_skipping_a_sync_leaves_the_clone_that_feeds_it(tmp_path: Path) -> None:
