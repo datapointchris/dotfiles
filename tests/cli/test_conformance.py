@@ -480,6 +480,107 @@ def test_the_exit_scan_finds_the_calls_it_is_asserting_about() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# The set of sites doing a thing is exactly the set that should
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Each centralization below has two independent claims: that the one owner works,
+# and that nothing goes round it. The rendering tests further down assert the
+# first. These assert the second, and it cannot be reached by rendering — a site
+# nothing exercises renders nothing.
+#
+# Keyed on the function or the constant, never on the file. A symbol that moves to
+# another module keeps its readers, so these answers do not change; a second reader
+# is a second owner wherever it lands.
+
+
+def functions_naming(*names: str) -> set[str]:
+    """Which functions in the package reference all of these names.
+
+    Module scope is left out. The assignment that defines a name and the import
+    that carries it into a module are not readers of it, and counting them would
+    make the answer a list of files again.
+    """
+    wanted, found = set(names), set()
+    for path in SOURCE:
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            reached = {inner.id for inner in ast.walk(node) if isinstance(inner, ast.Name)}
+            reached |= {inner.attr for inner in ast.walk(node) if isinstance(inner, ast.Attribute)}
+            if wanted <= reached:
+                found.add(node.name)
+    return found
+
+
+def phrase_sites(phrase: str) -> tuple[set[str], list[str]]:
+    """Which constants are assigned this phrase, and everywhere else it is written.
+
+    The second list is the invariant: a rendered literal, or a docstring pasting
+    one, is a copy nothing keeps in step. `documentation.md` § "A comment explains
+    the thing, not the change that produced it" refuses the docstring case for the
+    same reason, and no linter or type checker reads either.
+    """
+    owners, copies = set(), []
+    for path in SOURCE:
+        tree = ast.parse(path.read_text())
+        assigned = {
+            id(node.value): node.targets[0].id
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant) and isinstance(node.targets[0], ast.Name)
+        }
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and phrase in node.value:
+                if id(node) in assigned:
+                    owners.add(assigned[id(node)])
+                else:
+                    copies.append(f'{path.name}:{node.lineno}')
+    return owners, copies
+
+
+def test_only_the_two_heading_builders_name_the_heading_widths() -> None:
+    """A function naming either width is laying out a heading or a closing line of
+    its own, whatever it draws it with.
+
+    `machines show` and `network check` are the two that most wanted to. Both
+    render a section and neither names a width, because `section_line` hands them
+    the geometry already.
+    """
+    assert functions_naming('ADDRESS_COLUMN') == {'section_line', 'render_result'}
+    assert functions_naming('VERDICT_WIDTH') == {'render_verdict'}
+
+
+def test_one_function_asks_a_yes_or_no_question() -> None:
+    """That `_confirmed` works and that nothing bypasses `_confirmed` are
+    independent claims, and the tests for the first are satisfied by a fourth
+    prompt written out longhand. Three copies is where this started: three
+    different declines, one of them printing nothing at all."""
+    assert functions_naming('confirm') == {'_confirmed'}
+
+
+def test_one_function_composes_the_retention_rule() -> None:
+    """`base_of` and `superseded` are each legitimate alone — the first names a pin
+    and the second counts a limit. Composing them and dropping the base is the
+    *rule*, and a fourth caller assembling it by hand is where three sites stopped
+    agreeing before."""
+    assert functions_naming('base_of', 'superseded') == {'retention'}
+
+
+def test_the_attention_wording_is_written_once_and_read_everywhere_else() -> None:
+    """A seventh site typing the literal is invisible to a suite that only ever
+    compares against the constant.
+
+    Every string constant is read, so a docstring pasting the phrase counts. That
+    is the half no rendering reaches, and it is why this stands beside
+    `test_every_line_wording_attention_reads_it_from_one_constant` rather than
+    being replaced by it.
+    """
+    for phrase, owner in ((output.NEED_ATTENTION, 'NEED_ATTENTION'), (output.NEEDS_ATTENTION, 'NEEDS_ATTENTION')):
+        owners, copies = phrase_sites(phrase)
+        assert owners == {owner}, f'{phrase!r} is assigned to {sorted(owners)}'
+        assert not copies, f'{phrase!r} is written out at {copies}'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Every report shares one geometry, one wording and one prompt
 # ─────────────────────────────────────────────────────────────────────────────
 #
@@ -517,20 +618,20 @@ def rebind(monkeypatch: pytest.MonkeyPatch, name: str, value: object) -> list[st
     return [module.__name__ for module in held]
 
 
-RENDER_WIDTH = 400
-"""Wider than anything rendered below, since a wrapped line moves the column being
-measured and would report a geometry defect that is really a window size."""
-
-
 def capture(monkeypatch: pytest.MonkeyPatch) -> io.StringIO:
-    """Both consoles, writing plain text into one buffer.
+    """Both consoles, writing into one buffer.
 
-    `no_color`, because what is measured is a character index and an escape
-    sequence would sit in front of it. Rebound across the package rather than on
-    `output` alone, since modules throughout it hold their own reference to one.
+    Neither the width nor the colour is pinned — `testing.md` § "Never assert on
+    rendered output — assert the value it was built from" refuses both, and a
+    pinned width only picks which terminal the suite pretends to be. Rich answers
+    `is_terminal` false for a `StringIO` and emits no escape sequence into one, so
+    the buffer is already the plain text these tests index into.
+
+    Rebound across the package rather than on `output` alone, since modules
+    throughout it hold their own reference to a console.
     """
     buffer = io.StringIO()
-    stream = Console(file=buffer, width=RENDER_WIDTH, highlight=False, no_color=True)
+    stream = Console(file=buffer, highlight=False)
     rebind(monkeypatch, 'console', stream)
     rebind(monkeypatch, 'err_console', stream)
     return buffer
@@ -600,16 +701,40 @@ def test_every_report_opens_its_section_in_one_column(monkeypatch: pytest.Monkey
     assert wide['the summary block'] - narrow['the summary block'] == 22, f'a heading did not follow the width: {narrow} then {wide}'
 
 
-def test_no_resource_name_pushes_its_own_heading_out_of_line() -> None:
-    """The width every heading shares has to fit the longest name that reaches it.
-    A name wider than the column pushes its own detail right, so the misaligned
-    report is the one a real machine prints.
+def test_a_name_wider_than_the_column_is_pushed_right_and_never_cut() -> None:
+    """`ADDRESS_COLUMN` is a floor rather than a ceiling, and the difference is what
+    a report does with a heading nobody sized the column for. An `apply` opens two
+    sections named `needs attention` and `not measurable`, both wider than the
+    widest resource name, and a format that truncated would drop the word telling a
+    reader which set is in front of them.
 
-    Asserted over every resource rather than over the longest, since which name is
-    longest is the thing that changes when one is added.
+    Asserted with a name from outside `vocabulary.RESOURCES`, deliberately.
+    `ADDRESS_COLUMN` is the maximum over that tuple, so a heading measured against
+    it agrees by construction and can only fail if the derivation is replaced by a
+    literal.
 
     Measured on the markup rather than on a rendered line: the tags around the name
-    are the same length whatever the name, so a column that differs is padding.
+    are the same length whatever it is, so what moves is the padding.
+    """
+    wide = 'a-heading-nobody-sized-the-column-for'
+    assert len(wide) > output.ADDRESS_COLUMN, 'the name is not wide enough to test anything'
+
+    line = output.section_line('~', wide, DETAIL)
+
+    assert wide in line, f'the name was cut rather than pushing its detail right: {line!r}'
+    assert line.index(DETAIL) > line.index(wide) + len(wide), f'the detail runs into the name: {line!r}'
+
+
+def test_every_resource_heading_shares_one_column() -> None:
+    """The width has to fit every name it pads, or the report a machine really
+    prints misaligns wherever the longest one lands.
+
+    **It cannot fail while `ADDRESS_COLUMN` is the maximum over
+    `vocabulary.RESOURCES`**, since that is the tuple it is measured over. A
+    resource added later widens the constant with it. What it catches is the
+    derivation replaced by a literal, and it is the only thing that does: a heading
+    is compared against a hand-written column nowhere else in the suite, so
+    `ADDRESS_COLUMN = 4` otherwise passes every test there is.
     """
     columns = {resource: output.section_line('~', resource, DETAIL).index(DETAIL) for resource in vocabulary.RESOURCES}
 
@@ -638,19 +763,30 @@ def test_every_run_starts_its_closing_sentence_in_one_column(monkeypatch: pytest
     A report reaching the width by importing it, or by copying the number, is a
     second owner of that column.
 
-    The shipped width is measured first and without a rebinding, which is the half
-    a swap cannot reach: a width smaller than the longest verdict pads nothing and
-    moves that one word's sentence right.
+    Measured under a rebinding rather than at the shipped width, which is a
+    separate claim and is asserted separately below.
     """
-    shipped = verdict_columns(monkeypatch)
-    assert len(set(shipped.values())) == 1, f'the closing sentence moves with the verdict: {shipped}'
-
     narrow = verdict_columns(monkeypatch, width=12)
     wide = verdict_columns(monkeypatch, width=30)
 
     assert len(set(narrow.values())) == 1, f'closing lines disagree about their column: {narrow}'
     assert len(set(wide.values())) == 1, f'closing lines disagree about their column: {wide}'
     assert wide['drift'] - narrow['drift'] == 18, f'a closing line did not follow the width: {narrow} then {wide}'
+
+
+def test_every_verdict_word_shares_one_column(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The shipped half of the same geometry: a width narrower than the longest
+    verdict pads that one word to nothing and moves its sentence right.
+
+    **It cannot fail while `VERDICT_WIDTH` is the maximum over
+    `VERDICT_COLOURS`**, and `render_verdict` raises `KeyError` on any word outside
+    that dict, so no other word can reach the padding. What it catches is the
+    derivation replaced by a literal, and it is the only thing that does:
+    `VERDICT_WIDTH = 5` otherwise passes every test in the suite.
+    """
+    shipped = verdict_columns(monkeypatch)
+
+    assert len(set(shipped.values())) == 1, f'the closing sentence moves with the verdict: {shipped}'
 
 
 ATTENTION = 'ATTENTION-READ-FROM-THE-CONSTANT'
@@ -737,24 +873,8 @@ def test_the_two_attention_spellings_agree() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class Terminal(io.StringIO):
-    """Stdin a prompt can read from, which is the branch `--yes` exists to skip."""
-
-    def isatty(self) -> bool:
-        return True
-
-
-class NotATerminal(io.StringIO):
-    """Stdin a scheduled run has: readable, and nobody behind it."""
-
-    def isatty(self) -> bool:
-        return False
-
-
-@pytest.mark.parametrize(('stdin', 'no_input'), [(Terminal, True), (NotATerminal, False)], ids=['--no-input', 'no terminal'])
-def test_a_question_nobody_can_answer_names_the_flag_and_the_effect(
-    stdin: type[io.StringIO], no_input: bool, monkeypatch: pytest.MonkeyPatch
-) -> None:
+@pytest.mark.parametrize(('interactive', 'no_input'), [(True, True), (False, False)], ids=['--no-input', 'no terminal'])
+def test_a_question_nobody_can_answer_names_the_flag_and_the_effect(interactive: bool, no_input: bool) -> None:
     """A centralization pins the invariant it created, or it is one refactor and no
     guarantee — standards/testing.md § "A refactor that centralizes scattered
     handling pins the invariant it created".
@@ -768,10 +888,8 @@ def test_a_question_nobody_can_answer_names_the_flag_and_the_effect(
     not used here: `Abort` exits 1, and 1 is DRIFT, so a pipeline that forgot a
     flag would report a machine that differs from its declaration.
     """
-    monkeypatch.setattr(sys, 'stdin', stdin())
-
     with pytest.raises(click.BadParameter) as refused:
-        staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=no_input)
+        staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=no_input, interactive=interactive)
 
     assert refused.value.exit_code == vocabulary.ExitCode.USAGE
     assert '--yes' in str(refused.value)
@@ -790,8 +908,8 @@ def test_a_question_that_can_be_asked_defaults_to_no_and_asks_on_stderr(
     `--yes` short-circuits ahead of both, so a run that passed it never reaches a
     terminal that is not there.
     """
-    monkeypatch.setattr(sys, 'stdin', Terminal('\n'))
-    assert staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=False) is False
+    monkeypatch.setattr(sys, 'stdin', io.StringIO('\n'))
+    assert staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=False, interactive=True) is False
 
     asked = capsys.readouterr()
     assert '[y/N]' in asked.err, f'the prompt does not default to no: {asked.err!r}'
@@ -799,8 +917,7 @@ def test_a_question_that_can_be_asked_defaults_to_no_and_asks_on_stderr(
     # ahead of the read, as its own workaround for readline eating a backspace.
     assert 'Remove 3 bundle(s)?' not in asked.out
 
-    monkeypatch.setattr(sys, 'stdin', NotATerminal())
-    assert staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=True, no_input=False) is True
+    assert staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=True, no_input=False, interactive=False) is True
 
 
 def test_every_leaf_that_takes_yes_also_takes_no_input() -> None:
@@ -813,9 +930,11 @@ def test_every_leaf_that_takes_yes_also_takes_no_input() -> None:
     Not the other direction: `bundle create` asks which machine a bundle is for,
     which is a choice rather than a yes or no, so `--yes` would answer nothing.
     """
-    for path, options in ACCEPTED.items():
-        if '--yes' in options:
-            assert '--no-input' in options, f'{"/".join(path)} can be answered yes and cannot be told not to ask'
+    answerable = [path for path, options in ACCEPTED.items() if '--yes' in options]
+
+    assert answerable, 'no leaf offers --yes, so this asserts nothing'
+    for path in answerable:
+        assert '--no-input' in ACCEPTED[path], f'{"/".join(path)} can be answered yes and cannot be told not to ask'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -857,26 +976,41 @@ def test_no_sweep_removes_the_bundle_the_sparse_ones_fall_back_to(tmp_path: Path
     cross-machine sweep the local cache asks, and the helper `bundle prune` names
     files with — because a fourth caller assembling it by hand is where three sites
     stopped agreeing before.
+
+    **Two machines' stacks, and the local sweep is asked for both.** One machine's
+    is the shape where `swept` and `_superseded_locally` cannot differ from
+    `retention`, since both reduce to it — so the two extra doors would be asserted
+    and neither exercised. The limit counts per machine, and a peer's downloads
+    aging out the only bundle on a box that cannot re-fetch one is the loss the
+    grouping exists to prevent.
     """
-    machine = 'archlinux'
-    names = a_stack(machine)
-    base = names[0]
+    mine, peer = 'archlinux', 'wsl-workstation'
+    names = a_stack(mine) + a_stack(peer)
+    bases = (a_stack(mine)[0], a_stack(peer)[0])
 
-    assert base in remote.superseded(names, KEEP), 'the count no longer takes the base, so nothing below is asserting anything'
+    for base in bases:
+        assert base in remote.superseded(names, KEEP), 'the count no longer takes a base, so nothing below is asserting anything'
 
-    rule = offline_bundle.retention(names, KEEP)
-    assert rule.superseded and base not in rule.superseded
-    assert rule.pinned == (base,)
+    rule = offline_bundle.retention(a_stack(mine), KEEP)
+    assert rule.superseded and bases[0] not in rule.superseded
+    assert rule.pinned == (bases[0],)
 
     across = offline_bundle.swept(offline_bundle.by_machine(names), KEEP)
-    assert across.superseded and base not in across.superseded
-    assert across.pinned == (base,)
+    assert across.superseded and not set(bases) & set(across.superseded)
+    assert set(across.pinned) == set(bases)
+    assert len(across.superseded) == 2, f'the limit is not counted per machine: {across.superseded}'
 
     for name in names:
         (tmp_path / f'{name}.tar.gz').touch()
     monkeypatch.setattr(staging.paths, 'archive_dir', lambda: tmp_path)
     monkeypatch.setattr(staging.providers, 'staged_bundles', lambda: ())
 
-    locally = staging._superseded_locally(KEEP, machine)
-    assert locally.superseded and base not in locally.superseded
-    assert locally.pinned == (base,)
+    narrowed = staging._superseded_locally(KEEP, mine)
+    assert narrowed.superseded and bases[0] not in narrowed.superseded
+    assert narrowed.pinned == (bases[0],)
+    assert not [name for name in narrowed.superseded if peer in name], f"a peer's bundles were swept by --machine {mine}"
+
+    whole = staging._superseded_locally(KEEP, None)
+    assert whole.superseded and not set(bases) & set(whole.superseded)
+    assert set(whole.pinned) == set(bases)
+    assert len(whole.superseded) == 2, f'the cache sweep is not counted per machine: {whole.superseded}'
