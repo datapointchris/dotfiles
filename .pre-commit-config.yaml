@@ -280,8 +280,8 @@ repos:
       # measured, which is the failure it exists to prevent.
       #
       # `pyproject.toml` is in the selector because the contract lives there, and
-      # `src/` because that is the graph — `standards/ci.md` § "A `paths:` filter
-      # names every file the build reads, not only the ones it renders".
+      # `src/` because that is the graph. A `paths:` filter names every file the
+      # build reads, not only the ones it renders.
       - id: import-linter
         name: import-linter (layered architecture)
         entry: uv run lint-imports --no-cache
@@ -325,10 +325,10 @@ repos:
 
       # Tests a broken run would satisfy: every assertion a negative claim about
       # an external effect, with nothing pinning how the run ended. A command
-      # that died before reaching the write leaves exactly that state.
-      # `standards/testing.md` § "An assertion that nothing happened is
-      # satisfied by a crash" is the repair, and it is the only exemption —
-      # pair the negative with the exit code and one positive fact.
+      # that died before reaching the write leaves exactly that state. An
+      # assertion that nothing happened is satisfied by a crash. The repair is
+      # the only exemption — pair the negative with the exit code and one
+      # positive fact.
       #
       # It reads `tests/` and nothing else, so no commit under `src/` can move
       # its answer.
@@ -350,15 +350,14 @@ repos:
         files: ^(docs/|mkdocs\.yml$)
         stages: [pre-commit]
 
-      # How much of each page is a second copy of a docstring, per
-      # `standards/documentation.md` § "A page never restates a module
-      # docstring". The threshold is `LOUD` in the script, calibrated against
-      # the corpus rather than chosen.
+      # How much of each page is a second copy of a docstring. A page never
+      # restates a module docstring. The threshold is `LOUD` in the script,
+      # calibrated against the corpus rather than chosen.
       #
       # `src/dotfiles/` and `apps/` are in the selector because a page's score
-      # moves when the docstring it restates is edited and the page is not —
-      # `standards/ci.md` § "A `paths:` filter names every file the build reads,
-      # not only the ones it renders".
+      # moves when the docstring it restates is edited and the page is not. A
+      # `paths:` filter names every file the build reads, not only the ones it
+      # renders.
       - id: docs-duplication
         name: docs duplication (pages restating a docstring)
         entry: uv run python install/ops/docs-duplication.py
