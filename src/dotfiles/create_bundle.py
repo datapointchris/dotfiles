@@ -771,7 +771,7 @@ def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
 
     The category whose machine cannot use its declared installer at all. Everywhere
     else the bundle is an alternative to a slow or unreachable source; here the
-    employer network blocks the Store outright, so a Windows manifest that declares
+    restricted network blocks the Store outright, so a Windows manifest that declares
     only `winget_packages` has exactly one install route and this is the other end
     of it. That is what the `repo` and `asset` columns are declared for.
 

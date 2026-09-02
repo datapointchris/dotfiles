@@ -9,7 +9,7 @@ Two kinds of drift live here and must not be collapsed. A flag whose value does
 not match the declaration is ours to repair, and `apply` does. A machine-local
 secret or a file safekeep restores is drift we can *report* and never write:
 the repo knows a machine needs `WINDOWS_USER` and must never know its value.
-Reporting one as a failure would make every freshly-installed work box look
+Reporting one as a failure would make every freshly-installed machine look
 broken between the install and the restore.
 """
 
@@ -526,7 +526,7 @@ def _unready(entry, machine, observed: Observed) -> list[Change]:
 
     Only preconditions this machine declares. A name absent from its own register
     does not apply rather than failing: `local.sh` is required on both halves of
-    the work laptop, and only the WSL half declares `WINDOWS_USER`.
+    one laptop, and only the WSL half declares `WINDOWS_USER`.
     """
     declared = {value.name for value in machine.required_values}
     unmet = [name for name in entry.requires_values if name in declared and not (observed.values.get(name) or observed.resolved.of(name))]

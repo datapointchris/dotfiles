@@ -10,7 +10,7 @@ alias copycommand='fc -ln -1 | win32yank.exe -i'
 # ---------- Directory Navigation ---------- #
 
 # The Windows-side home. WINDOWS_USER belongs in ~/.env below the OVERRIDES
-# marker: the account name is per-machine and, on the work box, an employee ID
+# marker: the account name is per-machine and, on a managed box, an issued ID
 # that has no business in this repo. Left unset rather than guessed — deriving it
 # needs a cmd.exe fork, which is not worth paying on every shell startup.
 [[ -n "${WINDOWS_USER:-}" ]] && export winchris="/mnt/c/Users/${WINDOWS_USER}"
@@ -30,13 +30,14 @@ export ZVM_CLIPBOARD_PASTE_CMD='win32yank.exe -o --lf'
 # ---------- Network ---------- #
 
 # Mounting a Windows share is a WSL capability, so the mechanism lives here and
-# takes the share as an argument. Which shares exist is machine-local: the work
-# box's named wrappers (mount-h and friends) are employer infrastructure and live
-# in ~/.local/shell/local.sh, which this repo declares but never contains.
+# takes the share as an argument. Which shares exist is machine-local: a
+# machine's named wrappers (mount-h and friends) name its own infrastructure and
+# live in ~/.local/shell/local.sh, which this repo declares but never contains.
 #
 # Credentials come from ~/.env below the OVERRIDES marker, never from this repo —
-# an employee ID and an employer domain do not belong in it, and a wrong default
-# would mount a share as the wrong user rather than failing.
+# an issued account ID and the domain it authenticates against do not belong in
+# it, and a wrong default would mount a share as the wrong user rather than
+# failing.
 #
 # Checked inside the function rather than at file scope: a `${VAR:?}` while
 # sourcing aborts the rest of this file, so an unset value would cost every

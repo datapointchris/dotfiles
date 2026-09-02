@@ -288,8 +288,8 @@ can never reach.
 
 **A machine that will never hold an atuin account does not declare one.** `auth:`
 is the roster of logins a machine has to be able to make, so a permanent no
-belongs there rather than in a row explaining itself on every run. The work box
-is that machine: its copy of the config is the `trust/nonfleet` one, sync is off
+belongs there rather than in a row explaining itself on every run. The nonfleet
+box is that machine: its copy of the config is the `trust/nonfleet` one, sync is off
 because a git-only node behind a corporate firewall is the wrong place to send
 shell history from, and `scheduler.yml` leaves atuin out for the same reason in
 its own words.

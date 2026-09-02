@@ -9,8 +9,9 @@ is looking.
 
 **Two leaks decide the shape, and both are real on that machine.**
 `resources/identity.py` examines `user.name` and `user.email`, and its own
-docstring records that a nonfleet box defaults to the employer identity — so
-`check --json` there contains an employer address. `resources/env.py` examines
+docstring records that a nonfleet box defaults to its non-personal identity — so
+`check --json` there contains an address that is not the personal one.
+`resources/env.py` examines
 every `~/.env` key, `WINDOWS_DOMAIN` among them.
 
 So the document is composed over an **allowlist** and never filtered down to one.
@@ -35,7 +36,7 @@ row to drop refuses the document. `screened` is that, and the reasoning for
 per-row rather than per-document is there.
 
 **Which names those are is the trust coordinate's answer, and it is one answer
-for the whole exchange.** Off the fleet the hostname is an employer asset tag: it
+for the whole exchange.** Off the fleet the hostname is an owner's asset tag: it
 is what `written_by` deliberately reduces to a digest, and it is what a row is
 withheld for carrying. On the fleet the hostname is published on purpose, in the
 filename and in `written_by`, so screening rows against it would drop a row to

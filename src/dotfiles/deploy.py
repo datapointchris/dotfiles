@@ -34,9 +34,9 @@ LOCAL_IDENTITY = Path.home() / '.config' / 'git' / 'local.gitconfig'
 not the personal one.
 
 Named for what it is to this repo — machine-local, like `~/.local/shell/local.sh`
-beside it — rather than for whose address it happens to carry. It was
-`employer.gitconfig`, which reads as a category the repo is entitled to know and
-is wrong on the first machine that keeps a second identity for any other reason.
+beside it — rather than for whose address it happens to carry. A name describing
+the owner claims a category the repo is not entitled to know, and it is wrong on
+the first machine that keeps a second identity for any other reason.
 """
 
 GIT_CONFIG_STUB = """\

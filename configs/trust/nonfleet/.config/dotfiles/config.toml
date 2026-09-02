@@ -16,7 +16,7 @@ repos_registry = "~/.config/repos.json"
 
 # No periodic `dotfiles check` on a machine outside the fleet. The run measures
 # upstream, so a timer makes this box call the same host once a day for as long as
-# it is powered on — and here that traffic crosses an employer's egress, where a
+# it is powered on — and here that traffic crosses a monitored egress, where a
 # workstation beaconing on an exact interval is the pattern monitoring exists to
 # surface. The cadence is not the objection; the beacon is.
 #

@@ -99,7 +99,7 @@ managed_files:
   #
   # `network_trust: fleet`, because loosening an authentication control is a
   # decision about a machine, and off the fleet the machine is somebody else's.
-  # Rewriting /etc/security/faillock.conf on a work box is this repo weakening a
+  # Rewriting /etc/security/faillock.conf on a managed box is this repo weakening a
   # security control on hardware it does not own — and the built-in deny=3 is a
   # perfectly good answer there.
   - name: faillock-deny

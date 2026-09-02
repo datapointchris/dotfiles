@@ -431,7 +431,7 @@ def _reported_versions(present: tuple[DesiredItem, ...]) -> dict[str, str]:
     """What every installed tool says it is, asked concurrently.
 
     The dominant cost of measuring this resource, and the one that made a `check`
-    unusable on the work box: 69 probes, each its own process start, strictly one
+    unusable on WSL: 69 probes, each its own process start, strictly one
     after another. Serial, that is 1.4s on a fast Linux box and minutes on WSL,
     where a process start costs an order of magnitude more.
 

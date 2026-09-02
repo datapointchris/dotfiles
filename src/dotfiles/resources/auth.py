@@ -9,7 +9,7 @@ converged rows while the data CLIs cannot answer a single request between them.
 the roster, and the table below is the probe for each name. That is the shape
 `custom_installers` and `steps` settled on, and it is forced here for a reason
 neither of them had: half the roster is installed outside this repo entirely —
-`aws` arrives through a custom installer and `bbkt` by hand on the work box — so
+`aws` arrives through a custom installer and `bbkt` by hand on one machine — so
 a field on a `packages.yml` row could not reach them. A table of tools in code
 would put the roster where every other resource keeps it out of.
 
@@ -445,7 +445,7 @@ def _bbkt(session: Session) -> Credential:
 
     `bbkt config check` is the honest answer to "does this work" and says so in its
     own help — *connect to the instance and report who you are*. That makes it a
-    round trip to an employer's Bitbucket from a check that runs on a timer,
+    round trip to a hosted Bitbucket from a check that runs on a timer,
     whether or not anyone is at the desk. `config path token` reads the config
     file and prints where the token would be, which honors a `token_file`
     override this repo has no business guessing at.
@@ -468,7 +468,7 @@ def _jira(session: Session) -> Credential:
     """The config `jira init` writes, or the token in the environment.
 
     The one path here taken from upstream convention rather than measured, because
-    jira is declared by the work box alone. `jira init --help` and
+    jira is declared by one machine alone. `jira init --help` and
     `eza -1a ~/.config/.jira/` settle it there in one line each, and
     `$JIRA_CONFIG_FILE` is honored so a box that keeps it elsewhere reads correctly
     whatever the default turns out to be.

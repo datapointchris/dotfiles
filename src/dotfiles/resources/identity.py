@@ -26,7 +26,7 @@ stub, which carries no [user] by design, and calls every machine unset.
 not.** git needs a repository's own config to know its remotes, and `--global` is
 exactly the read that excludes it. The trust variant uses the `hasconfig:` spelling.
 
-**The two differing is not drift.** A nonfleet box defaults to the employer
+**The two differing is not drift.** A nonfleet box defaults to its non-personal
 identity and matches personal repos back with `includeIf hasconfig:remote.*.url`,
 so inside a personal checkout the effective identity is *meant* to differ from the
 machine default. Comparing the two reports the arrangement working as an override
@@ -34,7 +34,7 @@ and advises a `--unset` that would remove nothing.
 
 Drift is a value this checkout sets *for itself*: what `--local` reads and the only
 thing `--unset` can remove. A repo-local identity is legitimate in other clones —
-an employer address kept out of a personal repo — so only one inside `session.repo`
+a non-personal address kept out of a personal repo — so only one inside `session.repo`
 counts, and nothing outside it is examined.
 """
 
@@ -102,7 +102,7 @@ class Observed:
         The effective value rather than the machine default, because a person
         reading this is standing in a repo and asking what their next commit gets
         attributed to. On a nonfleet box the two differ by design, and naming the
-        default here put the employer identity at the top of a check run inside a
+        default here put the non-personal identity at the top of a check run inside a
         personal repo. `inventory` names the default beside it where they differ.
 
         A field that is not set is named rather than formatted. Interpolating two

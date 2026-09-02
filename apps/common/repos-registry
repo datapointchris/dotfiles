@@ -3,8 +3,8 @@
 #
 # The one resolver. Seven skills and a handful of tools each need the same answer
 # and were each carrying the literal `~/dev/repos.json`, which resolves on a fleet
-# box and names nothing on the work box — a machine that has its own registry,
-# listing work repos, at its own path. A hardcoded path is not a smaller version
+# box and names nothing off it — a machine that has its own registry,
+# listing its own repos, at its own path. A hardcoded path is not a smaller version
 # of this; it is a wrong answer on one of the machines that reads it.
 #
 # Lives in dotfiles rather than in fleet because every machine has this and only

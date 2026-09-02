@@ -1,7 +1,7 @@
 # icb's machine config: where this machine keeps the shared files icb reads.
 #
 # Fleet-scoped because the registry's location differs by trust domain, and icb
-# reaches no machine outside the fleet — the work box's manifest does not install
+# reaches no machine outside the fleet — a nonfleet manifest does not install
 # it, so configs/trust/nonfleet/ carries no counterpart.
 #
 # A literal, never a shared shell variable: ~/.env is a shell file, so nothing

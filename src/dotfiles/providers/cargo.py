@@ -330,8 +330,8 @@ def binstall(target: Target, *, offline: bool) -> Result:
     Not a `github_releases` entry, and so not verified against a checksum:
     cargo-binstall publishes minisign signatures and nothing this repo can read.
     The source build is the fallback rather than a relaxed verification — it is
-    also the only path that works on the work box, where release asset downloads
-    are blocked but crates.io is reachable.
+    also the only path that works on a restricted box, where release asset
+    downloads are blocked but crates.io is reachable.
     """
     if shutil.which('cargo-binstall'):
         return Result(True, '', kind=Kind.UNCHANGED)

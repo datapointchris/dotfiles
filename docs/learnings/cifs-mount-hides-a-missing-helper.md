@@ -2,8 +2,8 @@
 
 ## Problem
 
-A freshly installed WSL Ubuntu distro could not mount the work network drive.
-`mount-h`, a wrapper around `mount-cifs` in the work box's machine-local
+A freshly installed WSL Ubuntu distro could not mount a CIFS network drive.
+`mount-h`, a wrapper around `mount-cifs` in that machine's machine-local
 `~/.local/shell/local.sh`, failed with:
 
 ```text
