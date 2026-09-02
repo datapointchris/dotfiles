@@ -171,7 +171,7 @@ There's also a [learnings](https://datapointchris.github.io/dotfiles/learnings/)
 
 ## Some Highlights
 
-**Neovim**: Native LSP — one file per server in `configs/common/.config/nvim/lsp/`, which `eza -1` will list — plus CodeCompanion for Claude integration and a custom colorscheme manager spanning generated and plugin themes.
+**Neovim**: Native LSP — one file per server, which `eza -1 configs/common/.config/nvim/lsp/` will list — plus CodeCompanion for Claude integration and a custom colorscheme manager spanning generated and plugin themes.
 
 **Shell**: Custom ZSH prompt with git status, zoxide for smart directory jumping, fzf with preview, syntax highlighting, vi-mode.
 

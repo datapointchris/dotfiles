@@ -25,28 +25,47 @@ alias ....='z ../../..'
 
 # ---------- List / Display ---------- #
 
-# Color LS command
-# Long format, human-readable, include hidden, with directory trailing `/` (same as la)
+# eza reads its file list from stdin whenever it is handed no path and stdin is
+# not a terminal, and then prints nothing while exiting 0 — a result no caller
+# can tell apart from an empty directory. `--stdin` is its documented opt-in for
+# that, so a call arriving without one wants the working directory. Name it here
+# rather than at each list command, and stay out of the way when the caller has
+# named a path already.
+eza_with_path() {
+  local arg
+  for arg in "$@"; do
+    if [[ $arg != -* || $arg == --stdin ]]; then
+      command eza "$@"
+      return
+    fi
+  done
+  command eza "$@" .
+}
+
+# Color LS commands. Long format, human-readable, hidden entries included, with
+# a directory trailing `/`. `ll` and `la` build on `ls`, so they carry its
+# `--all` too and add a header row on top of it.
+#
 # Prefer eza when installed; fall back to native ls so machines without eza
 # (e.g. WSL where the binary is blocked) still have a working `ls`.
+#
+# Functions, because an alias can only prepend. A default path appended to one
+# would land after the caller's own argument and list two directories.
+#
+# eza reads the WHEN on `--color` and on `-F`/`--classify` as optional, so
+# whichever of them is written last claims the path after it as its value and
+# the command fails on it. The eza branch binds the value with `=`, and drops
+# `--color` for the auto its default already asks for.
 if command -v eza &>/dev/null; then
-  alias ls="eza -l --all --git --git-repos --icons=always --group-directories-first --no-permissions --no-user --no-time"
+  ls() { eza_with_path -l --all --git --git-repos --icons=always --group-directories-first --no-permissions --no-user --no-time "$@"; }
+  ll() { ls -lh --classify=always "$@"; }
+  la() { ls -lhA --classify=always "$@"; }
+  lsd() { eza_with_path -l --all --git --git-repos --icons=always --no-permissions --no-user --no-time --only-dirs "$@"; }
 else
-  alias ls="ls -lhAFgo --color"
-fi
-
-# Long format, human-readable, with directory trailing '/'
-alias ll="ls -lhF --color"
-
-# Long format, human-readable, include hidden, with directory trailing '/'
-alias la="ls -lhAF --color"
-
-# List only directories
-# alias lsdir="ls -ldh *"
-if command -v eza &>/dev/null; then
-  alias lsd="eza -l --all --git --git-repos --icons=always --no-permissions --no-user --no-time --only-dirs"
-else
-  alias lsd="ls -ldh */"
+  ls() { command ls -lhAFgo --color "$@"; }
+  ll() { ls -lhF --color "$@"; }
+  la() { ls -lhAF --color "$@"; }
+  lsd() { ls -ldh -- */ "$@"; }
 fi
 
 # Print each PATH entry on a separate line
