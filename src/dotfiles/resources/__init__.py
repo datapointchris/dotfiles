@@ -18,7 +18,7 @@ before the report was printed and before anything upstream in the stage order
 installed a toolchain, so the state it decided from may be minutes old. It
 refuses rather than forces.
 
-`Privilege` is a parameter of `perform` and of nothing else, which is what makes
+`Escalates` is a parameter of `perform` and of nothing else, which is what makes
 "the read-only verbs never escalate" structural rather than a promise: `observe`
 is not handed one, so the code to ask for a password is not reachable from the
 half `plan` and `check` run. Every resource but `system` ignores it, and that is
@@ -53,7 +53,7 @@ from dotfiles.plan import Plan
 from dotfiles.plan import Precondition
 from dotfiles.plan import Preconditions
 from dotfiles.plan import Stage
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 
 
 class Verdict(enum.StrEnum):
@@ -403,21 +403,29 @@ class Observation(Protocol):
 
 
 @runtime_checkable
-class Resource(Protocol):
-    """One addressable part of the machine, with the same two verbs applied to it."""
+class Resource[ObservationT: Observation](Protocol):
+    """One addressable part of the machine, with the same two verbs applied to it.
+
+    Generic in what `observe` returns, because `diff` takes that same thing back
+    and a parameter is contravariant. Written as a plain `Observation` on both,
+    every resource would be promising to diff any other resource's measurement —
+    a promise none of them keeps, since each reads only its own fields. `Resource`
+    unparameterised means `Resource[Any]`, which is what the engine holds: it
+    pairs the two calls per resource and never carries one across.
+    """
 
     name: str
     help: str
 
-    def observe(self, session: Any, plan: Plan) -> Observation:
+    def observe(self, session: Any, plan: Plan) -> ObservationT:
         """Measure the machine. Reads only. May be slow, may need the network."""
         ...
 
-    def diff(self, plan: Plan, observed: Observation) -> tuple[Change, ...]:
+    def diff(self, plan: Plan, observed: ObservationT) -> tuple[Change, ...]:
         """Pure. Desired × observed → decided work, in the order it must happen."""
         ...
 
-    def perform(self, session: Any, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Any, change: Change, privilege: Escalates) -> Outcome:
         """Do one Change, re-checking live that it is still the right thing to do."""
         ...
 
@@ -437,7 +445,7 @@ class Batched(Protocol):
     together. A provider that cannot honour that must not opt in.
     """
 
-    def perform_batch(self, session: Any, changes: Sequence[Change], privilege: Privilege) -> list[Outcome]:
+    def perform_batch(self, session: Any, changes: Sequence[Change], privilege: Escalates) -> list[Outcome]:
         """Do these Changes together, re-checking live as `perform` does."""
         ...
 

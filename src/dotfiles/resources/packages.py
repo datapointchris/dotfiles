@@ -38,7 +38,7 @@ from dotfiles.plan import DesiredItem
 from dotfiles.plan import Plan
 from dotfiles.plan import Preconditions
 from dotfiles.plan import Stage
-from dotfiles.privilege import Privilege
+from dotfiles.privilege import Escalates
 from dotfiles.providers import bundle
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
@@ -296,7 +296,7 @@ class PackagesResource:
             )
         return tuple(changes)
 
-    def perform(self, session: Session, change: Change, privilege: Privilege) -> Outcome:
+    def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot."""
         return registry.install(session, change, privilege)
 
@@ -741,7 +741,7 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
 
 
 def _never_bundled(item: DesiredItem) -> str:
-    """Why no bundle carries this entry, read off the entry rather than its section.
+    """Why no bundle carries this entry, asked of the entry where the section cannot answer.
 
     A section is the right subject for every kind but one. `custom_installers`
     answers `bundlable` per entry — `theme` and `claude-code` declare
@@ -751,7 +751,7 @@ def _never_bundled(item: DesiredItem) -> str:
     """
     if isinstance(item.entry, catalog.CustomInstaller):
         return f'{item.name} declares no bundle_install_script, so no bundle stages an installer to compare against'
-    kind = type(item.entry).section.replace('_', ' ').rstrip('s')
+    kind = item.section.replace('_', ' ').rstrip('s')
     return f'no bundle carries a {kind}, so an offline run cannot say whether {item.name} is current'
 
 
