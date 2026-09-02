@@ -23,7 +23,7 @@ from dotfiles.commands import report
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.main import app
-from dotfiles.resolve import Stage
+from dotfiles.plan import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus

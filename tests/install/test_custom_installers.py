@@ -26,8 +26,8 @@ from dotfiles import evidence
 from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import plan as planning
 from dotfiles import providers
-from dotfiles import resolve
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -410,8 +410,8 @@ class TestAwscli:
         line on every run of a Mac with nothing wrong."""
         entry = declared.find('custom_installers', 'awscli')
 
-        assert not resolve.available(entry, machines.load('macos-personal-workstation').coordinates)
-        assert resolve.available(entry, machines.load('archlinux-personal-workstation').coordinates)
+        assert not planning.available(entry, machines.load('macos-personal-workstation').coordinates)
+        assert planning.available(entry, machines.load('archlinux-personal-workstation').coordinates)
 
     def test_an_installed_aws_is_still_converged_because_presence_is_not_currency(self, declared, home, bundle, effected, monkeypatch):
         """Currency for awscli is the resource's, against `aws/aws-cli`'s tags, so

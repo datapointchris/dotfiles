@@ -35,12 +35,12 @@ from dotfiles.effects import Completed
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
+from dotfiles.plan import Stage
 from dotfiles.providers import bin_dir
 from dotfiles.providers import cargo
 from dotfiles.providers import gotool
 from dotfiles.providers import npm
 from dotfiles.providers import toolchain
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus

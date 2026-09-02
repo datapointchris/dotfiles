@@ -28,13 +28,13 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from dotfiles import registry
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Plan
+from dotfiles.plan import Preconditions
 from dotfiles.privilege import Privilege
 from dotfiles.providers import clone
 from dotfiles.registry import PluginSyncProvider
 from dotfiles.registry import Provider
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Plan
-from dotfiles.resolve import Preconditions
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome

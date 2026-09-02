@@ -19,9 +19,9 @@ from dotfiles import vocabulary
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Summary
+from dotfiles.plan import Stage
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Repair

@@ -90,7 +90,7 @@ RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', '
 """Every addressable part of the machine, in the order rows are measured and printed.
 
 **Not the convergence order, and it cannot be.** Ordering *work* is
-`resolve.Stage`, because the chain interleaves these names: toolchains → packages
+`plan.Stage`, because the chain interleaves these names: toolchains → packages
 → toolchains → packages → plugins → symlinks → plugins → system. No sequence of
 resource names expresses that, so a walk sorts on the stage and this tuple
 decides only who is asked first and whose row prints above whose.

@@ -29,10 +29,10 @@ from dotfiles import commands
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles import plan as planning
 from dotfiles import providers
 from dotfiles import publishing
 from dotfiles import remote as transport
-from dotfiles import resolve as resolver
 from dotfiles.providers import bundle
 from dotfiles.refusal import Refusal
 
@@ -225,7 +225,7 @@ class Coverage:
     """
 
 
-def coverage(staged: Staging, plan: resolver.Plan) -> Coverage:
+def coverage(staged: Staging, plan: planning.Plan) -> Coverage:
     """Which of this machine's bundlable items the bundle actually holds.
 
     Matched on the executable as well as the name. A row is keyed on the declared

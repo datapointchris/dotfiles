@@ -208,7 +208,7 @@ class Entry:
     Checked live and never filtered out of the plan: `available()` reads
     coordinates, and coordinates are what a *manifest* says a machine is, so
     resolution stays the same answer from every machine.
-    `resolve.Precondition.AMD_GPU` carries the argument for why this is not a
+    `plan.Precondition.AMD_GPU` carries the argument for why this is not a
     seventh coordinate axis.
 
     One entry uses it — `ollama`, whose pacman name is `ollama-rocm` and whose

@@ -25,10 +25,10 @@ from rich.console import Console
 from dotfiles import declaration
 from dotfiles import logging
 from dotfiles import output
+from dotfiles.plan import Stage
 from dotfiles.reconcile import Lens
 from dotfiles.reconcile import ResourceResult
 from dotfiles.reconcile import ResourceVerdict
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Repair

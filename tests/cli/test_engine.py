@@ -18,9 +18,9 @@ from dotfiles import vocabulary
 from dotfiles.event import Refusal
 from dotfiles.event import Started
 from dotfiles.event import Summary
+from dotfiles.plan import Plan
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
-from dotfiles.resolve import Plan
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
@@ -72,7 +72,7 @@ def test_the_walk_covers_the_resources_the_vocabulary_names() -> None:
     """One list of addresses, so `--skip`, the help and the walk cannot disagree.
 
     It is the measuring and printing order, not the convergence order — that is
-    `resolve.Stage`, asserted below.
+    `plan.Stage`, asserted below.
     """
     assert list(engine.resources()) == list(vocabulary.RESOURCES)
 

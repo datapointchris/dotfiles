@@ -25,11 +25,11 @@ from pathlib import Path
 import pytest
 
 from dotfiles import registry
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import syspkg
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus

@@ -24,12 +24,12 @@ from dotfiles import coordinates as axes
 from dotfiles import evidence as ev
 from dotfiles import providers
 from dotfiles import registry
+from dotfiles.plan import Precondition
+from dotfiles.plan import Preconditions
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import bootstrap
 from dotfiles.providers import syspkg
-from dotfiles.resolve import Precondition
-from dotfiles.resolve import Preconditions
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair

@@ -12,6 +12,7 @@ import yaml
 from dotfiles import catalog
 from dotfiles import coordinates as axes
 from dotfiles import machine as machines
+from dotfiles import plan as planning
 from dotfiles import registry
 from dotfiles import resolve
 
@@ -24,11 +25,11 @@ def declaration() -> catalog.Catalog:
     return catalog.load(REPO_ROOT / 'install' / 'packages.yml')
 
 
-def planned(declaration: catalog.Catalog, name: str, **kwargs: Any) -> resolve.Plan:
+def planned(declaration: catalog.Catalog, name: str, **kwargs: Any) -> planning.Plan:
     return resolve.resolve(declaration, machines.load(name, REPO_ROOT), **kwargs)
 
 
-def synthetic(tmp_path: Path, declared: dict[str, Any], manifest: dict[str, Any], **narrowing: Any) -> resolve.Plan:
+def synthetic(tmp_path: Path, declared: dict[str, Any], manifest: dict[str, Any], **narrowing: Any) -> planning.Plan:
     install = tmp_path / 'install'
     (install / 'manifests').mkdir(parents=True, exist_ok=True)
     (install / 'packages.yml').write_text(yaml.safe_dump(declared, sort_keys=False))
@@ -112,7 +113,7 @@ def test_a_tool_requiring_a_wsl_host_resolves_only_there(declaration: catalog.Ca
 def test_the_windows_machine_plans_every_winget_row_and_nothing_else_does(declaration: catalog.Catalog) -> None:
     """Subscription, not availability — which is why the assertion is two-sided.
 
-    `resolve.available` has no rule for these, unlike the three sections beside it
+    `plan.available` has no rule for these, unlike the three sections beside it
     that a coordinate rules out. It could: a Mac cannot run winget any more than
     Arch can run a cask. What stops the rule being written today is that a Linux
     machine installing winget packages is not hypothetical — the WSL box does
@@ -277,7 +278,7 @@ def test_a_private_repo_carries_a_precondition_rather_than_being_dropped(declara
     """Credentials are state a machine can lose, unlike a coordinate — so the item
     stays planned and the run says why it was skipped."""
     plan = planned(declaration, 'archlinux-personal-workstation')
-    private = [item for item in plan.items if item.precondition is resolve.Precondition.GITHUB_AUTH]
+    private = [item for item in plan.items if item.precondition is planning.Precondition.GITHUB_AUTH]
 
     assert private, 'the declaration has private-repo tools; none carried a precondition'
 
@@ -461,7 +462,7 @@ def test_the_four_manifests_do_not_collapse_an_axis() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def system_plan(tmp_path: Path, system_config: dict[str, Any], manifest: dict[str, Any], **kwargs: Any) -> resolve.Plan:
+def system_plan(tmp_path: Path, system_config: dict[str, Any], manifest: dict[str, Any], **kwargs: Any) -> planning.Plan:
     install = tmp_path / 'install'
     (install / 'manifests').mkdir(parents=True)
     (install / 'packages.yml').write_text(yaml.safe_dump({'system_packages': [{'name': 'docker', 'pacman': 'docker'}]}))
@@ -559,5 +560,5 @@ def test_system_configuration_runs_after_everything_it_configures(tmp_path: Path
     plan = system_plan(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'system_packages': 'workstation'})
 
     stages = [item.stage for item in plan.items]
-    assert max(stages) is resolve.Stage.SYSTEM_CONFIG
-    assert [item.stage for item in plan.for_resource('system')][-1] is resolve.Stage.SYSTEM_CONFIG
+    assert max(stages) is planning.Stage.SYSTEM_CONFIG
+    assert [item.stage for item in plan.for_resource('system')][-1] is planning.Stage.SYSTEM_CONFIG

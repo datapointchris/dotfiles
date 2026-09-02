@@ -33,11 +33,11 @@ from typing import Protocol
 from dotfiles import catalog
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Preconditions
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import syspkg
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Preconditions
 from dotfiles.resources import Blocker
 from dotfiles.resources import Verdict
 

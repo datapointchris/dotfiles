@@ -35,10 +35,10 @@ from dotfiles import machine as machines
 from dotfiles import network
 from dotfiles import paths
 from dotfiles import resolve
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Precondition
 from dotfiles.providers import clone
 from dotfiles.providers import toolchain
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Precondition
 from dotfiles.resources import symlinks
 from dotfiles.session import Session
 

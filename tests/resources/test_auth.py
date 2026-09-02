@@ -19,8 +19,8 @@ import pytest
 
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles.plan import Preconditions
 from dotfiles.privilege import Privilege
-from dotfiles.resolve import Preconditions
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict

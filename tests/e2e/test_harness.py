@@ -38,10 +38,10 @@ from harness import shadow_source
 from harness import shell_path
 
 from dotfiles import network
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Precondition
-from dotfiles.resolve import Reason
-from dotfiles.resolve import Stage
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Precondition
+from dotfiles.plan import Reason
+from dotfiles.plan import Stage
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The measured network

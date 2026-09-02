@@ -12,7 +12,7 @@ third pass needs no new plumbing.
 
 **Only `plan` is handed the Catalog.** `evidence` and `install` take a resolved
 `DesiredItem` and cannot reach back for a fact the item does not carry, which
-turns `resolve.py`'s "resolution finishes here" from a prose invariant into
+turns `plan.py`'s "a `DesiredItem` is complete" from a prose invariant into
 something the signatures enforce.
 
 **`install` is the only method handed a `Privilege`.** `plan`, `evidence` and the
@@ -36,8 +36,11 @@ from dotfiles import catalog as catalogs
 from dotfiles import coordinates
 from dotfiles import evidence as ev
 from dotfiles import machine as machines
+from dotfiles import plan as planning
 from dotfiles import providers
-from dotfiles import resolve
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Reason
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
@@ -56,9 +59,6 @@ from dotfiles.providers import syspkg
 from dotfiles.providers import toolchain
 from dotfiles.providers import uvtool
 from dotfiles.providers import winget
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Reason
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
@@ -197,7 +197,7 @@ class CatalogProvider(Provider):
                 reason=Reason(self.section, selector_of(self.section, subscription)),
             )
             for entry in declaration.section(self.section)
-            if subscription.wants(entry) and resolve.available(entry, machine.coordinates)
+            if subscription.wants(entry) and planning.available(entry, machine.coordinates)
         )
 
 
@@ -754,7 +754,7 @@ class PluginSyncProvider(Provider):
                 name=self.manager,
                 executable='',
                 evidence_path='',
-                precondition=resolve.Precondition.NONE,
+                precondition=planning.Precondition.NONE,
                 entry=None,
                 reason=Reason('plugins', f'section:{self.needs}' if self.needs else f'feature:{self.feature}'),
             ),
@@ -904,7 +904,7 @@ class ManagerProvider(Provider):
                 name=manager,
                 executable='',
                 evidence_path='',
-                precondition=resolve.Precondition.NONE,
+                precondition=planning.Precondition.NONE,
                 entry=None,
                 reason=Reason('managers', f'installs {provider}'),
             )
@@ -1033,7 +1033,7 @@ class ToolchainProvider(Provider):
                 name=self.runtime,
                 executable=self.executable,
                 evidence_path=self.installed_at,
-                precondition=resolve.Precondition.NONE,
+                precondition=planning.Precondition.NONE,
                 entry=declared_runtime(declaration, self.runtime),
                 reason=Reason(self.browses(), f'section:{self.needed_by}' if self.needed_by else 'every machine'),
             ),
@@ -1131,14 +1131,14 @@ class SystemConfigProvider(Provider):
                 name=entry.name,
                 executable='',
                 evidence_path='',
-                precondition=resolve.Precondition.NONE,
+                precondition=planning.Precondition.NONE,
                 entry=entry,
                 reason=Reason(self.section, decided_by(entry)),
             )
             for entry in declaration.section(self.section)
             if isinstance(entry, catalogs.SystemConfig)
-            and resolve.available(entry, machine.coordinates)
-            and resolve.configures(entry, machine, installed)
+            and planning.available(entry, machine.coordinates)
+            and planning.configures(entry, machine, installed)
         )
 
     def needs_root(self, item: DesiredItem) -> bool:
@@ -1557,7 +1557,7 @@ def executable_of(entry: catalogs.Entry) -> str:
     return entry.executable
 
 
-def precondition_of(entry: catalogs.Entry) -> resolve.Precondition:
+def precondition_of(entry: catalogs.Entry) -> planning.Precondition:
     """The one state that stops this entry installing, or NONE.
 
     One rather than a set, because no entry declares two and a set would be
@@ -1571,10 +1571,10 @@ def precondition_of(entry: catalogs.Entry) -> resolve.Precondition:
     stop.
     """
     if entry.requires_github_auth:
-        return resolve.Precondition.GITHUB_AUTH
+        return planning.Precondition.GITHUB_AUTH
     if entry.requires_amd_gpu:
-        return resolve.Precondition.AMD_GPU
-    return resolve.Precondition.NONE
+        return planning.Precondition.AMD_GPU
+    return planning.Precondition.NONE
 
 
 def selector_of(section: str, subscription: machines.Subscription) -> str:

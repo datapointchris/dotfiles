@@ -22,7 +22,7 @@ from typer.testing import CliRunner
 from dotfiles import vocabulary
 from dotfiles.commands import machines
 from dotfiles.main import app
-from dotfiles.resolve import Precondition
+from dotfiles.plan import Precondition
 from dotfiles.vocabulary import ExitCode
 
 runner = CliRunner()

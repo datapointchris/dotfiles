@@ -20,9 +20,9 @@ from pathlib import Path
 
 from dotfiles import envfile
 from dotfiles import settings
+from dotfiles.plan import Plan
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
-from dotfiles.resolve import Plan
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome

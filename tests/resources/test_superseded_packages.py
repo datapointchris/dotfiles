@@ -23,12 +23,12 @@ from __future__ import annotations
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Precondition
+from dotfiles.plan import Preconditions
+from dotfiles.plan import Reason
+from dotfiles.plan import Stage
 from dotfiles.reconcile import sift
-from dotfiles.resolve import DesiredItem
-from dotfiles.resolve import Precondition
-from dotfiles.resolve import Preconditions
-from dotfiles.resolve import Reason
-from dotfiles.resolve import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict

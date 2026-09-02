@@ -26,11 +26,11 @@ import pytest
 import yaml
 
 from dotfiles import registry
+from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import toolchain as installers
-from dotfiles.resolve import Stage
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict

@@ -321,7 +321,7 @@ def test_a_ceiling_stops_the_work_above_it_and_admits_the_stage_it_names(
 
 
 def test_an_unknown_stage_is_a_usage_error_naming_the_stages_that_exist(cli: Callable[..., Invocation]) -> None:
-    """The names are read off `resolve.Stage` rather than written down, so a stage
+    """The names are read off `plan.Stage` rather than written down, so a stage
     added there is spellable — and refusable — the day it exists."""
     ran = cli('apply', '--through', 'nonsense')
 
