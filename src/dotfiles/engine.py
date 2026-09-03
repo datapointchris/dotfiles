@@ -135,7 +135,7 @@ class Selection:
     def capped_at(self, ceiling: Stage | None) -> Selection:
         """The same walk, stopping after this stage. None leaves it uncapped.
 
-        A method rather than a `through=` argument travelling beside the selection
+        A method rather than a `through=` argument traveling beside the selection
         through every layer that takes one: a ceiling is part of what a walk covers,
         and two arguments that are only ever passed together are two chances for a
         call site to carry one and drop the other.
@@ -355,7 +355,7 @@ def _in_stage_order(planned: Iterable[Event]) -> list[Event]:
     `tests/cli/test_engine.py` pins that, since it is the precondition for this
     function existing.
 
-    Materialising is the price, and it is not one anybody pays: an `apply` prints
+    Materializing is the price, and it is not one anybody pays: an `apply` prints
     its whole plan before acting on any of it, so every caller hands this a list.
     """
     staged = [(event.payload.stage, event) for event in planned if isinstance(event.payload, Change) and event.payload.actionable]

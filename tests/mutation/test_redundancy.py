@@ -5,7 +5,7 @@ that catch exactly the same bugs as each other, one whose only assertion no oper
 redundant leaves the toy's mutation score unchanged, and that is the property being measured — the report is only how it is read.
 
 The seams around the proof get their own tables. Attribution is where a proof silently empties, so the shapes that used to be
-ambiguous — a parametrised id carrying ` - `, one node id that is another's prefix, a class, a file that will not import — are
+ambiguous — a parametrized id carrying ` - `, one node id that is another's prefix, a class, a file that will not import — are
 driven against a real pytest rather than a fixture imitating one. And a kill nothing can be attributed to is driven through a stub
 pytest that exits 1 in silence, because that is the failure the whole proof rests on not happening quietly.
 """
@@ -99,7 +99,7 @@ def test_attribution_intersects_what_was_recorded_with_what_was_handed(
 def test_pytest_records_the_ids_it_was_handed_however_they_are_shaped(tmp_path: Path) -> None:
     """The shapes that made a prefix scrape ambiguous, asserted against real pytest rather than a fixture imitating it.
 
-    A parametrised id may contain ` - `, which used to be the separator between an id and its message. `test_a` is a prefix of
+    A parametrized id may contain ` - `, which used to be the separator between an id and its message. `test_a` is a prefix of
     `test_ab`. A class adds a third `::` component. A file that will not import is named on its own.
     """
     (tmp_path / 'tests').mkdir()
@@ -108,7 +108,7 @@ def test_pytest_records_the_ids_it_was_handed_however_they_are_shaped(tmp_path: 
     handed = [
         'tests/test_shapes.py::test_a',
         'tests/test_shapes.py::test_ab',
-        'tests/test_shapes.py::test_parametrised[a - b]',
+        'tests/test_shapes.py::test_parametrized[a - b]',
         'tests/test_shapes.py::TestGrouped::test_inside',
     ]
     setup = dataclasses.replace(toy_tree(tmp_path / 'tree'), repo=tmp_path, pytest_prefix=(sys.executable, '-m', 'pytest'))
@@ -120,7 +120,7 @@ def test_pytest_records_the_ids_it_was_handed_however_they_are_shaped(tmp_path: 
     assert harness.killers_in(reported, handed) == (
         'tests/test_shapes.py::TestGrouped::test_inside',
         'tests/test_shapes.py::test_ab',
-        'tests/test_shapes.py::test_parametrised[a - b]',
+        'tests/test_shapes.py::test_parametrized[a - b]',
     )
 
     _, _, _, broke = harness.run_pytest(
@@ -148,7 +148,7 @@ def test_ab():
 
 
 @pytest.mark.parametrize('value', ['a - b'])
-def test_parametrised(value):
+def test_parametrized(value):
     assert False
 
 
@@ -172,7 +172,7 @@ def test_nothing_vanishes_from_an_ordinary_failure_summary() -> None:
 
 
 def test_a_test_whose_id_a_mutant_destroyed_is_unprovable_and_the_rest_are_not() -> None:
-    """Blocking the whole module for this cost 715 of 718 proofs, for six mutants that renamed a parametrised case."""
+    """Blocking the whole module for this cost 715 of 718 proofs, for six mutants that renamed a parametrized case."""
     run = toy_run([site(score.KILLED, killers=('t::one', 't::two'), unmeasured=('t::gone',))])
     footprint = one_file(['t::one', 't::two', 't::gone'])
     verdicts = redundancy.prove(run, ['t::two', 't::gone'], footprint, ['src/dotfiles/x.py'], run_set=['t::one', 't::two'])

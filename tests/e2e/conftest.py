@@ -514,7 +514,7 @@ def base(container_environment: Environment) -> str:
 
     Which environment comes from `container_environment` rather than being decided
     again here. Decided twice, the two disagreed: `--environment wsl` reached this
-    fixture as an unparametrised request, so it fell back to Arch and handed
+    fixture as an unparametrized request, so it fell back to Arch and handed
     `over_base` an Arch image to run with wsl's user and home. The container then
     failed at `chown -R ubuntu` — an image with no such user — which reads as a
     broken copy step rather than as the wrong base.

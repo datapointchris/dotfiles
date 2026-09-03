@@ -21,7 +21,7 @@ while pretending to be one tool. Around 5,800 lines, including the workflows bro
 
 The cards and Labs went to a second repo,
 [datapointchris/terminal-library](https://github.com/datapointchris/terminal-library), rather than
-travelling with the tool. Content is authored far more often than code. Co-locating them would have
+traveling with the tool. Content is authored far more often than code. Co-locating them would have
 meant cutting a release every time a card changed.
 
 ## A machine gets doit only if its manifest names it

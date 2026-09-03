@@ -137,7 +137,7 @@ Four, each argued where it is enforced.
 - **A mutant that breaks import is attributed rather than discarded.** Reading it
   as a harness fault blocked 715 of 718 proofs on the first real run.
   `run.UNCOLLECTABLE`.
-- **A mutant that renames a parametrised case blocks only the tests it renamed**,
+- **A mutant that renames a parametrized case blocks only the tests it renamed**,
   not the module. `run.vanished_in`.
 
 **The room is screened against an unmutated copy first**, which drops a test that

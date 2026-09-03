@@ -187,7 +187,7 @@ def test_a_monorepo_plugin_takes_only_its_own_subdirectory(tmp_path: Path, monor
     assert not (target / '.git').exists()
 
 
-def test_a_link_out_of_the_subdirectory_is_materialised_not_left_dangling(tmp_path: Path, monorepo: Path, unprivileged: Privilege) -> None:
+def test_a_link_out_of_the_subdirectory_is_materialized_not_left_dangling(tmp_path: Path, monorepo: Path, unprivileged: Privilege) -> None:
     """The license link points at the repo root, which does not come with the
     plugin. Moved, it would dangle — and aim at the shared plugins directory,
     where something else could later satisfy it."""

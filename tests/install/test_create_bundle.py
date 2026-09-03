@@ -663,7 +663,7 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
     `already_current` is tested directly elsewhere. What that cannot catch is a
     staging loop that never calls it: the bundle would carry the tool anyway, the
     build would report itself sparse, and every test of the decision would still
-    pass. Five call sites, so this is parametrised over the four that resolve a
+    pass. Five call sites, so this is parametrized over the four that resolve a
     version from a release — `add_install_scripts` stages from an unversioned URL
     and has nothing to compare.
     """
@@ -707,7 +707,7 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
 
         Lazily, because a mapping built eagerly makes a declaration error in any
         one of them the failure every case here reports — which is how three
-        parametrised cases came to fail for a fourth's reason.
+        parametrized cases came to fail for a fourth's reason.
         """
         kind, declared = self.DECLARED[section]
         entry = kind.from_mapping(declared)

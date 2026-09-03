@@ -224,7 +224,7 @@ def killers_in(reported: Sequence[str], tests: Sequence[str]) -> tuple[str, ...]
 def vanished_in(output: str, tests: Sequence[str]) -> tuple[str, ...]:
     """Which of the subset's node ids the mutant made unresolvable.
 
-    A mutation to a value a test is parametrised over renames the case: `'apt'` -> `'apt-mutant'` turns
+    A mutation to a value a test is parametrized over renames the case: `'apt'` -> `'apt-mutant'` turns
     `test_every_package_manager_names_an_installer_family[apt]` into a node id nothing answers to, pytest exits 4 having run
     nothing, and the whole subset comes back unmeasured over one renamed argument. Naming them lets the mutant be re-run against
     everyone still addressable, so the loss is the handful of tests whose identity moved rather than the module.

@@ -87,7 +87,7 @@ def test_the_homebrew_installer_is_never_escalated(world, monkeypatch) -> None:
 
 def test_the_installer_runs_non_interactively(world, monkeypatch) -> None:
     """Without it the script blocks on "press RETURN", which on a scheduled or
-    containerised install is forever."""
+    containerized install is forever."""
     seen: dict[str, object] = {}
 
     def record(command, **kwargs):

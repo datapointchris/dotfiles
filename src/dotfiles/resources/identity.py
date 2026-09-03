@@ -149,7 +149,7 @@ class Observed:
     def inventory(self) -> tuple[Examined, ...]:
         """The two fields that resolved, then the files they resolved through.
 
-        The files are the half worth itemising. "from 5 config file(s)" is a count
+        The files are the half worth itemizing. "from 5 config file(s)" is a count
         of the exact thing that makes this arrangement hard to follow, and which
         five it means is the question the count provokes.
 

@@ -338,7 +338,7 @@ class Examined:
     The other half of what a measurement found: `diff` returns only what differs,
     so everything a healthy machine holds is otherwise invisible.
 
-    **Not a `Change`**, which is a unit of work travelling into the run record, the
+    **Not a `Change`**, which is a unit of work traveling into the run record, the
     exit code and `apply`. This reaches none of the three, rides on `Summary`, and
     is dropped by `sinks.record` — a run record holding 173 matched symlinks would
     accrue for a fact the summary already states as a count.
@@ -382,7 +382,7 @@ class Observation(Protocol):
     """Whatever a resource measured. Opaque to everything but its own `diff`.
 
     Except for two things. `summary` is what a resource's row says when nothing
-    drifted, and `inventory` is the same knowledge itemised. Both belong to the
+    drifted, and `inventory` is the same knowledge itemized. Both belong to the
     observation because that is the only thing that knows how much was examined.
     Building either in the walk instead means reaching into `evidence`, `links`,
     `present` and `installed` from a module that has no other reason to know those
@@ -398,7 +398,7 @@ class Observation(Protocol):
 
         Required rather than defaulted, so a resource added later cannot silently
         report an empty list where it has items to name. A resource with genuinely
-        nothing to itemise returns `()` and says why in its own docstring.
+        nothing to itemize returns `()` and says why in its own docstring.
         """
         ...
 

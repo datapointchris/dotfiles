@@ -104,7 +104,7 @@ class Stage(enum.IntEnum):
 
     Sorting above the installing stages is therefore cosmetic, and it is not what
     keeps a not-yet-installed CLI from being reported unauthenticated —
-    `reconcile.apply_machine` materialises the whole of `engine.assess` before it
+    `reconcile.apply_machine` materializes the whole of `engine.assess` before it
     performs anything, so every probe has already run whatever this number says.
     `auth._uninstalled` is what answers that, with `UNKNOWN` for a tool that is not
     on PATH.

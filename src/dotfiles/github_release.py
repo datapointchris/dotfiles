@@ -229,7 +229,7 @@ def sha256_of(path: Path) -> str:
 def github_token() -> str | None:
     """Private repos need one for both the API and the download; public ones do not.
 
-    **Memoised because `_headers` asks on every request.** A refresh makes one
+    **Memoized because `_headers` asks on every request.** A refresh makes one
     request per declared release, so this ran `gh auth token` once per repo — a
     subprocess at roughly 35ms, spawned dozens of times in a run, to answer a
     question whose answer cannot change while that run is going.

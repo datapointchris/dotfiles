@@ -285,7 +285,7 @@ def logging_is_configured():
 
 @pytest.fixture(autouse=True)
 def a_token_lookup_that_forgot_the_last_test():
-    """Clear the memoised `github_token`, which is per-process and a suite is one.
+    """Clear the memoized `github_token`, which is per-process and a suite is one.
 
     `github_release.github_token` caches so a refresh does not spawn `gh auth token`
     once per declared release. That is right for an invocation and wrong for a

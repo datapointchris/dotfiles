@@ -42,6 +42,6 @@ autoMemoryReclaim=gradual
 # WSL 2.5.6 after reports of ext4 corruption, and a sparse vhdx cannot be
 # compacted by any other means: diskpart refuses with "Virtual hard disk files
 # must be uncompressed and unencrypted and must not be sparse". Turning it back
-# off re-materialises every hole and costs a full compact cycle to undo.
+# off re-materializes every hole and costs a full compact cycle to undo.
 #
 # `wsl-tools compact` is the supported path and reclaims the same space.

@@ -56,7 +56,7 @@ class SiteResult:
     unmeasured: tuple[str, ...] = ()
     """Tests this mutant made unaddressable, so it says nothing about them either way.
 
-    A mutation to a value a test is parametrised over renames the case, and the node id the subset holds stops existing. The mutant
+    A mutation to a value a test is parametrized over renames the case, and the node id the subset holds stops existing. The mutant
     is re-run against everyone still addressable and these are named, because a killer set that is silently short is the one thing
     a redundancy proof cannot survive. `run.vanished_in` is the mechanism.
     """

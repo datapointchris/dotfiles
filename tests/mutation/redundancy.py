@@ -71,10 +71,10 @@ a marker file, the checkout's own layout — does not find it there. Such a test
 would make it everybody's subsumer. The room is screened against the unmutated copy first and anything red is dropped and named.
 """
 
-UNADDRESSABLE = 'some mutant renamed its parametrised case, so at least one mutant never ran against it'
+UNADDRESSABLE = 'some mutant renamed its parametrized case, so at least one mutant never ran against it'
 """Why a test whose node id a mutant destroys cannot be proved, and why only that test is affected.
 
-`'apt'` -> `'apt-mutant'` in `coordinates.py` renames every case parametrised over the package managers, so those node ids stop
+`'apt'` -> `'apt-mutant'` in `coordinates.py` renames every case parametrized over the package managers, so those node ids stop
 existing and pytest exits having run nothing. The harness re-runs the mutant against everyone still addressable — so the rest of
 the room is measured normally and only the handful whose identity moved comes back unmeasured. Blocking the module instead cost
 715 of 718 proofs on the first real run, for six mutants.

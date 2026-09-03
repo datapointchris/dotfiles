@@ -239,7 +239,7 @@ def test_backing_out_of_the_picker_is_not_a_failure(tmp_path: Path) -> None:
 def test_neither_branch_of_an_optional_tool_writes_to_stderr(tmp_path: Path, tool: str) -> None:
     """Both tools carry the same shape, so both are held to the same rule.
 
-    Parametrised rather than folded into one assertion: a failure names which
+    Parametrized rather than folded into one assertion: a failure names which
     tool regressed, and the next one added to `.zshrc` is a row here.
 
     `git-open` is deliberately not here. It is a plugin rather than a tool, every

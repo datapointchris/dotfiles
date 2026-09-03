@@ -201,7 +201,7 @@ class TestTheGate:
 
     def test_a_fleet_box_does_not_screen_for_a_name_it_publishes_on_purpose(self) -> None:
         """`written_by` carries the bare hostname on `FLEET`, deliberately. Screening
-        rows against it too withholds a row to hide a string travelling one key
+        rows against it too withholds a row to hide a string traveling one key
         over — the builder loses a tool and the name ships regardless."""
         assert publishing.identifying(axes.NetworkTrust.FLEET) == {'the account this runs as': getpass.getuser()}
 

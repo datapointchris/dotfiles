@@ -148,7 +148,7 @@ def _subdirectory(repo: str, inner: str, target: Path) -> Result:
     gives each plugin a `LICENSE` symlink to the one at the repo root, and a move
     leaves that pointing at a path *outside* the plugin — dangling, and aimed at
     the shared plugins directory where something else could later satisfy it.
-    `ya pkg add` materialises the file, so this does too.
+    `ya pkg add` materializes the file, so this does too.
 
     `ignore_dangling_symlinks` is deliberately **not** set, despite looking like
     the tolerant choice: `copytree` tests the raw link target against the process

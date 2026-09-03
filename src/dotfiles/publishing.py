@@ -39,7 +39,7 @@ for the whole exchange.** Off the fleet the hostname is an employer asset tag: i
 is what `written_by` deliberately reduces to a digest, and it is what a row is
 withheld for carrying. On the fleet the hostname is published on purpose, in the
 filename and in `written_by`, so screening rows against it would drop a row to
-hide a string travelling one key over — costing the builder a tool and protecting
+hide a string traveling one key over — costing the builder a tool and protecting
 nothing. `identifying` is where that single decision lives. The account name is
 never published anywhere, so it is on the list on every machine.
 

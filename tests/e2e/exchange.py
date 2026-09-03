@@ -160,7 +160,7 @@ def peer_address(peer: Machine) -> str:
 
     The account is spelled out rather than left to ssh's default, because a
     *converged* machine has this repo's `~/.ssh/config` deployed and that file
-    decides the user. So the offline box dialled the builder as `chris` and was
+    decides the user. So the offline box dialed the builder as `chris` and was
     refused, while the builder — which installs nothing — defaulted correctly and
     passed every test at the cheaper rung.
     """

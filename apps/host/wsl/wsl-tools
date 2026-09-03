@@ -304,7 +304,7 @@ clean() {
 # behind --allow-unsafe since WSL 2.5.6 after reports of ext4 corruption, and a
 # sparse vhdx cannot be compacted at all: diskpart refuses with "Virtual hard
 # disk files must be uncompressed and unencrypted and must not be sparse."
-# Turning it back off re-materialises every hole, so the escape hatch costs a
+# Turning it back off re-materializes every hole, so the escape hatch costs a
 # full compact cycle.
 #
 # Optimize-VHD is not offered either. It needs the Hyper-V PowerShell module,

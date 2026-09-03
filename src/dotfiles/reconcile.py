@@ -391,7 +391,7 @@ def survey(
     run that never happens.
 
     **Reported a resource at a time, not once at the end**, because the walk is a
-    generator and materialising it makes a slow resource look like a hung one.
+    generator and materializing it makes a slow resource look like a hung one.
 
     `offline` swaps the upstream for the staged bundle and never stages one, and
     `Session.resolve` drops `refresh` alongside it.

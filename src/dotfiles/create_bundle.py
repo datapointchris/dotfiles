@@ -383,7 +383,7 @@ def installed_versions(document: Any) -> dict[str, str]:
     """What a status document says the target has, keyed by the plan address.
 
     Three lists rather than `examined` alone, and that is what makes a sparse
-    build possible at all. `examined` is the itemised set of items that produced
+    build possible at all. `examined` is the itemized set of items that produced
     *no* change, because `reconcile._unreported` subtracts every item that did —
     and the document is composed offline, where a tool the target has no bundle
     row for is `UNKNOWN`, which is a change. So on a machine with nothing staged

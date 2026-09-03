@@ -619,7 +619,7 @@ class TestTokenLookup:
 
     def test_the_environment_still_wins_and_spawns_nothing(self, monkeypatch):
         """The variable outranks `gh` and always did. Worth pinning beside the cache
-        because memoising an answer that came from the wrong rung would keep it for
+        because memoizing an answer that came from the wrong rung would keep it for
         the rest of the run."""
         monkeypatch.setenv('GITHUB_TOKEN', 'ghp_from_the_environment')
 

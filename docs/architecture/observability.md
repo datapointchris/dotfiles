@@ -45,7 +45,7 @@ question rather than this tool's.
 `plan --json` and `check --json` compose it and hand it to stdout, so where it
 lands is the caller's business. It is the one artifact of the four with no reader
 on this machine. The work box is git-only and off Syncthing, so the way its needs
-reach the fleet is its check output travelling as a file, and what that file says
+reach the fleet is its check output traveling as a file, and what that file says
 is missing is what the fleet builds into the next offline bundle for it. Why it
 carries a version, and what each generation holds, are `VERSION` in
 `src/dotfiles/status.py`.
