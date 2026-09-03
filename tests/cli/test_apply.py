@@ -904,6 +904,14 @@ class TestARunThatNeverStarted:
     The verdict line is composed from counts of what this walk decided, and a run
     refused before the walk has none — so a verdict word in front of a sentence
     about how the command was typed would claim a measurement nobody made.
+
+    **The refusal's own sentence is not asserted here, and the exit code stands
+    for it.** `NoBundle` is the only Issue reachable on this path — its two
+    neighbors in `reconcile` are usage errors — and its message interpolates
+    the staging directory, the working directory and `$HOME`, so matching it
+    makes the result a function of how long the operator's paths are. That the
+    refusal carries its remedy is `tests/cli/test_boundary.py`'s subject, over a
+    `Refusal` the test builds itself.
     """
 
     def test_an_offline_run_with_no_bundle_refuses_rather_than_reporting_a_verdict(
@@ -917,8 +925,6 @@ class TestARunThatNeverStarted:
 
         written = capsys.readouterr()
         assert code is ExitCode.ISSUE
-        assert 'offline needs a staged bundle' in written.err
-        assert 'dotfiles bundle stage PATH' in written.err
         assert 'converged' not in written.err
 
     def test_it_says_nothing_on_stdout_either(

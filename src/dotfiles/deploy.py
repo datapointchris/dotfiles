@@ -84,8 +84,8 @@ def _ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
     _retire_home_gitconfig(coordinates)
 
 
-def _retire_home_gitconfig(coordinates: axes.Coordinates) -> None:
-    """Remove any `~/.gitconfig`, since the entry point is XDG.
+def _retire_home_gitconfig(coordinates: axes.Coordinates) -> Path | None:
+    """Remove any `~/.gitconfig`, and answer where an identity in it should go.
 
     git prefers it over `~/.config/git/config` for reads and writes both, so one
     left behind silently out-ranks the entire include chain — the identity a trust
@@ -98,22 +98,27 @@ def _retire_home_gitconfig(coordinates: axes.Coordinates) -> None:
     personal.gitconfig, so there is nothing to preserve and the file is simply
     in the way — advising a rescue file there sent one Mac looking for a
     destination its trust variant never includes.
+
+    **The destination is returned, and the hint is derived from it.** The two
+    branches otherwise differ in nothing but the sentence they print, so the one
+    thing that separates them would exist only inside prose — and a caller, this
+    function's own tests included, would have no value to read.
     """
     if not HOME_GITCONFIG.exists():
         # `exists()` follows a link, so a dangling one reads as absent here and
         # still has to be unlinked: left behind it is the write target git picks.
         if HOME_GITCONFIG.is_symlink():
             HOME_GITCONFIG.unlink()
-        return
+        return None
     if identity := _identity_in(HOME_GITCONFIG):
         err_console.print(f'  [red]✗[/] ~/.gitconfig holds {identity} and out-ranks ~/.config/git/config')
-        if coordinates.network_trust is axes.NetworkTrust.FLEET:
-            hint(f'this machine already has that identity from {PERSONAL_IDENTITY.name}, so delete ~/.gitconfig')
-        else:
-            hint(f'move it into {LOCAL_IDENTITY}, then delete ~/.gitconfig')
-        return
+        rescue = None if coordinates.network_trust is axes.NetworkTrust.FLEET else LOCAL_IDENTITY
+        already = f'this machine already has that identity from {PERSONAL_IDENTITY.name}, so'
+        hint(f'move it into {rescue}, then delete ~/.gitconfig' if rescue else f'{already} delete ~/.gitconfig')
+        return rescue
     HOME_GITCONFIG.unlink()
     hint(f'removed {HOME_GITCONFIG} — the entry point is now {GIT_CONFIG_ENTRY}')
+    return None
 
 
 def epilogue(session: Session) -> None:

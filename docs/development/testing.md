@@ -30,8 +30,11 @@ The door is the membership rule for `tests/matrix/`. That package builds one
 synthetic machine out of files and drives the real CLI against it in process,
 with nothing in `src/dotfiles/` stubbed. The rule, and the four things that send
 a test to `tests/resources/` instead, are the module docstring in
-`tests/matrix/__init__.py`. `tests/matrix/harness.py` carries why the two
-import-time seams need rebinding rather than an environment variable.
+`tests/matrix/__init__.py`. Two seams are read at import and so cannot be reached
+by setting the variable alone. `tests/derivations.py` carries the constants
+`paths` derives, and is shared with the trees outside `tests/matrix/` that need
+the same thing; `tests/matrix/harness.py` carries the defaults captured into a
+function object when it was created.
 
 ## Tests are flat functions, grouped by a section comment
 

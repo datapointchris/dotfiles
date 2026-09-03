@@ -63,7 +63,22 @@ os.environ['DOTFILES_DIR'] = str(REPO)
 # `dotfiles.paths` and the assert holds that module out until the root is pinned.
 # `github_release` and `Privilege` reach it through nothing, so they stay up there.
 from dotfiles import machine as machines  # noqa: E402
+from dotfiles import paths  # noqa: E402
 from dotfiles import settings  # noqa: E402
+
+REAL_STATE_HOME = paths.STATE_HOME
+REAL_CONFIG_DIR = settings.config_file().parent
+"""The two directories this tool owns on the box running the suite.
+
+Read here, at import, while the environment is still the operator's. Everything
+below redirects `$XDG_STATE_HOME` and `$XDG_CONFIG_HOME`, and `paths` answers the
+redirect — so a guard asking `paths` at call time would name wherever the test had
+already moved to and could never fire.
+
+`~/.config/dotfiles/config.toml` is a symlink into this checkout on a deployed
+machine, so a write there does not stay in `$HOME`: it follows the link and
+truncates the tracked file, or unlinks it and leaves the deployed path a stray.
+"""
 
 
 def declared_names() -> tuple[str, ...]:
@@ -409,56 +424,62 @@ def no_stopping_this_machines_daemons(request, monkeypatch):
     monkeypatch.setattr(systemd, 'disable', refuse)
 
 
-@pytest.fixture(scope='session', autouse=True)
-def no_run_artifacts_on_this_machine(request):
-    """Fail the session if it left a run artifact in the real state directory.
+class WroteOntoThisMachine(BaseException):
+    """Raised where a test wrote into a directory this tool owns on the real box.
 
-    The counterpart to `no_installing_on_this_machine`, covering the other thing
-    a verb writes to the box it runs on. `sinks.open_log` swallows its own errors
-    by design, so a test that reaches it leaves a file and reports nothing. 1372
-    empty `.jsonl` accumulated beside 143 real runs before anything counted, in a
-    directory Syncthing shares with the rest of the fleet — and each looked like
-    an apply that had died on the spot, because the stubbed `keep` left no record
-    next to it.
-
-    Session-scoped: listing the directory once per test costs more than the leak
-    does, and one filename at the end is enough to find whoever wrote it.
-
-    Skipped under `--docker`, where an install writes its records inside the
-    container and the host's directory is not the subject.
-
-    Two things arriving in that directory during a session are not leaks, and both
-    will otherwise refuse a commit for something the suite did not do.
-    A peer machine's record is delivered there by Syncthing; `runs.begin` defaults
-    a record's host to `paths.MACHINE_ID`, so anything the suite could write
-    carries this box's id and a file naming another one was not written here.
-    And a `dotfiles` verb run by a person or a second session on this box writes
-    a real record while the suite happens to be running.
-
-    What the suite leaks is empty, which is what separates it from both: the
-    stubbed `keep` returns before anything is written, so the file is created and
-    never filled. That is the shape of all 1372.
+    A `BaseException` for the reason `WouldInstall` gives: `engine._measure` and
+    `engine._act` wrap a resource in `except Exception`, so an `AssertionError`
+    here would be turned into a `Refusal` and the run would exit 3 — reading as a
+    resource that could not be examined rather than as a test writing onto the
+    machine.
     """
-    from dotfiles import paths
 
-    def artifacts() -> set[str]:
-        """New, empty, and this machine's — a record no run finished writing."""
-        if not paths.RUNS_DIR.is_dir():
-            return set()
-        return {
-            path.name
-            for path in paths.RUNS_DIR.iterdir()
-            if f'-{paths.MACHINE_ID}-' in path.name and path.is_file() and path.stat().st_size == 0
-        }
 
-    if request.config.getoption('docker'):
-        yield
+@pytest.fixture(autouse=True)
+def no_writing_into_this_machines_own_directories(request, monkeypatch):
+    """Refuse a write under the real `~/.config/dotfiles` or `$XDG_STATE_HOME/dotfiles`.
+
+    **Guarded at `pathlib.Path` rather than at this package's writers**, because
+    the two incidents that produced this arrived by different routes and only one
+    of them went through a `dotfiles` function. Nothing in `src/dotfiles/` writes
+    `config.toml` at all — a test computed the path itself and wrote it — so a
+    wrap on `runs.write` and `status.record` would have caught the run records and
+    watched the config go past.
+
+    **Scoped to the two directories this tool owns**, so it is exact rather than
+    broad: every other path a test touches is under `tmp_path` or is somebody
+    else's, and a guard over the whole home would fire on `uv`, on coverage and on
+    pytest itself.
+
+    The roots are read at import, above, while they still describe the operator's
+    machine. A test redirecting `$XDG_STATE_HOME` moves what `paths` answers and
+    moves nothing here, which is the point: the guard has to keep naming the place
+    the test was supposed to be redirected away from.
+
+    A directory sweep cannot do this job. Syncthing delivers a peer's record into
+    `runs/` while the suite is running, and a person or a second session can run a
+    real verb on this box at the same time — so a new file there is not evidence of
+    a leak, and the narrow filter that tried to tell them apart was reasoning from
+    a premise `runs.write` does not hold to: it writes whatever `record.host` says,
+    and a fixture is free to say another machine's name.
+    """
+    if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
         return
 
-    before = artifacts()
-    yield
-    leaked = sorted(artifacts() - before)
-    assert not leaked, f'the suite wrote {len(leaked)} run artifact(s) into {paths.RUNS_DIR}, starting {leaked[:4]}'
+    def refuse_if_real(original, verb):
+        def guarded(self, *args, **kwargs):
+            for owned in (REAL_STATE_HOME, REAL_CONFIG_DIR):
+                if self == owned or owned in self.parents:
+                    raise WroteOntoThisMachine(
+                        f'{verb} on {self} would write into this machine’s own {owned} — '
+                        f'redirect $XDG_STATE_HOME or $XDG_CONFIG_HOME, or mark the test e2e'
+                    )
+            return original(self, *args, **kwargs)
+
+        return guarded
+
+    for verb in ('write_text', 'write_bytes', 'touch', 'mkdir', 'symlink_to', 'unlink'):
+        monkeypatch.setattr(Path, verb, refuse_if_real(getattr(Path, verb), verb))
 
 
 def pytest_configure(config):
