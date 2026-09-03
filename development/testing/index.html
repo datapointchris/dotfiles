@@ -1,0 +1,2724 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/development/testing/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../publishing-docs/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+    
+    
+      
+        <title>VM Testing - Dotfiles</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.84d31ad4.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css?h=e5bc92a0">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#testing" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dotfiles
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              VM Testing
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="https://docs.ichrisbirch.com/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  ← Code Kingdom
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../apps/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 20h4v-4h-4m0-2h4v-4h-4m-6-2h4V4h-4m6 4h4V4h-4m-6 10h4v-4h-4m-6 4h4v-4H4m0 10h4v-4H4m6 4h4v-4h-4M4 8h4V4H4z"/></svg>
+    
+  
+  Apps
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 15h-2v-2h2m0 6h-2v-2h2M13 7h-2V5h2m0 6h-2V9h2m0 6h-2v-2h2m0 6h-2v-2h2m-6-6H5V9h2m0 6H5v-2h2m0 6H5v-2h2m8-6V5l-3-3-3 3v2H3v14h18V11z"/></svg>
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../configuration/docker/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/rebuilding-a-machine/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2H3v2h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2v-2H8v-5a2 2 0 0 0-2-2 2 2 0 0 0 2-2V5h2V3m6 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3z"/></svg>
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../learnings/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+    
+  
+  Learnings
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dotfiles
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://docs.ichrisbirch.com/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ← Code Kingdom
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../apps/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 20h4v-4h-4m0-2h4v-4h-4m-6-2h4V4h-4m6 4h4V4h-4m-6 10h4v-4h-4m-6 4h4v-4H4m0 10h4v-4H4m6 4h4v-4h-4M4 8h4V4H4z"/></svg>
+  
+  <span class="md-ellipsis">
+    Apps
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Apps
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/theme/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.5 12a1.5 1.5 0 0 1-1.5-1.5A1.5 1.5 0 0 1 17.5 9a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1-1.5 1.5m-3-4A1.5 1.5 0 0 1 13 6.5 1.5 1.5 0 0 1 14.5 5 1.5 1.5 0 0 1 16 6.5 1.5 1.5 0 0 1 14.5 8m-5 0A1.5 1.5 0 0 1 8 6.5 1.5 1.5 0 0 1 9.5 5 1.5 1.5 0 0 1 11 6.5 1.5 1.5 0 0 1 9.5 8m-3 4A1.5 1.5 0 0 1 5 10.5 1.5 1.5 0 0 1 6.5 9 1.5 1.5 0 0 1 8 10.5 1.5 1.5 0 0 1 6.5 12M12 3a9 9 0 0 0-9 9 9 9 0 0 0 9 9 1.5 1.5 0 0 0 1.5-1.5c0-.39-.15-.74-.39-1-.23-.27-.38-.62-.38-1a1.5 1.5 0 0 1 1.5-1.5H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8"/></svg>
+  
+  <span class="md-ellipsis">
+    Theme and Font
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/notes/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 7V5h2V4a2 2 0 0 1 2-2h6v7l2.5-1.5L18 9V2h1c1.05 0 2 .95 2 2v16c0 1.05-.95 2-2 2H7c-1.05 0-2-.95-2-2v-1H3v-2h2v-4H3v-2h2V7zm4 4H5v2h2zm0-4V5H5v2zm0 12v-2H5v2z"/></svg>
+  
+  <span class="md-ellipsis">
+    Notes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/doit/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 2v2.07A8 8 0 0 0 4.07 11H2v2h2.07A8 8 0 0 0 11 19.93V22h2v-2.07A8 8 0 0 0 19.93 13H22v-2h-2.07A8 8 0 0 0 13 4.07V2m-2 4.08V8h2V6.09c2.5.41 4.5 2.41 4.92 4.91H16v2h1.91c-.41 2.5-2.41 4.5-4.91 4.92V16h-2v1.91C8.5 17.5 6.5 15.5 6.08 13H8v-2H6.09C6.5 8.5 8.5 6.5 11 6.08M12 11a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1"/></svg>
+  
+  <span class="md-ellipsis">
+    Doit
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/refcheck/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M.41 13.41 6 19l1.41-1.42L1.83 12m20.41-6.42L11.66 16.17 7.5 12l-1.43 1.41L11.66 19l12-12M18 7l-1.41-1.42-6.35 6.35 1.42 1.41z"/></svg>
+  
+  <span class="md-ellipsis">
+    Refcheck
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/backup/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9H0l4 4 4-4H5a7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7c-1.5 0-2.91-.5-4.06-1.3L6.5 19.14A9.1 9.1 0 0 0 12 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9m2 9a2 2 0 0 0-2-2 2 2 0 0 0-2 2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/></svg>
+  
+  <span class="md-ellipsis">
+    Backup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/safekeep/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2m-2.2 5.7-1.5-1.4 1.5-1.5C7.3 14 7 13 7 12s.3-2 .8-2.7L6.3 7.8l1.5-1.5 1.4 1.5C10 7.3 11 7 12 7s2 .3 2.8.8l1.5-1.5 1.4 1.4-1.5 1.5c.5.8.8 1.8.8 2.8s-.3 2-.8 2.8l1.5 1.5-1.4 1.4-1.5-1.5c-.8.5-1.8.8-2.8.8s-2-.3-2.7-.8zM12 9c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3m8-7c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2h-1v1h-4v-1H9v1H5v-1H4c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2zm0 18V4H4v16z"/></svg>
+  
+  <span class="md-ellipsis">
+    Safekeep
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/work-monitor/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 17V7H6v10zm0-12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6v2h2v2h-8v-2h2v-2H6c-1.11 0-2-.89-2-2V7a2 2 0 0 1 2-2zM2 3v12H0V3a2 2 0 0 1 2-2h18v2z"/></svg>
+  
+  <span class="md-ellipsis">
+    Work Monitor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/zsh-startup/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 20a7 7 0 0 1-7-7 7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7m7.03-12.61 1.42-1.42c-.45-.51-.9-.97-1.41-1.41L17.62 6c-1.55-1.26-3.5-2-5.62-2a9 9 0 0 0-9 9 9 9 0 0 0 9 9c5 0 9-4.03 9-9 0-2.12-.74-4.07-1.97-5.61M11 14h2V8h-2m4-7H9v2h6z"/></svg>
+  
+  <span class="md-ellipsis">
+    Zsh Startup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/wsl-disk-and-speed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    WSL Tools
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../architecture/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 15h-2v-2h2m0 6h-2v-2h2M13 7h-2V5h2m0 6h-2V9h2m0 6h-2v-2h2m0 6h-2v-2h2m-6-6H5V9h2m0 6H5v-2h2m0 6H5v-2h2m8-6V5l-3-3-3 3v2H3v14h18V11z"/></svg>
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Architecture
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/management-interface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Management Interface
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/shell-libraries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Shell Libraries
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/tmux-sessions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    tmux Sessions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/package-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Package Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/github-releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    GitHub Releases
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/custom-installers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Custom Installers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/offline-bundles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Offline Bundles
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/system-configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    System Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Observability
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Configuration
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docker Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/hyprland/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Hyprland
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rebuilding-a-machine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Rebuilding a Machine
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/platforms/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tool Availability
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/symlinks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Symlinks Manager
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Task Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/support/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/support/corporate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Restricted Networks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2H3v2h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2v-2H8v-5a2 2 0 0 0-2-2 2 2 0 0 0 2-2V5h2V3m6 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3z"/></svg>
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    VM Testing
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    VM Testing
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tests-are-flat-functions-grouped-by-a-section-comment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tests are flat functions, grouped by a section comment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coverage-says-a-line-ran-the-mutation-harness-says-whether-anything-asserted-on-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coverage says a line ran; the mutation harness says whether anything asserted on it
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drive-real-shells-from-pytest-not-from-a-second-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      Drive real shells from pytest, not from a second framework
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logic-belongs-in-python-and-moving-it-is-the-cheaper-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logic belongs in Python, and moving it is the cheaper fix
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#every-test-builds-its-own-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      Every test builds its own tree
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#never-compare-an-fd-count-against-a-count-from-anything-else" class="md-nav__link">
+    <span class="md-ellipsis">
+      Never compare an fd count against a count from anything else
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#an-install-is-only-proven-from-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      An install is only proven from nothing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-container-rig-must-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      What the container rig must not do
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-asks-the-machine-never-the-products-own-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Verification asks the machine, never the product's own evidence
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publishing-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Publishing Docs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docs Audit Record
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../learnings/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+  
+  <span class="md-ellipsis">
+    Learnings
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Learnings
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/app-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    App Installation Patterns
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/uv-tool-git-pins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    uv Tool Git Pins and Self-Update
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/minimal-manifest-for-servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Minimal Manifest for Servers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/undeclared-transitive-dependency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Undeclared Transitive Dependency
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/symlinks-path-gotchas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Symlinks Path Gotchas
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/a-test-writes-through-a-deployed-symlink/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A Test Writes Through a Deployed Symlink
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/wsl-credential-helper-exec-format-error/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    WSL Credential Helper Exec Format Error
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/pre-commit-stash-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    pre-commit Stash Recovery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/shared-stash-across-worktrees/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Shared Stash Across Worktrees
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Task Shell Printf Compatibility
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/profiling-zsh-startup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Profiling Zsh Startup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/resilient-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Resilient Installation Patterns
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/cargo-binstall-needs-release-binaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    cargo binstall Needs Release Binaries
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/packages-yml-entry-is-not-an-install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A packages.yml Entry Is Not an Install
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/cifs-mount-hides-a-missing-helper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A CIFS Mount Hides a Missing Helper
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/pyright-config-file-precedence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Pyright Config File Precedence
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/ghostty-shader-reload/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Ghostty Shader Reload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/usb-dac-lies-about-its-volume-range/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    The ORA by Kanto Volume Drop-in
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/finding-where-a-slow-run-went/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Finding Where a Slow Run Went
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/a-conflicting-package-blocks-an-install-forever/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A Conflicting Package Blocks an Install Forever
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-was-on-no-path-and-nothing-said-so/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Was on No PATH, and Nothing Said So
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/unix-socket-path-is-shorter-than-tmp-path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A Unix Socket Path Is Shorter Than tmp_path
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/a-cache-outlives-the-file-you-restored/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A Cache Outlives the File You Restored
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tests-are-flat-functions-grouped-by-a-section-comment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tests are flat functions, grouped by a section comment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coverage-says-a-line-ran-the-mutation-harness-says-whether-anything-asserted-on-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coverage says a line ran; the mutation harness says whether anything asserted on it
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drive-real-shells-from-pytest-not-from-a-second-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      Drive real shells from pytest, not from a second framework
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logic-belongs-in-python-and-moving-it-is-the-cheaper-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logic belongs in Python, and moving it is the cheaper fix
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#every-test-builds-its-own-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      Every test builds its own tree
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#never-compare-an-fd-count-against-a-count-from-anything-else" class="md-nav__link">
+    <span class="md-ellipsis">
+      Never compare an fd count against a count from anything else
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#an-install-is-only-proven-from-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      An install is only proven from nothing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-container-rig-must-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      What the container rig must not do
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-asks-the-machine-never-the-products-own-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Verification asks the machine, never the product's own evidence
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h1>
+<p>Everything is pytest. There is one runner, and the tiers are defined by <strong>what a
+test may touch</strong> rather than by how long it takes:</p>
+<ul>
+<li><strong>pure and host-tool</strong> — runs on every commit. Reads <code>tmp_path</code>, runs real
+  binaries, reaches no network.</li>
+<li><strong><code>e2e</code></strong> — reaches the real network or the real <code>HOME</code>. Deselected unless
+  <code>--e2e</code>.</li>
+<li><strong><code>docker</code></strong> — installs a whole machine in a container. Deselected unless
+  <code>--docker</code>.</li>
+<li><strong><code>replants</code></strong> — the mutation harness's own tests that drive a real pytest
+  against a real toy package. Deselected unless <code>--replants</code>.</li>
+</ul>
+<p><code>task --list-all</code> names the entry points. <code>tests/conftest.py</code> declares the three
+opt-in tiers, and carries why the deselection lives there rather than in
+<code>addopts</code>.</p>
+<p><strong>Three axes place a test, and none of them competes with the others.</strong> A tier
+says what a test is <em>allowed</em> to touch, and is a marker. A level says how much
+machine has to <em>exist</em> before it can run, and is read off the fixture the test
+asks for. A door says which surface the test comes in by.</p>
+<p>The container tier therefore divides into levels — an empty container, one
+section over a base, a machine already installed, a machine installed now.
+<code>--level</code> reaches one without paying for the rest, and <code>tests/e2e/levels.py</code>
+holds what each costs and what it can answer.</p>
+<p>The door is the membership rule for <code>tests/matrix/</code>. That package builds one
+synthetic machine out of files and drives the real CLI against it in process,
+with nothing in <code>src/dotfiles/</code> stubbed. The rule, and the four things that send
+a test to <code>tests/resources/</code> instead, are the module docstring in
+<code>tests/matrix/__init__.py</code>. Two seams are read at import and so cannot be reached
+by setting the variable alone. <code>tests/derivations.py</code> carries the constants
+<code>paths</code> derives, and is shared with the trees outside <code>tests/matrix/</code> that need
+the same thing; <code>tests/matrix/harness.py</code> carries the defaults captured into a
+function object when it was created.</p>
+<h2 id="tests-are-flat-functions-grouped-by-a-section-comment">Tests are flat functions, grouped by a section comment<a class="headerlink" href="#tests-are-flat-functions-grouped-by-a-section-comment" title="Permanent link">&para;</a></h2>
+<p>The great majority of test files already are, so this is the house style rather
+than a new rule — <code>rg -c '^class Test' tests/</code> counts the exceptions against
+<code>fd -e py 'test_' tests/</code>. A file groups with a <code># ────</code> band carrying the
+section's prose, and <code>-k</code> selects on the name, which is why every test name here
+is a declarative sentence rather than a noun.</p>
+<p><strong>A guarantee shared by a whole group is an autouse fixture, not a class-level
+marker.</strong> That is the one thing a class carried that a section comment cannot,
+and <code>tests/install/test_bundle_build.py</code> is the worked case: six classes each
+carrying <code>@pytest.mark.usefixtures('declaration')</code> became one autouse fixture
+saying the same thing once.</p>
+<h2 id="coverage-says-a-line-ran-the-mutation-harness-says-whether-anything-asserted-on-it">Coverage says a line ran; the mutation harness says whether anything asserted on it<a class="headerlink" href="#coverage-says-a-line-ran-the-mutation-harness-says-whether-anything-asserted-on-it" title="Permanent link">&para;</a></h2>
+<p><code>dotfiles report upload</code> shipped selecting run records by the wrong identifier
+while the suite held 3468 tests at 87.77% line coverage. <code>report._send</code> had zero
+executed statements and a file named for the verb held four tests, every one of
+them exercising a pure leaf helper. Coverage cannot report that, because a
+module counts covered the moment it is imported.</p>
+<p><code>tests/mutation/</code> answers the question coverage cannot. It plants one bug at a
+time, runs only the tests that execute that line, and counts the bugs nobody
+noticed. A line no test executes comes back UNREACHED without a pytest being
+spawned at all, which is what would have answered the defect above in seconds.</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>task<span class="w"> </span>test:mutation<span class="w">                       </span><span class="c1"># the modules targets.py names</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>task<span class="w"> </span>test:mutation:diff<span class="w">                  </span><span class="c1"># only the lines this branch changed</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>task<span class="w"> </span>test:redundancy<span class="w"> </span>--<span class="w"> </span>&lt;<span class="nb">test</span><span class="w"> </span>file&gt;<span class="w">      </span><span class="c1"># prove a test catches nothing another does</span>
+</span></code></pre></div>
+<p><code>tests/mutation/README.md</code> is the reference — the four buckets, what makes a
+number believable, and how a deletion is proved rather than argued. It is not in
+this nav because it sits beside the code it describes and is read there.</p>
+<p><strong>It is wired into nothing.</strong> Neither pre-commit nor CI runs it, because a slow
+integration hook does not belong in pre-commit — a full
+run is tens of minutes. <code>task test:mutation:diff</code> over one branch's changed lines
+is the shape that could be, and <code>targets.THRESHOLD</code> is the floor waiting for
+something to enforce it.</p>
+<h2 id="drive-real-shells-from-pytest-not-from-a-second-framework">Drive real shells from pytest, not from a second framework<a class="headerlink" href="#drive-real-shells-from-pytest-not-from-a-second-framework" title="Permanent link">&para;</a></h2>
+<p><code>tests/shell/</code> drives real <code>bash</code>, real <code>zsh</code> and a real <code>tmux</code> from pytest. bats
+is the rejected runner — a second test framework, with its own custom installer
+and its own assertion library, to run assertions pytest expresses directly. It
+stays declared in <code>install/packages.yml</code> because other shell repos in the
+portfolio use it, and both the generated pre-commit hook and the generated CI
+step are guarded to pass a repo holding no <code>.bats</code> file.</p>
+<p>Three properties are the reasons to keep this shape:</p>
+<p><strong>stdout and stderr stay apart.</strong> bats merges them into one <code>$output</code>, so an
+assertion passes whichever stream the code chose. That is how logging.sh's stderr
+routing regressed unnoticed. Porting the update suite found the same class of
+thing immediately — the dry-run announcement is on stderr and the resolved item
+list is on stdout, which no bats assertion could have distinguished.</p>
+<p><strong>A skipped interpreter is a case, not a silence.</strong> zsh is a parameter, so a
+machine without it reports the skip per test instead of quietly covering half of
+one. That is the right answer on a workstation and the wrong one on a runner,
+where a missing interpreter would leave the tier reporting green having run a
+third of itself — so <code>--require-interpreters</code> inverts it into a refusal to start,
+and CI passes the flag. The set it enforces is read back off the collected tests,
+so a test that starts driving a third interpreter is covered without the workflow
+changing. <code>tests/shell/test_interpreter_gate.py</code> asserts both readings by running
+pytest against a PATH with the interpreters taken off it.</p>
+<p><strong>Tables are tables.</strong> bats spawns a process per <code>@test</code>, which pushes a file
+toward one <code>@test</code> holding fifteen assertions — so a failure names the group
+rather than the property. Parametrized cases cost nothing and name themselves.</p>
+<p><code>tests/shell/shells.py</code> is the whole harness: it runs a snippet in a fresh shell
+with one library sourced and hands back stdout, stderr and the exit code, kept
+apart. Fresh every time, because these libraries resolve things at <em>source</em> time
+— the color gate most obviously — so a reused interpreter would answer with
+whatever the first test decided.</p>
+<h2 id="logic-belongs-in-python-and-moving-it-is-the-cheaper-fix">Logic belongs in Python, and moving it is the cheaper fix<a class="headerlink" href="#logic-belongs-in-python-and-moving-it-is-the-cheaper-fix" title="Permanent link">&para;</a></h2>
+<p>The offline bundler was shell until the cost showed: verifying a checksum parser
+written in awk meant a fixture tree and a subprocess per case, while the same
+parser as a function is called directly with a string and returns a value. That
+conversion traded seventeen shell tests needing a subprocess for thirty-one
+Python ones needing nothing.</p>
+<p>When a shell script grows a parser, a cache, or a return value, that is the
+signal — see
+<a href="../../learnings/app-installation-patterns/">app installation patterns</a> for where
+each language belongs. What stays shell is what is genuinely shell: an installer
+that drives a package manager, a library sourced into an interactive shell.</p>
+<h2 id="every-test-builds-its-own-tree">Every test builds its own tree<a class="headerlink" href="#every-test-builds-its-own-tree" title="Permanent link">&para;</a></h2>
+<p>A declaration-validation test writes a <code>packages.yml</code> and manifest set into
+<code>tmp_path</code>, calls <code>validate.declaration(root)</code> and asserts on the findings it
+returns — one test per check. Reading the actual repo would make each test a
+description of today's package list: failing on the next unrelated addition, and
+passing for reasons that have nothing to do with the check.</p>
+<p>Assert on the finding, never on the sentence describing it. The wording is free
+to change and the finding is not, so an assertion over printed output through a
+subprocess breaks on a reworded message.</p>
+<p>The package resource needs the same isolation for <em>installed-ness</em>, which is
+ambient rather than on disk. <code>tests/resources/test_packages.py</code> injects it
+through the knobs the code already honors — <code>PATH</code> and <code>UV_TOOL_DIR</code> — with
+<code>/usr/bin:/bin</code> kept behind the fake bin dir so the fixture's own helpers still
+resolve.</p>
+<p><strong>Nothing in <code>src/dotfiles/</code> is monkeypatched.</strong> The injection points are real
+environment knobs. Exactly two bug classes survive that boundary — a real tool
+differing from its stub, and the bootstrap — and those are what the container
+tier is for.</p>
+<h2 id="never-compare-an-fd-count-against-a-count-from-anything-else">Never compare an <code>fd</code> count against a count from anything else<a class="headerlink" href="#never-compare-an-fd-count-against-a-count-from-anything-else" title="Permanent link">&para;</a></h2>
+<p>Never compare a count from <code>fd</code> against a count from anything else. <code>fd</code> respects
+<code>.gitignore</code> and <code>tar</code> does not, so a backup test asserting the archive held as
+many files as the source directory compared 409 against 2929 and read as a broken
+backup. Pass <code>--no-ignore --hidden</code> when the count has to mean "every file on
+disk".</p>
+<h2 id="an-install-is-only-proven-from-nothing">An install is only proven from nothing<a class="headerlink" href="#an-install-is-only-proven-from-nothing" title="Permanent link">&para;</a></h2>
+<p>Docker for Linux, a fresh user account for macOS. Both give a clean environment
+that can be destroyed and rebuilt, which is the only way to know an install works
+from nothing rather than from a machine that already had half of it.</p>
+<p>macOS gets a user account rather than a VM because macOS VMs are slow and awkward
+enough that they stop being used, and a fresh account reproduces everything the
+install touches outside <code>/usr/local</code>.</p>
+<p>The container environments are one pytest rig with the environments as
+parameters: <code>tests/e2e/harness.py</code> holds the definitions, each pointed at the
+matching machine manifest. <code>eza -1 tests/install/e2e/</code> is what a container cannot
+be — a real macOS account, or the current machine.</p>
+<h2 id="what-the-container-rig-must-not-do">What the container rig must not do<a class="headerlink" href="#what-the-container-rig-must-not-do" title="Permanent link">&para;</a></h2>
+<p><strong>The probes are derived from the plan and only the blocklist is declared.</strong> The
+offline and restricted environments resolve <code>wsl-work-workstation</code> through
+<code>network.derive</code>, so a tool added to that manifest is rehearsed without anyone
+regenerating a fixture. <code>BLOCKED_HOSTS</code> in <code>tests/e2e/harness.py</code> names what the
+rehearsed firewall takes down, which is why <code>github.com</code> stays <em>reachable</em>:
+blackholing it takes every clone-based installer with it, and the three asset CDNs
+are how a refused release download is expressed as a host rule instead. Probes
+replay the derived request, user agent included — a synthesized one reported
+crates.io blocked on what was really a 403.</p>
+<p>No measurement of a real network is committed here, and
+<code>tests/install/test_network.py</code> fails if one appears. A recorded verdict is one
+machine's answer on one day; the declaration is what every machine resolves.</p>
+<p><strong>The container is authenticated from the host's <code>gh</code>.</strong> Sixty anonymous API calls
+an hour are shared with the host's public IP and one full install spends most of
+them, so an unauthenticated second run inside the hour is indistinguishable from a
+broken installer. The token is passed by name so it stays out of an argument list,
+<code>pytest_report_header</code> prints whether the run got a credential, and a check at the
+cheapest tier asserts the <em>container's</em> own rate limit is 5000 rather than 60 —
+the header reads the host and proves only that a credential was found.</p>
+<p><strong>The base image lives in docker's store; the ledger lives in the cache dir.</strong> The
+image is the artifact, and <code>docker save</code>/<code>load</code> of 14 GB duplicates storage docker
+already manages. What docker cannot say is which plan produced a tag, so
+<code>$XDG_CACHE_HOME/dotfiles/e2e-bases.json</code> says it: tagged by a digest of the
+<em>resolved plan</em> at or below the stage plus the source image id, so a comment edit
+does not rebuild and a dropped package does. Rebuilt after two weeks regardless,
+because the digest cannot see which versions the distro shipped.</p>
+<p><strong>The harness never reads the product's environment.</strong> It mounted
+<code>paths.REPO_ROOT</code>, which honors <code>$DOTFILES_DIR</code>, so every run launched from a
+worktree installed <code>main</code>'s code while reporting on the branch. Anchor on marker
+files, not on the product's own configuration and not on <code>parents[n]</code>.</p>
+<p><strong>Production code never asks whether it is under test.</strong> A resource probes the
+real precondition rather than reading <code>DOTFILES_DOCKER_TEST</code>, which is a harness
+telling production code it is being tested. <code>bootstrap.SYSTEM_BUS</code> and
+<code>evidence.AMD_KFD</code> carry the reasoning at the constants themselves, including
+what was tried instead.</p>
+<h2 id="verification-asks-the-machine-never-the-products-own-evidence">Verification asks the machine, never the product's own evidence<a class="headerlink" href="#verification-asks-the-machine-never-the-products-own-evidence" title="Permanent link">&para;</a></h2>
+<p>On a real machine, ask the machine:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>dotfiles<span class="w"> </span>plan<span class="w">     </span><span class="c1"># what apply would still change</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>dotfiles<span class="w"> </span>check<span class="w">    </span><span class="c1"># what is wrong, which a machine merely behind is not</span>
+</span></code></pre></div>
+<p>A tool with a second copy nothing declares is one of <code>check</code>'s findings. That is
+the failure PATH order hides — a stale copy in <code>/usr/bin</code> shadowed by a current
+one in <code>~/.local/bin</code> works fine until the order changes — and it lives there
+rather than in a test because it is a question about a machine somebody is using.</p>
+<p>A copy is only a finding when nothing explains it. Two explanations are read off
+the declaration: the location the item's own evidence names, and a copy the OS
+package manager attributes to a package this manifest declares. The second is not
+a nicety — fnm owns <code>node</code> and <code>npm</code> while pacman's <code>nodejs</code> ships <code>/usr/bin/node</code>
+underneath it, which is the bootstrap the declaration asks for, and reporting that
+pair was two of the nine findings the shell script produced on a healthy machine.</p>
+<p><strong>In the e2e tier, verification is deliberately a second opinion.</strong>
+<code>tests/e2e/test_verification.py</code> asks the container in shell and never runs
+<code>dotfiles check</code>: a verification reading the product's own evidence agrees with
+the installer exactly when they are wrong together. It takes the <em>expectations</em>
+from <code>resolve.resolve</code>, so a tool added or removed changes what is verified with
+no list to update, and every declared item is its own test node — a missing tool
+is a named red line rather than a return code with a transcript attached.</p>
+<p><strong>A refusal is not a missing tool.</strong> Each node reads this machine's own pinned run
+record and skips anything that run reached and deliberately wrote nothing for — an
+offline install has no go.dev to fetch a toolchain from, because its bundle stages
+the Go and Rust <em>tools</em> prebuilt instead, so it converges with four items refused.
+Counting those as failures described seven broken tools on a machine built exactly
+as intended, and a verdict nobody believes is one nobody reads. Every way of
+failing to read that record leaves the set empty and requires everything, because
+a record it cannot read has to make the check stricter.</p>
+<p>Document platform quirks found this way in
+<a href="../../reference/platforms/tools/">Tool Availability</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/datapointchris/dotfiles" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>

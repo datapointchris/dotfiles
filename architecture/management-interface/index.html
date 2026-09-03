@@ -1,0 +1,2849 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/architecture/management-interface/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../shell-libraries/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+    
+    
+      
+        <title>Management Interface - Dotfiles</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.84d31ad4.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css?h=e5bc92a0">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#management-interface" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dotfiles
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Management Interface
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="https://docs.ichrisbirch.com/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  ← Code Kingdom
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../apps/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 20h4v-4h-4m0-2h4v-4h-4m-6-2h4V4h-4m6 4h4V4h-4m-6 10h4v-4h-4m-6 4h4v-4H4m0 10h4v-4H4m6 4h4v-4h-4M4 8h4V4H4z"/></svg>
+    
+  
+  Apps
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 15h-2v-2h2m0 6h-2v-2h2M13 7h-2V5h2m0 6h-2V9h2m0 6h-2v-2h2m0 6h-2v-2h2m-6-6H5V9h2m0 6H5v-2h2m0 6H5v-2h2m8-6V5l-3-3-3 3v2H3v14h18V11z"/></svg>
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../configuration/docker/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/rebuilding-a-machine/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2H3v2h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2v-2H8v-5a2 2 0 0 0-2-2 2 2 0 0 0 2-2V5h2V3m6 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3z"/></svg>
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../learnings/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+    
+  
+  Learnings
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dotfiles
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://docs.ichrisbirch.com/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ← Code Kingdom
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../apps/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 20h4v-4h-4m0-2h4v-4h-4m-6-2h4V4h-4m6 4h4V4h-4m-6 10h4v-4h-4m-6 4h4v-4H4m0 10h4v-4H4m6 4h4v-4h-4M4 8h4V4H4z"/></svg>
+  
+  <span class="md-ellipsis">
+    Apps
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Apps
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/theme/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.5 12a1.5 1.5 0 0 1-1.5-1.5A1.5 1.5 0 0 1 17.5 9a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1-1.5 1.5m-3-4A1.5 1.5 0 0 1 13 6.5 1.5 1.5 0 0 1 14.5 5 1.5 1.5 0 0 1 16 6.5 1.5 1.5 0 0 1 14.5 8m-5 0A1.5 1.5 0 0 1 8 6.5 1.5 1.5 0 0 1 9.5 5 1.5 1.5 0 0 1 11 6.5 1.5 1.5 0 0 1 9.5 8m-3 4A1.5 1.5 0 0 1 5 10.5 1.5 1.5 0 0 1 6.5 9 1.5 1.5 0 0 1 8 10.5 1.5 1.5 0 0 1 6.5 12M12 3a9 9 0 0 0-9 9 9 9 0 0 0 9 9 1.5 1.5 0 0 0 1.5-1.5c0-.39-.15-.74-.39-1-.23-.27-.38-.62-.38-1a1.5 1.5 0 0 1 1.5-1.5H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8"/></svg>
+  
+  <span class="md-ellipsis">
+    Theme and Font
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/notes/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 7V5h2V4a2 2 0 0 1 2-2h6v7l2.5-1.5L18 9V2h1c1.05 0 2 .95 2 2v16c0 1.05-.95 2-2 2H7c-1.05 0-2-.95-2-2v-1H3v-2h2v-4H3v-2h2V7zm4 4H5v2h2zm0-4V5H5v2zm0 12v-2H5v2z"/></svg>
+  
+  <span class="md-ellipsis">
+    Notes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/doit/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 2v2.07A8 8 0 0 0 4.07 11H2v2h2.07A8 8 0 0 0 11 19.93V22h2v-2.07A8 8 0 0 0 19.93 13H22v-2h-2.07A8 8 0 0 0 13 4.07V2m-2 4.08V8h2V6.09c2.5.41 4.5 2.41 4.92 4.91H16v2h1.91c-.41 2.5-2.41 4.5-4.91 4.92V16h-2v1.91C8.5 17.5 6.5 15.5 6.08 13H8v-2H6.09C6.5 8.5 8.5 6.5 11 6.08M12 11a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1"/></svg>
+  
+  <span class="md-ellipsis">
+    Doit
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/refcheck/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M.41 13.41 6 19l1.41-1.42L1.83 12m20.41-6.42L11.66 16.17 7.5 12l-1.43 1.41L11.66 19l12-12M18 7l-1.41-1.42-6.35 6.35 1.42 1.41z"/></svg>
+  
+  <span class="md-ellipsis">
+    Refcheck
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/backup/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9H0l4 4 4-4H5a7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7c-1.5 0-2.91-.5-4.06-1.3L6.5 19.14A9.1 9.1 0 0 0 12 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9m2 9a2 2 0 0 0-2-2 2 2 0 0 0-2 2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/></svg>
+  
+  <span class="md-ellipsis">
+    Backup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/safekeep/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2m-2.2 5.7-1.5-1.4 1.5-1.5C7.3 14 7 13 7 12s.3-2 .8-2.7L6.3 7.8l1.5-1.5 1.4 1.5C10 7.3 11 7 12 7s2 .3 2.8.8l1.5-1.5 1.4 1.4-1.5 1.5c.5.8.8 1.8.8 2.8s-.3 2-.8 2.8l1.5 1.5-1.4 1.4-1.5-1.5c-.8.5-1.8.8-2.8.8s-2-.3-2.7-.8zM12 9c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3m8-7c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2h-1v1h-4v-1H9v1H5v-1H4c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2zm0 18V4H4v16z"/></svg>
+  
+  <span class="md-ellipsis">
+    Safekeep
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/work-monitor/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 17V7H6v10zm0-12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6v2h2v2h-8v-2h2v-2H6c-1.11 0-2-.89-2-2V7a2 2 0 0 1 2-2zM2 3v12H0V3a2 2 0 0 1 2-2h18v2z"/></svg>
+  
+  <span class="md-ellipsis">
+    Work Monitor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/zsh-startup/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 20a7 7 0 0 1-7-7 7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7m7.03-12.61 1.42-1.42c-.45-.51-.9-.97-1.41-1.41L17.62 6c-1.55-1.26-3.5-2-5.62-2a9 9 0 0 0-9 9 9 9 0 0 0 9 9c5 0 9-4.03 9-9 0-2.12-.74-4.07-1.97-5.61M11 14h2V8h-2m4-7H9v2h6z"/></svg>
+  
+  <span class="md-ellipsis">
+    Zsh Startup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/wsl-disk-and-speed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    WSL Tools
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 15h-2v-2h2m0 6h-2v-2h2M13 7h-2V5h2m0 6h-2V9h2m0 6h-2v-2h2m0 6h-2v-2h2m-6-6H5V9h2m0 6H5v-2h2m0 6H5v-2h2m8-6V5l-3-3-3 3v2H3v14h18V11z"/></svg>
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Architecture
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Management Interface
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Management Interface
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-there-is-a-cli-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why there is a CLI at all
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-answers-a-different-question-from-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      check answers a different question from plan
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-bootstrap-prints-two-commands-and-runs-neither" class="md-nav__link">
+    <span class="md-ellipsis">
+      The bootstrap prints two commands and runs neither
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dotfiles-update-updates-this-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      dotfiles update updates this installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-machine-environment-env" class="md-nav__link">
+    <span class="md-ellipsis">
+      The machine environment (~/.env)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The machine environment (~/.env)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#which-gates-are-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Which gates are flags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#beyond-the-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      Beyond the shell
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#selective-installs-and-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Selective installs and updates
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Selective installs and updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-and-update-are-one-act" class="md-nav__link">
+    <span class="md-ellipsis">
+      Install and update are one act
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-a-provider-is-allowed-to-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      What a provider is allowed to claim
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logins-are-checked-and-never-repaired" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logins are checked and never repaired
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-lives-in-apps-and-what-leaves-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      What lives in apps/ and what leaves it
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-libraries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Shell Libraries
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tmux-sessions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    tmux Sessions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../package-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Package Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../github-releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    GitHub Releases
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-installers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Custom Installers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../offline-bundles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Offline Bundles
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system-configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    System Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Observability
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Configuration
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docker Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/hyprland/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Hyprland
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rebuilding-a-machine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Rebuilding a Machine
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/platforms/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tool Availability
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/symlinks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Symlinks Manager
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Task Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/support/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/support/corporate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Restricted Networks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../development/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2H3v2h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2v-2H8v-5a2 2 0 0 0-2-2 2 2 0 0 0 2-2V5h2V3m6 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3z"/></svg>
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/publishing-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Publishing Docs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/docs-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docs Audit Record
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../learnings/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+  
+  <span class="md-ellipsis">
+    Learnings
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Learnings
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/app-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    App Installation Patterns
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/uv-tool-git-pins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    uv Tool Git Pins and Self-Update
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/minimal-manifest-for-servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Minimal Manifest for Servers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/undeclared-transitive-dependency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Undeclared Transitive Dependency
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/symlinks-path-gotchas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Symlinks Path Gotchas
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/a-test-writes-through-a-deployed-symlink/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A Test Writes Through a Deployed Symlink
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/wsl-credential-helper-exec-format-error/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    WSL Credential Helper Exec Format Error
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/pre-commit-stash-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    pre-commit Stash Recovery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/shared-stash-across-worktrees/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Shared Stash Across Worktrees
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Task Shell Printf Compatibility
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/profiling-zsh-startup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Profiling Zsh Startup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/resilient-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Resilient Installation Patterns
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/cargo-binstall-needs-release-binaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    cargo binstall Needs Release Binaries
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/packages-yml-entry-is-not-an-install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A packages.yml Entry Is Not an Install
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/cifs-mount-hides-a-missing-helper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A CIFS Mount Hides a Missing Helper
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/pyright-config-file-precedence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Pyright Config File Precedence
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/ghostty-shader-reload/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Ghostty Shader Reload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/usb-dac-lies-about-its-volume-range/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    The ORA by Kanto Volume Drop-in
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/finding-where-a-slow-run-went/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Finding Where a Slow Run Went
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/a-conflicting-package-blocks-an-install-forever/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A Conflicting Package Blocks an Install Forever
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-was-on-no-path-and-nothing-said-so/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Was on No PATH, and Nothing Said So
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/unix-socket-path-is-shorter-than-tmp-path/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A Unix Socket Path Is Shorter Than tmp_path
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/a-cache-outlives-the-file-you-restored/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    A Cache Outlives the File You Restored
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-there-is-a-cli-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why there is a CLI at all
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-answers-a-different-question-from-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      check answers a different question from plan
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-bootstrap-prints-two-commands-and-runs-neither" class="md-nav__link">
+    <span class="md-ellipsis">
+      The bootstrap prints two commands and runs neither
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dotfiles-update-updates-this-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      dotfiles update updates this installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-machine-environment-env" class="md-nav__link">
+    <span class="md-ellipsis">
+      The machine environment (~/.env)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The machine environment (~/.env)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#which-gates-are-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Which gates are flags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#beyond-the-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      Beyond the shell
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#selective-installs-and-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Selective installs and updates
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Selective installs and updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-and-update-are-one-act" class="md-nav__link">
+    <span class="md-ellipsis">
+      Install and update are one act
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-a-provider-is-allowed-to-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      What a provider is allowed to claim
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logins-are-checked-and-never-repaired" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logins are checked and never repaired
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-lives-in-apps-and-what-leaves-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      What lives in apps/ and what leaves it
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="management-interface">Management Interface<a class="headerlink" href="#management-interface" title="Permanent link">&para;</a></h1>
+<p>Drive this repository through the <code>dotfiles</code> CLI, which works from any directory.
+<code>task</code> is the second front door and keeps what belongs to working <em>in</em> the repo —
+the test suite and the docs site. Anything already one command gets no wrapper.
+Both doors reach one implementation in <code>src/dotfiles/</code>. The grammar is noun-verb
+with three reconcile verbs, Terraform-shaped, and all three sit at the top level
+and again under each resource, so narrowing to one part of the machine is the
+same sentence with a noun in it.</p>
+<h2 id="why-there-is-a-cli-at-all">Why there is a CLI at all<a class="headerlink" href="#why-there-is-a-cli-at-all" title="Permanent link">&para;</a></h2>
+<p>A standalone <code>dotfiles</code> CLI was considered in July 2026 and deliberately not
+built, on the grounds that it would "only re-wrap existing scripts for a cosmetic
+rename — maintenance cost with no capability gain." That reasoning was reversed,
+because two capabilities turned out to be missing rather than merely renamed.</p>
+<p><strong><code>task</code> cannot run from outside the repository.</strong> Task discovers <code>Taskfile.yml</code>
+by walking up from the working directory, so every management action was gated
+behind a <code>cd</code>. That is structural rather than cosmetic, and no amount of Taskfile
+work fixes it.</p>
+<p><strong><code>update.sh</code> had no argument surface at all.</strong> Its final line was a bare <code>main</code>.
+Nothing could skip the sudo-gated system phase or refresh only personal tools.
+Selective update did not exist anywhere in the repository.</p>
+<p>The constraint that kept the tool in bash is real and unchanged: a
+separately-distributed binary could never work on its own, because the CLI's job
+is invoking things that exist only inside the cloned repo.
+<code>uv tool install --editable</code> satisfies that constraint. The installed tool <em>is</em>
+the checkout, so there is no distribution channel to buy and nothing to keep in
+sync.</p>
+<h2 id="check-answers-a-different-question-from-plan"><code>check</code> answers a different question from <code>plan</code><a class="headerlink" href="#check-answers-a-different-question-from-plan" title="Permanent link">&para;</a></h2>
+<p>A package a version behind is drift: expected, benign, and exactly what <code>apply</code>
+is for. A machine-local value nobody set, a file only safekeep can restore, a
+declaration that will not validate, a checker that crashed — those need attention.</p>
+<p>One verb answering both meant one exit code carrying both, and the scheduled unit
+sat permanently <code>failed</code> on a machine whose only fault was being a version
+behind. The distinction was already in the data: <code>Repair</code> says who can fix a
+change, so <code>plan</code> keeps what <code>apply</code> can fix and <code>check</code> keeps what it cannot.
+<code>ExitCode</code> in <code>src/dotfiles/vocabulary.py</code> says why three is separate from one.
+The periodic timer runs <code>check</code> and leaves its verdict in the state file.</p>
+<p>The split does not reach the network, though. All three verbs measure: they ask
+GitHub what each declared release is at, the package managers what they are
+holding back, and every plugin clone whether its remote has moved. Being invoked
+is the reason to give a current answer. <code>--cached</code> declines the lot, and
+<code>commands.MEASURES_UPSTREAM</code> argues why that is the flag rather than the default.</p>
+<p>The resource doors say the same thing. <code>dotfiles system plan</code> and <code>dotfiles
+plugins plan</code> take the flag and default to measuring exactly as the composite
+verbs do, because a narrower door answering from a cache while the wide one
+measures is two front doors disagreeing about one dataset.</p>
+<p>How a run renders on screen is <code>src/dotfiles/output.py</code>, which argues its own
+choices. None of that reaches <code>--json</code>, which a caller parses instead of the
+screen; <a href="../observability/">Observability</a> has its shape.</p>
+<h2 id="the-bootstrap-prints-two-commands-and-runs-neither">The bootstrap prints two commands and runs neither<a class="headerlink" href="#the-bootstrap-prints-two-commands-and-runs-neither" title="Permanent link">&para;</a></h2>
+<p><code>./install.sh --machine NAME</code> gets a bare machine as far as this CLI, and then
+prints the <code>plan</code> and <code>apply</code> that converge it. It validates the manifest name
+itself — the only check in the system that does — because the CLI that would
+answer the question does not exist yet.</p>
+<p>Printing rather than running is deliberate. Ending in <code>exec dotfiles apply</code> meant
+a bare <code>./install.sh</code> on a WSL box whose <code>~/.env</code> already named it went straight
+into a half-hour networked run nobody had asked to start, and stalled on a
+blocked cargo download behind the work firewall. Getting the CLI onto a machine
+answers "can this box run any of this at all". Converging it answers "what should
+this box become". One question is cheap and always right; the other is long and
+worth planning first. Fusing them means the cheap one cannot be asked alone, and
+the expensive one cannot be declined. <code>--offline</code> stays on the bootstrap, because
+it decides where uv and the wheels come from, and that is settled before any CLI
+exists to be told.</p>
+<h2 id="dotfiles-update-updates-this-installation"><code>dotfiles update</code> updates this installation<a class="headerlink" href="#dotfiles-update-updates-this-installation" title="Permanent link">&para;</a></h2>
+<p><code>update</code> means here what it means for every other tool in the fleet: update this
+tool. It pulls <code>--ff-only</code> and repairs the two things a pull can invalidate, and
+<code>src/dotfiles/commands/manage.py</code> holds that sequence. An editable install goes
+stale only on a changed <code>pyproject.toml</code> or <code>uv.lock</code>, because uv points at the
+working tree, so code changes <em>are</em> the new code and never need a rebuild.</p>
+<p><strong><code>pyselfupdate</code> is deliberately not used, and its refusal is correct rather than
+a gap.</strong> It declines to reinstall over a <code>directory</code>/<code>path</code>/<code>editable</code>
+requirement, which is the right answer. This repo publishes no releases, its
+source of truth is the working tree, and installing a release over it would
+destroy the thing being updated. File nothing to add releases here on the
+strength of it.</p>
+<p>For the same reason there is no update <em>notice</em>: there is no published version to
+compare against. Both read-only verbs end with the honest equivalent — where the
+checkout sits against the last-fetched <code>origin/main</code>, and how long ago that fetch
+was. <code>src/dotfiles/checkout.py</code> reads <code>.git</code> and never the network, so the answer
+is free at a prompt and correct offline, which is why it dates itself.</p>
+<h2 id="the-machine-environment-env">The machine environment (<code>~/.env</code>)<a class="headerlink" href="#the-machine-environment-env" title="Permanent link">&para;</a></h2>
+<p><code>~/.env</code> is the first thing <code>.zshrc</code> sources, and where every command not given
+<code>--machine</code> learns which machine it is on. It answers which machine this is
+(<code>MACHINE</code>) and which features it wants running (the flags from
+<code>install/flags.yml</code>), and it carries secrets that must never be checked in.
+<code>dotfiles env</code> maintains it at the first stage of every apply, and
+<code>src/dotfiles/envfile.py</code> holds the OVERRIDES split that makes regenerating a
+file full of API tokens safe.</p>
+<p><code>MACHINE</code> names a manifest and the resolver derives everything else from it. No
+coordinate reaches this file, for the reasons <a href="../">the architecture
+overview</a> gives.</p>
+<p>Placing this file by hand is therefore the whole of the pre-install bootstrap.
+<code>session.resolve_machine</code> reads the file when <code>$MACHINE</code> is unset, so a rebuild
+that restores <code>~/.env</code> first never needs <code>--machine</code> on anything. Reading the file
+rather than only the environment is what makes that work outside a login shell: a
+scheduled <code>check</code> inherits no <code>~/.env</code> at all.</p>
+<p>That bootstrap is genuinely circular, since the manifest <code>~/.env</code> names is what
+generates <code>~/.env</code>. A bare machine therefore has one line to type by hand, and
+only <code>MACHINE=</code>; the first <code>dotfiles apply --machine NAME</code> fills in the rest.
+Hand-authoring the whole file is what left <code>NVIM_AI_ENABLED</code> set on every machine
+and read by nothing, with no way to say which had drifted.</p>
+<h3 id="which-gates-are-flags">Which gates are flags<a class="headerlink" href="#which-gates-are-flags" title="Permanent link">&para;</a></h3>
+<p>A flag is for behavior that is present and cheap, where the only question is
+whether this machine wants it running. Payload that is expensive to install stays
+a manifest tool list. Config a program discovers by path and cannot branch on
+(hyprland, waybar, ghostty) stays a coordinate variant under <code>configs/</code>. A
+<code>command -v fzf</code> guard is not a flag and should not become one, because fzf has
+no reason to be installed and unwanted. A gate earns a flag only when <em>installed
+but off</em> is a state worth having.</p>
+<p>The shell plugins qualify, because they carry both a preference and a real
+startup cost. The manifests use that: <code>linux-lxc-server</code> and <code>scheduler</code> turn
+off the whole interactive plugin set, because a box that exists to be SSHed into
+for diagnosis wants a fast shell rather than a personal one. The plugins are
+still <em>installed</em> there, so turning one back on mid-debugging is a <code>~/.env</code> edit
+rather than a reinstall. What each flag costs on this machine is
+<code>zsh-startup flags</code>.</p>
+<p>A plugin must be sourced at top level, never from inside a helper function. A
+function scope changes what a plugin's own <code>typeset</code> calls do, so the loads stay
+inline and slightly repetitive rather than factored into a <code>load_plugin</code> helper.
+The other ordering hazard is <code>zsh-vi-mode</code> overwriting the whole keymap, and
+<code>.zshrc</code> explains beside <code>apply_shell_keybindings</code> why that binding lives in a
+named function with two callers.</p>
+<h3 id="beyond-the-shell">Beyond the shell<a class="headerlink" href="#beyond-the-shell" title="Permanent link">&para;</a></h3>
+<p>Neovim reads none of this vocabulary, and the gate it had is the argument for
+keeping the rest small. <code>core/profiles.lua</code> derived a <code>minimal</code> plugin set from
+<code>DOTFILES_CAPACITY == 'server'</code>, with <code>NVIM_PROFILE</code> as the override. Before the
+axes split it read <code>PLATFORM == 'linux'</code>, which was the right answer for the
+wrong reason — <code>linux</code> happened to be the one headless platform, so a graphical
+Ubuntu desktop would have got the lean set.</p>
+<p>Following the coordinate was the correct fix and the profile still did not earn
+its keep. Exactly one machine ever reached it, the LXC, and the price was a
+hand-kept allowlist of editing essentials maintained forever for one box nobody
+sits at. Deleting it leaves one question — whether Neovim is embedded in VSCode —
+which no coordinate answers, because it is a fact about the process rather than
+about the machine.</p>
+<p><code>plugins/typos.lua</code> is the counter-example, and worth keeping in mind before
+reaching for this vocabulary at all. It was <code>PLATFORM ~= 'wsl'</code>, then
+<code>MACHINE_ROLE ~= 'work'</code>, then a test for <code>~/notes</code> — each one a label standing
+in for a condition that turned out not to need expressing. It is an unconditional
+remote spec: capture is scoped to <code>notes_root</code>, so a machine without one writes
+nothing, and <code>setup()</code> creates no directories. The gate existed only because a
+<code>dir =</code> local checkout errors on every startup when the directory is absent,
+which is a fact about local specs rather than about machines.</p>
+<p><code>core/options.lua</code> keeps its check and spells it <code>WSL_DISTRO_NAME</code>, which WSL
+sets itself. It read <code>DOTFILES_HOST == 'wsl'</code> first, on the reasoning that
+win32yank genuinely is a fact about the host rather than a stand-in for one —
+true, and still the wrong source, because a declared coordinate is a second
+description of something the runtime already states, and <code>tmux.conf</code> was solving
+the identical problem the direct way three files over. The test survives the
+correction and gains a clause. If the condition can be stated as something the
+code needs, state that. If the machine already announces it, read the
+announcement. Reach for a coordinate only when the difference really is which
+kind of machine this is, and no process on it says so.</p>
+<p>tmux gets nothing. Every conditional in <code>tmux.conf</code> is real runtime detection —
+is this pane running vim, is <code>$WSL_DISTRO_NAME</code> set, does the theme file exist,
+is tpm cloned — and none of them is a preference in disguise. A flag with no
+consumer is how <code>NVIM_AI_ENABLED</code> happened, so the mechanism waits until
+something needs it.</p>
+<h2 id="selective-installs-and-updates">Selective installs and updates<a class="headerlink" href="#selective-installs-and-updates" title="Permanent link">&para;</a></h2>
+<p>There is no phase registry. <code>dotfiles apply</code> measures the whole plan once and
+acts on it in <code>Stage</code> order. Keeping a hand-written order beside that is what let
+<code>system/manager</code>, the OS package upgrade, sit at a stage no phase named and never
+run at all.</p>
+<p>A selector is a resource, or one provider inside one, and <code>dotfiles apply --help</code>
+lists what each flag takes. Four hand-maintained groups (<code>system</code>, <code>languages</code>,
+<code>tools</code>, <code>plugins</code>) were the rejected alternative, because their membership was a
+fifth list to keep in step. A resource and a provider are what the provider
+registry already knows, so there is nothing to maintain. The one group worth its
+own name is <code>system</code>, because it needs sudo and dominates the runtime, and
+<code>--skip system</code> is that group derived rather than declared.</p>
+<p><strong>Every selector reads as well as it writes.</strong> <code>plan</code> answers "what would <code>apply</code>
+change", so a scope the write accepts and the read cannot express is not a
+narrower preview but no preview at all. For a while <code>apply</code> could be narrowed to
+one section with no way to rehearse it, which is the case a preview is worth most
+in. What stays write-only describes <em>how</em> to write rather than what to cover:
+installing from a staged bundle, or forcing an entry past what measuring
+concluded. <code>tests/cli/test_conformance.py</code> asserts the split across the whole
+tree, because nothing else notices a selector added to one verb and forgotten on
+its sibling.</p>
+<p>Narrowing belongs to the resolver rather than to each installer. A hand-rolled
+filter block per installer is how <code>--mine</code> came to run cargo, uv and npm in full
+while claiming to filter, because only the Go one honored the owner. The rules
+that fall out of doing it once are <code>Selection</code> in <code>src/dotfiles/engine.py</code>: why a
+misspelt address is a usage error, why the narrowing is per resource, and why a
+section brings the runtime it declared it needs.</p>
+<p>Ownership is derived from whichever field carries it — <code>repo</code>, <code>github_repo</code>, or
+a Go import path in <code>package</code> — never from a <code>personal</code> tag, because a tag has to
+be remembered on every new tool and silently excludes whatever it misses.
+<code>--owner</code> matters most in practice, because a newly released personal tool has to
+be installed before any self-updater can maintain it, and those tools span four
+sections at once.</p>
+<p><strong>Scope and force are different flags.</strong> <code>--package</code> narrows and <code>--reinstall</code>
+overrules what measuring concluded. One flag carrying both — <code>--reinstall
+lazygit</code> — puts a scope somewhere no other resource can see, so none of them can
+honor the force. Bare, <code>--reinstall</code> covers the whole run, which is expensive
+and not dangerous. Scope is structural — the argument's presence selects it,
+never a flag — and an absent argument is what sanctions a set-wide act.</p>
+<h3 id="install-and-update-are-one-act">Install and update are one act<a class="headerlink" href="#install-and-update-are-one-act" title="Permanent link">&para;</a></h3>
+<p>There is no update verb for the machine. <code>apply</code> installs what is missing and
+reinstalls what differs from the newest release, and which of those a given row
+needs is the verdict's answer rather than the caller's. <em>Differs</em>, not <em>is
+behind</em> — <code>src/dotfiles/resources/packages.py</code> holds why a version above the
+newest release is drift too, and what a downward re-version stranded.</p>
+<p>Whether an update installs a newly declared tool must not depend on which section
+of <code>packages.yml</code> it was added to. <code>go install @latest</code>, <code>cargo binstall</code> and the
+release installers all create as a side effect of upgrading, while
+<code>uv tool upgrade</code> and <code>&lt;tool&gt; update</code> cannot. A <code>MISSING</code> row and a <code>STALE</code> row
+are different verdicts with different repairs, and both are reported before
+either is acted on.</p>
+<p><code>dotfiles packages check</code> answers that on demand, and is deliberately separate
+from <code>dotfiles machines check</code>, which runs on every commit: that one compares
+<code>packages.yml</code> against the manifests and what can install them, and a machine
+part-way through a rollout is not a repo defect that should fail a commit.</p>
+<h3 id="what-a-provider-is-allowed-to-claim">What a provider is allowed to claim<a class="headerlink" href="#what-a-provider-is-allowed-to-claim" title="Permanent link">&para;</a></h3>
+<p>A per-tool line must be derived from observed state: a version or ref that
+changed, or a non-zero exit. It may never be derived from "the command returned",
+because <code>uv tool upgrade</code>, <code>cargo binstall</code>, <code>npm update -g</code> and
+<code>git pull --quiet</code> all exit 0 whether or not anything changed. The <code>Change</code>
+supplies that, and its <code>Outcome</code> names what was repaired. The one place a
+before-and-after snapshot survives is <code>clone.pull</code>, which reports the commit
+either side, because <code>git pull --quiet</code> on a current clone prints nothing at all.</p>
+<p>Where a tool already reports its own outcome accurately,
+<code>src/dotfiles/providers/custom.py</code> delegates rather than re-deriving one: <code>theme</code>
+and <code>font</code> run their own <code>update</code> and propagate the exit code. Matching a
+sentinel string against that output is the trap. It always missed, printing
+<code>theme updated</code> on every run, over an unconditional <code>exit 0</code> that kept a genuine
+failure out of the report.</p>
+<h2 id="logins-are-checked-and-never-repaired">Logins are checked and never repaired<a class="headerlink" href="#logins-are-checked-and-never-repaired" title="Permanent link">&para;</a></h2>
+<p>A converged machine is not necessarily a working one. Every binary can be
+installed, every symlink deployed and every flag set while the CLIs that do the
+work sit logged out. That was the Arch box on 2026-08-12, with <code>learning</code>,
+<code>meso</code>, <code>nomad</code> and <code>atuin</code> all unauthenticated and <code>dotfiles check</code> reporting a
+screen of converged rows. <code>src/dotfiles/resources/auth.py</code> closes that gap, and
+its module docstring carries the decisions inside it: why the manifest names
+which tools while the module says how each is asked, why every probe is local and
+which measurement picked it, and why a finding is <code>Repair.BY_HAND</code> that <code>apply</code>
+can never reach.</p>
+<p><strong>A machine that will never hold an atuin account does not declare one.</strong> <code>auth:</code>
+is the roster of logins a machine has to be able to make, so a permanent no
+belongs there rather than in a row explaining itself on every run. The work box
+is that machine: its copy of the config is the <code>trust/nonfleet</code> one, sync is off
+because a git-only node behind a corporate firewall is the wrong place to send
+shell history from, and <code>scheduler.yml</code> leaves atuin out for the same reason in
+its own words.</p>
+<h2 id="what-lives-in-apps-and-what-leaves-it">What lives in <code>apps/</code> and what leaves it<a class="headerlink" href="#what-lives-in-apps-and-what-leaves-it" title="Permanent link">&para;</a></h2>
+<p>The <code>apps/</code> scripts (<code>notes</code>, <code>packup</code>, …) are <strong>independent user tools</strong> with
+their own identity and <code>doit find</code> discovery. Folding them into
+<code>dotfiles &lt;subcommand&gt;</code> would be a regression, not a consolidation.</p>
+<p>An app leaves this directory when its data outgrows a file. <code>patterns</code> captured
+timestamped fragments into a per-machine JSONL that reached no other desk, and a
+tool for finding patterns over time needs every entry rather than one box's — so
+it became <code>icb patterns</code> against the ichrisbirch API. The test is the store, not
+the script: a file-backed app whose file has to roam is already an API client
+that has not been written yet.</p>
+<p>Everything else is answered from the source: <code>dotfiles --help</code> names the
+resources, and each module under <code>src/dotfiles/resources/</code> says how its resource
+is measured.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/datapointchris/dotfiles" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>
