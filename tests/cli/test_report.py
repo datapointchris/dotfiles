@@ -14,9 +14,11 @@ import datetime as dt
 import json
 from pathlib import Path
 
+import derivations
 import pytest
 from typer.testing import CliRunner
 
+from dotfiles import paths
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles.commands import report
@@ -38,13 +40,16 @@ BEGAN = dt.datetime(2026, 8, 10, 14, 30, 0, tzinfo=dt.UTC)
 
 @pytest.fixture
 def runs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    directory = tmp_path / 'runs'
-    monkeypatch.setattr('dotfiles.paths.RUNS_DIR', directory)
-    # `latest` narrows to this machine now that the fleet shares runs/, so the
-    # identity has to be pinned here — otherwise the suite's answer depends on
-    # which box it runs on, which is the machine the records do not claim.
-    monkeypatch.setattr('dotfiles.paths.MACHINE_ID', MACHINE)
-    return directory
+    """Shadows the one in `conftest.py`, which answers to a different box.
+
+    Defensive rather than load-bearing: `write` and `latest` both take the link's
+    name from `paths.LATEST_RUN`, so they agree whatever the host is and no
+    assertion below reads the value. It is answered so the filenames a failure
+    prints are the same on every desk as the `machine` the records carry.
+    """
+    monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'state'))
+    derivations.rerun(monkeypatch, hostname=MACHINE)
+    return paths.RUNS_DIR
 
 
 def change(item: str, verdict: Verdict) -> Change:

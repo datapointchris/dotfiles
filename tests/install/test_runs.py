@@ -9,6 +9,7 @@ while it is still free to change.
 import datetime as dt
 import json
 
+import derivations
 import pytest
 
 from dotfiles import paths
@@ -16,12 +17,29 @@ from dotfiles import runs
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Verdict
 
+HOST = 'thisbox'
+"""Who the box running the suite claims to be, so `latest-<host>` is a fixed name.
+
+Answered rather than read, because `latest` narrows to the machine asking and the
+records here are written by four different ones. Left to the real hostname, the
+link these tests assert on would be named after whichever desk or runner is
+executing them.
+"""
+
 
 @pytest.fixture
-def runs_dir(tmp_path):
-    directory = tmp_path / 'state' / 'runs'
-    directory.mkdir(parents=True)
-    return directory
+def runs_dir(tmp_path, monkeypatch):
+    """The directory `$XDG_STATE_HOME` puts records in, so `paths` and the fixture agree.
+
+    `runs.write` takes the link's directory from the records directory and its
+    name from `paths.LATEST_RUN`, and `runs.latest()` with no argument reads
+    `paths.RUNS_DIR`. A fixture that invented a path would leave those three
+    answering about two different places.
+    """
+    monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'state'))
+    derivations.rerun(monkeypatch, hostname=HOST)
+    paths.RUNS_DIR.mkdir(parents=True)
+    return paths.RUNS_DIR
 
 
 def timed(**steps) -> runs.Timing:
@@ -248,8 +266,7 @@ class TestListing:
     def test_latest_points_at_the_newest_record(self, runs_dir, monkeypatch):
         """Both halves are per-machine now that the fleet shares runs/: the link
         carries the name in it, and the lookup narrows to the machine asking."""
-        monkeypatch.setattr(paths, 'MACHINE_ID', 'macos-personal-workstation')
-        monkeypatch.setattr(paths, 'LATEST_RUN', paths.STATE_HOME / 'latest-macos-personal-workstation')
+        derivations.rerun(monkeypatch, hostname='macos-personal-workstation')
         older = a_run()
         older.started_at = '2026-08-01T00:00:00Z'
         runs.write(older, runs_dir)
@@ -266,7 +283,6 @@ class TestListing:
         it names the manifest, and both Macs declare the same one — so the answer
         is the per-host link, which is written here and deliberately not synced.
         """
-        monkeypatch.setattr(paths, 'LATEST_RUN', paths.STATE_HOME / 'latest-thisbox')
         mine = a_run()
         mine.started_at = '2026-08-01T00:00:00Z'
         written = runs.write(mine, runs_dir)
@@ -280,7 +296,6 @@ class TestListing:
     def test_latest_falls_back_to_the_newest_record_when_the_link_is_absent(self, runs_dir, monkeypatch):
         """A machine that has never run under this scheme still has records, and
         answering nothing there is worse than answering approximately."""
-        monkeypatch.setattr(paths, 'LATEST_RUN', paths.STATE_HOME / 'latest-thisbox')
         written = runs.write(a_run(), runs_dir)
         (runs_dir.parent / 'latest-thisbox').unlink()
 
@@ -296,8 +311,6 @@ class TestListing:
         *real* one from the other, so a rendered record came from the live machine
         rather than the directory it was handed.
         """
-        monkeypatch.setattr(paths, 'LATEST_RUN', paths.STATE_HOME / 'latest-thisbox')
-        monkeypatch.setattr(paths, 'RUNS_DIR', runs_dir)
         written = runs.write(a_run(), runs_dir)
 
         assert runs.latest() == written, 'the default read has to find the link the write left'

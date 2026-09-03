@@ -12,6 +12,7 @@ import datetime as dt
 import os
 from pathlib import Path
 
+import derivations
 import pytest
 
 from dotfiles import paths
@@ -25,11 +26,24 @@ CONVERGED = ResourceResult('packages', ResourceVerdict.CONVERGED, 'all declared 
 BROKEN = ResourceResult('env', ResourceVerdict.ISSUE, 'WINDOWS_USER is not set')
 
 
-def state_at(monkeypatch: pytest.MonkeyPatch, home: Path) -> Path:
-    """Point every state path at `home`, the way a real run derives them."""
-    monkeypatch.setattr(paths, 'STATE_HOME', home)
-    monkeypatch.setattr(paths, 'STATUS_FILE', home / 'status-box.json')
-    return home
+def state_at(monkeypatch: pytest.MonkeyPatch, xdg_state: Path) -> Path:
+    """Put `$XDG_STATE_HOME` at `xdg_state` and hand back the directory that derives from it.
+
+    `status-box.json` is the filename this produces, and it is produced rather
+    than written down. `STATUS_FILE` carries the *hostname*, never the machine
+    name `record` is passed — two boxes legitimately declare one manifest, and
+    keying the file on it would have the second overwrite the first in a directory
+    Syncthing shares. A fixture spelling the name itself cannot tell those apart,
+    so it would agree with the module by coincidence.
+
+    The host is answered as `Box.local` and the file comes out `status-box.json`,
+    which is what pins the two things `machine_id` does to it. Answered bare and
+    lowercase, dropping either would leave every assertion below green and put
+    `status-Box.local.json` beside `status-box.json` in that shared directory.
+    """
+    monkeypatch.setenv('XDG_STATE_HOME', str(xdg_state))
+    derivations.rerun(monkeypatch, hostname='Box.local')
+    return paths.STATE_HOME
 
 
 def when() -> dt.datetime:
@@ -61,7 +75,7 @@ def test_an_unwritable_state_directory_is_reported_rather_than_swallowed(
     refused = tmp_path / 'refused'
     refused.mkdir()
     refused.chmod(0o500)
-    home = state_at(monkeypatch, refused / 'dotfiles')
+    home = state_at(monkeypatch, refused)
 
     recorded = status.record([BROKEN], 'box', when())
 
@@ -78,6 +92,6 @@ def test_an_unwritable_state_directory_does_not_change_what_check_exits_with(tmp
     refused = tmp_path / 'refused'
     refused.mkdir()
     refused.chmod(0o500)
-    state_at(monkeypatch, refused / 'dotfiles')
+    state_at(monkeypatch, refused)
 
     assert status.record([BROKEN], 'box', when()) is False

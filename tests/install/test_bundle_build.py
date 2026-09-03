@@ -453,6 +453,13 @@ def declaration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     `INSTALL_DIR`, and `machines.names` lists `MANIFESTS_DIR`. `REPO_ROOT` and
     `PYPROJECT_FILE` are deliberately left pointing at this checkout — see the
     module docstring on `declared_closure`.
+
+    **`$DOTFILES_DIR` cannot express that split**, which is why this is patched
+    where `derivations.rerun` serves everywhere else. One variable decides all five,
+    so pointing it at the synthetic tree moves `REPO_ROOT` with the other three
+    and `uv export` runs where there is no `pyproject.toml`. The whole file fails
+    on `could not read the dependency closure from uv`, because this fixture is
+    autouse.
     """
     install = tmp_path / 'repo' / 'install'
     (install / 'manifests').mkdir(parents=True)

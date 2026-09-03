@@ -38,6 +38,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import derivations
 import pytest
 import yaml
 from typer.testing import CliRunner
@@ -112,9 +113,8 @@ def point_at(root: Path, packages: dict[str, Any] | None, monkeypatch: pytest.Mo
 
     `$DOTFILES_DIR` is the knob the whole package resolves the repo through, and
     setting it alone is not enough: `paths` derives `PACKAGES_FILE` from it once,
-    at import, so the constant still names `~/dotfiles`. The derivation is re-run
-    rather than reimplemented — `paths._repo_root()` is the module's own call —
-    so nothing here invents a value and the variable is still what decides.
+    at import, so the constant still names `~/dotfiles`. `derivations.rerun`
+    re-executes the module body over the variable as it now stands.
 
     `packages` of None writes no file, which is how a test reaches the refusal
     `get_packages_file` raises when a checkout has no declaration.
@@ -128,12 +128,9 @@ def point_at(root: Path, packages: dict[str, Any] | None, monkeypatch: pytest.Mo
         (root / 'install' / 'packages.yml').write_text(yaml.safe_dump(packages, sort_keys=False))
 
     monkeypatch.setenv('DOTFILES_DIR', str(root))
-    derived = paths._repo_root()
-    monkeypatch.setattr(paths, 'REPO_ROOT', derived)
-    monkeypatch.setattr(paths, 'INSTALL_DIR', derived / 'install')
-    monkeypatch.setattr(paths, 'PACKAGES_FILE', derived / 'install' / 'packages.yml')
+    derivations.rerun(monkeypatch)
     state_color_preference(monkeypatch, wanted=False)
-    return derived
+    return paths.REPO_ROOT
 
 
 @pytest.fixture
