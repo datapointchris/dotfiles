@@ -22,17 +22,25 @@
 # one, so no secret enters this repo.
 #
 # Under trust/fleet rather than common/ because of what it does when it runs
-# somewhere else. The default host is a homelab address, the transport is plain
-# HTTP carrying a bearer token, and a dropped stream reconnects every five
-# seconds forever. On an employer's network that RFC1918 address belongs to
-# somebody else's machine, so the loop is an authenticated request repeated at
-# whatever is really there — which is the shape lateral movement has. It was
-# deployed to every box and kept off the work one only by that machine happening
-# to have no ntfy config, which is an accident rather than a decision.
+# somewhere else. The host is a private address on the machine's own network, the
+# transport is plain HTTP carrying a bearer token, and a dropped stream
+# reconnects every five seconds forever. On another network that address belongs
+# to somebody else's machine, so the loop is an authenticated request repeated at
+# whatever is really there — which is the shape lateral movement has. The
+# coordinate is what keeps it off machines that are not on that network.
+#
+# The host is never compiled in. A default would be this repo carrying one
+# network's topology, and on any other network it would send the token to
+# whatever answered at that address — the wrong answer, arrived at silently.
+# CLAUDE_CI_WATCH_NTFY_HOST is a `required:` entry in install/flags.yml instead,
+# so an unset value is a `dotfiles check` failure rather than a surprise here.
+#
+# It is read below the argument dispatch, never above it. The machine that has
+# not set it is the machine reading `--help` to find out that it must, so a
+# refusal ahead of the dispatch hides the only screen that names the variable.
 
 set -euo pipefail
 
-NTFY_HOST="${CLAUDE_CI_WATCH_NTFY_HOST:-http://10.0.20.29}"
 NTFY_TOPICS="${CLAUDE_CI_WATCH_TOPICS:-ci-failures,homelab-alerts}"
 NTFY_CONFIG="${CLAUDE_CI_WATCH_CONFIG:-$HOME/.config/ntfy/client.yml}"
 
@@ -56,9 +64,11 @@ published, so a healthy repo is silent — status goes to stderr so you can tell
 that apart from a stream that never connected.
 
 Environment:
-  CLAUDE_CI_WATCH_SINCE   replay a window first, e.g. 12h. The way to see the
-                          filter work without waiting for a failure.
-  CLAUDE_CI_WATCH_NTFY_HOST, CLAUDE_CI_WATCH_TOPICS, CLAUDE_CI_WATCH_CONFIG
+  CLAUDE_CI_WATCH_NTFY_HOST   required. The ntfy server to subscribe to. This
+                              machine declares it; there is no default.
+  CLAUDE_CI_WATCH_SINCE       replay a window first, e.g. 12h. The way to see
+                              the filter work without waiting for a failure.
+  CLAUDE_CI_WATCH_TOPICS, CLAUDE_CI_WATCH_CONFIG
 EOF
 }
 
@@ -73,6 +83,8 @@ case "${1:-}" in
   -*) die "unknown option: $1" ;;
   *) repo="$1" ;;
 esac
+
+NTFY_HOST="${CLAUDE_CI_WATCH_NTFY_HOST:?set it in ~/.env; install/flags.yml declares it}"
 
 [ -r "$NTFY_CONFIG" ] || die "no readable ntfy config at $NTFY_CONFIG"
 token=$(rg -o 'default-token:\s*(\S+)' -r '$1' "$NTFY_CONFIG" || true)

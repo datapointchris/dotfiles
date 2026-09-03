@@ -1,5 +1,18 @@
+# Feeds come from a self-hosted FreshRSS over its Google Reader API, so the
+# server address and the account are facts about one machine's own network. This
+# repo is public and carries neither.
+#
+# The backticks are newsboat's shell evaluation, documented in `man newsboat`
+# under Shell Evaluation: the command runs and its output becomes the value.
+# `install/flags.yml` declares both variables, so `dotfiles check` fails while
+# either is unset.
+#
+# Quoted rather than bare, because the two forms differ only when the variable is
+# unset. Bare leaves the line with too few parameters and newsboat refuses to
+# start. Quoted, it prints `You must set freshrss-url to use FreshRSS` and starts
+# anyway, so a machine with no FreshRSS to reach still gets a reader.
 urls-source "freshrss"
-freshrss-url "http://10.0.20.17/api/greader.php"
-freshrss-login "chris"
+freshrss-url "`echo $FRESHRSS_URL`"
+freshrss-login "`echo $FRESHRSS_LOGIN`"
 freshrss-passwordeval "echo $FRESHRSS_PASSWORD"
 refresh-on-startup yes

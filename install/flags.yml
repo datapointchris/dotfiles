@@ -36,10 +36,16 @@
 # Arch-on-WSL box that `platform: wsl` would have missed entirely. The generated section names the ones that apply, and
 # `dotfiles check` fails while one is missing — without that, an unset value
 # just silently produces a wrong path at the point of use.
-# Only values whose absence is *silent* belong here. An unset WINDOWS_USER builds
-# /mnt/c/Users// and mounts a share with an empty username; an unset
-# JIRA_API_TOKEN just makes `jira` print an auth error, which names itself — that
-# one stays undeclared.
+# What earns an entry is that the machine has to supply the value, not that its
+# absence is quiet. A silent absence is the clearest case: an unset WINDOWS_USER
+# builds /mnt/c/Users// and mounts a share with an empty username. A loud one
+# qualifies too, because a `dotfiles check` that fails now is earlier than a
+# consumer that fails when somebody next runs it — HOMELAB_HOSTS_JSON below is
+# declared on exactly that reasoning.
+#
+# What stays out is a credential a tool mints for itself. JIRA_API_TOKEN is not
+# here because `jira` has a login: the manifest's `auth:` list names it and
+# `dotfiles auth check` asks. A value no login can produce is this register's.
 #
 # ~/.env is not the only place an entry can be answered. A name listed in
 # `settings.SHARED_PATHS` resolves through several rungs and `dotfiles check`
@@ -98,6 +104,64 @@ required:
     consumers:
       - ~/homelab/pyinfra/deploys/ssh_trust.py
       - ~/homelab/scripts/lib/machines.sh
+
+  # A service address on the machine's own network, which this repo is public and
+  # must not carry. The consumer refuses by name when it is unset, and that is
+  # late: it is an interactive command, so nothing reports the gap until somebody
+  # runs it. Declared here, `dotfiles check` says so on a fresh machine instead.
+  #
+  # Two axes. Trust matches the consumer, which lives under apps/trust/fleet/ for
+  # the reason its own header gives — a subscriber that reconnects forever against
+  # a private address is pointed at a stranger's machine on any other network.
+  # Capacity is what the consumer's *purpose* decides: it exists so a Claude
+  # session can watch the repo it is working in, and nobody works in a repo on a
+  # server.
+  - name: CLAUDE_CI_WATCH_NTFY_HOST
+    description: The ntfy server this machine's CI watcher subscribes to
+    network_trust: fleet
+    capacity: workstation
+    consumers:
+      - apps/trust/fleet/claude-ci-watch
+
+  # The FreshRSS server and account, named once and read by both consumers.
+  # newsboat evaluates a backtick in its config, so it takes the same variable the
+  # launcher does rather than a file of its own.
+  #
+  # Two axes, and neither is the display stack. The launcher is a Desktop Entry
+  # and reaches only a machine with a desk, but newsboat is a workstation package
+  # under `configs/common/`, so the reader is on the two Macs as well. Trust is
+  # what says a FreshRSS is reachable at all, and capacity keeps it off the
+  # servers, which install neither consumer.
+  - name: FRESHRSS_URL
+    description: Base URL of this machine's FreshRSS
+    network_trust: fleet
+    capacity: workstation
+    consumers:
+      - apps/display/wayland/rss
+      - configs/common/.config/newsboat/config
+
+  # Beside the URL because newsboat sends them together and neither is useful
+  # alone. An account name rather than a credential: the password is
+  # FRESHRSS_PASSWORD, which no register declares because `freshrss-passwordeval`
+  # already fails loudly and a secret belongs in the vault rather than here.
+  - name: FRESHRSS_LOGIN
+    description: Account name this machine authenticates to FreshRSS with
+    network_trust: fleet
+    capacity: workstation
+    consumers:
+      - configs/common/.config/newsboat/config
+
+  # Not a service this repo deploys — an audio host on somebody's own network,
+  # reached by two aliases. Declared for the reason the block above gives: the
+  # generated block in `~/.env` is the only thing that tells a rebuilt machine a
+  # value exists, so an undeclared one is a value nobody is ever asked for again.
+  #
+  # The os axis alone, because the consumer is a darwin-only shell layer.
+  - name: PI_AUDIO_SSH_TARGET
+    description: user@host of the Pi the pausepi and playpi aliases reach
+    os_family: darwin
+    consumers:
+      - shell/os/darwin/darwin.sh
 
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and
@@ -242,6 +306,34 @@ required_files:
     restore: "write it with `safekeep config init`, then `dotfiles machines requirements --safekeep`"
     consumers:
       - safekeep
+
+  # The whole file, which no other entry here asks for, and the reason is that
+  # atuin offers no seam at all. Measured on 18.21.0: ATUIN_CONFIG_DIR is the only
+  # environment variable it reads, per `atuin info`; a scratch config naming one
+  # address and ATUIN_SYNC_ADDRESS naming another resolved to the file both times;
+  # and TOML has no include.
+  #
+  # Dropping the address alone was the alternative and is worse than the
+  # disclosure it repairs. atuin's compiled default is https://api.atuin.sh, so a
+  # machine with auto_sync on and no address starts pushing shell history at a
+  # third party — silently, which is the failure a missing value is supposed to
+  # replace.
+  #
+  # What that costs: auto_sync, sync_frequency, update_check and ai.enabled stop
+  # being repo-managed on fleet machines and can drift between them. The header
+  # prose is not lost — the nonfleet copy carries the same block, and every
+  # setting is named in `restore:` below.
+  - name: atuin config.toml
+    path: ~/.config/atuin/config.toml
+    description: atuin's client config, including the history-sync server this machine reaches
+    network_trust: fleet
+    file_must_exist: true
+    restore: >-
+      write auto_sync = true, sync_frequency = "5m", update_check = false, [ai] enabled = false,
+      and sync_address naming this machine's own atuin server; keep the encryption key beside it,
+      because losing that loses the history
+    consumers:
+      - atuin
 
 flags:
   - name: ZSHRC_DEBUG

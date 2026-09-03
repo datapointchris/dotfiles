@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=RSS
 Comment=RSS feed reader
-Exec=/home/chris/.cargo/bin/webviewrs -n rss -t RSS --dark http://10.0.20.17
+Exec=/home/chris/.local/bin/rss
 Icon=application-rss+xml
 Terminal=false
 Type=Application
