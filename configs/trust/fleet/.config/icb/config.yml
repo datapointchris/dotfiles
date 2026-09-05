@@ -5,8 +5,9 @@
 # it, so configs/trust/nonfleet/ carries no counterpart.
 #
 # A literal, never a shared shell variable: ~/.env is a shell file, so nothing
-# that sources no profile ever sees it. See standards/data.md § "A shared file is
-# named in config; only the tool's own default is compiled in".
+# that sources no profile ever sees it. A shared file is named here rather than
+# compiled into the tool, so a machine that keeps it elsewhere changes this file
+# and nothing else.
 #
 # The clone rather than the ~/dev symlink that resolves into it: ~/dev is a
 # Syncthing folder, so the link is a second hop a rebuilt machine has not

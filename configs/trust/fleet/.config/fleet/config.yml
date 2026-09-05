@@ -3,8 +3,8 @@
 #
 # Literals, never a shared shell variable: ~/.env is a shell file, so anything
 # running under a systemd timer sources no profile and resolves the path to
-# nothing. See standards/data.md § "A shared file is named in config; only the
-# tool's own default is compiled in".
+# nothing. A shared file is named here rather than compiled into the tool, so a
+# machine that keeps it elsewhere changes this file and nothing else.
 
 # Where the declarations live — the repo registry, the workstation roster, the
 # host inventory, the standards, the schedule, the tool contracts and the secret
