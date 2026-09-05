@@ -28,15 +28,22 @@ class ExitCode(IntEnum):
     ISSUE = 3
 
 
-CORE_VERBS = ('plan', 'check', 'apply', 'list', 'show', 'search')
-"""The vocabulary proper: what a resource does, spelled the same way everywhere.
+RECONCILE_VERBS = ('plan', 'check', 'apply')
+"""The three that measure a machine, and the only three that leave a run record.
 
 `plan` and `check` ask different questions of one measurement — *what would apply
 change* and *is anything wrong* — and one verb answering both is what made a
 scheduled unit sit permanently failed on a machine whose only fault was a package
 being a version behind. `apply` is `plan` and then execute, so the three are a
 Terraform-shaped trio rather than three unrelated words.
+
+Named apart from the rest of `CORE_VERBS` because a filename carries one of these
+and nothing else does: `runs.names_a_run` is what decides whether a `.json` in a
+directory the whole fleet writes to is a record at all.
 """
+
+CORE_VERBS = (*RECONCILE_VERBS, 'list', 'show', 'search')
+"""The vocabulary proper: what a resource does, spelled the same way everywhere."""
 
 EXCEPTION_VERBS: dict[str, str] = {
     'unlink': 'symlinks: the inverse of apply, and it has no other spelling',

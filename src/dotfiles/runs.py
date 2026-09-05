@@ -39,6 +39,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from dotfiles import paths
+from dotfiles import vocabulary
 from dotfiles.refusal import Refusal
 from dotfiles.resources import ACTED
 from dotfiles.resources import UNCONVERGED
@@ -436,12 +437,17 @@ def list_runs(
     `0` asks for nothing, which is a distinction a falsy test cannot make — and
     the caller computing its own bound, `--limit "$(remaining)"`, is the one that
     reaches zero.
+
+    `names_a_run` runs before the sort, not only inside the `machine` filter. The
+    filter is optional and this listing is what every other reader is built on, so
+    a foreign `.json` skipped only when someone narrows is a foreign `.json` in the
+    default answer.
     """
     directory = runs_dir or paths.RUNS_DIR
     if not directory.exists():
         return []
 
-    found = sorted(directory.glob('*.json'), reverse=True)
+    found = sorted((path for path in directory.glob('*.json') if names_a_run(path.stem)), reverse=True)
     if machine:
         found = [path for path in found if machine_of(path.stem) == machine]
     if verb:
@@ -449,15 +455,46 @@ def list_runs(
     return found if limit is None else found[:limit]
 
 
+def names_a_run(stem: str) -> bool:
+    """Whether a filename is one `Identity.stem` produced.
+
+    **A predicate over the shape this module writes, never a list of the shapes to
+    skip.** `runs/` is a Syncthing folder for the whole fleet, so what lands beside
+    a record is not this repo's to enumerate — Syncthing sets a losing write aside
+    as `<name>.sync-conflict-<date>-<device>.json`, and an editor, a backup or a
+    person can leave anything else. Each arrives as a plausible row: it globs, it
+    sorts, and `machine_of` reads a machine name out of it.
+
+    Both ends are checked because both are load-bearing. `list_runs` sorts on the
+    name alone and reads no files, so a stem whose timestamp is not one orders
+    wrongly against every real record; and the verb is what a conflict copy loses,
+    since the device id lands where `check` was.
+
+    **A record that will not parse still passes here**, and has to: a truncated
+    write leaves a valid name and a broken body, and `report list` renders it as
+    `unreadable` on purpose rather than omitting it. This answers about the name.
+    """
+    stamp, _, rest = stem.partition('-')
+    machine, _, verb = rest.rpartition('-')
+    if not machine or verb not in vocabulary.RECONCILE_VERBS:
+        return False
+    try:
+        dt.datetime.strptime(stamp, '%Y%m%dT%H%M%SZ')
+    except ValueError:
+        return False
+    return True
+
+
 def machine_of(stem: str) -> str:
     """The machine a run filename names, or '' where the name is not a run's.
 
     The stem is `<timestamp>-<machine>-<verb>` and a machine name carries hyphens
-    of its own, so the machine is what remains after both ends come off. A name
-    with no middle is not a run record: `runs/` is a synced directory anything
-    can drop a `.json` into, and a filter asked about such a file answers that it
-    does not match, which is the only answer a filter has.
+    of its own, so the machine is what remains after both ends come off. A filter
+    asked about a name that is not a record answers that it does not match, which
+    is the only answer a filter has.
     """
+    if not names_a_run(stem):
+        return ''
     _, _, rest = stem.partition('-')
     machine, _, _ = rest.rpartition('-')
     return machine
@@ -481,7 +518,7 @@ def list_event_logs(runs_dir: Path | None = None, *, machine: str | None = None,
     if not directory.exists():
         return []
 
-    found = sorted(directory.glob('*.jsonl'), reverse=True)
+    found = sorted((path for path in directory.glob('*.jsonl') if names_a_run(path.stem)), reverse=True)
     if machine:
         found = [path for path in found if machine_of(path.stem) == machine]
     return found if limit is None else found[:limit]

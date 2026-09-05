@@ -149,9 +149,9 @@ class TestConvergence:
     """The whole of this property's behavior is pinned in `tests/cli/test_sinks.py`.
 
     A record built here is built by hand, and the verdict is read off `action` —
-    a vocabulary only `sinks` writes. Asserting on hand-typed actions is what let
-    `all(verdict == MATCHED)` pass three tests while being false on all 3667
-    records on the fleet, because no test ever built the shape the writer emits.
+    a vocabulary only `sinks` writes. A test typing its own actions agrees with
+    whatever it typed, so the shape the writer actually emits is the one thing it
+    cannot check, and every resource summary row is that shape.
     """
 
     def test_a_run_with_an_issue_has_not_converged(self, runs_dir):
@@ -313,3 +313,62 @@ class TestListing:
 
         assert runs.latest() == written, 'the default read has to find the link the write left'
         assert runs.latest(runs_dir) == written
+
+
+class TestForeignFilesInTheSharedDirectory:
+    """`runs/` is a Syncthing folder for the whole fleet, so what lands beside a
+    record is not this repo's to enumerate. Every listing answers about the names
+    this module writes, not about everything that globs.
+    """
+
+    def test_a_sync_conflict_copy_is_not_a_run(self, runs_dir):
+        """The shape Syncthing leaves when two boxes write one path — which is what
+        `status-macmini.json` took ten of. The device id lands where the verb was,
+        so a name that looks like a record all the way to the last token is not one.
+        """
+        written = runs.write(a_run(verb='check'), runs_dir)
+        conflict = runs_dir / f'{written.stem}.sync-conflict-20260816-055721-OY2JXOX.json'
+        conflict.write_text(written.read_text())
+
+        assert runs.list_runs(runs_dir) == [written]
+        assert runs.machine_of(conflict.stem) == ''
+
+    def test_a_record_that_will_not_parse_is_still_listed(self, runs_dir):
+        """A truncated write leaves a valid name and a broken body, and `report
+        list` renders that as `unreadable` rather than omitting it. The predicate
+        answers about the name, so it must not take this one out."""
+        written = runs.write(a_run(verb='check'), runs_dir)
+        truncated = runs_dir / '20260816T133615Z-macmini-check.json'
+        truncated.write_text('{"id": "abc')
+
+        assert set(runs.list_runs(runs_dir)) == {written, truncated}
+
+    @pytest.mark.parametrize(
+        'name',
+        [
+            'notes.json',
+            '20260816T133615Z-macmini.json',
+            '20260816T133615Z-macmini-search.json',
+            'yesterday-macmini-check.json',
+            '20260816-macmini-check.json',
+        ],
+        ids=['no-structure', 'no-verb', 'not-a-recording-verb', 'no-timestamp', 'wrong-timestamp-shape'],
+    )
+    def test_a_name_this_module_never_writes_is_not_a_run(self, runs_dir, name):
+        """Both ends are load-bearing. `list_runs` sorts on the name and reads no
+        file, so a stem whose timestamp is not one orders wrongly against every
+        real record."""
+        written = runs.write(a_run(verb='check'), runs_dir)
+        (runs_dir / name).write_text('{}')
+
+        assert runs.list_runs(runs_dir) == [written]
+
+    def test_a_foreign_event_log_is_not_followed(self, runs_dir):
+        """`latest_event_log` is what a follow pane narrates. Pointed at a conflict
+        copy it would narrate a run that already finished on another box."""
+        mine = runs_dir / '20260816T133615Z-thisbox-check.jsonl'
+        mine.write_text('{}\n')
+        (runs_dir / '20260816T140000Z-thisbox-check.sync-conflict-20260816-055721-OY2JXOX.jsonl').write_text('{}\n')
+
+        assert runs.list_event_logs(runs_dir) == [mine]
+        assert runs.latest_event_log(runs_dir, machine='thisbox') == mine
