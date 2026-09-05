@@ -294,6 +294,18 @@ installed.
 and the run history renders a failure green.
 """
 
+ACTED = frozenset(OutcomeStatus) - UNCONVERGED
+"""Where the item differed and the run left it matching the declaration.
+
+`SKIPPED` sits here with `DONE` because the question is what the run found rather
+than which write got there: an item another change in the same batch had already
+repaired was still an item this run found divergent.
+
+**The complement of `UNCONVERGED` over the whole enum, never listed out.** A
+status added to `OutcomeStatus` and forgotten here would be silently absent from
+both sets, and a reader asking what a run found would get neither answer.
+"""
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Outcome:

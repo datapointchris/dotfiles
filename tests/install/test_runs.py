@@ -62,7 +62,7 @@ def a_run(machine='macos-personal-workstation', verb='apply', host=None) -> runs
     """
     record = runs.start(runs.begin(machine, verb, host=machine if host is None else host), flags={'skip': ['system']})
     record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(observe=1, fetch=1, act=1))
-    record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
+    record.record_outcome('symlinks', runs.EXAMINED, str(runs.Intention.OBSERVED), timed(observe=1))
     record.record_issue('packages/github/yq', 'checksum', 'no checksum published')
     return runs.finish(record)
 
@@ -146,18 +146,16 @@ class TestRoundTrip:
 
 
 class TestConvergence:
+    """The whole of this property's behavior is pinned in `tests/cli/test_sinks.py`.
+
+    A record built here is built by hand, and the verdict is read off `action` —
+    a vocabulary only `sinks` writes. Asserting on hand-typed actions is what let
+    `all(verdict == MATCHED)` pass three tests while being false on all 3667
+    records on the fleet, because no test ever built the shape the writer emits.
+    """
+
     def test_a_run_with_an_issue_has_not_converged(self, runs_dir):
         assert not a_run().converged
-
-    def test_a_run_where_everything_matched_has_converged(self):
-        record = runs.start(runs.begin('m', 'check'))
-        record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
-        assert runs.finish(record).converged
-
-    def test_a_run_that_changed_something_has_not_converged(self):
-        record = runs.start(runs.begin('m', 'apply'))
-        record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(act=1))
-        assert not runs.finish(record).converged
 
 
 class TestSpan:

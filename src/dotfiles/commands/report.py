@@ -21,6 +21,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Mapping
+from collections.abc import Sequence
 from pathlib import Path
 
 import typer
@@ -33,6 +34,7 @@ from dotfiles import runs
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
+from dotfiles.output import NEED_ATTENTION
 from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import console
 from dotfiles.output import emit_json
@@ -43,6 +45,7 @@ from dotfiles.output import warn
 from dotfiles.resources import UNCONVERGED
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
+from dotfiles.vocabulary import parse_address
 
 app = typer.Typer(no_args_is_help=True, help='What past runs did, and what they cost')
 
@@ -71,21 +74,58 @@ returned the whole shelf from one and nothing from the other.
 """
 
 
-def _unsuccessful(record: runs.RunRecord) -> str:
-    """What kept a run from converging, in the words `apply` used at the time.
+def _standing(record: runs.RunRecord) -> str:
+    """What this run found that no further `apply` will clear, named.
 
-    Not `RunRecord.converged`, which is true only where every item MATCHED — that
-    is the right answer for `show`, whose reader is looking at one run, and the
-    wrong one for a list, where it marks a healthy apply that repaired something
-    the same as the run that could not examine a resource at all.
+    Not `RunRecord.verdict`, which grades the whole run in one word — that is the
+    right answer for `show`, whose reader is looking at one run, and too little for
+    a list, where the question is which box needs a look and what for.
+
+    **Drift is absent on purpose.** An item `apply` would repair is not a fault,
+    so listing it here would make every machine between two applies read as
+    needing attention and train a reader to ignore the column.
+
+    **Both kinds of fault, and a `check` only ever produces the second.** A write
+    that failed and a write that was never going to be attempted both leave the
+    item wrong. Collect only the first and the verb that exists to find what is
+    wrong is the one verb that can never report anything — which is what
+    `doit dashboard` reads this string for.
     """
-    refused = [issue.address for issue in record.issues]
-    failed = [outcome.address for outcome in record.outcomes if outcome.action in UNSUCCESSFUL]
-    named = sorted(set(refused + failed))
+    failed = {outcome.address for outcome in record.outcomes if outcome.action in UNSUCCESSFUL}
+    declined = {outcome.address for outcome in record.outcomes if outcome.action == runs.Intention.DECLINED}
+    # Joined rather than ranked. The two take different repairs — re-run the
+    # apply, or go and set something — so a cell showing whichever kind sorted
+    # first sends a reader away having fixed one of them.
+    clauses = (_clause(sorted(_named_once(record, failed)), 'unconverged'), _clause(sorted(declined), NEED_ATTENTION))
+    return '; '.join(clause for clause in clauses if clause)
+
+
+def _named_once(record: runs.RunRecord, failed: set[str]) -> set[str]:
+    """Every address this run reports wrong, with each fault named at one altitude.
+
+    A failed write is recorded twice on purpose — an Issue at the resource, so the
+    exit code and the record agree, and an outcome at the item, so the reader
+    learns which one. Counted from both lists, one failed install is two faults.
+
+    The item wins. `packages` says a reader has somewhere to look and `packages/zk`
+    says where, so the resource row is the one with nothing left to add. A resource
+    that refused produced no outcome at all, so nothing else names it and it stays.
+    """
+    covered = {parse_address(address)[0] for address in failed}
+    return failed | {issue.address for issue in record.issues if issue.address not in covered}
+
+
+def _clause(named: Sequence[str], word: str) -> str:
+    """`n word: a, b, c` for a table cell, or nothing where the set is empty.
+
+    Three names then an ellipsis: the count is the answer and the names are what
+    makes the row worth opening, and a cell carrying nine addresses wraps the
+    listing into a paragraph.
+    """
     if not named:
         return ''
     shown = ', '.join(named[:3])
-    return f'{len(named)} unconverged: {shown}' + (', …' if len(named) > 3 else '')
+    return f'{len(named)} {word}: {shown}' + (', …' if len(named) > 3 else '')
 
 
 def _readable(found: Iterable[Path]) -> Iterator[tuple[Path, runs.RunRecord]]:
@@ -131,13 +171,19 @@ def _listed(path: Path) -> dict[str, str]:
     try:
         record = runs.read(path)
     except runs.Unreadable:
-        return {'run': path.stem, 'machine': '', 'host': '', 'verb': '', 'outcome': 'unreadable'}
+        return {'run': path.stem, 'machine': '', 'host': '', 'verb': '', 'verdict': '', 'outcome': 'unreadable'}
     return {
         'run': path.stem,
         'machine': record.machine,
         'host': record.box,
         'verb': record.verb,
-        'outcome': _unsuccessful(record) or 'ok',
+        # The word `report show` leads with, and the same word `status-<box>.json`
+        # carries for the walk that wrote both. `show --json` is the record and
+        # nothing else, so this row is the only door that word is reachable through
+        # — and a fact on screen that no door answers for is one a caller has to
+        # scrape a rendering to get.
+        'verdict': str(record.verdict),
+        'outcome': _standing(record) or 'ok',
     }
 
 
@@ -205,7 +251,7 @@ def _slow_commands(record_path: Path) -> list[tuple[float, str]]:
 def _render(path: Path, record: runs.RunRecord) -> None:
     # `[{verdict}]` reads as a Rich style tag, so the word this line exists to say
     # was parsed as markup and dropped — every header printed a trailing blank.
-    verdict = 'converged' if record.converged else 'drift'
+    verdict = str(record.verdict)
     color = VERDICT_COLORS[verdict]
     console.print(f'[bold]{record.id}[/]  {record.box}  {record.verb}  [{color}]{verdict}[/]')
     console.print(f'{record.started_at} · {record.duration_seconds:.1f}s')
@@ -318,7 +364,7 @@ def list_runs(
     table.add_column('run')
     table.add_column('outcome')
     for path, record in _readable(found):
-        wrong = _unsuccessful(record)
+        wrong = _standing(record)
         color = 'red' if wrong else 'green'
         table.add_row(path.stem, f'[{color}]{wrong or "ok"}[/]')
     console.print(table)

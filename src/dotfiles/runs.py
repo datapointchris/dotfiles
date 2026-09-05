@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import dataclasses
 import datetime as dt
+import enum
 import json
 import time
 import uuid
@@ -39,7 +40,9 @@ from pathlib import Path
 
 from dotfiles import paths
 from dotfiles.refusal import Refusal
-from dotfiles.resources import Verdict
+from dotfiles.resources import ACTED
+from dotfiles.resources import UNCONVERGED
+from dotfiles.results import ResourceVerdict
 
 SCHEMA = 4
 
@@ -50,6 +53,67 @@ SCHEMA = 4
 # and one codebase carrying two ordering words is what made every mention of
 # either ambiguous. These sit *inside* one provider's `perform`, below a stage.
 STEPS = ('observe', 'fetch', 'verify', 'extract', 'act')
+
+
+class Intention(enum.StrEnum):
+    """What a run meant to do about one measured item, as `action` spells it.
+
+    `action` carries two vocabularies, and this is the half that reaches it
+    through a `Change`. `OutcomeStatus` is the other half and is what `perform`
+    did, so nothing here ever reaches `perform`.
+
+    Named here rather than at the one function that picks a word, because a reader
+    comparing against one of these has no enum to compare against otherwise — and
+    two modules spelling the same literal drift apart with nothing failing.
+    """
+
+    UNMEASURED = 'unmeasured'
+    """No evidence either way. Neither verb's answer, and it moves no verdict."""
+
+    DECLINED = 'declined'
+    """The item differs and `apply` cannot repair it, so a person has to."""
+
+    PLANNED = 'planned'
+    """The item differs and `apply` would repair it."""
+
+    OBSERVED = 'observed'
+    """Looked at, and nothing about it is being claimed. Also the resource's own
+    summary row, which carries what measuring the whole resource cost."""
+
+
+EXAMINED = 'examined'
+"""The `verdict` a resource's own summary row carries, and not a `Verdict` member.
+
+A resource row says the resource was looked at and claims nothing about any item,
+so no member of an item vocabulary fits it. **It shares `outcomes` with the item
+rows anyway**, which is the standing trap: a reader folding item verdicts matches
+it against nothing and gets a well-formed wrong answer, on every record, since
+every record carries one row of this per resource. `RunRecord.verdict` reads
+`action` for that reason.
+"""
+
+UNREPAIRABLE = frozenset({str(status) for status in UNCONVERGED}) | {str(Intention.DECLINED)}
+"""Every `action` meaning the item is wrong and no further `apply` will fix it.
+
+The two halves arrive by different routes and mean the same thing to a reader.
+`UNCONVERGED` is a write that was attempted and did not take; `DECLINED` is a
+write that was never going to be attempted. Both leave an item differing from the
+declaration with nothing scheduled to change that, which is `ResourceVerdict.ISSUE`.
+
+**Derived from `UNCONVERGED`, never listed again.** Spelled out, the two sets
+disagree silently and a run history renders a failure green.
+"""
+
+REPAIRABLE = frozenset({str(status) for status in ACTED}) | {str(Intention.PLANNED)}
+"""Every `action` meaning the item differed and `apply` is what closes it.
+
+`PLANNED` is the intention and `ACTED` is the same finding after the write, so a
+`plan` and the `apply` that followed it grade one machine the same way.
+
+**Both halves, rather than the intention alone.** An apply writes the `Change` and
+the `Outcome` for one item, so `PLANNED` alone answers correctly here only while
+that pairing holds — and nothing enforces it. Each row says enough on its own.
+"""
 
 
 def _now() -> dt.datetime:
@@ -208,21 +272,36 @@ class RunRecord:
         self.issues.append(Issue(address=address, kind=kind, message=message))
 
     @property
-    def converged(self) -> bool:
-        """Whether this run found the machine already matching what it declares.
+    def verdict(self) -> ResourceVerdict:
+        """What this run *found*, graded in the vocabulary `reconcile.worst` uses.
 
-        Not whether it left it that way, which is a different question and is
-        `commands/report._unsuccessful`'s. That split is deliberate and documented
-        there: this is the right answer for `show`, whose reader is looking at one
-        run, and the wrong one for a list, where it would mark a healthy apply that
-        repaired something the same as a run that could not examine a resource at all.
+        Not what it left behind, which is `commands/report._standing`'s question.
+        An apply that repaired two things found a machine that differed, and
+        reading this as the state afterwards marks it the same as a run that could
+        not examine a resource at all.
 
-        Compared against the enum rather than a literal spelling of it. This read
-        `'MATCHED'` for as long as it existed and was therefore never true:
-        `Verdict` is a `StrEnum` whose values are lower case, so every record ever
-        written said drift — including the ones that had nothing wrong with them.
+        One walk writes this record and `status-<box>.json`, so the two grade it
+        with one set of words or a reader has to know which half is stale.
+
+        **Read off `action`, never off the item verdict.** An action says what the
+        run decided about a row and a verdict says what the world is, so `declined`
+        and `planned` are both `MISSING` with opposite consequences. `EXAMINED` is
+        the other half of why: a resource row carries no item verdict to compare.
         """
-        return not self.issues and all(outcome.verdict == Verdict.MATCHED for outcome in self.outcomes)
+        if self.issues or any(outcome.action in UNREPAIRABLE for outcome in self.outcomes):
+            return ResourceVerdict.ISSUE
+        if any(outcome.action in REPAIRABLE for outcome in self.outcomes):
+            return ResourceVerdict.DRIFT
+        return ResourceVerdict.CONVERGED
+
+    @property
+    def converged(self) -> bool:
+        """Whether this run found nothing at all to report.
+
+        Derived from `verdict` rather than tested again, so the boolean and the
+        word cannot answer differently about one record.
+        """
+        return self.verdict is ResourceVerdict.CONVERGED
 
 
 class Stopwatch:
