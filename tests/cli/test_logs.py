@@ -6,9 +6,9 @@ duration of the run the stream exists and the record does not. Every discovery
 path here goes through the `.jsonl` files for that reason, and a reader routed
 through the records would find the live run last rather than first.
 
-The other half is `runs/` being a Syncthing folder. Another machine's stream
-arrives in the same directory, so "the newest file" and "the newest run on this
-box" are different questions and only the second one is ever being asked.
+The other half is `runs/` being replicated. Another machine's stream arrives in
+the same directory, so "the newest file" and "the newest run on this box" are
+different questions and only the second one is ever being asked.
 """
 
 from __future__ import annotations
@@ -49,9 +49,9 @@ def test_a_run_in_progress_is_found_before_it_has_a_record(runs_dir: Path) -> No
 
 
 def test_another_machines_newer_stream_is_not_this_boxs_latest(runs_dir: Path) -> None:
-    """`runs/` is shared over Syncthing, so the newest file and the newest local
-    run are different questions. Answering the first would have a follow pane
-    switch to narrating a different computer mid-session."""
+    """`runs/` is replicated between machines, so the newest file and the newest
+    local run are different questions. Answering the first would have a follow
+    pane switch to narrating a different computer mid-session."""
     mine = stream(runs_dir, '20260815T100000Z', ran('git status'))
     stream(runs_dir, '20260815T120000Z', ran('brew list'), machine=OTHER)
 
@@ -132,8 +132,8 @@ def test_a_seconds_field_is_not_rendered_twice(runs_dir: Path) -> None:
 def test_a_newer_run_is_chosen_by_name_rather_than_mtime(runs_dir: Path) -> None:
     """`Identity.stem` leads with a UTC timestamp precisely so the directory
     sorts chronologically as text. Comparing mtimes would instead follow whichever
-    file Syncthing happened to write last, which on a shared directory is not the
-    same ordering at all."""
+    file was written to disk last, which on a shared directory is not the same
+    ordering at all."""
     current = stream(runs_dir, '20260815T100000Z', ran('git status'))
     later = stream(runs_dir, '20260815T110000Z', ran('go install'))
     later.touch()

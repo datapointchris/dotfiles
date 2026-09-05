@@ -95,7 +95,7 @@ def a_record(sandbox: Sandbox, host: str, stamp: str = '20260817T120000Z', verb:
 def test_a_peer_s_record_stays_on_the_machine_that_wrote_it(
     sandbox: Sandbox, server: Path, named: str, cli: Callable[..., Invocation]
 ) -> None:
-    """`$XDG_STATE_HOME` is a Syncthing folder on the fleet, so the runs directory
+    """`$XDG_STATE_HOME` is replicated across the fleet, so the runs directory
     holds every box's records and this shelf is one box's. Both of this box's
     files go and neither of the peer's does — the record carries a failure's
     scope and the log carries its cause, so sending one is the shape that makes
@@ -238,10 +238,10 @@ def test_a_send_leaves_nothing_behind_in_the_temporary_directory(
 class TestReadingThemBack:
     """The half `upload` had no counterpart for.
 
-    A record says what an `apply` decided and what it ran, and on a box off the
-    fleet's Syncthing the shelf holds the only copy anyone else can reach. Sent and
-    never fetched, the one artifact answering "what did that apply install" was
-    unreachable from the machine that builds its bundles.
+    A record says what an `apply` decided and what it ran, and on a box outside
+    the fleet's sync the shelf holds the only copy anyone else can reach. Sent
+    and never fetched, the one artifact answering "what did that apply install"
+    was unreachable from the machine that builds its bundles.
     """
 
     def sent(self, sandbox: Sandbox, named: str, cli: Callable[..., Invocation], stamp: str = '20260817T120000Z') -> Path:

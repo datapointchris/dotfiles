@@ -83,8 +83,8 @@ environments share one image, and the fixture that builds a missing image itself
 raced two `docker build` processes into a single tag the first time this fanned
 out. `task test:report` reads those records; `--stats` is the one worth having,
 because a cell that is usually thirty seconds and took nine minutes is the
-interesting kind of green. The history is Syncthing-shared, so each record names
-its machine and checkout and `--stats --machine <name>` narrows it.
+interesting kind of green. The history is shared between machines, so each
+record names its machine and checkout and `--stats --machine <name>` narrows it.
 
 `task test:logs -- <cell>` follows a cell that is running now, and
 `task test:containers` says what exists and what each container is for: a name

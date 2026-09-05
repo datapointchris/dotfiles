@@ -154,7 +154,7 @@ def test_an_untimed_decision_is_written_as_a_measured_zero() -> None:
 
 
 def test_a_record_round_trips_through_the_file_it_is_written_to(tmp_path: Path) -> None:
-    """The record crosses machines over Syncthing, so writing it and reading it
+    """The record crosses machines by replication, so writing it and reading it
     back has to produce the same thing — including the nested timings."""
     written = sinks.record(
         [

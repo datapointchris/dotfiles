@@ -129,7 +129,7 @@ def test_the_safekeep_config_is_itself_in_the_register() -> None:
 
 
 def test_a_fleet_machine_needs_no_safekeep_config() -> None:
-    """Syncthing is the transport there and Proxmox holds the backups, so a fleet
+    """The sync is the transport there and Proxmox holds the backups, so a fleet
     machine without one is not a machine missing anything. Narrowed on capacity
     at first, which reported both Macs short of a file neither needs."""
     entries = json.loads(run('macos-personal-workstation', '--json'))

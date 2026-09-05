@@ -343,7 +343,7 @@ def test_latest_follows_this_box_link_rather_than_the_newest_record(sandbox: San
     """`runs/` is shared by the whole fleet, so the newest record in it is whichever
     machine ran most recently. The link is what makes `latest` a statement about
     this box — asserted by writing the older record last, which is what a Mac's
-    record arriving over Syncthing looks like from here."""
+    record arriving by replication looks like from here."""
     record(sandbox, identifier='newerbyname1', verb='plan', when='20260202T000000Z')
     record(sandbox, identifier='writtenlast1', verb='check', when='20260101T000000Z')
 
@@ -620,11 +620,11 @@ def test_a_verb_that_only_names_a_record_survives_an_unreadable_one(
 def test_the_listing_reports_the_runs_it_can_read(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """One unreadable record costs the listing that row and nothing else.
 
-    `runs/` is a Syncthing folder shared by the whole fleet, and a record is
-    written with a plain `write_text` — so an interrupted process or a full disk
-    leaves a truncated file every reading verb has to survive. The companion event
-    log is tolerated exactly this way: `_slow_commands` catches its own parse
-    errors line by line and says so, on the grounds that a run must not refuse to
+    `runs/` is replicated across the whole fleet, and a record is written with a
+    plain `write_text` — so an interrupted process or a full disk leaves a
+    truncated file every reading verb has to survive. The companion event log is
+    tolerated exactly this way: `_slow_commands` catches its own parse errors
+    line by line and says so, on the grounds that a run must not refuse to
     render because an optional file is malformed. The blast radius is larger here
     — `list`, `stats`, `latest` and `show` all answer out of this reader, so one
     unreadable file costs every one of them the runs that are fine.

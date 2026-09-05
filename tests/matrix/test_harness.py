@@ -208,7 +208,7 @@ def test_the_home_every_path_resolves_through_is_the_sandbox_one(sandbox: Sandbo
 )
 def test_every_directory_the_package_writes_to_is_under_the_sandbox(sandbox: Sandbox, name: str, attribute: str) -> None:
     """Each is a separate chance to write into the real fleet's state directory,
-    which is on Syncthing.
+    which is replicated between machines.
 
     The cache paths are functions and resolve through `$XDG_CACHE_HOME` on every
     call, so the sandbox setting that one variable carries all of them — where a

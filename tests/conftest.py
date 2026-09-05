@@ -456,12 +456,12 @@ def no_writing_into_this_machines_own_directories(request, monkeypatch):
     moves nothing here, which is the point: the guard has to keep naming the place
     the test was supposed to be redirected away from.
 
-    A directory sweep cannot do this job. Syncthing delivers a peer's record into
-    `runs/` while the suite is running, and a person or a second session can run a
-    real verb on this box at the same time — so a new file there is not evidence of
-    a leak, and the narrow filter that tried to tell them apart was reasoning from
-    a premise `runs.write` does not hold to: it writes whatever `record.host` says,
-    and a fixture is free to say another machine's name.
+    A directory sweep cannot do this job. Replication delivers a peer's record
+    into `runs/` while the suite is running, and a person or a second session can
+    run a real verb on this box at the same time — so a new file there is not
+    evidence of a leak, and the narrow filter that tried to tell them apart was
+    reasoning from a premise `runs.write` does not hold to: it writes whatever
+    `record.host` says, and a fixture is free to say another machine's name.
     """
     if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
         return

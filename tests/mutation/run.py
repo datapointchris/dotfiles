@@ -572,8 +572,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     directory = parsed.runs_dir if parsed.runs_dir is not None else paths.STATE_HOME / 'mutation-runs'
     machine = parsed.machine or paths.MACHINE_ID
     written = score.record(run, directory, machine)
-    # This box's own history and nobody else's. The state directory is a
-    # Syncthing folder, so the newest file in it is usually another machine's
+    # This box's own history and nobody else's. The state directory is
+    # replicated, so the newest file in it is usually another machine's
     # measurement of another commit, and the gate below follows the comparison.
     earlier = [path for path in score.recorded(directory, machine) if path != written]
     comparison = score.compare(run, score.read(earlier[0])) if earlier else None

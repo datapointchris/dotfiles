@@ -87,8 +87,8 @@ rather than repaired, and what happens to a line that only runs at import time.
 
 Each invocation writes a run to
 `$XDG_STATE_HOME/dotfiles/mutation-runs/`, under a name carrying the machine —
-that directory is a Syncthing folder, and `score.recorded` reads only this box's
-own history back.
+that directory is replicated between machines, and `score.recorded` reads only
+this box's own history back.
 
 `targets.py` commits a **threshold** and never a score, and `targets.THRESHOLD`
 says why a committed baseline always drifts instead of failing. Where the score

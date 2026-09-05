@@ -145,7 +145,7 @@ def test_every_http_logger_the_client_registers_is_pinned():
     """A pin on `httpcore` misses the fork, which vendors its transport as
     `httpcore2` — the noisiest logger in the process. Its DEBUG records carry whole
     response-header tuples as the event text, and unpinned they are the bulk of a
-    log that Syncthing copies to every machine.
+    log that is copied to every machine.
 
     Both modules are imported here because the loggers are registered on import
     and would otherwise not exist to be counted. No request is made, so this stays
