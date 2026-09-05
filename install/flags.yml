@@ -211,7 +211,7 @@ required_files:
 
   # The default identity off the fleet, where the default is not the personal one.
   # Declared rather than shipped for the same reason as the values above: it names
-  # an organisation. Absence is silent in the way that earns a place here — git ignores
+  # an organization. Absence is silent in the way that earns a place here — git ignores
   # a missing include without a word, so the machine would fall through to
   # useConfigOnly and refuse every commit while naming nothing.
   #

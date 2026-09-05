@@ -2,8 +2,8 @@
 #
 # The nonfleet twin of configs/trust/fleet/.config/syncer/config.toml, differing
 # in where the registry lives and in how long a git call gets. A machine outside
-# the fleet has no ~/dev and no terminal-library-fleet clone; it keeps its own
-# registry, listing its own work, at the XDG config path every machine has.
+# the fleet has neither the shared directory nor the library clone; it keeps its
+# own registry, listing its own work, at the XDG config path every machine has.
 #
 # Duplicated rather than layered because there is no merge step: the same
 # relative path in configs/common/ and a coordinate directory is a collision
