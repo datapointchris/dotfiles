@@ -130,8 +130,9 @@ def staging_dir() -> Path:
     merging: `providers.locate` reads across them newest-first, and an entry the
     sparse bundle omits falls through to the older full bundle carrying it.
 
-    **Cache rather than state, whatever the recovery cost.** `STATE_HOME` is a
-    Syncthing folder, and a gigabyte of archives there replicates across the fleet.
+    **Cache rather than state, whatever the recovery cost.** `STATE_HOME` is
+    replicated, so a gigabyte of archives there lands on every machine in the
+    fleet.
 
     A function rather than a constant, so `$DOTFILES_BUNDLE` is read on every call
     and a test cannot miss rebinding it.

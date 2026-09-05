@@ -9,8 +9,8 @@ running a check of its own.
 caller keeps it — so it carries every item behind every count, which is what makes
 it worth handing to a machine that can reach the network. This file is written by
 every check, wanted by nobody in particular, and lands in `$XDG_STATE_HOME`, which
-is a Syncthing folder for the fleet. Written as the document it was 127 KB against
-2.8 KB for the same walk, several times a day, on every box.
+the fleet replicates between machines. Written as the document it was 127 KB
+against 2.8 KB for the same walk, several times a day, on every box.
 
 Written by every `check`, not only the scheduled one, so an interactive check
 refreshes what a later reader sees.
@@ -55,10 +55,10 @@ def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
 def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> bool:
     """Write the state file, and say when the state directory would not take it.
 
-    The state directory is on Syncthing for the fleet and absent on a fresh
-    machine, and neither is a reason for `dotfiles check` to exit non-zero — it
-    answered the question it was asked. Degrading is right here; degrading
-    silently is not. An unwritable directory is indistinguishable from a
+    On the fleet the state directory is replicated between machines, and on a
+    fresh machine it is absent. Neither is a reason for `dotfiles check` to exit
+    non-zero — it answered the question it was asked. Degrading is right here;
+    degrading silently is not. An unwritable directory is indistinguishable from a
     successful write to everything downstream, so a reader asking where this
     machine stands would get an answer from whenever the last write landed and
     nothing saying it was stale.
@@ -155,7 +155,7 @@ def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) ->
     The same header as `document` and `as_counts` in place of `as_dict`, which is
     the whole difference. Both cross machines and both are versioned; what they
     are not is one artifact, and writing the document here made every scheduled
-    check push 127 KB into a Syncthing folder to answer a question — is this
+    check push 127 KB into a replicated directory to answer a question — is this
     machine converged — that 2.8 KB answers.
 
     A caller wanting the items asks for them: `dotfiles check --json > wherever`

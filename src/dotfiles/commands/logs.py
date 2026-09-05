@@ -197,8 +197,8 @@ def show(
     """Print one run's debug stream.
 
     With no argument this is the newest run on *this* machine, which is not the
-    newest file in the directory: `runs/` is shared over Syncthing, so another
-    box's check arriving mid-run would otherwise be the answer.
+    newest file in the directory: `runs/` is replicated between machines, so
+    another box's check arriving mid-run would otherwise be the answer.
 
     `--follow` keeps the pane live across runs. Start it once beside the terminal
     you are working in, and it moves to each new run's stream as that run opens
@@ -267,7 +267,7 @@ def _newer_than(current: Path) -> Path | None:
     Compared by name rather than by mtime: `Identity.stem` leads with a
     basic-format UTC timestamp precisely so the directory sorts chronologically
     as text, and an mtime comparison would instead follow whichever file
-    Syncthing wrote last.
+    arrived from another machine last.
     """
     newest = runs.latest_event_log()
     return newest if newest is not None and newest.name > current.name else None

@@ -17,13 +17,13 @@ The split matters because "the install was slow" and "the *downloads* were slow"
 are different findings, and only a per-step number tells them apart.
 
 Reading a record needs no special tooling — it is JSON, and the fleet shares one
-directory over Syncthing.
+directory between machines.
 
 **Records are kept indefinitely.** There is no retention bound and no prune verb,
 because the value of the history is that it goes back: "is this getting slower"
 cannot be answered by a window that drops the comparison. A record is a few
-kilobytes of JSON and its event log a few tens, and the directory is its own
-Syncthing folder — so the fleet manages what accumulates there, not this module.
+kilobytes of JSON and its event log a few tens, and the directory is replicated
+between machines — so the fleet manages what accumulates there, not this module.
 """
 
 from __future__ import annotations
@@ -317,10 +317,10 @@ class Unreadable(Refusal):
     nothing else to say. Neither can decide that from a `JSONDecodeError` without
     knowing which parser `read` happens to use.
 
-    Reached by an ordinary accident rather than by corruption: `runs/` is a
-    Syncthing folder, a record is written with a plain `write_text`, and an
-    interrupted process or a full disk leaves a truncated file behind that
-    outlives the run that wrote it.
+    Reached by an ordinary accident rather than by corruption: `runs/` is
+    replicated between machines, a record is written with a plain `write_text`,
+    and an interrupted process or a full disk leaves a truncated file behind
+    that outlives the run that wrote it.
     """
 
 
@@ -394,7 +394,7 @@ def list_event_logs(runs_dir: Path | None = None, *, machine: str | None = None,
     this could not find.
 
     `machine` filters on the stem exactly as `list_runs` does, and every caller
-    here passes this box: `runs/` is shared over Syncthing, so another machine's
+    here passes this box: `runs/` is replicated between machines, so a peer's
     check arriving mid-run is otherwise the newest log in the directory and a
     follow pane would switch to narrating a different computer.
     """

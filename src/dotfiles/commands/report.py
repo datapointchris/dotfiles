@@ -357,7 +357,7 @@ def upload(
     scope, the second its cause. Sending one is the shape that makes somebody ask
     for the other.
 
-    Only this box's own records. `$XDG_STATE_HOME` is a Syncthing folder on the
+    Only this box's own records. `$XDG_STATE_HOME` is replicated across the
     fleet, so the runs directory holds every machine's, and a bare "upload
     everything" would put a peer's records on this machine's shelf.
     """
