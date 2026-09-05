@@ -46,8 +46,7 @@ question rather than this tool's.
 lands is the caller's business. It is the one artifact of the four with no reader
 on this machine. A nonfleet box is git-only and outside the sync, so the way its
 needs reach the fleet is its check output traveling as a file, and what that file
-says
-is missing is what the fleet builds into the next offline bundle for it. Why it
+says is missing is what the fleet builds into the next offline bundle for it. Why it
 carries a version, and what each generation holds, are `VERSION` in
 `src/dotfiles/status.py`.
 
