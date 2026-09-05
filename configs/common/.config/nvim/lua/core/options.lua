@@ -2,8 +2,17 @@
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
-local venv_python = vim.fn.getcwd() .. '/.venv/bin/python'
-if vim.fn.executable(venv_python) == 1 then vim.g.python3_host_prog = venv_python end
+-- The Python host runs remote plugins, so it has to be an interpreter carrying
+-- `pynvim`. A project's own `.venv` is the wrong choice for it: almost none of
+-- them install `pynvim`, so a remote plugin would work in some directories and
+-- fail in others with nothing on screen saying why. The jupyterlab tool venv
+-- carries `pynvim` and `jupyter_client` together, which is what molten needs.
+--
+-- A kernel is a separate process and is chosen per buffer, so nothing here
+-- constrains which environment code actually runs in.
+local data_home = vim.env.XDG_DATA_HOME or vim.fn.expand('~/.local/share')
+local nvim_python = data_home .. '/uv/tools/jupyterlab/bin/python'
+if vim.fn.executable(nvim_python) == 1 then vim.g.python3_host_prog = nvim_python end
 
 -- Show line numbers
 vim.opt.number = true
