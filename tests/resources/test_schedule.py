@@ -68,7 +68,7 @@ def results(*verdicts: tuple[str, ResourceVerdict]) -> list[ResourceResult]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_the_status_file_is_versioned_and_still_at_one(state: Path) -> None:
+def test_the_status_file_is_versioned_and_still_at_two(state: Path) -> None:
     """It crosses machines — the fleet syncs the state directory — and an
     unversioned file breaks silently when the two ends disagree about its shape.
 
@@ -78,13 +78,14 @@ def test_the_status_file_is_versioned_and_still_at_one(state: Path) -> None:
     have happened, a revert, and a shape change with no bump all pass. Editing the
     number here is the deliberate second act that makes a bump a decision.
 
-    Still 1 while the interchange document is 2, which is the arrangement being
-    pinned: two artifacts, two numbers, and one moving is exactly what the other's
-    must not follow. The document's own literal is in `tests/matrix/test_composite.py`.
+    Two artifacts, two numbers, and one moving is exactly what the other's must
+    not follow: this reached 2 for a key of its own while the interchange
+    document was already there for reasons of its own. That document's literal is
+    in `tests/matrix/test_composite.py`.
     """
     status.record(results(('system', ResourceVerdict.CONVERGED)), 'box', WHEN)
 
-    assert json.loads(paths.STATUS_FILE.read_text())['version'] == 1
+    assert json.loads(paths.STATUS_FILE.read_text())['version'] == 2
 
 
 def test_the_status_file_carries_each_resource_verdict_and_no_item_rows(state: Path) -> None:
@@ -110,6 +111,23 @@ def test_the_document_names_the_machine_and_when_it_was_measured(state: Path) ->
 
     assert written['machine'] == 'box'
     assert written['checked'] == WHEN.isoformat()
+
+
+def test_the_document_names_the_box_as_well_as_the_manifest(state: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The filename splits on the box and the document has to say the same thing.
+
+    macmini and mbp both declare `macos-personal-workstation`, so a reader folding
+    the fleet's files on `machine` alone sees one Mac and reads whichever it opened
+    last. Recovering the box by parsing the filename is the half mechanism the
+    split exists to avoid.
+    """
+    monkeypatch.setattr(paths, 'MACHINE_ID', 'macmini')
+
+    status.record(results(('system', ResourceVerdict.CONVERGED)), 'macos-personal-workstation', WHEN)
+    written = json.loads(paths.STATUS_FILE.read_text())
+
+    assert written['host'] == 'macmini'
+    assert written['machine'] == 'macos-personal-workstation'
 
 
 def test_an_unwritable_state_directory_never_fails_the_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
