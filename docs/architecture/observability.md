@@ -21,6 +21,11 @@ Every name carries the box because the directory is shared — a run id embeds i
 (`20260823T224350Z-archlinux-apply.json`) and `status-<box>.json` spells it out.
 What collided before they did is `src/dotfiles/paths.py`.
 
+Every one of the three says the box inside as well, because the name is what
+keeps two writes apart and the field is what a reader matches on. Two boxes
+legitimately share a manifest, so a document naming only that has nothing to fold
+the fleet's files by. `status.state` and `runs.Identity` each argue their half.
+
 Nothing here is pushed at a person. Every one of the three is read by asking for
 it, and the schedule that refreshes the status file is a `steps` row declared in
 `architecture/system-configuration.md` § "`steps` is the name for no shared
@@ -31,6 +36,29 @@ The record and the stream divide one level down, on the same question. A record
 is composed and travels off the machine. A stream is emitted and stays behind.
 That is why the stream gets its own noun instead of a verb under `report`, which
 `src/dotfiles/commands/logs.py` argues in full.
+
+## One walk, and every reader of it grades the machine the same way
+
+A `check` measures the machine once and leaves the state file and the run record
+behind. Both then answer "how is this box", so both answer in one vocabulary —
+`converged`, `drift`, `issue`, which is what `reconcile.worst` grades a whole
+machine with. Two artifacts of one measurement that word their answers
+differently are a disagreement waiting for a reader to find, and the reader who
+finds it has no way to tell which half is stale.
+
+The two folds are not the same width. `status-<box>.json` is written under the
+check lens, where drift is not a finding, so its verdict says whether anything is
+*wrong* and its per-resource `pending` counts carry what `apply` would change.
+`RunRecord.verdict` reads the whole walk, so it separates a machine `apply`
+repairs from one only a person can. Neither contradicts the other, and
+`src/dotfiles/runs.py` states what each `action` licenses.
+
+**The verdict travels through `dotfiles report`, never by reading the state file.**
+An aggregator is a different tool on the same box — `doit dashboard` is the one —
+and the thing it reads has to be a door rather than a file, or the naming
+convention and the box-selection key become its problem to get right. `report
+list --json` carries the verdict and the addresses behind it for every run in the
+shared directory, which is the whole fleet from any machine in it.
 
 ## Nothing here prunes anything
 
