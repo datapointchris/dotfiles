@@ -32,7 +32,7 @@ One minimal manifest, plus a tiered system-package model.
 - **Optional coordinate directories.** The server ships only a shell layer and no
   configs of its own, and the symlinks manager treats every coordinate directory as
   optional. They are keyed on coordinates rather than on a platform string, so the
-  apt helpers are `shell/pkg/apt/apt.sh` and reach the Ubuntu work box too — see
+  apt helpers are `shell/pkg/apt/apt.sh` and reach the Ubuntu WSL box too — see
   `docs/reference/tools/symlinks.md`.
 
 Provision one with `install.sh --machine linux-lxc-server`. The interactive zsh

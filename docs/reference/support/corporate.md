@@ -1,8 +1,8 @@
 # Restricted Networks
 
-The work machine sits behind a firewall that blocks most of what an install
-reaches for. Everything here is built for that machine, and none of it is proxy
-or registry-mirror configuration.
+One machine sits behind a firewall that blocks most of what an install reaches
+for. Everything here is built for that machine, and none of it is proxy or
+registry-mirror configuration.
 
 ## Find out what is actually blocked
 
@@ -52,14 +52,14 @@ no return value, so "produce a tarball and tell the caller what it is called" ha
 no direct expression there. `tests/install/test_create_bundle.py` covers the
 logic and needs neither a network nor a container.
 
-## Install it on the work box
+## Install it on the restricted box
 
 `dotfiles remote check` says whether this machine can exchange anything at all.
 Run it before the first transfer rather than after a failed one.
 `src/dotfiles/commands/remote.py` says why a declared transport and a usable one
 are two separate questions.
 
-Then, from the work box:
+Then, from the restricted box:
 
 ```bash
 dotfiles bundle download
@@ -79,7 +79,7 @@ can be built against it.
 which is what `bundle check` and `bundle show` read, and for a tarball carried
 across by hand from somewhere the search does not look.
 
-To read back what an apply did, `dotfiles report upload` from the work box and
+To read back what an apply did, `dotfiles report upload` from the restricted box and
 `dotfiles report download --machine wsl-work-workstation` where the network is.
 The record says what the run decided and the log beside it says what it ran,
 which is the pair that answers a converge nobody was watching.
@@ -95,7 +95,7 @@ the apply gets everything else.
 ## Carry only what changed
 
 Each round is planned against the last. `dotfiles status upload` publishes what
-the work box already has, scoped to packages and toolchains and to nothing else.
+the restricted box already has, scoped to packages and toolchains and to nothing else.
 Then, where the network is:
 
 ```bash

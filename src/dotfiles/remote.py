@@ -214,7 +214,7 @@ What the machine supplies is the root they hang under, which is a fact about a
 server.
 
 Keyed by *manifest* under each, never by hostname. `paths.machine_id()` is the
-bare hostname, and on the one machine this exists for that is an employer's asset
+bare hostname, and on the one machine this exists for that is an owner's asset
 tag — a name that has no business on a shelf beside personal artifacts. The
 manifest name is what a bundle is built for anyway, so it is also the right key.
 """

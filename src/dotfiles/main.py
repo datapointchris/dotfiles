@@ -292,7 +292,7 @@ def check(
         # Not what `status.record` just wrote. That file accrues unasked in a
         # synced directory and holds the verdicts alone; this is composed because
         # a caller asked and is kept by them, so it carries the items behind every
-        # count — which is what makes the work box's check output worth handing to
+        # count — which is what makes an offline box's check output worth handing to
         # a machine that can build it a bundle.
         emit_json(status.document(results, checked_machine, when))
     else:

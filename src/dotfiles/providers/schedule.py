@@ -14,7 +14,7 @@ means nothing here escalates.
 this row decides who runs one.** A timer is periodic by construction, so what it
 sends becomes a beacon: this one runs `check --refresh`, which is a call per
 declared release through a thread pool, once a day, to one host. On a machine
-behind an employer's egress that is a workstation calling out on an exact
+behind a monitored egress that is a workstation calling out on an exact
 interval, which is the pattern network monitoring exists to surface — so the
 schedule is opted into per machine rather than installed everywhere and tuned.
 The other cost is the host's: those calls are charged against a quota shared by
@@ -56,7 +56,7 @@ def enabled(config: settings.Config | None = None) -> bool:
     `remote.publish_reports_after_apply` already fails in and for the same reason.
     A timer is a standing background process that outlives the session installing
     it, and this one runs `check --refresh` — one request per declared release,
-    once a day, forever. Behind an employer's egress that is a workstation
+    once a day, forever. Behind a monitored egress that is a workstation
     calling out on an exact interval, which is the pattern network monitoring
     exists to surface. Something with that reach is opted into, never defaulted
     into.

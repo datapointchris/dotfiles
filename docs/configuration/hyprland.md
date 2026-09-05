@@ -41,7 +41,7 @@ Workspace 9 is the exception and is numbered, unnamed in waybar, and bound to
 then `monitor = HDMI-A-1, disable`. The explicit `disable` has to come after the
 catch-all or the catch-all claims it.
 
-The HDMI run goes to the work desk's monitor. Leaving it live makes Hyprland
+The HDMI run goes to a second desk's monitor. Leaving it live makes Hyprland
 spread workspaces across two physical desks, so it stays off and the
 `work-monitor` app enables it on demand — see [work-monitor](../apps/work-monitor.md),
 which also documents why that tool keeps its own state file instead of asking

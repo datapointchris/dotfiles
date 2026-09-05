@@ -11,7 +11,7 @@ How the dotfiles repository is organized and why.
 Which coordinate directories a machine deploys is decided by where it sits on the
 axes, never by a platform name. So the Wayland tree lives once under
 `display/wayland/`, whatever Linux runs beneath it, and the apt helpers reach the
-Ubuntu work box as well as the Debian LXC. The trees, their destinations, and
+Ubuntu WSL box as well as the Debian LXC. The trees, their destinations, and
 what a coordinate directory means inside each are
 [Symlinks Manager](../reference/tools/symlinks.md).
 
@@ -22,9 +22,9 @@ is the module docstring in `src/dotfiles/coordinates.py`.
 A `MACHINE_ROLE` axis — work, personal, server — was tried alongside `PLATFORM`
 and dropped before the split. It was rendered from the same manifest, so it
 carried no information `MACHINE` did not. It declared three values while shipping
-a single file that served a single machine. That file was employer
-infrastructure, which the machine-local file handles instead. That is the better
-fit, because the code was never shareable in the first place.
+a single file that served a single machine. That file named hosts on a network
+this repo is not party to, which the machine-local file handles instead. That is
+the better fit, because the code was never shareable in the first place.
 
 Deploy with `dotfiles symlinks apply`, which works from any directory. `task` is
 equivalent from inside the repo, and both front doors are
@@ -102,8 +102,8 @@ where something actually differs along it.
 ### The machine-local file is declared, never shipped
 
 `~/.local/shell/local.sh` is shell code this repo declares and deliberately never
-contains: the work box's employer infrastructure, meaning internal hostnames,
-share paths and Okta profiles. It is a real file among the symlinks, sourced last
+contains: a nonfleet machine's own infrastructure, meaning internal hostnames,
+share paths and SSO profiles. It is a real file among the symlinks, sourced last
 so it can build on what the coordinate layers exported.
 
 The repo knows it exists without knowing its contents. `install/flags.yml`
@@ -123,8 +123,8 @@ WSL capability, so `mount-cifs` lives in `shell/host/wsl/wsl.sh` and takes the
 share as an argument. Only the wrappers naming actual hosts go in `local.sh`.
 
 A second test sits beside it, and it is the one that is easy to miss. A
-workaround only an employer's network forces is theirs too, however generic it
-looks. `update-tldr` installs tldr pages from a zip downloaded by hand, and it
+workaround only one restricted network forces belongs there too, however generic
+it looks. `update-tldr` installs tldr pages from a zip downloaded by hand, and it
 reaches the Windows Downloads folder through `$winchris`. Read as a mechanism it
 is plainly a WSL function. No personal WSL box would ever run it, because every
 one of them can just fetch the pages. It sat in the coordinate layer for months
@@ -174,9 +174,9 @@ Intel Mac, and `/opt/homebrew/bin/gh` on an Apple Silicon one, a distinction no
 platform string draws. `gh` unqualified resolves everywhere git runs here.
 
 Identity rides the trust axis, because that is the thing it actually varies with.
-A machine hosting employer work alongside personal needs a different default from
-one hosting only personal work. A fleet machine's `fleet.gitconfig` includes
-`personal.gitconfig` unconditionally, so the personal machines take their
+A machine hosting two identities needs a different default from one hosting one.
+A fleet machine's `fleet.gitconfig` includes `personal.gitconfig`
+unconditionally, so the personal machines take their
 identity from the repo and nobody sets one by hand. The personal address is in
 the repo because it is already in every commit object here. Shipping it discloses
 nothing, and a value the repo owns cannot drift on one machine or vanish when a
@@ -185,9 +185,10 @@ symlink is pruned.
 A machine off the fleet inverts the pair. `local.gitconfig` is the default, and
 `personal.gitconfig` is included behind
 `includeIf "hasconfig:remote.*.url:..."`. That direction is deliberate. A repo
-slipping through the match commits under the employer address, which is wrong but
-internal; the reverse puts a personal address into employer history. `hasconfig`
-keys on the remote rather than the checkout path, so it holds wherever a repo is
+slipping through the match commits under the other address, which is wrong and
+stays inside. The reverse puts a personal address into history that is not
+personal, which does not come back. `hasconfig` keys on the remote rather than
+the checkout path, so it holds wherever a repo is
 cloned. It takes two blocks, because the condition matches the URL literally and
 HTTPS and SSH spell the same remote differently.
 

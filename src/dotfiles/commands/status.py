@@ -11,7 +11,7 @@ What is new is the *width*: this one covers the resources a bundle builder can a
 on, and `scope` in the document says so. One schema, one version, one word.
 
 The width is not a convenience. `check --json` carries the whole machine, and on
-the box this exists for that includes an employer git identity and the
+the box this exists for that includes a non-personal git identity and the
 `WINDOWS_DOMAIN` in `~/.env` — `publishing` is where that reasoning lives, and the
 gate it exports runs before any byte moves.
 """
@@ -216,7 +216,7 @@ def publish_after_apply(machine: str | None) -> None:
 
     Off unless `remote.publish_status_after_offline_apply` says otherwise, and the
     default is what a machine that declares nothing gets. The box this exists for
-    sits on an employer network where the concern is monitoring rather than
+    sits on a monitored network where the concern is observation rather than
     capability, and a converge that reaches a server unasked is a change in
     posture — the loop is worth automating and is not worth automating quietly.
 
