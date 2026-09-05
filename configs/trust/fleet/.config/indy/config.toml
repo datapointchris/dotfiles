@@ -13,7 +13,8 @@ repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 exemplar_registry = "~/.local/share/terminal-library-fleet/exemplar-repos.json"
 
 # data_dir is deliberately unset: the index is derived state and belongs in
-# $XDG_DATA_HOME/indy, which is replicated between machines as its own folder.
+# $XDG_DATA_HOME/indy, which is replicated between machines independently of
+# anything above it.
 
 # Non-repo roots worth searching — the reasoning behind decisions that no repo records.
 [[extra_paths]]

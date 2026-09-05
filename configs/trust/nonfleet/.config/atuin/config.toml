@@ -10,11 +10,9 @@
 # both prefer atuin and drop back to it on a box where atuin cannot be asked.
 
 # History stays on this machine and no `sync_address` names anywhere to send it.
-# This box is a git-only node: no SSH, no Syncthing, a corporate firewall between
-# it and the fleet's network, and a standing rule that nothing written here
-# travels home.
-# Commands typed on this box are exactly what that rule is about, so the fleet's
-# server is not merely unreachable from here — it is the wrong destination.
+# This box reaches the other machines by git alone, and what is typed here is not
+# meant to leave it. So the shared server is not merely unreachable from here —
+# it is the wrong destination, and would still be if the network allowed it.
 #
 # Local capture is unaffected: Ctrl-R, exit codes, cwd and `atuin stats` all work
 # without an account. `dotfiles auth check` follows this flag and asks for no

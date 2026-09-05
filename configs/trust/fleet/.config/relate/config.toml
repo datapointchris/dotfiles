@@ -15,13 +15,14 @@
 # refused.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 
-# relate's corpus reaches every machine because that directory is replicated, which
-# is a fact about this fleet and not about relate — so relate defaults to
-# $XDG_DATA_HOME/relate and is pointed here instead of carrying the answer.
+# relate's corpus reaches every machine because `data_dir` below points into a
+# directory replicated between machines, which is a fact about this fleet and not
+# about relate — so relate defaults to $XDG_DATA_HOME/relate and is pointed here
+# instead of carrying the answer.
 #
-# Under trust/fleet for the reason above it: that directory exists on this domain's
-# machines and nowhere else, so a machine of the other domain gets no key and the
-# XDG default.
+# Under trust/fleet for the reason above it: the `data_dir` directory exists on
+# this domain's machines and nowhere else, so a machine of the other domain gets
+# no key and the XDG default.
 #
 # The log deliberately does not follow. It stays at $XDG_STATE_HOME/relate, because it
 # describes the machine that wrote it and replicating it to the others is noise.
