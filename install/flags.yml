@@ -263,10 +263,10 @@ required_files:
       - fleet machine secrets apply
 
   # Machine-local and never synced, like every other credential on the fleet —
-  # `~/.claude/.credentials.json` sits inside a *synced* folder and is stignored
-  # out of it, which is a decision rather than an oversight. Sitting beside a
+  # `~/.claude/.credentials.json` sits inside a *synced* folder and is excluded
+  # from it, which is a decision rather than an oversight. Sitting beside a
   # deployed symlink is fine here for the same reason `~/.config/waybar/` mixes
-  # both: nothing carries this directory, so there is no link for Syncthing to
+  # both: nothing carries this directory, so there is no link for the sync to
   # replicate.
   #
   # It is unlike gh, icb, nomad and meso in the way that matters, though. Those
@@ -283,7 +283,7 @@ required_files:
       - configs/display/wayland/.config/systemd/user/ntfy-client.service
 
   # Off the fleet only, which is the axis that actually decides it. safekeep is
-  # how a machine outside Syncthing gets the files above back; on the fleet the
+  # how a machine outside the sync gets the files above back; on the fleet the
   # sync is the transport and Proxmox holds the backups, so a fleet machine with
   # no safekeep config is not a machine missing anything. Narrowed on capacity
   # at first, which required it on all three workstations and reported the two

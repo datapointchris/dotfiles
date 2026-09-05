@@ -14,10 +14,10 @@ the thing none of them can state, because each knows only its own end.
 | `runs/<id>.jsonl` | every `plan`, `check` and `apply` | `dotfiles logs`, during the run or after |
 | `status-<box>.json` | every `check` | a caller asking where this machine stands |
 
-All three sit under `$XDG_STATE_HOME/dotfiles/`, which is its own Syncthing
-folder. The fleet shares one history that way, and a machine outside that sync
-keeps its own by construction rather than by a rule. Every name carries the box
-because the directory is shared — a run id embeds it
+All three sit under `$XDG_STATE_HOME/dotfiles/`, which is replicated between
+machines as its own unit. The fleet shares one history that way, and a machine
+outside that sync keeps its own by construction rather than by a rule. Every
+name carries the box because the directory is shared — a run id embeds it
 (`20260823T224350Z-archlinux-apply.json`) and `status-<box>.json` spells it out.
 What collided before they did is `src/dotfiles/paths.py`.
 
@@ -37,8 +37,8 @@ That is why the stream gets its own noun instead of a verb under `report`, which
 Records accumulate, and the scheduled check runs on the interval
 `src/dotfiles/providers/schedule.py` names, so the history is a series rather
 than a sample. Why there is no retention bound is `src/dotfiles/runs.py`. What
-happens to the directory afterwards is Syncthing's, which makes it the fleet's
-question rather than this tool's.
+happens to the directory afterwards belongs to whatever replicates it, which
+makes it the fleet's question rather than this tool's.
 
 ## The interchange document is a fourth thing, and nothing here writes it
 

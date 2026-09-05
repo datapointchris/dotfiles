@@ -16,10 +16,9 @@ this script.
 
 ## Where the notebook lives
 
-`~/notes` is Syncthing-synced between machines, not a git repo and not in
-iCloud. It holds Chris's own notes, written for him; `~/obsession` is the
-parallel store written for Claude. The distinction is audience, not authorship —
-see the directory ecosystem section of `~/.claude/CLAUDE.md`.
+`~/notes` is replicated between machines, not a git repo and not in iCloud. It
+holds personal notes. This repo configures the notebook and never carries its
+contents.
 
 zk's configuration is `configs/common/.config/zk/config.toml`, symlinked to
 `~/.config/zk/`. Its `[group.*]` blocks define per-section note templates and

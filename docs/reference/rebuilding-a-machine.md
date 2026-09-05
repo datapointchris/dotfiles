@@ -118,7 +118,7 @@ next `apply --offline`, which stages the newest archive in the download cache,
 `./` or `~/` unless that archive is the one already staged. `dotfiles bundle
 stage` unpacks without installing, for looking at a bundle before it lands.
 
-This box has no Syncthing, so anything the fleet replicates that way — `~/dev`,
+This box has no sync, so anything the fleet replicates that way — `~/dev`,
 `~/notes`, the `indy` index — is simply absent. Tools depending on those paths
 are either off the manifest or configured differently, which is a property of
 the machine rather than something the install detects.

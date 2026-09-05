@@ -33,11 +33,10 @@ while a git uv tool reaches only the machines whose manifest declares it.
 
 ## `register.yml` is config, and config stays out of the repo
 
-`doit`'s config and state live under its own XDG paths, and both directories are Syncthing folders
-declared in `homelab/containers/syncthing-lxc/folders-manifest.yml`. `register.yml` is the entry
-worth explaining. It is hand-edited, the tool only ever reads it, and it is personal — while both
-`doit` repos are public. So it belongs in a synced config directory rather than under version
-control.
+`doit`'s config and state live under its own XDG paths, and both directories are replicated between
+machines. `register.yml` is the entry worth explaining. It is hand-edited, the tool only ever reads
+it, and it is personal — while both `doit` repos are public. So it belongs in a synced config
+directory rather than under version control.
 
 ## See Also
 
