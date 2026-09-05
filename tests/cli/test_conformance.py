@@ -532,13 +532,12 @@ def functions_naming(*names: str) -> set[str]:
 # it, and source cannot see that. `test_every_rendered_line_reads_its_wording_from_the_table`
 # is the half that renders.
 #
-# **Not a search for the prose.** Scanning the package for each wording was
-# measured and refused: `unmeasured` is also a `--json` key on `ResourceResult`
-# and the classification `sinks.intention` returns, and `unprobed` is also a
-# `--json` key and a column label in `network check`. Four sites, none of them a
-# copy, all four flagged. Coupling a rendered phrase to a machine contract that
-# happens to spell it the same way is the sweep this exists to end, pointed the
-# other way.
+# **Not a search for the prose**, because the prose is not the table's alone.
+# `unmeasured` is also a `--json` key on `ResourceResult` and the classification
+# `sinks.intention` returns; `unprobed` is also a `--json` key and a `render_row`
+# label in `network check`. A search for those two wordings reaches four sites and
+# not one of them is a copy. Coupling a rendered phrase to a machine contract that
+# spells it the same way is the sweep this removes, pointed the other way.
 
 VOCABULARY = (Path(output.__file__), Path(reconcile.__file__))
 """The two modules that own the whole-machine verbs' wording.
@@ -602,8 +601,8 @@ def counted_builders(tree: ast.Module) -> set[str]:
     """Which functions in this module compose `N noun(s) …` out of an f-string.
 
     The plural marker is the signal, and it is the whole shape `counted` exists to
-    own: a site writing its own decides the noun, the marker and the spacing again,
-    and seven sites deciding them independently agreed by luck rather than by
+    own: a site writing its own decides the noun, the marker and the spacing
+    again, and sites deciding those independently agree by luck rather than by
     construction.
     """
     building = set()
@@ -699,12 +698,12 @@ def test_the_call_site_guard_sees_a_wording_typed_where_it_renders() -> None:
 
 
 def test_one_builder_composes_every_counted_line() -> None:
-    """`N item(s) …` is one shape, and seven functions each wrote their own.
+    """`N noun(s) …` is one shape, so one function composes it.
 
     Refused at the f-string rather than at the call, because a site that composes
-    the whole line never calls a builder and so is invisible to the guard above.
-    `main.py` held a seventh copy of the attention wording for exactly that
-    reason, and it was found by a scan rather than by anything structural.
+    the whole line calls no builder and so is invisible to the guard above. That
+    is the door a call-site rule cannot reach, and it is the one a new render site
+    goes through: writing the sentence out is easier than finding the builder.
     """
     for path in VOCABULARY:
         builders = counted_builders(ast.parse(path.read_text()))
@@ -967,10 +966,9 @@ def stand_in_phrases() -> SimpleNamespace:
     """`Phrase` again, with every wording replaced by the name of its own member.
 
     Derived from the table rather than written beside it, so a member added there
-    is in the swap already. A hand-written list of the phrases was tried during
-    the change that centralized the attention wording and reverted before it
-    landed: it is a second copy of the set, and the member left out of it is the
-    one the swap then cannot see.
+    is in the swap already. A list of the phrases written out here is a second
+    copy of the set, and the member left out of it is the one the swap then
+    cannot see.
 
     Each stand-in carries no lowercase prose, so a site that typed its wording is
     the one still spelling English after the swap.

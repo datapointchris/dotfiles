@@ -57,7 +57,7 @@ class Phrase(StrEnum):
     **An enum rather than a wall of constants, because the membership is then the
     set.** `list(Phrase)` is what `tests/cli/test_conformance.py` walks, so a
     member added here is inside every guard without a second declaration. A
-    hand-written tuple of constants was tried and reverted: it is a copy of the
+    tuple gathering those constants for the guard to walk is a second copy of the
     set, and a phrase left out of it narrows the guard in silence.
 
     Here rather than beside the counted quantities on `ResourceResult`, which
