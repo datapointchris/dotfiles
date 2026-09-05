@@ -39,6 +39,7 @@ from dotfiles.commands import verbosity
 from dotfiles.output import SUBJECT_COLUMN
 from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
+from dotfiles.output import Phrase
 from dotfiles.output import console
 from dotfiles.output import elapsed
 from dotfiles.output import emit_json
@@ -170,7 +171,7 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
             'network',
             f'{reachable} reachable, {len(blocked)} blocked',
             VERDICT_COLORS[verdict_word],
-            f'{tally((len(measurement.unprobed), "unprobed"))}{elapsed(seconds)}',
+            f'{tally((len(measurement.unprobed), Phrase.UNPROBED))}{elapsed(seconds)}',
         )
     )
 

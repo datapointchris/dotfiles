@@ -357,7 +357,7 @@ def test_a_plan_with_nothing_to_do_names_the_items_the_other_verb_owns() -> None
     # `nothing for apply to change` is produced at one site and read by nothing
     # else, so asserting the items alone leaves the head this test is named for
     # free to become `nothing to change` with the suite green.
-    assert line == 'nothing for apply to change; 2 item(s) need attention: auth/meso, auth/atuin'
+    assert line == f'{output.Phrase.NOTHING_FOR_APPLY_TO_CHANGE}; 2 item(s) {output.Phrase.NEED_ATTENTION}: auth/meso, auth/atuin'
 
 
 def test_a_plan_with_work_to_do_names_what_would_change() -> None:
@@ -368,7 +368,7 @@ def test_a_plan_with_work_to_do_names_what_would_change() -> None:
 
     line = reconcile.verdict_line([folded('packages', drifting, Lens.PLAN)], Lens.PLAN)
 
-    assert line == '2 item(s) to change: ghrelease/zk, go/forge'
+    assert line == f'2 item(s) {output.Phrase.TO_CHANGE}: ghrelease/zk, go/forge'
 
 
 def test_a_check_names_the_items_needing_attention_across_every_resource() -> None:
@@ -393,7 +393,7 @@ def test_a_check_names_a_resource_that_could_not_be_measured_at_all() -> None:
     a person can go and do something about it."""
     results = [ResourceResult('packages', ResourceVerdict.ISSUE, 'the release cache is unreadable', lens=Lens.CHECK)]
 
-    assert reconcile.verdict_line(results, Lens.CHECK) == '1 resource(s) could not be measured: packages'
+    assert reconcile.verdict_line(results, Lens.CHECK) == f'1 resource(s) {output.Phrase.COULD_NOT_BE_MEASURED}: packages'
 
 
 def test_a_clean_check_names_the_drift_it_deliberately_ignored() -> None:
@@ -405,7 +405,7 @@ def test_a_clean_check_names_the_drift_it_deliberately_ignored() -> None:
 
     line = reconcile.verdict_line([folded('packages', behind, Lens.CHECK)], Lens.CHECK)
 
-    assert line == 'nothing wrong; 2 item(s) differ from what this machine declares: ghrelease/yazi, go/forge'
+    assert line == f'{output.Phrase.NOTHING_WRONG}; 2 item(s) {output.Phrase.DIFFER_FROM_DECLARED}: ghrelease/yazi, go/forge'
 
 
 def test_an_unmeasurable_item_never_reaches_the_drift_clause() -> None:
@@ -416,7 +416,7 @@ def test_an_unmeasurable_item_never_reaches_the_drift_clause() -> None:
 
     line = reconcile.verdict_line([folded('packages', mixed, Lens.CHECK)], Lens.CHECK)
 
-    assert line == 'nothing wrong; 1 item(s) differ from what this machine declares: go/forge'
+    assert line == f'{output.Phrase.NOTHING_WRONG}; 1 item(s) {output.Phrase.DIFFER_FROM_DECLARED}: go/forge'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -505,9 +505,9 @@ def test_a_short_shared_fix_still_rides_on_the_heading() -> None:
     with no rows under it.
 
     **The one place the issue wording is pinned**, spelled out rather than
-    interpolated from `output.NEED_ATTENTION`. Every other test builds its
-    expectation from the constant, so a typo in the constant itself would reach a
-    screen with the suite green. Rewording edits this line and the constant.
+    interpolated from `output.Phrase.NEED_ATTENTION`. Every other test builds its
+    expectation from the member, so a typo in the table itself would reach a
+    screen with the suite green. Rewording edits this line and the table.
     """
     short = change(Verdict.MISSING, Repair.BY_HAND, item='atuin', advice='log in with `atuin login`')
 

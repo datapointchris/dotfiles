@@ -14,6 +14,7 @@ is a `--json` one.
 from __future__ import annotations
 
 import json
+from enum import StrEnum
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -44,17 +45,113 @@ A literal rather than `str(Verdict.MATCHED)`, so this module keeps its runtime
 distance from `resources`: nothing about presentation should be a reason to import
 the logic. `tests/cli/test_output.py` asserts the two agree."""
 
-NEED_ATTENTION = 'need attention'
-"""How drift that `apply` declines to act on is worded, everywhere it is counted.
 
-Named because six sites across two modules render it, and the tests build their
-expected strings from it rather than repeating it — so rewording is this line and
-its neighbor, not a sweep. `attention` rather than a repairer is what the bucket
-can honestly claim: `Change.declined` is the complement of "apply will act", so it
-carries `Repair.NONE` items with no by-hand route to point at."""
+class Phrase(StrEnum):
+    """Every wording the whole-machine verbs put after a count, and the set of them.
 
-NEEDS_ATTENTION = 'needs attention'
-"""The same phrase as a section heading, where the subject is singular."""
+    One owner per phrase, so rewording one is this table rather than a sweep of
+    the sites that print it. A phrase typed where it renders is the same thing a
+    typed count is: true when it is written, and out of step with its siblings the
+    moment one of them is reworded, with nothing that runs to say so.
+
+    **An enum rather than a wall of constants, because the membership is then the
+    set.** `list(Phrase)` is what `tests/cli/test_conformance.py` walks, so a
+    member added here is inside every guard without a second declaration. A
+    hand-written tuple of constants was tried and reverted: it is a copy of the
+    set, and a phrase left out of it narrows the guard in silence.
+
+    Here rather than beside the counted quantities on `ResourceResult`, which
+    would sit the prose next to the fields it describes and cost this module its
+    runtime distance from `results` — the distance `MATCHED` is a literal to keep.
+
+    **A member carries a second wording only where the subject's number changes
+    the verb**, and `heading` is that form. It defaults to the counted one, so no
+    member declares an agreement it does not have. Which spelling renders is the
+    renderer's to decide rather than the caller's: a count renders the member and
+    a section name renders `heading`, and there is no second member to reach for.
+    """
+
+    heading: str
+
+    def __new__(cls, wording: str, heading: str = '') -> Phrase:
+        member = str.__new__(cls, wording)
+        member._value_ = wording
+        member.heading = heading or wording
+        return member
+
+    DIFFER = 'differ'
+    """What `check` calls the items `plan` would act on, counted in its tally."""
+
+    UNMEASURED = 'unmeasured'
+    """The tally label for items nothing could weigh either way."""
+
+    NEED_ATTENTION = ('need attention', 'needs attention')
+    """How drift that `apply` declines to act on is worded, everywhere it is counted.
+
+    `attention` rather than a repairer is what the bucket can honestly claim:
+    `Change.declined` is the complement of "apply will act", so it carries
+    `Repair.NONE` items with no by-hand route to point at."""
+
+    NEED_A_PASSWORD = 'need a password'
+    """Items whose repair acquires root, warned about before the write asks."""
+
+    UNPROBED = 'unprobed'
+    """The `network check` tally label for a source the run never reached."""
+
+    TO_CHANGE = 'to change'
+    """What `plan` says about the items it would act on."""
+
+    TO_CONVERGE = 'to converge'
+    """What an `apply` says about a group of work before it runs it."""
+
+    CHANGED = 'changed'
+    """What an `apply` says about the items it repaired."""
+
+    DID_NOT_CONVERGE = 'did not converge'
+    """What an `apply` says about the items whose repair failed."""
+
+    DIFFER_FROM_DECLARED = 'differ from what this machine declares'
+    """Drift, worded in full where the line has room to name the declaration.
+
+    Distinct from `DIFFER`, which is the same set inside a tally that has room for
+    one word. Two spellings of one set, and folding them would put a sentence in a
+    column sized for a label."""
+
+    COULD_NOT_BE_MEASURED = 'could not be measured'
+    """A resource that produced no evidence at all, or an item nothing could weigh.
+
+    Distinct from `NOT_MEASURABLE`, which names a *section* rather than counting
+    items into a clause, and from `UNMEASURED`, which is the tally's one word for
+    the same set."""
+
+    NOT_MEASURABLE = 'not measurable'
+    """The section an `apply` prints over what it walked past with no evidence."""
+
+    NOT_REPAIRED_BY_APPLY = 'differ, and apply is not what repairs them'
+    """Why the deferred section exists, said once under its own heading.
+
+    Distinct from `DIFFER_FROM_DECLARED` despite the shared first word: that one
+    is drift a `plan` would act on, and this one is drift it deliberately will
+    not."""
+
+    NO_EVIDENCE_EITHER_WAY = 'have no evidence either way, so nothing was decided'
+    """Why the unmeasurable section exists, said once under its own heading."""
+
+    IN_THE_DECLARATION = 'in the declaration'
+    """Where a validation problem is, counted the same way by both doors onto it."""
+
+    SEE_MACHINES_CHECK = '— see machines check'
+    """Where a warning the sound-declaration row does not print can be read."""
+
+    NOTHING_WRONG = 'nothing wrong'
+    """`check`'s own answer when it found none, kept beside a drift clause."""
+
+    NOTHING_TO_CHANGE = 'nothing to change'
+    """What `plan` and `apply` answer when there is nothing else to say."""
+
+    NOTHING_FOR_APPLY_TO_CHANGE = 'nothing for apply to change'
+    """`plan`'s answer where something else on the line is not apply's to act on."""
+
 
 VERDICT_MARKS = {'converged': '✓', 'drift': '~', 'issue': '✗'}
 """What stands in front of a section's name, since the name itself is the heading.
@@ -156,19 +253,43 @@ def tallies(result: ResourceResult) -> str:
     answers for apply, and the tally is what `check` would report.
     """
     if str(result.lens) == 'check':
-        return tally((result.pending, 'differ'), (result.unmeasured, 'unmeasured'))
-    return tally((result.attention, NEED_ATTENTION), (result.unmeasured, 'unmeasured'), (result.privileged, 'need a password'))
+        return tally((result.pending, Phrase.DIFFER), (result.unmeasured, Phrase.UNMEASURED))
+    return tally(
+        (result.attention, Phrase.NEED_ATTENTION),
+        (result.unmeasured, Phrase.UNMEASURED),
+        (result.privileged, Phrase.NEED_A_PASSWORD),
+    )
 
 
-def tally(*counts: tuple[int, str]) -> str:
+def tally(*counts: tuple[int, Phrase]) -> str:
     """The non-zero counts a section carries, in the punctuation every section uses.
 
     Separate from `tallies` so a heading that is not a `ResourceResult` — an
     `apply` group, `network check` — gets the same trailer from one owner. Zeroes
     are dropped rather than printed down every line of a healthy machine.
+
+    A label rather than a clause, so no noun: this trailer rides on a heading that
+    has already named its subject, and `counted` is the shape for a line that has
+    not.
     """
     shown = [f'{count} {label}' for count, label in counts if count]
     return f'  ·  {", ".join(shown)}' if shown else ''
+
+
+def counted(count: int, phrase: Phrase, noun: str = 'item') -> str:
+    """How many of a thing, and what is true of them.
+
+    The one shape every counted line in `reconcile` is built from — a resource's
+    own detail, both read verbs' closing clauses, an `apply`'s closing line, and
+    the headings over what it walked past. Seven sites each wrote their own, so
+    the noun, the plural marker and the spacing were seven decisions that happened
+    to agree.
+
+    Never joined to the subjects here: only `reconcile._clause` knows the naming
+    limit, and a line that names its subjects is a longer sentence rather than a
+    different one.
+    """
+    return f'{count} {noun}(s) {phrase}'
 
 
 def section_line(mark: str, name: str, detail: str, color: str = '', trailer: str = '') -> str:

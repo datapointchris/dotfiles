@@ -44,14 +44,14 @@ from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Started
 from dotfiles.event import Summary
-from dotfiles.output import NEED_ATTENTION
-from dotfiles.output import NEEDS_ATTENTION
 from dotfiles.output import NOTICE_MARK
 from dotfiles.output import PROGRESS_MARK
 from dotfiles.output import SUBJECT_CEILING
 from dotfiles.output import SUBJECT_COLUMN
+from dotfiles.output import Phrase
 from dotfiles.output import announce
 from dotfiles.output import console
+from dotfiles.output import counted
 from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.output import hint
@@ -107,13 +107,13 @@ def declaration_row(findings: Sequence[validate.Finding], broken: Sequence[valid
     resource — which reads as a stray sentence rather than as the row it is.
     """
     if not broken:
-        warned = f' ({len(findings)} warning(s) — see machines check)' if findings else ''
+        warned = f' ({counted(len(findings), Phrase.SEE_MACHINES_CHECK, "warning")})' if findings else ''
         return ResourceResult('machines', ResourceVerdict.CONVERGED, f'the declaration is sound{warned}', lens=Lens.CHECK)
 
     return ResourceResult(
         'machines',
         ResourceVerdict.ISSUE,
-        f'{len(broken)} problem(s) in the declaration',
+        counted(len(broken), Phrase.IN_THE_DECLARATION, 'problem'),
         lens=Lens.CHECK,
         invalid=tuple((finding.section, finding.message) for finding in broken),
         attention=len(broken),
@@ -181,8 +181,8 @@ def from_changes(
         # Said here rather than at a prompt: root is acquired when a write needs
         # it, so the only warning anyone gets is the one the plan prints.
         root = f', {root_needed} needing root' if root_needed else ''
-        return row(verdict=ResourceVerdict.DRIFT, detail=f'{len(kept)} item(s) differ from what this machine declares{root}')
-    return row(verdict=ResourceVerdict.ISSUE, detail=f'{len(kept)} item(s) {NEED_ATTENTION}{lead(kept)}')
+        return row(verdict=ResourceVerdict.DRIFT, detail=f'{counted(len(kept), Phrase.DIFFER_FROM_DECLARED)}{root}')
+    return row(verdict=ResourceVerdict.ISSUE, detail=f'{counted(len(kept), Phrase.NEED_ATTENTION)}{lead(kept)}')
 
 
 def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
@@ -484,7 +484,7 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     Each verb carries the other's half — drift is `check`'s, attention is `plan`'s
     — because a verdict omitting it reads as a machine with nothing else to say.
     """
-    blind = _clause([result.address for result in results if _refused(result)], 'could not be measured', 'resource')
+    blind = _clause([result.address for result in results if _refused(result)], Phrase.COULD_NOT_BE_MEASURED, 'resource')
     # Read off the changes rather than off the counts beside them, and asked with
     # the same properties `sift` classifies by. A verb's own half is `findings` and
     # the other verb's is `others`, so the two are gathered from opposite fields
@@ -493,9 +493,9 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
 
     if lens is Lens.PLAN:
         if own:
-            return _sentence(_clause(own, 'to change'), blind)
-        attention = _clause([change.item for result in results for change in result.others if change.declined], NEED_ATTENTION)
-        head = 'nothing for apply to change' if attention or blind else 'nothing to change'
+            return _sentence(_clause(own, Phrase.TO_CHANGE), blind)
+        attention = _clause([change.item for result in results for change in result.others if change.declined], Phrase.NEED_ATTENTION)
+        head = Phrase.NOTHING_FOR_APPLY_TO_CHANGE if attention or blind else Phrase.NOTHING_TO_CHANGE
         return _sentence(head, attention, blind)
 
     # A declaration finding has no Change to carry it and is the same kind of thing
@@ -506,8 +506,8 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     # rather than a filler. The verdict word beside it is green, because drift is
     # not this verb's subject and does not move it — so a line that opened on the
     # drift alone would read as a contradiction of the word to its left.
-    answered = _sentence(_clause(troubled, NEED_ATTENTION), blind) or 'nothing wrong'
-    return _sentence(answered, _clause(drift, 'differ from what this machine declares'))
+    answered = _sentence(_clause(troubled, Phrase.NEED_ATTENTION), blind) or Phrase.NOTHING_WRONG
+    return _sentence(answered, _clause(drift, Phrase.DIFFER_FROM_DECLARED))
 
 
 def _refused(result: ResourceResult) -> bool:
@@ -521,13 +521,17 @@ def _refused(result: ResourceResult) -> bool:
     return result.verdict is ResourceVerdict.ISSUE and not result.findings and not result.invalid
 
 
-def _clause(subjects: Sequence[str], phrase: str, noun: str = 'item') -> str:
+def _clause(subjects: Sequence[str], phrase: Phrase, noun: str = 'item') -> str:
     """How many, what about them, and which ones — or nothing at all.
 
     Empty for an empty set, so `_sentence` decides the punctuation rather than
     every caller deciding whether its clause needs a leading separator.
+
+    The count and the wording come from `output.counted`, which is the same shape
+    a resource's own detail and both closing lines are built from. Only the naming
+    is this function's own, because only this end knows the limit `named` applies.
     """
-    return f'{len(subjects)} {noun}(s) {phrase}: {named(subjects)}' if subjects else ''
+    return f'{counted(len(subjects), phrase, noun)}: {named(subjects)}' if subjects else ''
 
 
 def _sentence(*clauses: str) -> str:
@@ -844,9 +848,10 @@ def apply_machine(
         # either out again here is a second opinion that can disagree with it.
         gate = declaration_row(found, broken)
         render_result(gate, err_console)
+        problems = counted(len(broken), Phrase.IN_THE_DECLARATION, 'problem')
         render_verdict(
             str(gate.verdict),
-            f'{len(broken)} problem(s) in the declaration, so there is nothing safe to apply — run: dotfiles machines check',
+            f'{problems}, so there is nothing safe to apply — run: dotfiles machines check',
             err_console,
         )
         return exit_code([gate])
@@ -976,12 +981,11 @@ def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[C
     **What nothing could measure is named, not just counted**, because this is the
     line a scheduled run's summary keeps once the rows are gone.
     """
-    repaired = f'{changed} item(s) changed' if changed else ''
-    failed = f'{len(unsuccessful)} item(s) did not converge: {named(unsuccessful)}' if unsuccessful else ''
-    head = '; '.join(clause for clause in (repaired, failed) if clause) or 'nothing to change'
-    attention = f'; {len(deferred)} item(s) {NEED_ATTENTION}' if deferred else ''
-    blind = f'; {len(unmeasured)} item(s) could not be measured: {named([change.item for change in unmeasured])}' if unmeasured else ''
-    return f'{head}{attention}{blind}'
+    repaired = counted(changed, Phrase.CHANGED) if changed else ''
+    failed = _clause(unsuccessful, Phrase.DID_NOT_CONVERGE)
+    head = _sentence(repaired, failed) or Phrase.NOTHING_TO_CHANGE
+    attention = counted(len(deferred), Phrase.NEED_ATTENTION) if deferred else ''
+    return _sentence(head, attention, _clause([change.item for change in unmeasured], Phrase.COULD_NOT_BE_MEASURED))
 
 
 def _name_the_shared_fix(changes: Sequence[Change]) -> None:
@@ -1005,14 +1009,18 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
 
     `NOTICE_MARK` on both, because one is drift and the other is an absence of
     evidence — borrowing `~` or `✗` would state something the run did not measure.
+
+    The section's name is `heading` and the sentence under it is the member itself,
+    which is what makes the singular reading unreachable from here: the subject of
+    a heading is the section and the subject of the sentence is a count of items.
     """
-    for name, color, group, why in (
-        (NEEDS_ATTENTION, 'yellow', deferred, 'differ, and apply is not what repairs them'),
-        ('not measurable', 'magenta', unmeasured, 'have no evidence either way, so nothing was decided'),
+    for section, color, group, why in (
+        (Phrase.NEED_ATTENTION, 'yellow', deferred, Phrase.NOT_REPAIRED_BY_APPLY),
+        (Phrase.NOT_MEASURABLE, 'magenta', unmeasured, Phrase.NO_EVIDENCE_EITHER_WAY),
     ):
         if not group:
             continue
-        render_section(name, f'{len(group)} item(s) {why}', mark=NOTICE_MARK, color=color)
+        render_section(section.heading, counted(len(group), why), mark=NOTICE_MARK, color=color)
         width = max([SUBJECT_COLUMN, *(len(change.item) for change in group)])
         for change in group:
             render_change(change, min(width, SUBJECT_CEILING))
@@ -1038,11 +1046,22 @@ def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
     privilege = privileges.Privilege()
     for group in engine.batches(planned):
         changes = [event.payload for event in group if isinstance(event.payload, Change)]
-        detail = f'{len(changes)} item(s) to converge{tally((len(privileged(changes)), "need a password"))}'
-        render_section(_address(group[0]), detail, mark=PROGRESS_MARK, color='blue')
+        render_section(_address(group[0]), converging_line(changes), mark=PROGRESS_MARK, color='blue')
         for event in engine.execute(session, group, privilege):
             _render(event)
             yield event
+
+
+def converging_line(changes: Sequence[Change]) -> str:
+    """The heading over one group of work, said before the group runs.
+
+    A builder rather than an expression inside the loop, which is what every other
+    line this module composes already is — `applied_line` and `verdict_line` are
+    both a set of counts in and one sentence out. A line assembled where it prints
+    can only be read by driving a whole `apply`, so what pins its wording is a
+    walk that had to arrange for work to exist.
+    """
+    return f'{counted(len(changes), Phrase.TO_CONVERGE)}{tally((len(privileged(changes)), Phrase.NEED_A_PASSWORD))}'
 
 
 def _address(event: Event) -> str:

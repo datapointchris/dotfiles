@@ -251,7 +251,7 @@ def test_a_row_shows_the_counts_behind_its_verdict(capsys: pytest.CaptureFixture
     )
 
     written = capsys.readouterr().out
-    assert '2 need a password' in written
+    assert f'2 {output.Phrase.NEED_A_PASSWORD}' in written
 
 
 def test_a_converged_plan_row_still_carries_the_other_verbs_count(capsys: pytest.CaptureFixture) -> None:
@@ -263,7 +263,7 @@ def test_a_converged_plan_row_still_carries_the_other_verbs_count(capsys: pytest
 
     output.render_result(result, output.console)
 
-    assert f'4 {output.NEED_ATTENTION}' in capsys.readouterr().out
+    assert f'4 {output.Phrase.NEED_ATTENTION}' in capsys.readouterr().out
 
 
 def test_a_check_row_calls_pending_drift_what_it_is(capsys: pytest.CaptureFixture) -> None:
@@ -274,7 +274,7 @@ def test_a_check_row_calls_pending_drift_what_it_is(capsys: pytest.CaptureFixtur
 
     output.render_result(result, output.console)
 
-    assert '3 differ' in capsys.readouterr().out
+    assert f'3 {output.Phrase.DIFFER}' in capsys.readouterr().out
 
 
 def test_a_verb_never_restates_its_own_answer_as_a_tally(capsys: pytest.CaptureFixture) -> None:
