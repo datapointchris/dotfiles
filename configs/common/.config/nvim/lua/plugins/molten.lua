@@ -20,8 +20,9 @@
 -- a real `GlueContext` with no JVM on this machine.
 --
 -- Needs `pynvim` and `jupyter_client` in whatever `vim.g.python3_host_prog` names,
--- plus `requests` and `websocket` for the URL form. core/options.lua points that
--- at the jupyterlab tool venv, which carries all four.
+-- plus `requests` and `websocket-client` for the URL form. That is the project's
+-- own `.venv`, so they belong in the dev dependencies of a repo where molten is
+-- wanted — `uv sync` prunes anything installed into the venv but not declared.
 
 --- Evaluate the `# %%` cell the cursor is inside.
 ---
