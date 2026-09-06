@@ -111,8 +111,7 @@ def get_packages_file() -> Path:
     """The declaration this checkout carries, or a refusal naming its absence.
 
     `paths` is the one module that resolves the checkout, and `$DOTFILES_DIR` is
-    the knob it reads — so a caller wanting a different tree sets that rather
-    than passing a root down through every reader.
+    the knob it reads.
     """
     if paths.PACKAGES_FILE.exists():
         return paths.PACKAGES_FILE
@@ -272,11 +271,8 @@ def truncated_description(description: str) -> str:
 def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_widths: dict[str, int] | None = None) -> dict[str, int]:
     """Each field's column, measured to its widest value and capped where asked.
 
-    No items measures the same as one empty value, which is what keeps the
-    callers' own emptiness checks a rendering choice rather than a crash guard —
-    they print their own wording for a query that matched nothing, and would
-    otherwise be the only thing standing between an empty result and `max()`
-    raising on an empty sequence.
+    No items measures the same as one empty value, so a caller's own check for an
+    empty result decides only the wording it prints for one.
     """
     max_widths = max_widths or {}
     widths = {}
@@ -438,8 +434,12 @@ def described(pkg: dict[str, Any]) -> dict[str, Any]:
     platform, which is the state the rendered form says by printing no status
     line at all — a distinction a reader of the text cannot make from one whose
     probe simply found nothing.
+
+    `NOT_AVAILABLE` is that state, so `check_installed` is asked for it rather
+    than the platform being read a second time here.
     """
-    status, path = check_installed(pkg) if is_available_on_platform(pkg) else (None, None)
+    status, path = check_installed(pkg)
+    available = status is not InstallStatus.NOT_AVAILABLE
     return {
         'name': pkg['name'],
         'description': pkg.get('description', ''),
@@ -447,9 +447,9 @@ def described(pkg: dict[str, Any]) -> dict[str, Any]:
         'tags': pkg.get('tags', []),
         'platforms': {field: pkg[field] for field in PLATFORM_FIELDS if field in pkg},
         'metadata': {field: pkg[field] for field, _ in METADATA_FIELDS if field in pkg},
-        'available': is_available_on_platform(pkg),
-        'installed': status.value if status is not None else None,
-        'path': str(path) if path else None,
+        'available': available,
+        'installed': status.value if available else None,
+        'path': str(path) if available and path else None,
     }
 
 
