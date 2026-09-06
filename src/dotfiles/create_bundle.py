@@ -617,6 +617,13 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
         bundle.record_checksum(cache.recorded_digest(asset), path.name)
         return
     if status == 'unpublished':
+        # Said again on every build, not only the one that discovered it. The
+        # cache short-circuits the API call and must not short-circuit the
+        # report: an asset staged with no digest is the one thing a reader of
+        # this log cannot recover afterwards, and a warm cache is the normal
+        # state. `checksums.txt` records what was checked, so it cannot name
+        # what was not.
+        log.warning(f'    {repo} publishes no checksum for {asset_name}, staged unverified')
         return
 
     published = github_release.release_assets(repo, tag)
@@ -938,6 +945,11 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
     installs from it. Naming it here as well is what went wrong before: the two
     sides expanded `binary_pattern` off different data, so a pattern change moved
     one and not the other, silently, on the one machine the bundle exists for.
+
+    Verified against the checksum the release published, like every other GitHub
+    asset here. The archive is what carries a published digest, and the binary
+    pulled out of it is a file no release ever named — so the check happens on
+    the archive, before `extract_go_binary` consumes it.
     """
     log.info('Downloading Go tool binaries...')
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
@@ -956,6 +968,9 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
 
         archive_path = bundle.go_binaries / asset.filename
         cache.fetch(asset, archive_path, f'  {entry.executable} ({version})')
+        # Before the extraction, because the archive is the file upstream
+        # published a digest for and the extraction consumes it.
+        verify_against_upstream(bundle, cache, archive_path, asset)
         extract_go_binary(archive_path, entry.executable, bundle.go_binaries / entry.executable)
         # Keyed by `name` and filed under `executable`. Every version lookup asks
         # by the declared name — `packages._bundled` reads `item.name` — while
@@ -970,6 +985,11 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
     Recorded under the *crate* name rather than the binary's, because that is what
     `providers.cargo` looks the row up by — a declaration agreeing with itself,
     rather than two halves agreeing by convention.
+
+    Verified against the checksum the release published, like every other GitHub
+    asset here. A crate shipping a zip is repacked as a tarball, so the digest is
+    recorded for the zip that was checked rather than for the file this bundler
+    wrote in its place.
     """
     log.info('Downloading Cargo tool binaries...')
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
@@ -985,6 +1005,10 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
 
         destination = bundle.binaries / filename
         cache.fetch(asset, destination, f'  {entry.name} ({version})')
+        # Before the repack, for the reason `add_go_binaries` records: the zip is
+        # what the digest was published for, and the tarball written in its place
+        # is this bundler's own file that no release ever named.
+        verify_against_upstream(bundle, cache, destination, asset)
 
         if filename.endswith('.zip'):
             filename = repackage_zip_as_tarball(destination, entry.executable, cargo.asset_target(entry, target), version.lstrip('v'))
