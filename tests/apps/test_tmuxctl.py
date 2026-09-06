@@ -1,4 +1,4 @@
-"""Where `tmux-place` puts a pane, decided without a tmux server anywhere near it.
+"""Where `tmuxctl` puts a pane, decided without a tmux server anywhere near it.
 
 `place()` is a pure function over window dimensions, the panes already there, and
 what is being placed. That is the whole reason the module is arranged this way:
@@ -1474,13 +1474,31 @@ def test_status_tells_running_from_dead_from_gone(tmuxctl, server):
     assert tmuxctl.pane_size('%9999') == (0, 0)
 
 
+def test_a_live_sibling_is_not_read_in_place_of_the_pane_asked_about(tmuxctl, monkeypatch):
+    # `list-panes` answers for a whole window, so the row has to be found by id. A
+    # caller's own healthy pane sits in the same answer as the dead one being asked
+    # about, and reading the first row would report whichever tmux listed first.
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%0\t0\t\n%1\t1\t127\n')
+
+    assert tmuxctl.pane_state('%1') == (tmuxctl.PaneState.DEAD, 127)
+    assert tmuxctl.pane_state('%0') == (tmuxctl.PaneState.RUNNING, None)
+
+
+def test_a_dead_pane_whose_status_cannot_be_read_is_still_dead(tmuxctl, monkeypatch):
+    # The status is what a caller reports, and not having one is not a reason to call
+    # a dead pane healthy -- which is what a parse failure defaulting to RUNNING does.
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\n')
+
+    assert tmuxctl.pane_state('%1') == (tmuxctl.PaneState.DEAD, None)
+
+
 @needs_tmux
 def test_close_drops_the_marks_before_the_pane_that_carries_them(tmuxctl, server):
     # `release` walks live panes, so a mark on a pane tmux has already destroyed
     # is unreachable and nothing would ever clear it.
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
     landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents', 'phase-3-worker')
-    assert tmuxctl.cmd_close('phase-3-worker') == 0
+    assert tmuxctl.cmd_close('phase-3-worker', False) == 0
     assert tmuxctl.pane_state(landed.pane)[0] is tmuxctl.PaneState.GONE
     assert not any(pane.handle for window in tmuxctl.read_workspace() for pane in window.panes)
 

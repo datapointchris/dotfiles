@@ -1295,9 +1295,11 @@ def cmd_open(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_release(panes: Sequence[str]) -> int:
+def cmd_release(panes: Sequence[str], as_json: bool) -> int:
     dropped = release([resolve(pane) for pane in panes])
     err(f'dropped {dropped} mark{"" if dropped == 1 else "s"}')
+    if as_json:
+        emit({'dropped': dropped})
     return 0
 
 
@@ -1353,17 +1355,23 @@ def cmd_read(address: str, lines: int | None) -> int:
     return 0
 
 
-def cmd_close(address: str) -> int:
+def cmd_close(address: str, as_json: bool) -> int:
     """Destroy a pane, and drop the marks that would outlive it.
 
     The marks go first. `kill-pane` on the last pane of a window takes the window
     with it, and a mark on a pane tmux has already destroyed is unreachable --
     `release` walks live panes, so nothing would ever clear it.
+
+    A mutating verb still answers `--json` with the object it affected, so a
+    caller reading every response the same way does not have one verb that
+    returns nothing and parses as a failure.
     """
     pane_id = resolve(address)
     release([pane_id])
     if problem := tmux_soft('kill-pane', '-t', pane_id):
         raise TmuxFailed(f'tmux kill-pane: {problem}')
+    if as_json:
+        emit({'pane': pane_id, 'state': str(PaneState.GONE)})
     return 0
 
 
@@ -1469,6 +1477,7 @@ def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
 
     closing = command('close', 'destroy a pane', 'Kill a pane and drop the marks that would otherwise outlive it.')
     closing.add_argument('address', metavar='ADDRESS', help=ADDRESS)
+    closing.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
     dropping = command(
         'release',
@@ -1479,6 +1488,7 @@ def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
         ),
     )
     dropping.add_argument('panes', nargs='*', metavar='ADDRESS', help=f'{ADDRESS}; every marked pane and window when none are named')
+    dropping.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1508,8 +1518,8 @@ PANE_VERBS = {
     'open': cmd_open,
     'status': lambda args: cmd_status(args.address, args.json),
     'read': lambda args: cmd_read(args.address, args.lines),
-    'close': lambda args: cmd_close(args.address),
-    'release': lambda args: cmd_release(args.panes),
+    'close': lambda args: cmd_close(args.address, args.json),
+    'release': lambda args: cmd_release(args.panes, args.json),
 }
 
 
