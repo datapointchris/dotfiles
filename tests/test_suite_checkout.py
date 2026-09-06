@@ -30,9 +30,13 @@ from dotfiles import paths
 REPO = Path(__file__).resolve().parent.parent
 
 DECOY_MESSAGE = 'a bare load read a declaration this checkout does not carry'
+"""What the pinned case says when it resolved against some other checkout."""
+
 ORDER_MESSAGE = 'something above imported dotfiles.paths'
-"""What `tests/conftest.py` says when its assert fires, matched rather than restated:
-a run that fails for some other reason prints neither."""
+"""What `tests/conftest.py` says when its assert fires, matched rather than restated.
+
+Delete that assert and an unset `$DOTFILES_DIR` passes the child outright, so the
+message is what separates this red from every other one."""
 
 
 def test_the_suite_measures_the_checkout_it_lives_in() -> None:
@@ -93,9 +97,7 @@ def test_resolving_the_root_before_the_pin_runs_is_refused(tmp_path: Path) -> No
 
     `-p dotfiles.paths` imports the module as a plugin, and pytest loads plugins
     before conftest — the one way in reach to arrive at `tests/conftest.py` with the
-    root already resolved. Without the assert the child fails later and differently,
-    or passes outright where `$DOTFILES_DIR` is unset, so the message is what
-    separates this from any other red.
+    root already resolved.
     """
     ran = run_pinned_case(decoy_checkout(tmp_path), '-p', 'dotfiles.paths')
 
