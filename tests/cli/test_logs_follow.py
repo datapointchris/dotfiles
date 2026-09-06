@@ -152,24 +152,38 @@ def append(path: Path, entry: dict) -> None:
         handle.write(json.dumps(entry) + '\n')
 
 
-def test_a_limit_cuts_where_a_followed_pane_opens_and_not_what_it_follows(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+FOLLOWED_LIMITS: tuple[tuple[str, tuple[int, ...]], ...] = (('1', (1, 2)), ('0', (2,)))
+"""A `--limit` under `--follow`, and which of the three lines a pane gets.
+
+Indices into `git status`, `go install`, `cargo build` — the third being the one
+written while the follower is already open. It is in both rows, because a limit
+that bounded the live stream rather than the opening would drop it and every other
+assertion here would still hold.
+"""
+
+
+@pytest.mark.parametrize(('limit', 'wanted'), FOLLOWED_LIMITS, ids=['the-newest-line', 'only-what-happens-next'])
+def test_a_limit_cuts_where_a_followed_pane_opens_and_not_what_it_follows(
+    runs_dir: Path, monkeypatch: pytest.MonkeyPatch, limit: str, wanted: tuple[int, ...]
+) -> None:
     """What `tail -n N -f` does, and what `--follow` used to discard.
 
-    The limit was read after the follow branch returned, so `--limit 2` parsed,
-    did nothing, and exited 0 — a caller believing the pane was bounded and
-    nothing on screen correcting them. Both halves are asserted: the opening is
-    cut to the newest line, and the line written afterwards still arrives, because
-    a limit that also bounded the live stream would end the pane at one line.
-    """
-    first, second = ran('git status'), ran('go install')
-    path = stream(runs_dir, '20260815T100000Z', first, second)
-    live = ran('cargo build')
-    ticker = Ticker(stop_after=2, on_tick={1: lambda: append(path, live)})
+    The limit was read after the follow branch returned, so `--limit 2` parsed, did
+    nothing, and exited 0 — a caller believing the pane was bounded and nothing on
+    screen correcting them.
 
-    result = follow(monkeypatch, ticker, '--limit', '1', '--json')
+    Zero is the second row rather than an edge case. `tail -n 0 -f` is how a reader
+    asks for only what happens from now, and it is unreachable if a falsy limit
+    means unset.
+    """
+    lines = [ran('git status'), ran('go install'), ran('cargo build')]
+    path = stream(runs_dir, '20260815T100000Z', *lines[:2])
+    ticker = Ticker(stop_after=2, on_tick={1: lambda: append(path, lines[2])})
+
+    result = follow(monkeypatch, ticker, '--limit', limit, '--json')
 
     assert result.exit_code == 0
-    assert emitted(result) == [second, live]
+    assert emitted(result) == [lines[index] for index in wanted]
 
 
 def test_a_named_run_is_followed_from_its_own_file_rather_than_from_the_newest(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
