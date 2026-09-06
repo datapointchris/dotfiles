@@ -206,7 +206,7 @@ def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
         rollup = node['commits']['nodes']
         prs.append(
             {
-                # The forge that hosts it. Every action but the local diff has
+                # Who hosts it. Every action but the local diff has
                 # to dispatch on this, and inferring it from the slug's shape
                 # would be a guess.
                 'provider': 'github',
@@ -393,7 +393,7 @@ NOTES = (
     'provider whose listing does not count them. `review` and `checks` are empty',
     'until a review is requested and a workflow has run.',
     '',
-    '`review` is the forge decision. `reviews` is how many were submitted, which',
+    "`review` is the provider's decision. `reviews` is how many were submitted, which",
     'is a different fact — a review setting no decision leaves the first empty.',
 )
 

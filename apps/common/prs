@@ -18,6 +18,11 @@ Enter on a row opens the action menu. A letter takes that action there and then,
 without the menu, and the footer names them — `m` is merge, which is the one
 worth pressing from the list, since the confirm it prints is the whole flow.
 
+The menu shows the PR's description rendered as markdown, and its own footer names
+the keys that scroll it. `p` fetches GitHub's own rendering instead, with the
+comment threads the listing does not carry, and `r` opens a Claude window running
+`/review-pr` on it.
+
 Lives in dotfiles rather than in fleet because every machine has this and only
 some have fleet. The data comes from `pull-requests`, the one place that knows how to
 ask a provider for PRs; this is the renderer, the picker and the window.
@@ -47,6 +52,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -57,6 +63,7 @@ from pytermstyle import help_section
 from pytermstyle import help_text
 from pytermstyle import help_usage
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.text import Text
 
 # Days before a PR reads as stale, then as ignored. A PR is meant to be read the
@@ -71,7 +78,7 @@ STALE = 7
 # different glyphs are not guaranteed the same cell width either, so a row
 # differing only in review state would sit a column off from the one above it.
 CHECKS_ICON = ''
-REVIEW_ICON = ''
+DECISION_ICON = ''
 FILES_ICON = ''
 ADDED_ICON = ''
 REMOVED_ICON = ''
@@ -84,6 +91,23 @@ DIFF_ICON = ''
 BROWSER_ICON = ''
 COMMENT_ICON = ''
 MERGE_ICON = ''
+# Each carries its codepoint in the comment beside it. These are private-use
+# characters, so a diff viewer, a clipboard, or a terminal without the font all
+# render them identically to each other and to nothing at all — the codepoint is
+# the only form of the name that reads anywhere and can be grepped for.
+PAGE_ICON = ''  # U+F15C file-text, beside FILES_ICON's file
+REVIEW_ICON = ''  # U+F41E octicon checklist, beside DIFF_ICON and MERGE_ICON
+# `REVIEW_ICON` marks the `r` action, which asks for a review. `DECISION_ICON`
+# marks the status column, which renders the one GitHub already reached. Two
+# different things, so two names.
+CLOSE_ICON = ''  # U+F057 times-circle, the mate of CHECKS_ICON's check-circle
+
+# Picked against each font's cmap rather than by looking at a terminal. U+F544,
+# the Material robot and the obvious glyph for a review, is in no Nerd Font —
+# and a glyph the font lacks draws as tofu, whose width is the terminal's guess
+# rather than one cell, so it takes the whole column out of line for the same
+# reason the paragraph above rules out emoji. Ask a font what it carries with
+# `fontTools.ttLib.TTFont(path).getBestCmap()`, over what `fc-list` reports.
 
 CHECK_STYLES = {'SUCCESS': 'green', 'FAILURE': 'red', 'ERROR': 'red'}
 REVIEW_STYLES = {'APPROVED': 'green', 'CHANGES_REQUESTED': 'red', 'REVIEW_REQUIRED': 'cyan'}
@@ -153,7 +177,7 @@ class PullRequest:
     The three diff counts are None, never 0, from a provider that does not report
     them. A PR nobody counted is not a PR that changed nothing.
 
-    `review` is the forge's decision and `reviews` is how many were submitted.
+    `review` is the provider's decision and `reviews` is how many were submitted.
     A review can set no decision, so the two disagree routinely.
     """
 
@@ -297,7 +321,7 @@ def checks_cell(pr: PullRequest) -> Text:
 
 
 def review_cell(pr: PullRequest) -> Text:
-    """The forge decision where there is one, and otherwise how many reviews were submitted.
+    """The provider's decision where there is one, and otherwise how many reviews were submitted.
 
     The decision leads because it is the one that gates the merge, and a count
     cannot displace it.
@@ -309,7 +333,7 @@ def review_cell(pr: PullRequest) -> Text:
         style = REVIEW_STYLES.get(pr.review, 'dim')
         word = REVIEW_WORDS.get(pr.review, pr.review.lower())
     cell = Text()
-    cell.append(f'{REVIEW_ICON}  ', style=style)
+    cell.append(f'{DECISION_ICON}  ', style=style)
     cell.append(f'review {word}', style=style)
     return cell
 
@@ -355,14 +379,26 @@ def number_cell(pr: PullRequest) -> Text:
 
 @dataclass(frozen=True)
 class Action:
-    """One thing you can do to a PR, and which forges can do it.
+    """One thing you can do to a PR, and which providers can do it.
 
-    `providers` empty means every forge — the diff and the branch name are local
-    git and the browser is a URL, so none of the three asks a forge anything.
+    `providers` empty means every provider — the diff and the branch name are
+    local git and the browser is a URL, so none of the three asks a provider
+    anything.
 
     `key` is the letter that reaches it from either menu. It is a property of the
     action rather than of a menu so both bind the same letter, and a letter
     learned on the list still works one screen deeper.
+
+    `handler` is what `perform` calls, and it is a field rather than a branch in
+    a dispatch so that an action with no handler cannot be constructed. Every
+    other property of an action — its key, its legend row, its help row — is
+    already derived from this tuple, so a *binding* cannot go unmentioned while a
+    handler named anywhere else could, and the least conservative thing for a
+    half-wired action to reach is the one that lands the pull request.
+
+    Every handler takes the same pair, `(pr, interactive=...)`, whether or not it
+    reads the second. That is what keeps `perform` one call: a signature that
+    varied would put the choosing back in a branch, one level down.
     """
 
     name: str
@@ -370,31 +406,16 @@ class Action:
     icon: str
     label: str
     detail: str
+    handler: Callable[..., int]
     providers: frozenset[str] = frozenset()
 
     def supported(self, provider: str) -> bool:
         return not self.providers or provider in self.providers
 
 
-# Ordered by how often each is wanted. Merge is last because it is the one that
-# cannot be undone, so the arrow keys reach it slowest; `m` reaches it at once
-# from anywhere, and the confirm it prints is what guards it.
-#
-# Letters are the first letter of the thing, not of the label — `b` is the
-# branch and `o` is open-in-browser, because two actions starting with `b` would
-# make one of them arbitrary.
-ACTIONS = (
-    Action('diff', 'd', DIFF_ICON, 'view diff', 'fetch the ref and open it in a tmux window'),
-    Action('browser', 'o', BROWSER_ICON, 'open in browser', 'the pull request page on its forge'),
-    Action('branch', 'b', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard'),
-    Action('comment', 'c', COMMENT_ICON, 'comment', 'write one in $EDITOR and post it', frozenset({'github'})),
-    Action('merge', 'm', MERGE_ICON, 'merge', 'merge it — asks once, and enter is yes'),
-)
-
-# What fzf hands back on the first line of its output when one of these is
-# pressed. Enter leaves that line empty, which is how "open the action menu" and
-# "do this one thing" are told apart.
-EXPECT = ','.join(action.key for action in ACTIONS)
+# `ACTIONS` and `EXPECT` are built at the bottom of the file, below the handlers
+# they name. Everything between here and there reads them from inside a function,
+# which runs after the module finishes.
 
 
 def compose(prs: list[PullRequest], *, width: int) -> tuple[Text, list[list[Text]]]:
@@ -508,7 +529,7 @@ def expected(stdout: str) -> tuple[Action | None, str]:
 def shortcut_legend() -> Text:
     """The keys, as a footer line under the list.
 
-    Every action is named, including the ones a forge cannot do. Which of them is
+    Every action is named, including the ones a provider cannot do. Which of them is
     live depends on the row under the cursor, and a legend that changed as you
     moved would be read as flicker rather than as information.
     """
@@ -518,6 +539,39 @@ def shortcut_legend() -> Text:
             line.append('   ')
         line.append(action.key, style='bold cyan')
         line.append(f' {action.label}', style='dim')
+    return line
+
+
+# How the description moves, in one place: the key as fzf spells it, the key as a
+# reader sees it, and what it does. The footer and `--bind` are both derived from
+# this, so the legend cannot name a key nothing is bound to.
+#
+# fzf binds the shift arrows to `preview-up` and `preview-down` itself, and those
+# rows carry no action for that reason — an explicit bind would replace a default
+# with itself. It ships nothing on the half-page pair, which is what makes those
+# two rows load-bearing rather than decorative.
+HALF_PAGE = {'ctrl-u': 'preview-half-page-up', 'ctrl-d': 'preview-half-page-down'}
+
+SCROLL_KEYS = (
+    ('shift-↑ shift-↓', 'scroll a line'),
+    (' '.join(HALF_PAGE), 'scroll half a page'),
+)
+
+PREVIEW_BINDS = ','.join(f'{key}:{action}' for key, action in HALF_PAGE.items())
+
+
+def scroll_legend() -> Text:
+    """How to move the description, as a footer under the action menu.
+
+    Only under the menu, never under the list. The list has no preview to scroll,
+    and a footer naming keys that do nothing there is worse than no footer.
+    """
+    line = Text()
+    for index, (keys, what) in enumerate(SCROLL_KEYS):
+        if index:
+            line.append('   ')
+        line.append(keys, style='bold cyan')
+        line.append(f' {what}')
     return line
 
 
@@ -629,16 +683,64 @@ def describe(pr: PullRequest) -> Text:
     page.append('  into  ', style='dim')
     page.append(f'{pr.base}\n\n', style='blue')
     if pr.body.strip():
-        page.append(pr.body.rstrip())
+        page.append(rendered(pr.body))
     else:
         page.append('No description.', style='dim')
     return page
 
 
+NARROWEST_PREVIEW = 40
+"""Below this the description is unreadable whatever is done to it, so the width
+stops shrinking and fzf is left to wrap. A floor rather than a refusal: a narrow
+window is a bad place to read a PR body and not a reason to refuse to draw one."""
+
+
+def preview_width() -> int:
+    """How wide the description pane actually is, measured rather than assumed.
+
+    Not `TABLE_WIDTH`. That constant is a *popup* measurement — its own comment
+    defines it as `display-popup -w 150` less the border and padding — and this
+    pane is not always in that popup, since `pick`'s docstring gives sizing to
+    the caller and the menu runs in a plain terminal too. A width taken from
+    there would tie how a body lays out to a number describing another window,
+    with the tmux.conf line that sets it saying nothing about this one.
+
+    `--padding=1,{SIDE_PAD}` is what fzf takes off each side, and the preview
+    window carries only a top border, so the two paddings are the whole
+    difference between the terminal and the pane.
+    """
+    columns = shutil.get_terminal_size(fallback=(TABLE_WIDTH + 2 * SIDE_PAD, 24)).columns
+    return max(columns - 2 * SIDE_PAD, NARROWEST_PREVIEW)
+
+
+def rendered(body: str) -> Text:
+    """A PR body as markdown rather than as the source someone typed.
+
+    A body here is written to be read — headings, fenced code, backticked paths,
+    bullets — and printed raw it arrives as `##` and backticks with no styling at
+    all, which is the same characters the author was trying to get away from.
+
+    Rendered locally out of the body the listing already carries, so it costs
+    nothing on every arrow key.
+
+    Wrapped to `preview_width()`, and soft-wrapped so a line shorter than that
+    stays short. Both halves are needed. A `Console` that is not told a width
+    falls back to 80, because it cannot see a terminal from here — this renders
+    into a temporary file that fzf `cat`s. And with `soft_wrap=False` rich pads
+    every line out to the full width with spaces, so a padded line one column
+    wider than the pane makes fzf wrap it into a continuation row carrying
+    nothing but the marker, and the whole description renders double-spaced.
+    """
+    console = Console(force_terminal=True, width=preview_width(), soft_wrap=True)
+    with console.capture() as captured:
+        console.print(Markdown(body.rstrip()))
+    return Text.from_ansi(captured.get().rstrip('\n'))
+
+
 def action_line(action: Action, pr: PullRequest) -> Text:
     """One menu row. Unsupported ones stay, dimmed, and say why.
 
-    Hiding an action a forge cannot do would make the menu a different shape per
+    Hiding an action a provider cannot do would make the menu a different shape per
     provider, so you would learn where `merge` sits and then find it somewhere
     else. Dimmed, the list is the same list everywhere.
 
@@ -676,20 +778,28 @@ def choose_action(pr: PullRequest) -> Action | None:
                 '--with-nth=2',
                 '--no-sort',
                 '--reverse',
-                '--gap',
+                # No `--gap` here, unlike the list. A blank line between rows costs
+                # one row per action, and eight actions plus their gaps overflow a
+                # list pane that is 35% of a popup 60% of the screen tall — merge,
+                # the last row, falls below the fold on an 83-row terminal. The
+                # rows are one line each and lead with a column of single letters,
+                # which is separation enough without spending a row on it.
                 '--border=none',
                 '--list-border=none',
                 '--input-border=none',
                 '--no-scrollbar',
-                # No search line here. Five fixed choices are an arrow-key list,
-                # not something you filter, and a prompt invites typing that then
-                # does nothing useful.
+                # No search line here. A short fixed list of choices is an
+                # arrow-key list, not something you filter, and a prompt invites
+                # typing that then does nothing useful.
                 '--no-input',
                 f'--expect={EXPECT}',
                 '--color=bg:-1,gutter:-1,preview-bg:-1',
                 '--pointer=',
                 '--marker=',
                 f'--padding=1,{SIDE_PAD}',
+                f'--footer={to_lines([scroll_legend()], color=True)[0]}',
+                '--footer-border=top',
+                f'--bind={PREVIEW_BINDS}',
                 '--preview',
                 f'cat {preview}',
                 '--preview-window=down,65%,wrap,border-top',
@@ -710,7 +820,7 @@ def choose_action(pr: PullRequest) -> Action | None:
     return ACTIONS[int(chosen.split('\t')[0])]
 
 
-def open_review(pr: PullRequest) -> int:
+def open_diff(pr: PullRequest, *, interactive: bool = False) -> int:
     """Fetch the PR ref and open its diff in a new tmux window."""
     if not pr.path:
         return fail(f'{pr.repo} is not checked out on this machine')
@@ -737,21 +847,14 @@ def open_review(pr: PullRequest) -> int:
     socket.unlink(missing_ok=True)
 
     # Three-dot: from where the branch diverged to its tip, which is what the
-    # forge shows. Two-dot would render commits the base gained since branching
+    # provider shows. Two-dot would render commits the base gained since branching
     # as changes this PR reverted.
-    subprocess.run(
-        [
-            'tmux',
-            'new-window',
-            '-n',
-            f'pr {pr.repo} #{pr.number}',
-            '-c',
-            str(checkout),
-            f"nvim --listen '{socket}' -c 'DiffviewOpen origin/{base}...{ref}'",
-        ],
-        check=True,
+    return open_window(
+        f'diff {pr.repo} #{pr.number}',
+        f"nvim --listen '{socket}' -c 'DiffviewOpen origin/{base}...{ref}'",
+        cwd=checkout,
+        needs=('nvim',),
     )
-    return 0
 
 
 def in_repo(pr: PullRequest) -> Path | None:
@@ -759,7 +862,7 @@ def in_repo(pr: PullRequest) -> Path | None:
     return Path(pr.path) if pr.path and Path(pr.path).is_dir() else None
 
 
-def open_browser(pr: PullRequest) -> int:
+def open_browser(pr: PullRequest, *, interactive: bool = False) -> int:
     if pr.provider == 'github':
         return run(['gh', 'pr', 'view', str(pr.number), '--repo', pr.slug, '--web'])
     checkout = in_repo(pr)
@@ -768,21 +871,147 @@ def open_browser(pr: PullRequest) -> int:
     return run(['bbkt', 'pr', 'open', str(pr.number)], cwd=checkout)
 
 
-def copy_branch(pr: PullRequest) -> int:
+def copy_branch(pr: PullRequest, *, interactive: bool = False) -> int:
     """The branch, not the number: a number is a per-repo counter and collides
-    across the registry, and both forges take a branch anywhere they take one."""
+    across the registry, and both providers take a branch anywhere they take one."""
     clipboard = next((tool for tool in ('wl-copy', 'pbcopy', 'xclip') if shutil.which(tool)), None)
     if not clipboard:
         return fail('no clipboard tool found — install wl-clipboard, or xclip')
     argv = [clipboard, '-selection', 'clipboard'] if clipboard == 'xclip' else [clipboard]
-    subprocess.run(argv, input=pr.branch, text=True, check=True)
+    # Present on PATH is not the same as able to run, which is why the failure is
+    # read rather than raised. `wl-copy` is installed on every Wayland box and
+    # exits 1 with no compositor to talk to — over ssh, in a login shell, under a
+    # test — and a raise here surfaces as a traceback into a popup that has
+    # already torn down, which leaves the picker nothing to report it with.
+    written = subprocess.run(argv, input=pr.branch, text=True, capture_output=True, check=False)
+    if written.returncode != 0:
+        said = written.stderr.strip().splitlines()
+        return fail(f'{clipboard} could not take the branch: {said[-1] if said else f"exit {written.returncode}"}')
     print(f'copied  {pr.branch}')
     return 0
 
 
-def comment(pr: PullRequest) -> int:
+def comment(pr: PullRequest, *, interactive: bool = False) -> int:
     """GitHub only. bbkt has no comment verb at all — see `bbkt pr --help`."""
     return run(['gh', 'pr', 'comment', str(pr.number), '--repo', pr.slug])
+
+
+def read_page(pr: PullRequest, *, interactive: bool = False) -> int:
+    """GitHub's own rendering of the PR, in a pager in a tmux window.
+
+    `GH_FORCE_TTY` is what makes this worth having. gh prints a `key:\tvalue`
+    dump when it is not writing to a terminal and renders the real page when it
+    is, and it is writing to a pager here. `$(tput cols)` rather than a number:
+    only gh's stdout is the pipe, so the shell tmux starts still reports the
+    window's real width, and this window is the client's full size rather than
+    the popup's.
+
+    `--comments` is the reason this exists beside the menu's own preview. The
+    preview carries the body, which the listing already holds; the review threads
+    are only on GitHub.
+
+    `--repo` names the PR, so this opens in no particular directory.
+    """
+    return open_window(
+        f'page {pr.repo} #{pr.number}',
+        f'GH_FORCE_TTY=$(tput cols) gh pr view {pr.number} --repo {pr.slug} --comments | less -R',
+        cwd=None,
+        needs=('gh', 'less'),
+    )
+
+
+def claude_review(pr: PullRequest, *, interactive: bool = False) -> int:
+    """A Claude window with `/review-pr` already typed, run where the PR lives.
+
+    A window rather than this process, because the review runs several agents and
+    takes minutes. Nothing here waits for it.
+
+    The session is new, so it holds nothing about how the code was written. That
+    is what the skill wants: a review carries weight only from a reader who did
+    not write the diff, and a session started from the picker has read none of it.
+
+    Only the number is passed. The skill takes a count before an optional repo,
+    and the window already opens in that PR's checkout, which is where the skill
+    resolves the repo from.
+    """
+    checkout = in_repo(pr)
+    if not checkout:
+        return fail(f'{pr.repo} is not checked out here, and a review needs the code')
+    return open_window(f'review {pr.repo} #{pr.number}', f"claude '/review-pr {pr.number}'", cwd=checkout, needs=('claude',))
+
+
+def open_window(name: str, command: str, *, cwd: Path | None, needs: tuple[str, ...]) -> int:
+    """Run a command in a new tmux window, named, once its tools are on PATH.
+
+    `-c` decides whether the window starts in the popup's directory or the repo's,
+    so an action that needs the repo passes one and an action that does not passes
+    None.
+
+    `needs` is checked here because nothing downstream can. `tmux new-window`
+    reports whether the *launch* was accepted, never what the launched command
+    did: it exits 0 for a binary that does not exist and 0 for a `-c` naming a
+    directory that does not, and the pane it opened then dies with the popup
+    already torn down. So every precondition a launched command has is checked
+    before the launch or it is not checked at all — which for `claude` is a real
+    machine, since the manifest for a network that blocks claude.ai leaves
+    `claude-code` uninstalled.
+    """
+    if missing := [tool for tool in needs if not shutil.which(tool)]:
+        return fail(f'{", ".join(missing)} is not installed, and a tmux window would open and die on it')
+    argv = ['tmux', 'new-window', '-n', name]
+    if cwd:
+        argv += ['-c', str(cwd)]
+    return run([*argv, command])
+
+
+def answered_yes(question: str, *, default_yes: bool) -> bool:
+    """Ask once, and say in the prompt which way enter goes."""
+    answer = input(f'{question}  {"[Y/n]" if default_yes else "[y/N]"} ').strip().lower()
+    return answer in ({'', 'y', 'yes'} if default_yes else {'y', 'yes'})
+
+
+def declined(message: str) -> int:
+    """Say what was not done, and hold the window open long enough to read it.
+
+    The pause is the whole function. `prs` normally runs as `display-popup -E`,
+    which tears the popup down the instant the command exits, so a line printed on
+    the way out is drawn and erased in the same frame. `empty_state` carries the
+    same pause for the same reason.
+    """
+    print(message)
+    input('press enter to close ')
+    return 0
+
+
+def unattended(action: str) -> int:
+    """Refuse to change a pull request with no terminal to confirm on.
+
+    `interactive` is `sys.stdin.isatty()`, and `prs` has no flag that supplies the
+    answer instead — so with stdin redirected the confirm was skipped and the
+    action taken, which is the opposite of what a guarded action should do when
+    its guard cannot run. `cli-design.md` § "Destructive operations require an
+    explicit flag when non-interactive" wants the flag named; there is none to
+    name yet, so this says what is missing rather than inventing one.
+    """
+    return fail(f'{action} needs a terminal to confirm on, and stdin is not one')
+
+
+def close(pr: PullRequest, *, interactive: bool) -> int:
+    """Closing asks once and defaults to no, which is the opposite of merge.
+
+    The asymmetry is about which mistake is recoverable. A merge confirmed by
+    reflex lands work that was going to land anyway; a close confirmed by reflex
+    discards a branch nobody reviewed, and the PR reopens but the moment someone
+    would have read it does not.
+
+    `--comment` is not offered: a close worth explaining is worth explaining in
+    the thread, where `c` already goes.
+    """
+    if not interactive:
+        return unattended('close')
+    if not answered_yes(f'close {pr.slug} #{pr.number} — {pr.title}?', default_yes=False):
+        return declined('left open')
+    return run(['gh', 'pr', 'close', str(pr.number), '--repo', pr.slug])
 
 
 def merge(pr: PullRequest, *, interactive: bool) -> int:
@@ -797,15 +1026,14 @@ def merge(pr: PullRequest, *, interactive: bool) -> int:
     `--merge` is what makes this one prompt instead of four. Without a method gh
     runs its own wizard: which method, whether to delete the branch, then a
     submit step. Every answer is already settled — a PR lands as a merge commit
-    rather than a squash or a rebase, and forge sets `delete_branch_on_merge` on
-    the repo, so the forge deletes the remote branch and nothing here touches the
-    local one.
+    rather than a squash or a rebase, and the `forge` tool sets
+    `delete_branch_on_merge` on the repo, so GitHub deletes the remote branch and
+    nothing here touches the local one.
     """
-    if interactive:
-        answer = input(f'merge {pr.slug} #{pr.number} — {pr.title}?  [Y/n] ')
-        if answer.strip().lower() not in {'', 'y', 'yes'}:
-            print('left alone')
-            return 0
+    if not interactive:
+        return unattended('merge')
+    if not answered_yes(f'merge {pr.slug} #{pr.number} — {pr.title}?', default_yes=True):
+        return declined('left alone')
     if pr.provider == 'github':
         return run(['gh', 'pr', 'merge', str(pr.number), '--repo', pr.slug, '--merge'])
     checkout = in_repo(pr)
@@ -816,25 +1044,50 @@ def merge(pr: PullRequest, *, interactive: bool) -> int:
 
 def run(argv: list[str], cwd: Path | None = None) -> int:
     """Hand the terminal over. These are interactive — gh opens an editor, both
-    forges prompt — so nothing here captures their output."""
+    providers prompt — so nothing here captures their output."""
     try:
         return subprocess.run(argv, cwd=cwd, check=False).returncode
     except FileNotFoundError:
         return fail(f'{argv[0]} is not installed')
 
 
+# Ordered by how often each is wanted, with the three reading actions first. The
+# two that change the pull request are last, so the arrow keys reach them
+# slowest; each is reachable at once by its letter from anywhere, and the confirm
+# each prints is what guards it. Merge sits below close because a closed PR
+# reopens and a merged one does not.
+#
+# Letters are the first letter of the thing, not of the label — `b` is the
+# branch and `o` is open-in-browser, because two actions starting with `b` would
+# make one of them arbitrary. `x` for close is the one that names nothing: `c` is
+# already the comment, and `x` is what closes a thing everywhere else on a
+# keyboard, which beats a second arbitrary letter taken off `close`.
+#
+# `providers` names GitHub for every action that reaches a GitHub-only tool. The
+# three without it are local: the diff is git, the branch name is a string, and
+# the browser takes a URL. `review` carries it because the skill it launches
+# posts with `gh pr review` and names bbkt nowhere.
+ACTIONS = (
+    Action('diff', 'd', DIFF_ICON, 'view diff', 'fetch the ref and open it in a tmux window', open_diff),
+    Action('page', 'p', PAGE_ICON, 'page and comments', 'the description and every comment, in a pager', read_page, frozenset({'github'})),
+    Action('review', 'r', REVIEW_ICON, 'claude review', 'a Claude window running /review-pr on it', claude_review, frozenset({'github'})),
+    Action('browser', 'o', BROWSER_ICON, 'open in browser', 'the same page, handed to your browser', open_browser),
+    Action('branch', 'b', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard', copy_branch),
+    Action('comment', 'c', COMMENT_ICON, 'comment', 'write one in $EDITOR and post it', comment, frozenset({'github'})),
+    Action('close', 'x', CLOSE_ICON, 'close', 'close it unmerged — asks once, and enter is no', close, frozenset({'github'})),
+    Action('merge', 'm', MERGE_ICON, 'merge', 'merge it — asks once, and enter is yes', merge),
+)
+
+# What fzf hands back on the first line of its output when one of these is
+# pressed. Enter leaves that line empty, which is how "open the action menu" and
+# "do this one thing" are told apart.
+EXPECT = ','.join(action.key for action in ACTIONS)
+
+
 def perform(action: Action, pr: PullRequest, *, interactive: bool) -> int:
     if not action.supported(pr.provider):
         return fail(f'{action.label} is not available on {pr.provider}')
-    if action.name == 'diff':
-        return open_review(pr)
-    if action.name == 'browser':
-        return open_browser(pr)
-    if action.name == 'branch':
-        return copy_branch(pr)
-    if action.name == 'comment':
-        return comment(pr)
-    return merge(pr, interactive=interactive)
+    return action.handler(pr, interactive=interactive)
 
 
 def default_branch(checkout: Path) -> str:
@@ -859,9 +1112,13 @@ def fail(message: str) -> int:
 def help_screen() -> None:
     """The screen, in the grammar every other tool on this PATH draws.
 
-    The key rows come off `ACTIONS` rather than being written out, so a sixth
-    action cannot arrive with a binding the screen does not mention. That is the
-    same tuple the menu and the footer are built from.
+    The key rows come off `ACTIONS` rather than being written out, so a new action
+    cannot arrive with a binding the screen does not mention. That is the same
+    tuple the menu and the footer are built from.
+
+    The scroll keys come off `SCROLL_KEYS` for the same reason, and are the one
+    set here that is not an action — they move the description rather than doing
+    anything to the pull request.
     """
     help_header('prs')
     help_text('Pick an open PR and open its diff in a tmux window.')
@@ -877,9 +1134,14 @@ def help_screen() -> None:
         help_row(action.key, action.label, action.detail)
     help_row('enter', '', 'open the action menu for the row under the cursor')
 
+    help_section('Reading the description')
+    help_text('In the action menu, where the description sits under the choices.')
+    for keys, what in SCROLL_KEYS:
+        help_row(keys, '', what)
+
     help_section('Options')
     help_row('-h, --help', '', 'show this screen')
-    help_text('', 'Needs tmux, which is where the review window goes.')
+    help_text('', 'Needs tmux, which is where every window this opens goes.')
     help_end()
 
 
@@ -923,7 +1185,7 @@ def main() -> int:
     # tmux and no editor, and refusing to print there would be refusing to answer
     # a question that was fully answerable.
     if not os.environ.get('TMUX'):
-        return fail('not inside tmux — this opens a review window')
+        return fail('not inside tmux — every action here that opens anything opens a tmux window')
     for tool in ('fzf', 'nvim', 'git'):
         if not shutil.which(tool):
             return fail(f'{tool} is required')
