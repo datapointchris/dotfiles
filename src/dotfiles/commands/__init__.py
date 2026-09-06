@@ -9,7 +9,9 @@ must read identically on twenty leaves is a flag that should have one definition
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
+from typing import Literal
 
 import typer
 
@@ -30,6 +32,43 @@ VerboseOption = typer.Option(
     help='Every item examined, and every step; -vv adds the HTTP requests behind them',
 )
 QuietOption = typer.Option(False, '--quiet', '-q', help='The verdict alone, without the per-item evidence')
+
+
+def limit_option(what: str) -> Any:
+    """`--limit`, saying which noun this verb counts.
+
+    Here for the reason the verbosity pair is: four resources take this flag and it
+    has to mean one thing on all of them. The noun is the half that differs — a
+    listing counts runs, a stream counts lines — so it is a parameter, and one help
+    string reading "lines" on a verb returning runs is a divergence a reader cannot
+    see.
+
+    **`None` is unbounded and `0` asks for nothing.** The caller computing its own
+    bound, `--limit "$(remaining)"`, is the one that reaches zero, and it means none
+    of them. `min=0` because a negative means one row to whoever typed it and slices
+    from the far end to a list, and both answers exit 0.
+    """
+    return typer.Option(None, '--limit', '-n', min=0, help=f'The newest N {what} only')
+
+
+def kept[T](items: Sequence[T], limit: int | None, *, newest_at: Literal['start', 'end']) -> list[T]:
+    """The newest `limit` items, taken from whichever end holds them.
+
+    `None` keeps every item and `0` keeps none. A falsy test cannot make that
+    distinction: `items[:limit] if limit else items` answers a zero limit with
+    everything, and `items[-limit:]` slices from the far end because `-0` is `0`.
+
+    **The end is a parameter because the two sequences here are ordered
+    oppositely**, and nothing else in either module states it.
+    `runs.list_event_logs` and `runs.list_runs` sort newest first; a run's stream
+    and a remote's shelf are written oldest first, one entry at a time. Written out
+    at each site the two agree only by accident, and the accident is a sort order
+    no test pins.
+    """
+    if limit is None:
+        return list(items)
+    return list(items[:limit]) if newest_at == 'start' else list(items[len(items) - limit :])
+
 
 MEASURES_UPSTREAM = True
 """Every read verb measures. `--cached` is how a caller declines.

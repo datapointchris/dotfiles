@@ -34,6 +34,8 @@ from rich.text import Text
 
 from dotfiles import paths
 from dotfiles import runs
+from dotfiles.commands import kept
+from dotfiles.commands import limit_option
 from dotfiles.effects import SLOW_SECONDS
 from dotfiles.output import console
 from dotfiles.output import emit_json
@@ -44,15 +46,10 @@ app = typer.Typer(no_args_is_help=True, help='The debug stream a run emitted, li
 
 IdentifierArgument = typer.Argument(None, help='Run id or filename prefix (default: the newest run on this machine)')
 FollowOption = typer.Option(False, '--follow', '-f', help='Stream new lines, switching to the next run when one starts')
-LimitOption = typer.Option(None, '--limit', '-n', min=0, help='Show only the last N lines')
-"""How many lines or runs to keep from the newest end.
-
-`min=0` rather than an unbounded int, because `-n -1` is a caller that meant one
-line and gets a slice from the other end — every row but the last, silently and
-at exit 0. Zero is a legitimate request for nothing and is not the same as
-asking for everything, which is what `None` means.
-"""
-JsonOption = typer.Option(False, '--json', help='Emit the stream unchanged, one JSON object per line')
+LinesOption = limit_option('lines')
+RunsOption = limit_option('runs')
+StreamJsonOption = typer.Option(False, '--json', help='Emit the stream unchanged, one JSON object per line')
+ListingJsonOption = typer.Option(False, '--json', help='Emit the listing as one JSON array on stdout')
 
 POLL_SECONDS = 0.25
 """How often a follower looks for new lines and for a newer run.
@@ -203,8 +200,8 @@ def _emit(line: str, as_json: bool) -> None:
 def show(
     identifier: str = IdentifierArgument,
     follow: bool = FollowOption,
-    limit: int | None = LimitOption,
-    as_json: bool = JsonOption,
+    limit: int | None = LinesOption,
+    as_json: bool = StreamJsonOption,
 ) -> None:
     """Print one run's debug stream.
 
@@ -217,10 +214,10 @@ def show(
     it — including the first one, when it is started on a machine that has never
     recorded anything.
 
-    `--limit` means the same thing on both branches: the newest N lines of what a
-    file already holds. Under `--follow` that is where the pane starts and the
-    live lines follow it, which is what `tail -n N -f` and `docker logs --tail N
-    -f` both do.
+    `--limit` bounds the opening on both branches: the newest N lines of what the
+    file already holds. Under `--follow` that is where the pane starts, and the
+    live lines after it are unbounded — which is what `tail -n N -f` and `docker
+    logs --tail N -f` both mean by it.
 
     `--json` emits the stream unchanged for `lnav`, `jq` or anything else that
     reads JSON lines.
@@ -230,19 +227,9 @@ def show(
         return
 
     path = _resolve(identifier)
-    for line in _tail(path.read_text(errors='replace').splitlines(), limit):
+    # A stream is written one line at a time, so its newest are at the end.
+    for line in kept(path.read_text(errors='replace').splitlines(), limit, newest_at='end'):
         _emit(line, as_json)
-
-
-def _tail(lines: list[str], limit: int | None) -> list[str]:
-    """The last `limit` lines, where `None` is every one and `0` is none of them.
-
-    `lines[-limit:] if limit else lines` cannot express the second. A zero limit
-    is falsy, so it answered with the whole file, and `-0` is `0`, which slices
-    from the other end. The caller that reaches zero is the one computing its own
-    bound — `--limit "$(remaining)"` — and it asked for nothing.
-    """
-    return lines if limit is None else lines[max(0, len(lines) - limit) :]
 
 
 def _follow(start: Path | None, as_json: bool, limit: int | None) -> None:
@@ -263,6 +250,7 @@ def _follow(start: Path | None, as_json: bool, limit: int | None) -> None:
 def _stream(start: Path | None, as_json: bool, limit: int | None) -> None:
     current = start
     handle = None
+    opening = True
     try:
         while True:
             if current is None:
@@ -273,7 +261,9 @@ def _stream(start: Path | None, as_json: bool, limit: int | None) -> None:
             if handle is None:
                 handle = current.open(errors='replace')
                 _announce(current, as_json)
-                _seed(handle, as_json, limit)
+                if opening:
+                    _seed(handle, as_json, limit)
+                    opening = False
 
             if line := handle.readline():
                 _emit(line, as_json)
@@ -290,20 +280,23 @@ def _stream(start: Path | None, as_json: bool, limit: int | None) -> None:
 
 
 def _seed(handle: TextIO, as_json: bool, limit: int | None) -> None:
-    """Print what a freshly opened stream already holds, and leave the handle at its end.
+    """Print the newest lines a pane opens on, and leave the handle past them.
 
-    Unbounded, this does nothing and the loop reads the file from the top as it
-    always has — a pane opened mid-run shows the run so far. A limit cuts that
-    opening to its newest lines, and the follower carries on from the same place
-    either way, because the read consumed the file whichever branch ran.
+    Unbounded this returns without reading, and the loop then reads the file from
+    the top — a pane opened mid-run shows the run so far. Under a limit the read
+    consumes the file and the follower carries on from the end of it, so the handle
+    is left at the end on that branch alone.
 
-    Every open rather than the first, so the flag means one thing on each file a
-    follower touches. Nothing about a run switched to mid-follow makes its earlier
-    lines more wanted than the ones the pane opened on.
+    **The first file only, which is what `--limit` bounds.** A follower switches
+    when a new run opens a log, and that run is what the pane exists to narrate.
+    Applying the limit again would drop the beginning of it, by an amount decided
+    by how long the previous run kept the loop busy rather than by anything the
+    caller asked for. `tail -n N -F` applies N once, at the opening.
     """
     if limit is None:
         return
-    for line in _tail(handle.read().splitlines(), limit):
+    # A stream is written one line at a time, so its newest are at the end.
+    for line in kept(handle.read().splitlines(), limit, newest_at='end'):
         _emit(line, as_json)
 
 
@@ -332,23 +325,24 @@ def _announce(path: Path, as_json: bool) -> None:
 
 
 @app.command('list')
-def list_logs(limit: int | None = LimitOption, as_json: bool = JsonOption) -> None:
+def list_logs(limit: int | None = RunsOption, as_json: bool = ListingJsonOption) -> None:
     """The runs on this machine that have a stream, newest first.
 
     Only this machine's, for the reason `show` gives. The whole fleet's records
     are `dotfiles report list`, which is a different question about a different
     artifact.
 
-    The machine is asked for everything it has recorded and the bound is applied
-    after. `--limit 0` is a caller asking for nothing, and asking the listing for
-    nothing returns the same empty list as a machine that has never run — which
-    reported an unrecorded box and exited 3 to a caller whose history was fine.
+    **The machine is asked what it recorded, and the bound is applied to that
+    answer.** `--limit 0` asks for no runs, and a listing bounded inside the same
+    call answers it with the empty list a machine that has never run also gives —
+    two states one emptiness test cannot separate.
     """
     recorded = runs.list_event_logs(machine=paths.MACHINE_ID)
     if not recorded:
         error('no runs have been recorded on this machine yet')
         raise typer.Exit(ExitCode.ISSUE)
-    found = recorded if limit is None else recorded[:limit]
+    # `list_event_logs` sorts newest first, so the newest runs are at the front.
+    found = kept(recorded, limit, newest_at='start')
 
     if as_json:
         emit_json([{'stem': path.stem, 'run_id': _run_id(path), 'bytes': path.stat().st_size, 'path': str(path)} for path in found])

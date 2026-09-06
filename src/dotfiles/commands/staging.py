@@ -35,6 +35,8 @@ from dotfiles import remote as transport
 from dotfiles import status as status_document
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
+from dotfiles.commands import kept
+from dotfiles.commands import limit_option
 from dotfiles.commands import verbosity
 from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
@@ -392,7 +394,7 @@ def _report_retention(where: transport.Remote, machine: str) -> None:
 @bundle_app.command('list')
 def list_bundles(
     machine: str = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)'),
-    limit: int = typer.Option(0, '--limit', '-n', help='Most recent N only (0 for all)'),
+    limit: int | None = limit_option('bundles'),
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
@@ -408,7 +410,8 @@ def list_bundles(
     where = transport.reachable()
     named = machine or Session.resolve(None).machine_name
     listed = offline_bundle.on_remote(where, named)
-    shown = listed[:limit] if limit else listed
+    # `on_remote` sorts newest first, so the newest bundles are at the front.
+    shown = kept(listed, limit, newest_at='start')
 
     if as_json:
         emit_json({'machine': named, 'directory': transport.bundles_for(where, named), 'bundles': list(shown), 'total': len(listed)})
@@ -418,7 +421,7 @@ def list_bundles(
     console.print(section_line(VERDICT_MARKS[word], 'bundles', f'{len(listed)} for {named}', VERDICT_COLORS[word]))
     for name in shown:
         render_row(publishing.age_column(name), name, '')
-    if limit and len(listed) > limit:
+    if limit is not None and len(listed) > limit:
         hint(f'see the rest with: dotfiles bundle list --machine {named}')
     raise typer.Exit(ExitCode.CONVERGED)
 

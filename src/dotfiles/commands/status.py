@@ -35,6 +35,8 @@ from dotfiles import status as status_document
 from dotfiles import vocabulary
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
+from dotfiles.commands import kept
+from dotfiles.commands import limit_option
 from dotfiles.commands import verbosity
 from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
@@ -253,7 +255,7 @@ def publish_after_apply(machine: str | None) -> None:
 @app.command('list')
 def list_statuses(
     machine: str = MachineOption,
-    limit: int = typer.Option(0, '--limit', '-n', help='Most recent N only (0 for all)'),
+    limit: int | None = limit_option('statuses'),
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
@@ -263,7 +265,8 @@ def list_statuses(
     where = transport.reachable()
     named = machine or Session.resolve(None).machine_name
     listed = status_document.on_remote(where, named)
-    shown = listed[:limit] if limit else listed
+    # `on_remote` sorts newest first, so the newest statuses are at the front.
+    shown = kept(listed, limit, newest_at='start')
 
     if as_json:
         emit_json({'machine': named, 'directory': transport.statuses_for(where, named), 'statuses': list(shown), 'total': len(listed)})
@@ -273,7 +276,7 @@ def list_statuses(
     console.print(section_line(VERDICT_MARKS[word], 'statuses', f'{len(listed)} for {named}', VERDICT_COLORS[word]))
     for name in shown:
         render_row(publishing.age_column(name), name, '')
-    if limit and len(listed) > limit:
+    if limit is not None and len(listed) > limit:
         hint(f'see the rest with: dotfiles status list --machine {named}')
     raise typer.Exit(ExitCode.CONVERGED)
 

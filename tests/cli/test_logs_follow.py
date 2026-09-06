@@ -166,15 +166,16 @@ assertion here would still hold.
 def test_a_limit_cuts_where_a_followed_pane_opens_and_not_what_it_follows(
     runs_dir: Path, monkeypatch: pytest.MonkeyPatch, limit: str, wanted: tuple[int, ...]
 ) -> None:
-    """What `tail -n N -f` does, and what `--follow` used to discard.
+    """`--limit` bounds a followed pane's opening and leaves its live lines alone.
 
-    The limit was read after the follow branch returned, so `--limit 2` parsed, did
-    nothing, and exited 0 — a caller believing the pane was bounded and nothing on
-    screen correcting them.
+    Both halves are asserted, because a limit read only on the non-follow branch
+    parses, does nothing and exits 0 — a caller believing the pane is bounded with
+    nothing on screen correcting them. A limit that bounded the live stream instead
+    would end the pane at one line.
 
     Zero is the second row rather than an edge case. `tail -n 0 -f` is how a reader
-    asks for only what happens from now, and it is unreachable if a falsy limit
-    means unset.
+    asks for only what happens from now, and a falsy limit meaning unset puts that
+    out of reach.
     """
     lines = [ran('git status'), ran('go install'), ran('cargo build')]
     path = stream(runs_dir, '20260815T100000Z', *lines[:2])
@@ -184,6 +185,28 @@ def test_a_limit_cuts_where_a_followed_pane_opens_and_not_what_it_follows(
 
     assert result.exit_code == 0
     assert emitted(result) == [lines[index] for index in wanted]
+
+
+def test_a_switch_gives_the_new_run_whole_rather_than_the_opening_limit_again(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--limit` bounds the pane's opening, and a run it switches to is not that.
+
+    The pane exists to narrate the run that just started, so re-applying the limit
+    drops the beginning of the thing it was opened for. How much goes is decided by
+    how long the previous run kept the loop busy, which is nothing the caller asked
+    for. GNU `tail -n 1 -F` prints a new file whole.
+
+    Five entries against `--limit 1`, because a one-entry second run passes whether
+    the limit is applied again or not.
+    """
+    opening = [ran('git status'), ran('go install')]
+    arriving = [ran(f'step {index}') for index in range(5)]
+    stream(runs_dir, '20260815T100000Z', *opening)
+    ticker = Ticker(stop_after=3, on_tick={1: lambda: stream(runs_dir, '20260815T110000Z', *arriving)})
+
+    result = follow(monkeypatch, ticker, '--limit', '1', '--json')
+
+    assert result.exit_code == 0
+    assert emitted(result) == [opening[1], *arriving]
 
 
 def test_a_named_run_is_followed_from_its_own_file_rather_than_from_the_newest(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
