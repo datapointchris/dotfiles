@@ -281,7 +281,14 @@ class DownloadCache:
         self.hits = 0
         self.downloads = 0
         if enabled:
-            cache_root().mkdir(parents=True, exist_ok=True)
+            try:
+                cache_root().mkdir(parents=True, exist_ok=True)
+            except OSError as unwritable:
+                # A root that cannot be made is a cache that can serve nothing and
+                # store nothing, so the build runs cold rather than warning per
+                # asset about the same directory.
+                log.warning(f'    could not open the download cache at {cache_root()}: {unwritable}')
+                self.enabled = False
 
     def digest_file(self, asset: BundleAsset) -> Path:
         cached = cache_path_for(asset.key)
@@ -314,9 +321,12 @@ class DownloadCache:
                 # count as use — otherwise a tool that never changes ages out
                 # precisely because the cache kept working for it.
                 now = None
-                for path in (cached, digest_file, self.status_file(asset)):
-                    if path.exists():
-                        os.utime(path, now)
+                try:
+                    for path in (cached, digest_file, self.status_file(asset)):
+                        if path.exists():
+                            os.utime(path, now)
+                except OSError as unwritable:
+                    log.warning(f'    could not refresh the cache entry for {destination.name}: {unwritable}')
                 self.hits += 1
                 return
             log.warning(f'    cached copy of {destination.name} is corrupt, re-downloading')
@@ -332,15 +342,17 @@ class DownloadCache:
         # Publish through a temp name: an interrupted build must not leave a
         # truncated file that a later build reads as complete. A cache that
         # cannot be written is a slow build, not a failed one, so this never
-        # aborts.
-        cached.parent.mkdir(parents=True, exist_ok=True)
+        # aborts — and the guard opens at the directory, because making one is
+        # itself a write into the cache and it is the write an asset nothing has
+        # cached before needs first.
         try:
+            cached.parent.mkdir(parents=True, exist_ok=True)
             partial = cached.with_name(f'{cached.name}.partial.{os.getpid()}')
             shutil.copyfile(destination, partial)
             partial.replace(cached)
             digest_file.write_text(github_release.sha256_of(cached) + '\n')
-        except OSError:
-            log.warning(f'    could not cache {destination.name}')
+        except OSError as unwritable:
+            log.warning(f'    could not cache {destination.name}: {unwritable}')
 
     def remember_status(self, asset: BundleAsset, status: str) -> None:
         """Written only once the asset is cached, so a status cannot outlive the
@@ -348,7 +360,10 @@ class DownloadCache:
         """
         if not self.enabled or not self.digest_file(asset).is_file():
             return
-        self.status_file(asset).write_text(status + '\n')
+        try:
+            self.status_file(asset).write_text(status + '\n')
+        except OSError as unwritable:
+            log.warning(f'    could not record the checksum verdict for {asset.filename}: {unwritable}')
 
     def status(self, asset: BundleAsset) -> str | None:
         if not self.enabled or not self.status_file(asset).is_file():
@@ -361,7 +376,12 @@ class DownloadCache:
     def evict(self, asset: BundleAsset) -> None:
         cached = cache_path_for(asset.key)
         for path in (cached, self.digest_file(asset), self.status_file(asset)):
-            path.unlink(missing_ok=True)
+            try:
+                path.unlink(missing_ok=True)
+            except OSError as unwritable:
+                # A caller evicts on its way to a refusal it states itself, so
+                # raising from here would replace that sentence with this one.
+                log.warning(f'    could not evict {path.name}: {unwritable}')
 
     def prune(self) -> None:
         """Drop entries not used for CACHE_RETENTION_DAYS.
@@ -373,10 +393,17 @@ class DownloadCache:
             return
         cutoff = dt.datetime.now().timestamp() - (CACHE_RETENTION_DAYS * 86400)
         for path in sorted(cache_root().rglob('*'), reverse=True):
-            if path.is_file() and path.stat().st_mtime < cutoff:
-                path.unlink(missing_ok=True)
-            elif path.is_dir() and not any(path.iterdir()):
-                path.rmdir()
+            # Per entry, because one locked directory says nothing about the
+            # rest: a guard around the walk would let the first refusal keep
+            # every later entry past its retention, behind a warning naming only
+            # the one that failed.
+            try:
+                if path.is_file() and path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
+                elif path.is_dir() and not any(path.iterdir()):
+                    path.rmdir()
+            except OSError as unwritable:
+                log.warning(f'    could not sweep {path.name}: {unwritable}')
 
 
 def installed_versions(document: Any) -> dict[str, str]:
@@ -1295,7 +1322,11 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     log.info(f'  Downloads: {cache.downloads}')
     if bundle.built_from:
         log.info(f'  Left out as already current: {len(bundle.current)}')
-    if use_cache:
+    # `cache.enabled` and never `use_cache`: the flag is what the run asked for
+    # and the attribute is what it got, and they part company when the root could
+    # not be opened. Reporting the flag prints `From cache: 0` beside a directory
+    # that does not exist, hundreds of lines below the one warning that said so.
+    if cache.enabled:
         log.info(f'  From cache: {cache.hits} ({cache_root()})')
     log.info('To use this bundle:')
     log.info('  1. Copy the tarball to ~/ or ~/dotfiles/ on the target machine')
@@ -1303,7 +1334,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     log.info('  3. Install:   dotfiles apply --machine <name> --offline')
 
     # After the tarball, so a build is never delayed or failed by housekeeping.
-    if use_cache:
+    if cache.enabled:
         cache.prune()
 
     return tarball_path

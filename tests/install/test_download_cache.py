@@ -322,12 +322,17 @@ def test_an_entry_appears_whole_or_not_at_all(cache_home, wire, tmp_path, monkey
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
-def test_a_cache_that_cannot_be_written_is_a_slow_build_rather_than_a_failed_one(cache_home, wire, tmp_path):
+def test_a_cache_that_cannot_be_written_is_a_slow_build_rather_than_a_failed_one(cache_home, wire, tmp_path, caplog):
     """A build must not fail over housekeeping it does not need to finish.
 
     The asset is still downloaded and still staged; only the copy into the
     cache is lost, and the next build pays for it in time rather than in a
     traceback.
+
+    The warning is asserted and not only the survival. Surviving is what the
+    `try` does and removing it turns this red; the sentence is the half that
+    makes a machine ten minutes slower forever into something anyone can
+    diagnose, and replacing the `log.warning` with `pass` moves nothing else.
     """
     wire()
     cache = DownloadCache(enabled=True)
@@ -336,27 +341,29 @@ def test_a_cache_that_cannot_be_written_is_a_slow_build_rather_than_a_failed_one
     destination = tmp_path / 'out' / ASSET.filename
 
     try:
-        cache.fetch(ASSET, destination, '  fd')
+        with caplog.at_level('WARNING'):
+            cache.fetch(ASSET, destination, '  fd')
     finally:
         entry_of(ASSET).parent.chmod(0o755)
 
     assert destination.read_bytes() == PAYLOAD
     assert cache.downloads == 1
     assert not entry_of(ASSET).exists()
+    assert f'could not cache {destination.name}' in caplog.text
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
-def test_the_write_guard_covers_the_copy_and_not_the_directory_the_copy_needs(cache_home, wire, tmp_path):
-    """Measured rather than endorsed, and the sibling above is why.
+def test_the_write_guard_covers_the_directory_the_copy_needs_as_well_as_the_copy(cache_home, wire, tmp_path, caplog):
+    """The sibling above is the same machine one directory deeper.
 
-    The two are the same machine — a cache root nobody can write into — and
-    differ only in whether this asset's directory happens to exist from an
-    earlier build. `cached.parent.mkdir` sits outside the try that catches
-    OSError, so on the first asset of a fresh cache the build dies with an
-    uncaught PermissionError instead of the warning the second one gets.
+    Both are a cache root nobody can write into, and they differ only in
+    whether this asset's directory survives from an earlier build. Making that
+    directory is itself a write into the cache, so it belongs under the same
+    guard as the copy it exists for — otherwise whether a build survives an
+    unwritable cache depends on which assets happen to have been fetched before.
 
-    The download itself already succeeded, which is what makes it worth
-    pinning: the bytes are in hand and the build ends anyway.
+    The download has already succeeded by this point, which is what makes the
+    difference worth pinning: the bytes are in hand either way.
     """
     wire()
     cache = DownloadCache(enabled=True)
@@ -364,13 +371,38 @@ def test_the_write_guard_covers_the_copy_and_not_the_directory_the_copy_needs(ca
     destination = tmp_path / 'out' / ASSET.filename
 
     try:
-        with pytest.raises(PermissionError):
+        with caplog.at_level('WARNING'):
             cache.fetch(ASSET, destination, '  fd')
     finally:
         cache_home.chmod(0o755)
 
     assert destination.read_bytes() == PAYLOAD
     assert cache.downloads == 1
+    assert not entry_of(ASSET).exists()
+    assert f'could not cache {destination.name}' in caplog.text
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
+def test_a_cache_root_that_cannot_be_made_leaves_a_cold_build_rather_than_no_build(tmp_path, monkeypatch, caplog):
+    """`__init__` is the one place that can answer once for every asset.
+
+    A root that cannot be created serves nothing and stores nothing, so the
+    alternative to disabling here is the same warning repeated per asset for a
+    directory that will never exist.
+    """
+    unwritable = tmp_path / 'locked'
+    unwritable.mkdir()
+    unwritable.chmod(0o555)
+    monkeypatch.setenv('XDG_CACHE_HOME', str(unwritable / 'cache'))
+
+    try:
+        with caplog.at_level('WARNING'):
+            cache = DownloadCache(enabled=True)
+    finally:
+        unwritable.chmod(0o755)
+
+    assert cache.enabled is False
+    assert 'could not open the download cache' in caplog.text
 
 
 def test_the_recorded_digest_is_the_value_a_checksums_file_carries(cache_home, wire, tmp_path):
@@ -476,9 +508,40 @@ def test_a_tool_that_never_changes_does_not_age_out_because_the_cache_kept_worki
     assert entry_of(wanted).parent.parent.is_dir(), 'a directory something still lives under is left alone'
 
 
+def test_a_hit_that_cannot_restamp_its_entry_serves_the_bytes_and_says_so(cache_home, wire, tmp_path, monkeypatch, caplog):
+    """The sibling above is what the restamp is for, and this is it failing.
+
+    Reached by patching `os.utime` rather than by a mode, because the caller
+    owns these files and `utime` succeeds for an owner whatever the directory
+    permits — a read-only filesystem is the state that produces it. Without a
+    test the guard is unexecuted, and the consequence it protects is the one
+    above inverted: an entry that ages from its download date, so the sweep
+    drops precisely the tool that never changes.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    an_entry_and_its_digest(cache, ASSET)
+    destination = tmp_path / 'out' / ASSET.filename
+
+    def refuse(path, times):
+        raise PermissionError(30, 'Read-only file system')
+
+    monkeypatch.setattr(create_bundle.os, 'utime', refuse)
+    with caplog.at_level('WARNING'):
+        cache.fetch(ASSET, destination, '  fd')
+
+    assert cache.hits == 1, 'the entry is still served; only its clock went unmoved'
+    assert destination.read_bytes() == STALE
+    assert f'could not refresh the cache entry for {destination.name}' in caplog.text
+
+
 def test_a_cache_that_was_never_created_is_swept_without_complaint(cache_home):
-    """`build` prunes unconditionally at the end, including a run with
-    `--no-cache`, where the directory does not exist at all.
+    """The sweep is safe on a cache that does not exist, which `--no-cache` and
+    a root that could not be opened both produce.
+
+    `build` skips it for either, so this is the guard rather than the path — and
+    it is the guard that lets `prune` be called from anywhere without each caller
+    first asking whether there is a directory.
 
     The enabled sweep beside it is the control. An absent root is what a fresh
     `tmp_path` looks like too, so on its own the first assertion is satisfied by
@@ -491,6 +554,39 @@ def test_a_cache_that_was_never_created_is_swept_without_complaint(cache_home):
     DownloadCache(enabled=True).prune()
 
     assert cache_home.is_dir(), 'enabling is what creates the root, and the sweep leaves it'
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
+def test_one_entry_the_sweep_cannot_delete_does_not_take_the_rest_of_the_sweep_with_it(cache_home, wire, tmp_path, caplog):
+    """Two entries, both past retention, and only one of them locked.
+
+    One entry cannot tell the two failures apart: a sweep that warned and
+    carried on and a sweep that warned and gave up both leave the locked entry
+    on disk. The second entry is the whole assertion — it is deletable, it is
+    walked after the locked one, and it survives only if the guard sits around
+    the iteration.
+
+    The walk is `reverse=True`, so `zzz` is refused before `aaa` is reached.
+    """
+    locked = create_bundle.github_asset('zzz/tool', 'v1', 'asset.tar.gz')
+    sweepable = create_bundle.github_asset('aaa/tool', 'v1', 'asset.tar.gz')
+    wire({locked.url: PAYLOAD, sweepable.url: PAYLOAD})
+    cache = DownloadCache(enabled=True)
+    for asset in (locked, sweepable):
+        cache.fetch(asset, tmp_path / 'out' / asset.key[1] / asset.filename, f'  {asset.key[1]}')
+        age(entry_of(asset), create_bundle.CACHE_RETENTION_DAYS + 1)
+        age(cache.digest_file(asset), create_bundle.CACHE_RETENTION_DAYS + 1)
+    entry_of(locked).parent.chmod(0o555)
+
+    try:
+        with caplog.at_level('WARNING'):
+            cache.prune()
+    finally:
+        entry_of(locked).parent.chmod(0o755)
+
+    assert entry_of(locked).exists(), 'the build ends rather than the entry'
+    assert not entry_of(sweepable).exists(), 'a guard around the walk would keep this one past its retention forever'
+    assert 'could not sweep' in caplog.text
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -558,6 +654,34 @@ def test_eviction_takes_the_bytes_the_digest_and_the_verdict_together(cache_home
     cache.fetch(ASSET, destination, '  fd')
     assert (cache.hits, cache.downloads) == (0, 2)
     assert len(recorder.calls) == 2
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason='root ignores the directory permission this test removes')
+def test_a_sidecar_the_cache_will_not_take_is_a_warning_on_either_side(cache_home, wire, tmp_path, caplog):
+    """`create_bundle` evicts on its way to a `BundleError` it states itself, so
+    an OSError raised out of the eviction would replace the mismatch it is
+    reporting with a permissions traceback.
+
+    Both warnings are asserted, because both guards survive being replaced with
+    a bare `pass` under the two assertions below them — the bytes are still
+    there either way, and the verdict is unwritten either way.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+    entry_of(ASSET).parent.chmod(0o555)
+
+    try:
+        with caplog.at_level('WARNING'):
+            cache.remember_status(ASSET, 'verified')
+            cache.evict(ASSET)
+    finally:
+        entry_of(ASSET).parent.chmod(0o755)
+
+    assert cache.status(ASSET) is None, 'the verdict never reached the disk'
+    assert entry_of(ASSET).exists(), 'and the bytes it would have described are still there'
+    assert f'could not record the checksum verdict for {ASSET.filename}' in caplog.text
+    assert f'could not evict {ASSET.filename}' in caplog.text
 
 
 def test_evicting_something_that_was_never_cached_is_not_an_error(cache_home):
