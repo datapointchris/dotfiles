@@ -225,6 +225,41 @@ class TestListing:
         assert ran.document['bundles'] == [f'{NEWEST}.tar.gz']
         assert ran.document['total'] == 2
 
+    def test_a_limit_of_zero_asks_for_no_bundles_and_gets_none(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
+    ) -> None:
+        """One meaning for `--limit 0` across every verb that takes it.
+
+        `report list` answers this way and `test_a_limit_of_zero_lists_nothing`
+        holds it there. This verb read zero as "all" under a help row that looked
+        the same, so a caller computing its own bound — `--limit "$(remaining)"` —
+        got the whole shelf at the moment it asked for none of it.
+
+        `total` still counts what is on the shelf, because the bound is what was
+        asked for and not what is there.
+        """
+        published(server, OLDER)
+        published(server, NEWEST)
+
+        ran = cli('bundle', 'list', '--limit', '0', '--json')
+
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert ran.document['bundles'] == []
+        assert ran.document['total'] == 2
+
+    def test_a_negative_limit_is_a_usage_error_rather_than_a_slice(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
+    ) -> None:
+        """`listed[:-1]` drops the newest bundle, which is the one a reader asking
+        for a listing wants most, and it exits 0 while doing it."""
+        published(server, OLDER)
+        published(server, NEWEST)
+
+        ran = cli('bundle', 'list', '--limit', '-1', '--json', catch_exceptions=True)
+
+        assert ran.exit_code == ExitCode.USAGE
+        assert ran.document is None
+
 
 class TestDownloading:
     def test_the_newest_arrives_in_the_cache_and_is_not_staged(

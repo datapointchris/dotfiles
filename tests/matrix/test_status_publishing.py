@@ -501,6 +501,32 @@ class TestFetching:
         assert fetched.exit_code == ExitCode.CONVERGED
         assert (paths.status_cache() / f'{status_commands.PREFIX}20260909T120000Z-{MACHINE}-abcd1234.json').is_file()
 
+    def test_a_limit_of_zero_asks_for_no_statuses_and_a_negative_one_is_a_usage_error(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
+    ) -> None:
+        """One meaning for `--limit 0` across every verb that takes it.
+
+        This verb read zero as "all" under a help row matching the ones that read
+        it as none, so a caller computing its own bound got the whole shelf at the
+        moment it asked for nothing. A negative is the other end of the same
+        conflation: `listed[:-1]` drops the newest status and exits 0.
+
+        `total` still counts the shelf either way, because the bound says what was
+        asked for and not what is there.
+        """
+        shelf(server).mkdir(parents=True)
+        for stamp in ('20260101T010000Z', '20260909T120000Z'):
+            (shelf(server) / f'{status_commands.PREFIX}{stamp}-{MACHINE}-abcd1234.json').write_text('{"version": 2}')
+
+        none = cli('status', 'list', '--limit', '0', '--json')
+        negative = cli('status', 'list', '--limit', '-1', '--json', catch_exceptions=True)
+
+        assert none.exit_code == ExitCode.CONVERGED
+        assert none.document['statuses'] == []
+        assert none.document['total'] == 2
+        assert negative.exit_code == ExitCode.USAGE
+        assert negative.document is None
+
     def test_print_path_puts_the_path_alone_on_stdout(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """So the networked side is a substitution rather than a copy-paste, the
         same handoff `bundle create --print-path` already offers."""
