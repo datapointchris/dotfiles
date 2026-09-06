@@ -64,8 +64,11 @@ extraction. An entry whose upstream cannot supply one declares that in
 `packages.yml`; `catalog.CHECKSUM_STATES` says why the exceptions are separate
 values.
 
-Whether a declared exception is still true is measured against live releases
-rather than written down here:
+The declaration is not this section's alone. `go_tools`, `cargo_packages` and
+`winget_packages` carry the same field for the assets a bundle downloads for
+them, and [Offline Bundles](offline-bundles.md) is where that side is described.
+The command below measures all four, so its count is larger than this page's
+subject.
 
 ```bash
 uv run pytest tests/install/test_release_urls.py --e2e -k verifies

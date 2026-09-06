@@ -119,7 +119,51 @@ being an exception.
 
 The two exceptions are separate values because they are separate upstream facts;
 `github_release.Verification` carries the same distinction and says why.
+
+**The subject is the file that was downloaded, never the file that was staged.**
+`create_bundle.verify_against_upstream` runs before `extract_go_binary` pulls a
+binary out of an archive, before `repackage_zip_as_tarball` writes a tarball in a
+zip's place, and before `extract_windows_exe` opens a Windows zip. So an extracted
+or repacked entry answers the same question as one staged whole, and a digest
+taken after any of those steps would be a digest of the bundler's own output.
+
+Four sections carry the field, and `asset_fields` is what separates them: the three
+naming their asset in `packages.yml`, plus `github_releases`, whose asset names
+live in `providers/releases.py`. Each section's own docstring says only what
+differs there — which file is downloaded, and what reads the declaration.
 """
+
+
+def checksum_problems(entry: Entry, declared: str) -> tuple[str, ...]:
+    """Every fault in one row's checksum declaration.
+
+    A helper rather than a shared base class. The four sections carrying the
+    field differ in everything else a base would have to hold — where the release
+    coordinate lives, whether an asset name is data or code, what consumes the
+    result — so the class would be a lid over one string.
+
+    `declared` is passed rather than read off `entry`, because the field is not
+    on the base and a union of the four classes here is a fifth place a fifth
+    section would have to be added.
+
+    An unrecognized word returns before the exception rule, so a typo is reported
+    once as a typo. Reporting it twice called it an exception as well, and told a
+    reader to remove a word whose remedy is to spell it.
+
+    The exception rule reaches only a section that names its assets in
+    `packages.yml`. `github_releases` names its in `providers/releases.py`, so the
+    declaration cannot say whether a row has an asset and this has nothing to
+    measure there.
+    """
+    if declared not in CHECKSUM_STATES:
+        return (f"declares 'checksum' as {declared!r}, which is not one of {', '.join(sorted(CHECKSUM_STATES))}",)
+    if not entry.asset_fields or entry.names_its_asset or declared == CHECKSUM_REQUIRED:
+        return ()
+    return (
+        f"declares 'checksum' as {declared!r} while naming no release asset a bundle can download. "
+        f'Remove it, or name the asset so the exception has a subject.',
+    )
+
 
 VERSION_FROM_RELEASES = 'releases'
 VERSION_FROM_TAGS = 'tags'
@@ -262,6 +306,36 @@ class Entry:
     declared_in: ClassVar[str] = 'packages.yml'
     """Which declaration file holds this section, so an error names the file a
     reader has to open rather than the one most sections happen to live in."""
+
+    asset_fields: ClassVar[tuple[str, ...]] = ()
+    """The fields naming this section's release asset in `packages.yml`.
+
+    Empty almost everywhere, because a package manager fetches its own bytes and
+    there is no asset to name. `github_releases` downloads one and is still empty
+    here: its names live in `providers/releases.py`, because those entries defeat
+    any placeholder vocabulary between them.
+
+    The field names rather than a boolean, so one declaration answers three
+    questions — whether the section names its asset, whether a given row named
+    all of it, and which field a half-named row is missing. A fourth such section
+    sets this and gets `names_its_asset`, the pair fault below and the bundled
+    corpus in `tests/install/test_release_urls.py` without writing any of them.
+    """
+
+    @property
+    def names_its_asset(self) -> bool:
+        """Whether this row names the release asset a bundle would download for it.
+
+        False wherever `asset_fields` is empty, which is every section whose
+        asset a bundle cannot name from the declaration. `getattr` carries no
+        default on purpose: a name in `asset_fields` that is not a field raises
+        here rather than answering False, which is the quiet direction.
+
+        `create_bundle.bundleable` filters on this rather than on the fields
+        themselves, so the bundler and the corpus measuring the checksum
+        declaration cannot come to disagree about which rows a bundle reaches.
+        """
+        return bool(self.asset_fields) and all(getattr(self, name) for name in self.asset_fields)
 
     @property
     def executable(self) -> str:
@@ -441,10 +515,7 @@ class GithubRelease(Entry):
         return owner_of(self.repo)
 
     def problems(self) -> tuple[str, ...]:
-        if self.checksum in CHECKSUM_STATES:
-            return Entry.problems(self)
-        allowed = ', '.join(sorted(CHECKSUM_STATES))
-        return (f"declares 'checksum' as {self.checksum!r}, which is not one of {allowed}", *Entry.problems(self))
+        return (*checksum_problems(self, self.checksum), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -492,15 +563,26 @@ class CargoPackage(Entry):
     """
 
     section: ClassVar[str] = 'cargo_packages'
+    asset_fields: ClassVar[tuple[str, ...]] = ('github_repo', 'binary_pattern')
 
     github_repo: str = ''
     binary_pattern: str = ''
     linux_target: str = ''
     darwin_target: str = ''
 
+    checksum: str = CHECKSUM_REQUIRED
+    """`CHECKSUM_STATES`, asked of the archive a bundle downloads for this crate.
+
+    `cargo binstall` fetches its own bytes online and verifies nothing this can
+    describe, so the declaration describes the offline channel alone.
+    """
+
     @property
     def owner(self) -> str | None:
         return owner_of(self.github_repo) if self.github_repo else None
+
+    def problems(self) -> tuple[str, ...]:
+        return (*checksum_problems(self, self.checksum), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -537,6 +619,7 @@ class WingetPackage(Entry):
     """
 
     section: ClassVar[str] = 'winget_packages'
+    asset_fields: ClassVar[tuple[str, ...]] = ('repo', 'asset')
 
     winget: str
     """The Microsoft Store id, which is not derivable from `repo`: ripgrep is
@@ -552,6 +635,14 @@ class WingetPackage(Entry):
     The tag is not known until the release is looked up, so the asset carries
     `{version}` or `{version_num}` where the publisher stamps one in — the tag as
     written and the tag from its first digit on."""
+
+    checksum: str = CHECKSUM_REQUIRED
+    """`CHECKSUM_STATES`, asked of the Windows asset a bundle downloads.
+
+    The Store installs and verifies its own way, so this describes the offline
+    channel — and the machine that channel exists for is the one whose network
+    blocks the Store outright, leaving no second route to compare against.
+    """
 
     @property
     def filename(self) -> str:
@@ -571,18 +662,33 @@ class WingetPackage(Entry):
     def owner(self) -> str | None:
         return owner_of(self.repo)
 
+    def problems(self) -> tuple[str, ...]:
+        return (*checksum_problems(self, self.checksum), *Entry.problems(self))
+
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class GoTool(Entry):
     section: ClassVar[str] = 'go_tools'
+    asset_fields: ClassVar[tuple[str, ...]] = ('github_repo', 'binary_pattern')
 
     package: str
     github_repo: str = ''
     binary_pattern: str = ''
 
+    checksum: str = CHECKSUM_REQUIRED
+    """`CHECKSUM_STATES`, asked of the archive a bundle downloads for this tool.
+
+    `go install` reaches the module proxy and verifies through Go's own checksum
+    database, a different mechanism on a different artifact, so the declaration
+    describes the release asset alone.
+    """
+
     @property
     def owner(self) -> str | None:
         return owner_of(self.github_repo) if self.github_repo else owner_of(self.package)
+
+    def problems(self) -> tuple[str, ...]:
+        return (*checksum_problems(self, self.checksum), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)

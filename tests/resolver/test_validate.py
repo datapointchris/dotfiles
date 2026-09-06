@@ -25,6 +25,20 @@ from dotfiles import validate
 from dotfiles.validate import Severity
 
 LINUX = {'machine': 'test-machine', 'platform': 'linux'}
+
+WINDOWS = {
+    'machine': 'test-machine',
+    'coordinates': {
+        'package_manager': 'winget',
+        'os_family': 'windows',
+        'display_stack': 'none',
+        'host': 'native',
+        'network_trust': 'nonfleet',
+        'capacity': 'workstation',
+    },
+}
+"""The axes written out, because Windows has no `platform:` bundle — the one real
+Windows manifest declares them the same way and says why."""
 """Every manifest needs coordinates to load at all, which is `machine.py`'s rule
 and not this module's. A manifest that will not load is reported as such and its
 other questions wait for the next run — the same short-circuit the catalog gets,
@@ -170,6 +184,41 @@ def test_a_pattern_with_no_repo_to_expand_it_against_is_a_warning(tmp_path: Path
     found = validate.declaration(root)
 
     assert messages(found, Severity.WARNING) == ["'ghost' declares binary_pattern but no github_repo, so no asset URL can be built"]
+    assert validate.errors(found) == ()
+
+
+def test_a_repo_with_no_pattern_to_expand_is_the_same_warning(tmp_path: Path) -> None:
+    """The other direction, which a `github_repo`/`binary_pattern` protocol read
+    one way only. A row keeping its repo and losing its pattern is exactly what a
+    bundle cannot stage, and the corpus that would have reported the row builds
+    its own membership from these fields — so the row leaves the measurement
+    instead of failing it, and this is what says so."""
+    root = tree(
+        tmp_path,
+        packages={'cargo_packages': [{'name': 'ghost', 'github_repo': 'someone/ghost'}]},
+        manifests={'test-machine': {**LINUX, 'cargo_packages': ['ghost']}},
+    )
+
+    found = validate.declaration(root)
+
+    assert messages(found, Severity.WARNING) == ["'ghost' declares github_repo but no binary_pattern, so no asset URL can be built"]
+    assert validate.errors(found) == ()
+
+
+def test_a_winget_row_naming_half_its_pair_is_reached_too(tmp_path: Path) -> None:
+    """`winget_packages` spells its pair `repo`/`asset`, which the two-field
+    protocol could not see at all. Membership comes from `Entry.asset_fields`, so
+    the section is covered by declaring its pair rather than by anyone widening
+    this check."""
+    root = tree(
+        tmp_path,
+        packages={'winget_packages': [{'name': 'ghost', 'winget': 'Some.Ghost', 'repo': 'someone/ghost', 'asset': ''}]},
+        manifests={'test-machine': {**WINDOWS, 'winget_packages': ['ghost']}},
+    )
+
+    found = validate.declaration(root)
+
+    assert messages(found, Severity.WARNING) == ["'ghost' declares repo but no asset, so no asset URL can be built"]
     assert validate.errors(found) == ()
 
 

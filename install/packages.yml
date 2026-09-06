@@ -1139,6 +1139,10 @@ custom_installers:
 # Installed by src/dotfiles/providers/cargo.py, which builds the argv.
 # Prebuilt release binaries where a crate publishes one for the target, and a
 # source build where it does not — see docs/learnings/cargo-binstall-needs-release-binaries.md
+#
+# `checksum:` is the declaration `github_releases` above carries, vocabulary and
+# all. Here its subject is the archive an offline bundle downloads, and nothing
+# reads it on a `cargo binstall` run.
 
 cargo_packages:
   # Node version manager. Reads .nvmrc, and unlike nvm it is a binary rather
@@ -1159,6 +1163,7 @@ cargo_packages:
     binary_pattern: "fnm-{target}.zip"
     linux_target: linux
     darwin_target: macos
+    checksum: unpublished
     tags: [cli, development]
 
   - name: ripgrep
@@ -1174,6 +1179,7 @@ cargo_packages:
     description: cat with syntax highlighting
     github_repo: sharkdp/bat
     binary_pattern: "bat-{version}-{target}.tar.gz"
+    checksum: unpublished
     tags: [cli, files]
 
   - name: fd-find
@@ -1181,6 +1187,7 @@ cargo_packages:
     description: modern find replacement
     github_repo: sharkdp/fd
     binary_pattern: "fd-{version}-{target}.tar.gz"
+    checksum: unpublished
     tags: [cli, search, files]
 
   - name: eza
@@ -1188,6 +1195,7 @@ cargo_packages:
     description: modern ls replacement
     github_repo: eza-community/eza
     binary_pattern: "eza_{target}.tar.gz"
+    checksum: unpublished
     tags: [cli, files]
 
   - name: zoxide
@@ -1196,6 +1204,7 @@ cargo_packages:
     github_repo: ajeetdsouza/zoxide
     binary_pattern: "zoxide-{version_num}-{target}.tar.gz"
     linux_target: x86_64-unknown-linux-musl
+    checksum: unpublished
     tags: [cli]
 
   - name: git-delta
@@ -1203,6 +1212,7 @@ cargo_packages:
     description: syntax-highlighting git diff
     github_repo: dandavison/delta
     binary_pattern: "delta-{version}-{target}.tar.gz"
+    checksum: unpublished
     tags: [cli, git]
 
   - name: oxker
@@ -1210,6 +1220,7 @@ cargo_packages:
     description: Docker container TUI
     github_repo: mrjackwills/oxker
     binary_pattern: "oxker_{platform}_{arch}.tar.gz"
+    checksum: unpublished
     tags: [cli, tui, containers]
 
   - name: broot
@@ -1217,6 +1228,7 @@ cargo_packages:
     description: Interactive directory tree navigator with fuzzy search
     github_repo: Canop/broot
     binary_pattern: "broot_{version_num}.zip"
+    checksum: unpublished
     tags: [cli, tui, files, navigation]
 
   # The generic watcher, deliberately not a purpose-built live-diff tool. The
@@ -1281,6 +1293,10 @@ cargo_packages:
 # `catalog.WingetPackage` says why this is a section of its own rather than a
 # column, and why `asset` is data here where `github_releases` keeps its asset
 # names in code.
+#
+# `checksum:` is the declaration `github_releases` above carries, vocabulary and
+# all. Here its subject is the Windows asset an offline bundle downloads, and
+# nothing reads it on a machine that can reach the Store.
 
 winget_packages:
   - name: jq
@@ -1288,6 +1304,7 @@ winget_packages:
     winget: jqlang.jq
     repo: jqlang/jq
     asset: jq-windows-amd64.exe
+    checksum: unpublished
     description: JSON processor
     tags: [cli, json]
 
@@ -1312,6 +1329,7 @@ winget_packages:
     winget: sharkdp.bat
     repo: sharkdp/bat
     asset: "bat-{version}-x86_64-pc-windows-msvc.zip"
+    checksum: unpublished
     description: cat with syntax highlighting
     tags: [cli, files]
 
@@ -1320,6 +1338,7 @@ winget_packages:
     winget: sharkdp.fd
     repo: sharkdp/fd
     asset: "fd-{version}-x86_64-pc-windows-msvc.zip"
+    checksum: unpublished
     description: modern find replacement
     tags: [cli, search, files]
 
@@ -1328,6 +1347,7 @@ winget_packages:
     winget: eza-community.eza
     repo: eza-community/eza
     asset: eza.exe_x86_64-pc-windows-gnu.zip
+    checksum: unpublished
     description: modern ls replacement
     tags: [cli, files]
 
@@ -1336,6 +1356,7 @@ winget_packages:
     winget: ajeetdsouza.zoxide
     repo: ajeetdsouza/zoxide
     asset: "zoxide-{version_num}-x86_64-pc-windows-msvc.zip"
+    checksum: unpublished
     description: Smarter cd command
     tags: [cli]
 
@@ -1344,6 +1365,7 @@ winget_packages:
     winget: dandavison.delta
     repo: dandavison/delta
     asset: "delta-{version}-x86_64-pc-windows-msvc.zip"
+    checksum: unpublished
     description: syntax-highlighting git diff
     tags: [cli, git]
 
@@ -1575,6 +1597,11 @@ git_uv_tools:
 # Installed via: go install <package>@latest
 # Managed by Go toolchain (installed in Phase 2)
 # These are Go CLI tools installed globally
+#
+# `checksum:` is the declaration `github_releases` above carries, vocabulary and
+# all. Here its subject is the archive an offline bundle downloads, and nothing
+# reads it on a `go install` run, which verifies through Go's own checksum
+# database instead.
 
 go_tools:
   - name: task
@@ -1587,6 +1614,7 @@ go_tools:
     package: github.com/cheat/cheat/cmd/cheat
     github_repo: cheat/cheat
     binary_pattern: "cheat-{os}-{go_arch}.gz"
+    checksum: unpublished
     description: Interactive cheatsheet CLI
 
   - name: terraform-docs
@@ -1623,6 +1651,7 @@ go_tools:
     package: mvdan.cc/gofumpt
     github_repo: mvdan/gofumpt
     binary_pattern: "gofumpt_{version}_{os}_{go_arch}"
+    checksum: unpublished
     description: Stricter gofmt formatter for Go code
 
   - name: golangci-lint
@@ -1635,6 +1664,7 @@ go_tools:
     package: github.com/dundee/gdu/v5/cmd/gdu
     github_repo: dundee/gdu
     binary_pattern: "gdu_{os}_{go_arch}.tgz"
+    checksum: unlisted
     description: Fast disk usage analyzer with interactive TUI
 
   - name: sesh
@@ -1695,6 +1725,7 @@ go_tools:
     package: github.com/Achno/gowall
     github_repo: Achno/gowall
     binary_pattern: "gowall-{go_arch}-{os}.tar.gz"
+    checksum: unpublished
     description: Recolor images to a theme palette (used for theme wallpaper backgrounds)
 
   # {Os_mac} exists for this asset naming: upstream capitalizes the kernel name
@@ -1725,6 +1756,7 @@ go_tools:
     package: github.com/docker/docker-language-server/cmd/docker-language-server
     github_repo: docker/docker-language-server
     binary_pattern: "docker-language-server-{os}-{go_arch}-{version}"
+    checksum: unpublished
     description: Dockerfile and compose LSP
 
 # ================================================================

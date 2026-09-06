@@ -20,24 +20,32 @@ Linux_x86_64 while every release published linux_x86_64.
 Run with: pytest tests/install/test_release_urls.py --e2e
 """
 
+import ast
+import dataclasses as dc
+import inspect
 import json
 import tempfile
 from collections.abc import Callable
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Any
 
 import httpx2
 import pytest
 
 from dotfiles import catalog
+from dotfiles import create_bundle
 from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
+from dotfiles.providers import cargo
 from dotfiles.providers import ghrelease
+from dotfiles.providers import gotool
 from dotfiles.providers import releases as providers
+from dotfiles.providers import winget
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGES_YML = REPO_ROOT / 'install' / 'packages.yml'
@@ -52,6 +60,18 @@ OS_TARGETS = {
     OSFamily.LINUX: (('linux', 'x86_64'),),
 }
 
+
+def declaration() -> catalog.Catalog:
+    """This checkout's `packages.yml`, never the machine's.
+
+    A load with no path resolves through `DOTFILES_DIR`, and `.zshenv` exports
+    that to the primary checkout on every machine here. A bare load run from a
+    worktree therefore measures what `main` declares while the branch under test
+    sits unread — green against a file the change never touched.
+    """
+    return catalog.load(PACKAGES_YML)
+
+
 Case = tuple[str, str, str]
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
@@ -60,7 +80,7 @@ not vary by target for any of them, and every declared tool covers this one."""
 
 
 def declared_releases() -> set[str]:
-    return {entry.name for entry in catalog.load().section('github_releases')}
+    return {entry.name for entry in declaration().section('github_releases')}
 
 
 def build_corpus() -> list[Case]:
@@ -73,7 +93,7 @@ def build_corpus() -> list[Case]:
     of that grammar, and it is the copy that would be wrong the first time a
     machine spells its subscription the other way.
     """
-    declared = catalog.load()
+    declared = declaration()
     cases: set[Case] = set()
     for name in machines.names(REPO_ROOT):
         machine = machines.load(name, REPO_ROOT)
@@ -88,7 +108,7 @@ CORPUS = build_corpus()
 
 def resolve_url(tool: str, os_name: str, arch: str) -> tuple[str, str, str]:
     """What this repo would download for one tool on one platform."""
-    entry = catalog.load(PACKAGES_YML).find('github_releases', tool)
+    entry = declaration().find('github_releases', tool)
     assert isinstance(entry, catalog.GithubRelease)
 
     tag = ghrelease.resolve_tag(entry)
@@ -197,7 +217,7 @@ class TestCorpus:
         daemon; `supersedes` is what stops a second copy of that daemon running
         beside it out of Homebrew or pacman — and a machine carrying both shares one
         config directory and one port between them."""
-        declared = {entry.name: entry for entry in catalog.load().section('github_releases')}
+        declared = {entry.name: entry for entry in declaration().section('github_releases')}
 
         assert all(declared[name].supersedes for name in providers.AGENTS)
 
@@ -273,7 +293,7 @@ def _fleet_install_urls() -> list[tuple[str, str]]:
     vendor decides what that path serves, and pretending otherwise would fail the
     test for something no commit here can fix.
     """
-    rows = catalog.load(PACKAGES_YML).section('custom_installers')
+    rows = declaration().section('custom_installers')
     entries = [entry for entry in rows if isinstance(entry, catalog.CustomInstaller)]
     assert len(entries) == len(rows), 'every custom_installers row loads as a CustomInstaller'
 
@@ -342,7 +362,7 @@ STATE_FOR_DECLARATION = {
 
 
 def declared_checksum_states() -> dict[str, str]:
-    rows = catalog.load(PACKAGES_YML).section('github_releases')
+    rows = declaration().section('github_releases')
     states = {entry.name: entry.checksum for entry in rows if isinstance(entry, catalog.GithubRelease)}
     assert len(states) == len(rows), 'every github_releases row loads as a GithubRelease'
     return states
@@ -393,20 +413,201 @@ def test_every_declared_checksum_state_is_one_the_engine_acts_on():
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def bundled_entries() -> list[tuple[str, str]]:
-    """Every `cargo_packages`/`go_tools` entry a bundle can stage, by section.
+def sections_staged_from_a_declared_asset() -> set[str]:
+    """Sections whose asset name is data in `packages.yml` rather than a function.
 
-    These are the sections whose asset naming is `binary_pattern` in
-    `packages.yml` rather than a function in `providers/releases.py`, which is
-    why the corpus above never covered them — and why `watchexec-cli` spelled
-    `{version}` where cargo-dist publishes the bare number, 404ing every bundle
-    build for as long as nothing asked.
+    Read off `catalog.Entry.asset_fields`, so a fourth section spelling its assets
+    in the declaration joins the corpus below by naming those fields rather than
+    by someone remembering to widen a tuple here.
+
+    `github_releases` is verified too and is deliberately not one of these. Its
+    asset names live in `providers/releases.py`, and the matrix at the top of this
+    file is the corpus that asks them.
     """
-    declared = catalog.load()
+    return {section for section, entry_class in catalog.SECTIONS.items() if entry_class.asset_fields}
+
+
+def sections_declaring_a_checksum() -> set[str]:
+    """Sections whose rows can say what upstream publishes for their asset.
+
+    Read off the dataclass fields, which is a different source from the bundler's
+    own code — so the two can be compared rather than one derived from the other.
+    """
+    return {section for section, entry_class in catalog.SECTIONS.items() if 'checksum' in {f.name for f in dc.fields(entry_class)}}
+
+
+DISPATCHER = 'build'
+"""The `create_bundle` function that calls every staging function.
+
+The walk below stops here, and it is not an optimization. `build` dispatches *to*
+the staging functions, so following a call to it inverts the direction the walk is
+asking about and every staging function reaches every other one — 125 reachable
+names from `add_github_releases` against 13 from `add_install_scripts`.
+
+A name-keyed call graph reaches it by two routes and both matter.
+`add_github_releases` binds a local `build` from `releases.ASSETS` and calls it,
+which this cannot tell from the module function; and a genuine call upward would
+do the same thing deliberately.
+"""
+
+
+def module_functions() -> dict[str, ast.FunctionDef]:
+    """`create_bundle`'s top-level functions, by name, parsed once per call."""
+    parsed = ast.parse(inspect.getsource(create_bundle))
+    return {node.name: node for node in parsed.body if isinstance(node, ast.FunctionDef)}
+
+
+def sections_named_under(node: ast.AST) -> list[str]:
+    """Every section a `plan.for_section('x')` call beneath `node` names."""
+    return [
+        found.args[0].value
+        for found in ast.walk(node)
+        if isinstance(found, ast.Call)
+        and isinstance(found.func, ast.Attribute)
+        and found.func.attr == 'for_section'
+        and found.args
+        and isinstance(found.args[0], ast.Constant)
+        and isinstance(found.args[0].value, str)
+    ]
+
+
+def dispatched_sections() -> dict[str, str]:
+    """`{section: staging function}` for every section `create_bundle.build` stages.
+
+    Parsed rather than matched by pattern. A regex over the source binds to the
+    innermost call before `plan.for_section(`, so wrapping that argument in any
+    helper rebinds it and the section changes hands with nothing going red —
+    `bundleable` is the obvious wrapper and lives in the same module. The
+    statement-level call is the outermost by construction.
+
+    The count assertion is the floor: a section staged by a call this walk does
+    not reach is a section the guards below never visit, which is the failure that
+    reads as coverage.
+    """
+    found = {}
+    for statement in ast.walk(module_functions()[DISPATCHER]):
+        if not isinstance(statement, ast.Expr) or not isinstance(statement.value, ast.Call):
+            continue
+        call = statement.value
+        if not isinstance(call.func, ast.Name):
+            continue
+        for section in sections_named_under(call):
+            found[section] = call.func.id
+
+    asked = len(sections_named_under(module_functions()[DISPATCHER]))
+    assert len(found) == asked, f'{asked} sections are staged and this walk reached {len(found)}'
+    return found
+
+
+def calls_reachable_from(start: str, functions: dict[str, ast.FunctionDef]) -> set[str]:
+    """Every function name reachable from `start` within `create_bundle`.
+
+    Transitive rather than one frame deep, and that is the whole point. Moving a
+    call into a helper leaves behavior identical, so a check reading only the
+    staging function's own body drops the section from the population and every
+    case still passes.
+
+    Attribute calls are recorded as `module.name` so a provider's own naming
+    function can be recognised; bare names are followed, except `DISPATCHER`,
+    which says why it is the one name this does not follow.
+    """
+    seen: set[str] = set()
+    reached: set[str] = set()
+    queue = [start]
+    while queue:
+        name = queue.pop()
+        if name in seen or name == DISPATCHER or name not in functions:
+            continue
+        seen.add(name)
+        for node in ast.walk(functions[name]):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                reached.add(node.func.id)
+                queue.append(node.func.id)
+            elif isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+                reached.add(f'{node.func.value.id}.{node.func.attr}')
+    return reached
+
+
+def sections_the_bundler_verifies() -> dict[str, str]:
+    """`{section: staging function}` for every section whose staging checks a published digest.
+
+    Read out of `create_bundle.build` rather than listed here. A list is what the
+    guards below are for, so writing one would have them check their own copy —
+    and the section a future staging function stages would be missing from both.
+    """
+    functions = module_functions()
+    return {
+        section: staging
+        for section, staging in dispatched_sections().items()
+        if 'verify_against_upstream' in calls_reachable_from(staging, functions)
+    }
+
+
+@dc.dataclass(frozen=True)
+class Staging:
+    """How one section names the release asset a bundle downloads for it."""
+
+    namer: str
+    """The provider function that names it, as written in `create_bundle`.
+
+    Carried as text so the guard below can assert this section's staging function
+    actually calls it. Without that the case goes on asking `gotool.stage` after
+    `add_go_binaries` stops calling it, which is the drift
+    `test_a_bundled_pattern_names_an_asset_the_release_publishes` names as its own
+    reason for existing."""
+
+    repo: Callable[[Any], str]
+    """The field holding the GitHub coordinate.
+
+    Read per section rather than through a `getattr` default, for the reason
+    `create_bundle.bundleable` gives: a default standing in for "this subclass
+    has no such field" answers wrongly for a field that was merely renamed, and
+    the symptom is a corpus quietly one entry short."""
+
+    asset: Callable[[Any, str], str]
+    """The provider function that expands the declared asset name for a tag."""
+
+
+def staging_functions() -> dict[str, Staging]:
+    """How each section staged from a declared asset is asked what it downloads.
+
+    Routed to the provider that names the asset rather than expanded here,
+    because each of them answers the same question when installing from a bundle
+    — the arrangement `create_bundle.add_go_binaries` records, and the reason the
+    bundler does not name assets itself.
+
+    `winget.stage` takes no target. Its machine is Windows x86_64 and there is no
+    second coordinate to name; the other two are asked for Linux x86_64, which is
+    what the offline manifest `wsl-work-workstation` builds for.
+    """
+    target = Target(OSFamily('linux'), Arch('x86_64'))
+    return {
+        'cargo_packages': Staging('cargo.stage', lambda e: e.github_repo, lambda e, tag: cargo.stage(e, tag, target)),
+        'go_tools': Staging('gotool.stage', lambda e: e.github_repo, lambda e, tag: gotool.stage(e, tag, target)),
+        'winget_packages': Staging('winget.stage', lambda e: e.repo, winget.stage),
+    }
+
+
+def bundled_entries() -> list[tuple[str, str]]:
+    """Every entry a bundle can stage from a declared asset name, by section.
+
+    These are the sections whose asset naming is data in `packages.yml` rather
+    than a function in `providers/releases.py`, which is why the matrix above
+    never covered them — and why `watchexec-cli` spelled `{version}` where
+    cargo-dist publishes the bare number, 404ing every bundle build for as long
+    as nothing asked.
+
+    `entry.names_its_asset` is asked rather than spelled, so this and
+    `create_bundle.bundleable` cannot come to disagree about which entries a
+    bundle reaches.
+    """
+    declared = declaration()
     found = []
-    for section in ('cargo_packages', 'go_tools'):
+    for section in sorted(sections_staged_from_a_declared_asset()):
         for entry in declared.section(section):
-            if getattr(entry, 'github_repo', '') and getattr(entry, 'binary_pattern', ''):
+            if entry.names_its_asset:
                 found.append((section, entry.name))
     return sorted(found)
 
@@ -414,39 +615,177 @@ def bundled_entries() -> list[tuple[str, str]]:
 BUNDLED = bundled_entries()
 
 
+class TestBundledCorpus:
+    """Guards that the two cases below are asked of every entry a bundle reaches.
+
+    Each one is answered by something that does not pass through the predicate it
+    is checking. A guard deriving its own population from the thing it guards
+    cannot report a member that leaves, because the walk and the collection shrink
+    together — so a row dropping out reads identically to a row that was never
+    there.
+    """
+
+    def test_the_corpus_holds_every_row_that_names_an_asset(self):
+        """Keyed on `(section, name)`. Six crate names are also winget rows, so a
+        bare name would let one section's entry stand in for another's and the
+        corpus would be six cases short with every row in it still matching.
+
+        A row cannot leave this quietly any more, and the guard is not what stops
+        it: `catalog.half_named_asset` faults a row naming one of its asset fields
+        and not the other at declaration time, where nothing derived can shrink
+        in step with it."""
+        declared = declaration()
+        sections = sections_staged_from_a_declared_asset()
+        walked = {(section, entry.name) for section in sections for entry in declared.section(section) if entry.names_its_asset}
+        assert len(walked) == len(BUNDLED), 'the corpus lost an entry between the walk and the collection'
+        assert walked == set(BUNDLED)
+        assert {section for section, _ in BUNDLED} == sections, 'a section staged from a declared asset contributes no entry'
+
+    def test_asset_fields_name_fields_that_exist(self):
+        """`names_its_asset` reads these with `getattr` and no default, so a
+        renamed field raises rather than answering False. This says so before the
+        raise reaches a bundle build."""
+        for section in sorted(sections_staged_from_a_declared_asset()):
+            entry_class = catalog.SECTIONS[section]
+            declared_fields = {field.name for field in dc.fields(entry_class)}
+            assert set(entry_class.asset_fields) <= declared_fields, section
+
+    def test_every_such_section_has_a_provider_that_names_its_asset(self):
+        """A section in the corpus with no staging row is a case that cannot run,
+        and one row with no section is a lookup nothing reaches."""
+        assert set(staging_functions()) == sections_staged_from_a_declared_asset()
+
+    def test_each_provider_named_here_is_the_one_its_staging_function_calls(self):
+        """The join between the two section maps fifty lines apart. Without it the
+        case goes on asking `gotool.stage` after `add_go_binaries` stops calling
+        it, and the corpus measures a filename the bundler never downloads."""
+        functions = module_functions()
+        staged_by = sections_the_bundler_verifies()
+        for section, staging in staging_functions().items():
+            assert section in staged_by, f'{section} is not staged by create_bundle.build'
+            reached = calls_reachable_from(staged_by[section], functions)
+            assert staging.namer in reached, f'{staged_by[section]} does not call {staging.namer}'
+
+    def test_a_staging_path_reaches_its_own_provider_and_no_other(self):
+        """The property that makes the join above mean anything, and the walk
+        bounded enough to have it.
+
+        A call graph keyed on names has no scope, so it climbs into `DISPATCHER`
+        and from there back down into every other staging function. Every section
+        then reaches every namer, and the join passes while asserting nothing.
+
+        Asked of every dispatched section rather than of the three with a namer,
+        because the one that escapes is `add_github_releases` — it binds a local
+        `build` from `releases.ASSETS` and calls it, which a name-keyed walk
+        cannot tell from the module function. It has no namer row, so a guard
+        over `staging_functions()` alone never looks at it.
+        """
+        functions = module_functions()
+        namers = {section: staging.namer for section, staging in staging_functions().items()}
+        for section, staging_function in dispatched_sections().items():
+            reached = calls_reachable_from(staging_function, functions) & set(namers.values())
+            expected = {namers[section]} if section in namers else set()
+            assert reached == expected, f'{staging_function} reaches {sorted(reached)}, expected {sorted(expected)}'
+
+    def test_the_bundler_verifies_exactly_the_sections_that_declare_a_checksum(self):
+        """Set equality against a floor the bundler's source cannot move.
+
+        `assert not undeclared` passed over an emptied set, so a section leaving
+        the left side ran the whole way to a vacuous green. The right side comes
+        from `dc.fields` on the catalog classes and is non-empty, which is what
+        makes a shrinking left side red.
+
+        Adding a staging function that verifies — through a helper or directly —
+        is what makes this red, and so is a section that stops being verified."""
+        assert set(sections_the_bundler_verifies()) == sections_declaring_a_checksum()
+
+    def test_every_section_declaring_a_checksum_refuses_a_word_outside_the_vocabulary(self):
+        """The `problems` override is three verbatim copies of one line, one per
+        class, and nothing asserted any of them existed — deleting one left both
+        `dotfiles machines check` and the whole suite green.
+
+        Driven off `dc.fields`, so a fourth section carrying the field is covered
+        without this being widened."""
+        declared = declaration()
+        for section in sorted(sections_declaring_a_checksum()):
+            row = declared.section(section)[0]
+            broken = dc.replace(row, checksum='maybe')
+            assert any('not one of' in problem for problem in broken.problems()), f'{section} validates nothing'
+
+
+@pytest.fixture(scope='session')
+def staged_asset() -> Callable[[str, str], tuple[str, str, str]]:
+    """`(repo, tag, filename)` a bundle would download for one entry, resolved once.
+
+    Shared by the two cases below rather than resolved in each. A release lookup
+    is an API call per entry, against a rate limit the release matrix above is
+    already spending.
+    """
+    naming = staging_functions()
+    cache: dict[tuple[str, str], tuple[str, str, str]] = {}
+
+    def lookup(section: str, name: str) -> tuple[str, str, str]:
+        if (section, name) not in cache:
+            entry = declaration().find(section, name)
+            staging = naming[section]
+            repo = staging.repo(entry)
+            # `latest_version`, which is what the bundler calls — not `latest_tag`. A
+            # workspace repo tags its subcrates too, and the newest tag in `BurntSushi/
+            # ripgrep` is `ignore-0.4.33`, a crate release carrying no assets at all.
+            try:
+                tag = github_release.latest_version(repo)
+            except github_release.Unreadable as unreachable:
+                # Skipped rather than failed, and the two skips say different things: a
+                # shared rate limit takes every entry here at once and says nothing about
+                # any declaration, while a repo with no release is about this one.
+                pytest.skip(str(unreachable))
+            if not tag:
+                pytest.skip(f'{repo} publishes no release')
+            cache[(section, name)] = (repo, tag, staging.asset(entry, tag))
+        return cache[(section, name)]
+
+    return lookup
+
+
 @pytest.mark.e2e
 @pytest.mark.parametrize(('section', 'name'), BUNDLED, ids=lambda value: value if isinstance(value, str) else str(value))
-def test_a_bundled_pattern_names_an_asset_the_release_publishes(section, name, published_assets, http):
+def test_a_bundled_pattern_names_an_asset_the_release_publishes(section, name, published_assets, staged_asset):
     """Asked of the same function that installs from the bundle.
 
-    `cargo.stage`/`gotool.stage` are what name the file on both sides, so this
-    covers the expansion rather than re-deriving it — the mistake the release
-    corpus above records as its own reason for existing.
-
-    Linux x86_64 only: unlike the release entries, a bundle is built for the one
-    machine that needs it, and the offline manifest is `wsl-work-workstation`.
+    `cargo.stage`, `gotool.stage` and `winget.stage` are what name the file on
+    both sides, so this covers the expansion rather than re-deriving it — the
+    mistake the release corpus above records as its own reason for existing.
     """
-    from dotfiles.providers import cargo
-    from dotfiles.providers import gotool
+    repo, tag, staged = staged_asset(section, name)
 
-    entry = catalog.load().find(section, name)
-    # `latest_version`, which is what the bundler calls — not `latest_tag`. A
-    # workspace repo tags its subcrates too, and the newest tag in `BurntSushi/
-    # ripgrep` is `ignore-0.4.33`, a crate release carrying no assets at all.
-    try:
-        tag = github_release.latest_version(entry.github_repo)
-    except github_release.Unreadable as unreachable:
-        # Skipped rather than failed, and the two skips say different things: a
-        # shared rate limit takes every entry here at once and says nothing about
-        # any declaration, while a repo with no release is about this one.
-        pytest.skip(str(unreachable))
-    if not tag:
-        pytest.skip(f'{entry.github_repo} publishes no release')
+    assert staged in published_assets(repo, tag), (
+        f'{name} asks for {staged!r}, which {repo} {tag} does not publish — '
+        f'check {{version}} against {{version_num}} in its declared asset name'
+    )
 
-    target = Target(OSFamily('linux'), Arch('x86_64'))
-    staged = (cargo.stage if section == 'cargo_packages' else gotool.stage)(entry, tag, target)
 
-    assert staged in published_assets(entry.github_repo, tag), (
-        f'{name} asks for {staged!r}, which {entry.github_repo} {tag} does not publish — '
-        f'check {{version}} against {{version_num}} in its binary_pattern'
+@pytest.mark.e2e
+@pytest.mark.parametrize(('section', 'name'), BUNDLED, ids=lambda value: value if isinstance(value, str) else str(value))
+def test_a_bundled_asset_verifies_exactly_as_its_entry_declares(section, name, published_assets, staged_asset):
+    """The same comparison the release matrix above makes, on the asset a bundle downloads.
+
+    `checksum_state` is reused rather than restated, so both corpora ask upstream
+    one question. The subject is the downloaded file and never the staged one:
+    `verify_against_upstream` runs before `extract_go_binary` pulls a binary out,
+    before `repackage_zip_as_tarball` writes a tarball in a zip's place, and
+    before `extract_windows_exe` opens a Windows zip — so an extracted or
+    repacked entry is as declarable as one staged whole.
+
+    Fails in both directions, like the matrix above. A project that starts
+    publishing checksums stops being an exception here, and one that stops is
+    caught before a bundle stages its bytes with nothing said.
+    """
+    entry = declaration().find(section, name)
+    repo, tag, staged = staged_asset(section, name)
+
+    expected = STATE_FOR_DECLARATION[entry.checksum]
+    state = checksum_state(repo, tag, staged, published_assets(repo, tag))
+
+    assert state == expected, (
+        f'{name} declares checksum: {entry.checksum}, which claims {expected}, but {repo} {tag} answers {state} — change the declaration'
     )

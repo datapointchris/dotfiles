@@ -90,6 +90,25 @@ of both — why an allowlist rather than a denylist, why a row carrying an
 identifying name is withheld rather than the whole document refused, and why the
 trust coordinate decides which names count.
 
+## For go, cargo and winget the bundler is the only verifier
+
+Four sections stage a GitHub asset — `github_releases`, `go_tools`,
+`cargo_packages` and `winget_packages` — and `create_bundle.verify_against_upstream`
+checks each download against the digest its release published. Only the first is
+checked again when it installs. `providers/gotool.py`, `providers/cargo.py` and
+`providers/winget.py` open what a bundle staged and install it, so a machine
+unpacking a bundle takes those bytes on the builder's word.
+
+That is why all four declare `checksum:` even though the field gates an install
+for only one. `catalog.CHECKSUM_STATES` carries the vocabulary and what the
+declaration is measured against; the decision recorded here is that a section
+whose only verifier is the builder still declares, because an asset nobody can
+verify is worth counting wherever it is staged.
+
+The bundle's own `checksums.txt` cannot stand in for it. That file records the
+digest of the file that was downloaded, and for an extracted binary or a repacked
+tarball the downloaded file is not what the bundle carries.
+
 ## The automatic legs are off by default
 
 Three `[remote]` settings close the loop with nothing typed: fetching a bundle,
