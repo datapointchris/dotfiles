@@ -2,11 +2,11 @@
 
 `runs.write` takes its directory from `runs_dir or paths.RUNS_DIR`. A
 `control-flow` mutant turning that `or` into an `and` sends a test that handed it
-a `tmp_path` to the real `$XDG_STATE_HOME/dotfiles/runs` instead. Nine fixture run
-records reached the fleet's replicated state directory that way, and each one
-replicated to every machine. The mutant was scored as killed every time — the
-test went on to assert about the `tmp_path` it never got — so a kill is no
-evidence the write did not happen.
+a `tmp_path` to the real `$XDG_STATE_HOME/dotfiles/runs` instead. `runs/` is the
+one directory there that replicates, so fixture records written that way reached
+every machine in the fleet. The mutant was scored as killed every time — the test
+went on to assert about the `tmp_path` it never got — so a kill is no evidence
+the write did not happen.
 
 `no_writing_into_this_machines_own_directories` in `tests/conftest.py` refuses it
 now. These say so, because an autouse guard nothing tries to defeat reads exactly
@@ -84,14 +84,15 @@ def test_the_event_log_refusal_is_not_swallowed_by_the_fallback(refused_write) -
 def test_every_write_verb_is_refused_under_both_directories_this_tool_owns(refused_write, this_machines_own_directories) -> None:
     """The two incidents behind the guard arrived by different routes, so the set
     is pinned by behavior rather than by the tuple `conftest` iterates."""
-    refused = [
-        (root, verb)
-        for root in this_machines_own_directories
-        for verb, arguments in ATTEMPTS.items()
-        if _is_refused(refused_write, root / PROBE, verb, arguments)
-    ]
+    expected: list[tuple[Path, str]] = []
+    refused: list[tuple[Path, str]] = []
+    for root in this_machines_own_directories:
+        for verb, arguments in ATTEMPTS.items():
+            expected.append((root, verb))
+            if _is_refused(refused_write, root / PROBE, verb, arguments):
+                refused.append((root, verb))
 
-    assert refused == [(root, verb) for root in this_machines_own_directories for verb in ATTEMPTS]
+    assert refused == expected
 
 
 def _is_refused(refused_write, target: Path, verb: str, arguments: tuple) -> bool:
