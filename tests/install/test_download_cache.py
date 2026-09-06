@@ -497,7 +497,7 @@ def test_a_tool_that_never_changes_does_not_age_out_because_the_cache_kept_worki
     for asset in (wanted, superseded):
         an_entry_and_its_digest(cache, asset)
         cache.remember_status(asset, 'verified')
-        for path in (entry_of(asset), cache.digest_file(asset), cache.status_file(asset)):
+        for path in cache.entry_files(asset):
             age(path, RETENTION + 30)
 
     cache.fetch(wanted, tmp_path / 'out' / wanted.filename, '  fd')
@@ -719,7 +719,7 @@ def test_eviction_takes_the_bytes_the_digest_and_the_verdict_together(cache_home
 
     cache.evict(ASSET)
 
-    assert [path.exists() for path in (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))] == [False] * 3
+    assert [path.exists() for path in cache.entry_files(ASSET)] == [False] * 3
     cache.fetch(ASSET, destination, '  fd')
     assert (cache.hits, cache.downloads) == (0, 2)
     assert len(recorder.calls) == 2

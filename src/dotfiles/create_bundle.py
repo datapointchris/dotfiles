@@ -333,7 +333,12 @@ class DownloadCache:
                 # precisely because the cache kept working for it.
                 now = None
                 try:
-                    for path in (cached, digest_file, self.status_file(asset)):
+                    # `entry_files`, because a hit restamps the whole entry and
+                    # the set it restamps is the set `evict` removes and `status`
+                    # requires. The `exists` guard stays: a verdict is written
+                    # after the first fetch, so an entry legitimately arrives
+                    # here without one.
+                    for path in self.entry_files(asset):
                         if path.exists():
                             os.utime(path, now)
                 except OSError as unwritable:
