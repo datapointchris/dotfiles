@@ -39,6 +39,7 @@ from dotfiles.commands import verbosity
 from dotfiles.output import SUBJECT_COLUMN
 from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
+from dotfiles.output import Phrase
 from dotfiles.output import console
 from dotfiles.output import elapsed
 from dotfiles.output import emit_json
@@ -170,7 +171,7 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
             'network',
             f'{reachable} reachable, {len(blocked)} blocked',
             VERDICT_COLORS[verdict_word],
-            f'{tally((len(measurement.unprobed), "unprobed"))}{elapsed(seconds)}',
+            f'{tally((len(measurement.unprobed), Phrase.UNPROBED))}{elapsed(seconds)}',
         )
     )
 
@@ -186,7 +187,11 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
     for reason in measurement.unprobed:
         # Nothing to ask rather than asked and refused, which is the same
         # distinction `unmeasured` carries everywhere else in this report.
-        render_row('unprobed', '', reason, 'magenta', width)
+        #
+        # The same member the tally above counts with, because it is the same word
+        # for the same set on the same screen. A literal here reworded only the
+        # rows or only the count, and the two sit three lines apart.
+        render_row(Phrase.UNPROBED, '', reason, 'magenta', width)
 
     console.print()
     render_verdict(verdict_word, _closing(len(blocked), len(intercepted)), console)

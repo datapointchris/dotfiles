@@ -710,7 +710,7 @@ class TestWhatApplyDeclinedToTouch:
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        assert '2 item(s) could not be measured' in capsys.readouterr().err
+        assert f'2 item(s) {output.Phrase.COULD_NOT_BE_MEASURED}' in capsys.readouterr().err
 
     def test_the_closing_fix_is_named_once_however_many_items_share_it(
         self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
@@ -737,12 +737,19 @@ class TestWhatApplyDeclinedToTouch:
         self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
     ) -> None:
         """These were printed as bare rows with no heading, so they read as a
-        continuation of whatever provider had acted last."""
+        continuation of whatever provider had acted last.
+
+        **The one place the singular spelling is pinned**, written out rather than
+        read from `Phrase.NEED_ATTENTION.heading`. An assertion that reads the
+        member takes the same value the renderer took, so a typo in the second
+        wording reaches a screen with the suite green — and `heading` is reached
+        from one line of `src/`, which leaves the affordance itself unguarded.
+        """
         walked(monkeypatch, Walk(drift('atuin', Repair.BY_HAND), outcomes=()))
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        assert output.NEEDS_ATTENTION in capsys.readouterr().err
+        assert 'needs attention' in capsys.readouterr().err
 
     def test_stdout_stays_empty(self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
         """`--json` owns stdout, so every one of these rows is a diagnostic."""
@@ -858,10 +865,10 @@ class TestTheClosingLine:
     """
 
     def test_a_run_that_repaired_everything_says_how_much(self) -> None:
-        assert reconcile.applied_line(11, [], [], []) == '11 item(s) changed'
+        assert reconcile.applied_line(11, [], [], []) == f'11 item(s) {output.Phrase.CHANGED}'
 
     def test_a_run_with_nothing_to_do_says_that_instead_of_counting_to_zero(self) -> None:
-        assert reconcile.applied_line(0, [], [], []) == 'nothing to change'
+        assert reconcile.applied_line(0, [], [], []) == output.Phrase.NOTHING_TO_CHANGE
 
     def test_a_failure_keeps_the_count_of_what_did_converge(self) -> None:
         """The count is worth most on exactly this branch. Dropping it makes a run
@@ -870,12 +877,12 @@ class TestTheClosingLine:
         end, surviving where it costs the reader most."""
         line = reconcile.applied_line(11, ['claude-code'], [], [])
 
-        assert line == '11 item(s) changed; 1 item(s) did not converge: claude-code'
+        assert line == f'11 item(s) {output.Phrase.CHANGED}; 1 item(s) {output.Phrase.DID_NOT_CONVERGE}: claude-code'
 
     def test_a_run_that_repaired_nothing_and_failed_names_only_the_failure(self) -> None:
         """No `0 item(s) changed` clause: a count of nothing is not a fact about the
         run, and the sentence beside it already says what happened."""
-        assert reconcile.applied_line(0, ['claude-code'], [], []) == '1 item(s) did not converge: claude-code'
+        assert reconcile.applied_line(0, ['claude-code'], [], []) == f'1 item(s) {output.Phrase.DID_NOT_CONVERGE}: claude-code'
 
     def test_what_needs_attention_is_counted_and_never_pointed_elsewhere(self) -> None:
         """`Repair.BY_HAND` is not a failure, so it is not counted as work this verb
@@ -885,7 +892,7 @@ class TestTheClosingLine:
 
         line = reconcile.applied_line(1, [], deferred, [])
 
-        assert line == f'1 item(s) changed; 1 item(s) {output.NEED_ATTENTION}'
+        assert line == f'1 item(s) {output.Phrase.CHANGED}; 1 item(s) {output.Phrase.NEED_ATTENTION}'
         assert 'dotfiles check' not in line
 
     def test_what_nothing_could_measure_is_named_rather_than_only_counted(self) -> None:
@@ -895,7 +902,7 @@ class TestTheClosingLine:
 
         line = reconcile.applied_line(0, [], [], blind)
 
-        assert line == 'nothing to change; 2 item(s) could not be measured: doit, syncer'
+        assert line == f'{output.Phrase.NOTHING_TO_CHANGE}; 2 item(s) {output.Phrase.COULD_NOT_BE_MEASURED}: doit, syncer'
 
 
 class TestARunThatNeverStarted:
