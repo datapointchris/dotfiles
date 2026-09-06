@@ -95,6 +95,19 @@ LATEST_RUN = STATE_HOME / f'latest-{MACHINE_ID}'
 STATUS_FILE = STATE_HOME / f'status-{MACHINE_ID}.json'
 
 
+def uv_tool_dir() -> Path:
+    """Where `uv tool install` puts a tool's own environment.
+
+    From the environment, because that is the knob uv itself honors — which is
+    also what lets a test point it somewhere without patching anything.
+
+    Empty is unset, which is how uv reads it too. Taken as an answer it names the
+    relative path `.`, so every tool under it would resolve against whatever
+    directory the process happens to be standing in.
+    """
+    return Path(os.environ.get('UV_TOOL_DIR') or Path.home() / '.local/share/uv/tools')
+
+
 def cache_home() -> Path:
     """Where this tool's caches live, re-read on every call.
 
