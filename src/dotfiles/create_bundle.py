@@ -930,11 +930,15 @@ def bundleable(items: tuple[DesiredItem, ...]) -> list[catalog.GoTool | catalog.
     *unbundleable* for an entry whose field was merely renamed, and the symptom is
     a bundle silently one tool
     short on the machine that cannot fetch it.
+
+    `stageable` is asked rather than spelled, so this and the two corpora in
+    `tests/install/test_release_urls.py` cannot come to disagree about which
+    entries a bundle reaches.
     """
     staged = []
     for item in items:
         entry = item.entry
-        if isinstance(entry, catalog.GoTool | catalog.CargoPackage) and entry.github_repo and entry.binary_pattern:
+        if isinstance(entry, catalog.GoTool | catalog.CargoPackage) and entry.stageable:
             staged.append(entry)
         else:
             log.warning(f'  {item.name} declares no github_repo/binary_pattern, so nothing is staged for it')

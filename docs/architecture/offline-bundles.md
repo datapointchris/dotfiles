@@ -90,6 +90,29 @@ of both — why an allowlist rather than a denylist, why a row carrying an
 identifying name is withheld rather than the whole document refused, and why the
 trust coordinate decides which names count.
 
+## For go, cargo and winget the bundler is the only verifier
+
+Four sections stage a GitHub asset — `github_releases`, `go_tools`,
+`cargo_packages` and `winget_packages` — and `create_bundle.verify_against_upstream`
+checks each download against the digest its release published. Only the first of
+them is checked again when it installs. `providers/gotool.py`,
+`providers/cargo.py` and `providers/winget.py` open what a bundle staged and
+install it, so a machine unpacking a bundle takes those bytes on the builder's
+word.
+
+That is why all four declare `checksum:` in `packages.yml` even though the field
+gates an install for only one. The declaration is what makes an asset upstream
+cannot verify countable rather than discovered, and
+`tests/install/test_release_urls.py` measures every one of them against the live
+release, failing when an exception stops being true as well as when it starts.
+
+The subject is the file that was downloaded, never the file that was staged.
+Verification runs before `extract_go_binary` pulls a binary out of an archive,
+before `repackage_zip_as_tarball` writes a tarball in a zip's place, and before
+`extract_windows_exe` opens a Windows zip — so an extracted or repacked entry is
+as declarable as one staged whole. A digest taken after any of those steps would
+be a digest of this bundler's own output, which proves nothing about upstream.
+
 ## The automatic legs are off by default
 
 Three `[remote]` settings close the loop with nothing typed: fetching a bundle,

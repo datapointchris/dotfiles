@@ -20,17 +20,22 @@ Linux_x86_64 while every release published linux_x86_64.
 Run with: pytest tests/install/test_release_urls.py --e2e
 """
 
+import dataclasses as dc
+import inspect
 import json
+import re
 import tempfile
 from collections.abc import Callable
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Any
 
 import httpx2
 import pytest
 
 from dotfiles import catalog
+from dotfiles import create_bundle
 from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles.coordinates import Arch
@@ -52,6 +57,18 @@ OS_TARGETS = {
     OSFamily.LINUX: (('linux', 'x86_64'),),
 }
 
+
+def declaration() -> catalog.Catalog:
+    """This checkout's `packages.yml`, never the machine's.
+
+    A load with no path resolves through `DOTFILES_DIR`, and `.zshenv` exports
+    that to the primary checkout on every machine here. A bare load run from a
+    worktree therefore measures what `main` declares while the branch under test
+    sits unread — green against a file the change never touched.
+    """
+    return catalog.load(PACKAGES_YML)
+
+
 Case = tuple[str, str, str]
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
@@ -60,7 +77,7 @@ not vary by target for any of them, and every declared tool covers this one."""
 
 
 def declared_releases() -> set[str]:
-    return {entry.name for entry in catalog.load().section('github_releases')}
+    return {entry.name for entry in declaration().section('github_releases')}
 
 
 def build_corpus() -> list[Case]:
@@ -73,7 +90,7 @@ def build_corpus() -> list[Case]:
     of that grammar, and it is the copy that would be wrong the first time a
     machine spells its subscription the other way.
     """
-    declared = catalog.load()
+    declared = declaration()
     cases: set[Case] = set()
     for name in machines.names(REPO_ROOT):
         machine = machines.load(name, REPO_ROOT)
@@ -88,7 +105,7 @@ CORPUS = build_corpus()
 
 def resolve_url(tool: str, os_name: str, arch: str) -> tuple[str, str, str]:
     """What this repo would download for one tool on one platform."""
-    entry = catalog.load(PACKAGES_YML).find('github_releases', tool)
+    entry = declaration().find('github_releases', tool)
     assert isinstance(entry, catalog.GithubRelease)
 
     tag = ghrelease.resolve_tag(entry)
@@ -197,7 +214,7 @@ class TestCorpus:
         daemon; `supersedes` is what stops a second copy of that daemon running
         beside it out of Homebrew or pacman — and a machine carrying both shares one
         config directory and one port between them."""
-        declared = {entry.name: entry for entry in catalog.load().section('github_releases')}
+        declared = {entry.name: entry for entry in declaration().section('github_releases')}
 
         assert all(declared[name].supersedes for name in providers.AGENTS)
 
@@ -273,7 +290,7 @@ def _fleet_install_urls() -> list[tuple[str, str]]:
     vendor decides what that path serves, and pretending otherwise would fail the
     test for something no commit here can fix.
     """
-    rows = catalog.load(PACKAGES_YML).section('custom_installers')
+    rows = declaration().section('custom_installers')
     entries = [entry for entry in rows if isinstance(entry, catalog.CustomInstaller)]
     assert len(entries) == len(rows), 'every custom_installers row loads as a CustomInstaller'
 
@@ -342,7 +359,7 @@ STATE_FOR_DECLARATION = {
 
 
 def declared_checksum_states() -> dict[str, str]:
-    rows = catalog.load(PACKAGES_YML).section('github_releases')
+    rows = declaration().section('github_releases')
     states = {entry.name: entry.checksum for entry in rows if isinstance(entry, catalog.GithubRelease)}
     assert len(states) == len(rows), 'every github_releases row loads as a GithubRelease'
     return states
@@ -393,20 +410,78 @@ def test_every_declared_checksum_state_is_one_the_engine_acts_on():
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def bundled_entries() -> list[tuple[str, str]]:
-    """Every `cargo_packages`/`go_tools` entry a bundle can stage, by section.
+def sections_staged_from_a_declared_asset() -> set[str]:
+    """Sections whose asset name is data in `packages.yml` rather than a function.
 
-    These are the sections whose asset naming is `binary_pattern` in
-    `packages.yml` rather than a function in `providers/releases.py`, which is
-    why the corpus above never covered them — and why `watchexec-cli` spelled
-    `{version}` where cargo-dist publishes the bare number, 404ing every bundle
-    build for as long as nothing asked.
+    Read off `catalog.Entry.declares_its_asset`, so a fourth section spelling its
+    assets in the declaration joins the corpus below by setting that flag rather
+    than by someone remembering to widen a tuple here.
+
+    `github_releases` is verified too and is deliberately not one of these. Its
+    asset names live in `providers/releases.py`, and the matrix at the top of this
+    file is the corpus that asks them.
     """
-    declared = catalog.load()
+    return {section for section, entry_class in catalog.SECTIONS.items() if entry_class.declares_its_asset}
+
+
+@dc.dataclass(frozen=True)
+class Staging:
+    """How one section names the release asset a bundle downloads for it."""
+
+    repo: Callable[[Any], str]
+    """The field holding the GitHub coordinate.
+
+    Read per section rather than through a `getattr` default, for the reason
+    `create_bundle.bundleable` gives: a default standing in for "this subclass
+    has no such field" answers wrongly for a field that was merely renamed, and
+    the symptom is a corpus quietly one entry short."""
+
+    asset: Callable[[Any, str], str]
+    """The provider function that expands the declared asset name for a tag."""
+
+
+def staging_functions() -> dict[str, Staging]:
+    """How each section staged from a declared asset is asked what it downloads.
+
+    Routed to the provider that names the asset rather than expanded here,
+    because each of them answers the same question when installing from a bundle
+    — the arrangement `create_bundle.add_go_binaries` records, and the reason the
+    bundler does not name assets itself.
+
+    `winget.stage` takes no target. Its machine is Windows x86_64 and there is no
+    second coordinate to name; the other two are asked for Linux x86_64, which is
+    what the offline manifest `wsl-work-workstation` builds for.
+    """
+    from dotfiles.providers import cargo
+    from dotfiles.providers import gotool
+    from dotfiles.providers import winget
+
+    target = Target(OSFamily('linux'), Arch('x86_64'))
+    return {
+        'cargo_packages': Staging(lambda entry: entry.github_repo, lambda entry, tag: cargo.stage(entry, tag, target)),
+        'go_tools': Staging(lambda entry: entry.github_repo, lambda entry, tag: gotool.stage(entry, tag, target)),
+        'winget_packages': Staging(lambda entry: entry.repo, winget.stage),
+    }
+
+
+def bundled_entries() -> list[tuple[str, str]]:
+    """Every entry a bundle can stage from a declared asset name, by section.
+
+    These are the sections whose asset naming is data in `packages.yml` rather
+    than a function in `providers/releases.py`, which is why the matrix above
+    never covered them — and why `watchexec-cli` spelled `{version}` where
+    cargo-dist publishes the bare number, 404ing every bundle build for as long
+    as nothing asked.
+
+    `entry.stageable` is asked rather than spelled, so this and
+    `create_bundle.bundleable` cannot come to disagree about which entries a
+    bundle reaches.
+    """
+    declared = declaration()
     found = []
-    for section in ('cargo_packages', 'go_tools'):
+    for section in sorted(sections_staged_from_a_declared_asset()):
         for entry in declared.section(section):
-            if getattr(entry, 'github_repo', '') and getattr(entry, 'binary_pattern', ''):
+            if entry.stageable:
                 found.append((section, entry.name))
     return sorted(found)
 
@@ -414,39 +489,144 @@ def bundled_entries() -> list[tuple[str, str]]:
 BUNDLED = bundled_entries()
 
 
+def sections_the_bundler_verifies() -> dict[str, str]:
+    """`{section: staging function}` for every section whose staging checks a published digest.
+
+    Read out of `create_bundle.build` rather than listed here. A list is what the
+    guard below is for, so writing one would have the guard check its own copy —
+    and the section a future staging function stages would be missing from both.
+
+    The dispatch is a straight-line block of calls rather than a table, so this
+    matches the call shape and then asserts it found every `for_section` in the
+    function. Without that count a call spelled differently is a section the walk
+    never visits, which is the failure that reads as coverage.
+    """
+    source = inspect.getsource(create_bundle.build)
+    dispatched = re.findall(r"(\w+)\([^()]*plan\.for_section\('(\w+)'\)", source)
+    assert len(dispatched) == source.count('plan.for_section('), (
+        'a section is staged by a call this pattern does not match, so the walk below never visits it'
+    )
+    return {
+        section: function
+        for function, section in dispatched
+        if 'verify_against_upstream(' in inspect.getsource(getattr(create_bundle, function))
+    }
+
+
+class TestBundledCorpus:
+    """Guards that the two cases below are asked of every entry a bundle reaches."""
+
+    def test_the_corpus_holds_every_stageable_entry_from_every_such_section(self):
+        """Keyed on `(section, name)`. Six crate names are also winget rows, so a
+        bare name would let one section's entry stand in for another's and the
+        corpus would be six cases short with every row in it still matching.
+
+        The size assertion catches that loss between the walk and the collection,
+        which a content comparison alone cannot see. The section assertion
+        catches a whole section going empty — strip `binary_pattern` from every
+        Go tool and the corpus silently loses all 22."""
+        declared = declaration()
+        sections = sections_staged_from_a_declared_asset()
+        walked = {(section, entry.name) for section in sections for entry in declared.section(section) if entry.stageable}
+        assert len(walked) == len(BUNDLED), 'the corpus lost an entry between the walk and the collection'
+        assert walked == set(BUNDLED)
+        assert {section for section, _ in BUNDLED} == sections, 'a section staged from a declared asset contributes no entry'
+
+    def test_every_such_section_has_a_provider_that_names_its_asset(self):
+        """A section in the corpus with no staging row is a case that cannot run,
+        and one row with no section is a lookup nothing reaches."""
+        assert set(staging_functions()) == sections_staged_from_a_declared_asset()
+
+    def test_every_section_the_bundler_verifies_declares_a_checksum_state(self):
+        """A section whose staging checks a digest and whose rows cannot say what
+        upstream publishes installs unverified assets nobody can count.
+
+        Adding a staging function that verifies is what makes this red, which is
+        the mutation no breakage of the walk above reaches."""
+        undeclared = {
+            section
+            for section in sections_the_bundler_verifies()
+            if 'checksum' not in {field.name for field in dc.fields(catalog.SECTIONS[section])}
+        }
+        assert not undeclared, (
+            f'{sorted(undeclared)} is staged through verify_against_upstream and declares no checksum state, '
+            f'so an asset it installs unverified cannot be counted — add the field to its catalog class'
+        )
+
+
+@pytest.fixture(scope='session')
+def staged_asset() -> Callable[[str, str], tuple[str, str, str]]:
+    """`(repo, tag, filename)` a bundle would download for one entry, resolved once.
+
+    Shared by the two cases below rather than resolved in each. A release lookup
+    is an API call per entry, against a rate limit the release matrix above is
+    already spending.
+    """
+    naming = staging_functions()
+    cache: dict[tuple[str, str], tuple[str, str, str]] = {}
+
+    def lookup(section: str, name: str) -> tuple[str, str, str]:
+        if (section, name) not in cache:
+            entry = declaration().find(section, name)
+            staging = naming[section]
+            repo = staging.repo(entry)
+            # `latest_version`, which is what the bundler calls — not `latest_tag`. A
+            # workspace repo tags its subcrates too, and the newest tag in `BurntSushi/
+            # ripgrep` is `ignore-0.4.33`, a crate release carrying no assets at all.
+            try:
+                tag = github_release.latest_version(repo)
+            except github_release.Unreadable as unreachable:
+                # Skipped rather than failed, and the two skips say different things: a
+                # shared rate limit takes every entry here at once and says nothing about
+                # any declaration, while a repo with no release is about this one.
+                pytest.skip(str(unreachable))
+            if not tag:
+                pytest.skip(f'{repo} publishes no release')
+            cache[(section, name)] = (repo, tag, staging.asset(entry, tag))
+        return cache[(section, name)]
+
+    return lookup
+
+
 @pytest.mark.e2e
 @pytest.mark.parametrize(('section', 'name'), BUNDLED, ids=lambda value: value if isinstance(value, str) else str(value))
-def test_a_bundled_pattern_names_an_asset_the_release_publishes(section, name, published_assets, http):
+def test_a_bundled_pattern_names_an_asset_the_release_publishes(section, name, published_assets, staged_asset):
     """Asked of the same function that installs from the bundle.
 
-    `cargo.stage`/`gotool.stage` are what name the file on both sides, so this
-    covers the expansion rather than re-deriving it — the mistake the release
-    corpus above records as its own reason for existing.
-
-    Linux x86_64 only: unlike the release entries, a bundle is built for the one
-    machine that needs it, and the offline manifest is `wsl-work-workstation`.
+    `cargo.stage`, `gotool.stage` and `winget.stage` are what name the file on
+    both sides, so this covers the expansion rather than re-deriving it — the
+    mistake the release corpus above records as its own reason for existing.
     """
-    from dotfiles.providers import cargo
-    from dotfiles.providers import gotool
+    repo, tag, staged = staged_asset(section, name)
 
-    entry = catalog.load().find(section, name)
-    # `latest_version`, which is what the bundler calls — not `latest_tag`. A
-    # workspace repo tags its subcrates too, and the newest tag in `BurntSushi/
-    # ripgrep` is `ignore-0.4.33`, a crate release carrying no assets at all.
-    try:
-        tag = github_release.latest_version(entry.github_repo)
-    except github_release.Unreadable as unreachable:
-        # Skipped rather than failed, and the two skips say different things: a
-        # shared rate limit takes every entry here at once and says nothing about
-        # any declaration, while a repo with no release is about this one.
-        pytest.skip(str(unreachable))
-    if not tag:
-        pytest.skip(f'{entry.github_repo} publishes no release')
+    assert staged in published_assets(repo, tag), (
+        f'{name} asks for {staged!r}, which {repo} {tag} does not publish — '
+        f'check {{version}} against {{version_num}} in its declared asset name'
+    )
 
-    target = Target(OSFamily('linux'), Arch('x86_64'))
-    staged = (cargo.stage if section == 'cargo_packages' else gotool.stage)(entry, tag, target)
 
-    assert staged in published_assets(entry.github_repo, tag), (
-        f'{name} asks for {staged!r}, which {entry.github_repo} {tag} does not publish — '
-        f'check {{version}} against {{version_num}} in its binary_pattern'
+@pytest.mark.e2e
+@pytest.mark.parametrize(('section', 'name'), BUNDLED, ids=lambda value: value if isinstance(value, str) else str(value))
+def test_a_bundled_asset_verifies_exactly_as_its_entry_declares(section, name, published_assets, staged_asset):
+    """The same comparison the release matrix above makes, on the asset a bundle downloads.
+
+    `checksum_state` is reused rather than restated, so both corpora ask upstream
+    one question. The subject is the downloaded file and never the staged one:
+    `verify_against_upstream` runs before `extract_go_binary` pulls a binary out,
+    before `repackage_zip_as_tarball` writes a tarball in a zip's place, and
+    before `extract_windows_exe` opens a Windows zip — so an extracted or
+    repacked entry is as declarable as one staged whole.
+
+    Fails in both directions, like the matrix above. A project that starts
+    publishing checksums stops being an exception here, and one that stops is
+    caught before a bundle stages its bytes with nothing said.
+    """
+    entry = declaration().find(section, name)
+    repo, tag, staged = staged_asset(section, name)
+
+    expected = STATE_FOR_DECLARATION[entry.checksum]
+    state = checksum_state(repo, tag, staged, published_assets(repo, tag))
+
+    assert state == expected, (
+        f'{name} declares checksum: {entry.checksum}, which claims {expected}, but {repo} {tag} answers {state} — change the declaration'
     )

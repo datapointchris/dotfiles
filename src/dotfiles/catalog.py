@@ -121,6 +121,37 @@ The two exceptions are separate values because they are separate upstream facts;
 `github_release.Verification` carries the same distinction and says why.
 """
 
+
+def checksum_problem(declared: str) -> tuple[str, ...]:
+    """The one rule every section declaring a checksum state shares.
+
+    A helper rather than a shared base class. The four sections carrying this
+    field differ in everything else a base would have to hold — where the release
+    coordinate lives, whether an asset name is data or code, what consumes the
+    result — so the class would be a lid over one string. The field is declared
+    per section and the rule is stated once.
+    """
+    if declared in CHECKSUM_STATES:
+        return ()
+    return (f"declares 'checksum' as {declared!r}, which is not one of {', '.join(sorted(CHECKSUM_STATES))}",)
+
+
+def unstageable_checksum(entry: GoTool | CargoPackage | WingetPackage) -> tuple[str, ...]:
+    """An exception claimed by an entry that has no asset to claim it about.
+
+    The same rule `honored_constraints` states for version pins, and for the same
+    reason: a declaration nothing reads describes an asset that may not exist and
+    rots unread. `go install` and `cargo binstall` fetch their own bytes, so an
+    entry naming no release coordinate never downloads an asset at all — and
+    excusing verification of one is a claim about nothing.
+    """
+    if entry.stageable or entry.checksum == CHECKSUM_REQUIRED:
+        return ()
+    return (
+        f"declares 'checksum' as {entry.checksum!r} while naming no release asset a bundle can download, so the exception excuses nothing",
+    )
+
+
 VERSION_FROM_RELEASES = 'releases'
 VERSION_FROM_TAGS = 'tags'
 
@@ -262,6 +293,32 @@ class Entry:
     declared_in: ClassVar[str] = 'packages.yml'
     """Which declaration file holds this section, so an error names the file a
     reader has to open rather than the one most sections happen to live in."""
+
+    declares_its_asset: ClassVar[bool] = False
+    """Whether this section names its release asset in `packages.yml` rather than in code.
+
+    False almost everywhere, because a package manager fetches its own bytes and
+    there is no asset name to write. `github_releases` downloads one and still
+    says False: its names live in `providers/releases.py`, because those entries
+    defeat any placeholder vocabulary between them.
+
+    The three saying True carry a `binary_pattern` or an `asset` string, and
+    `tests/install/test_release_urls.py` builds its bundled corpus from this — so
+    a fourth such section joins that corpus by setting the flag rather than by
+    someone widening a list in the test.
+    """
+
+    @property
+    def stageable(self) -> bool:
+        """Whether a bundle can name this entry's release asset.
+
+        False on the base, where there is no asset to name. Each section setting
+        `declares_its_asset` overrides this with the condition its own fields
+        state, and `create_bundle.bundleable` filters on it rather than on those
+        fields — so the bundler and the corpus that measures the checksum
+        declaration cannot come to disagree about which entries a bundle reaches.
+        """
+        return False
 
     @property
     def executable(self) -> str:
@@ -441,10 +498,7 @@ class GithubRelease(Entry):
         return owner_of(self.repo)
 
     def problems(self) -> tuple[str, ...]:
-        if self.checksum in CHECKSUM_STATES:
-            return Entry.problems(self)
-        allowed = ', '.join(sorted(CHECKSUM_STATES))
-        return (f"declares 'checksum' as {self.checksum!r}, which is not one of {allowed}", *Entry.problems(self))
+        return (*checksum_problem(self.checksum), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -492,15 +546,45 @@ class CargoPackage(Entry):
     """
 
     section: ClassVar[str] = 'cargo_packages'
+    declares_its_asset: ClassVar[bool] = True
 
     github_repo: str = ''
     binary_pattern: str = ''
     linux_target: str = ''
     darwin_target: str = ''
 
+    checksum: str = CHECKSUM_REQUIRED
+    """What upstream publishes for the asset a bundle downloads for this crate.
+
+    The three words `GithubRelease` carries, asked of a different file. The
+    subject is the **downloaded** archive: `create_bundle.verify_against_upstream`
+    runs before `repackage_zip_as_tarball` consumes a zip, so the digest is
+    checked against the file the release published rather than against the
+    tarball this bundler writes in its place. A repacked crate is therefore as
+    declarable as one staged whole — fnm and broot both answer the question, and
+    both answer `unpublished`.
+
+    `cargo binstall` does its own fetching online and verifies nothing this can
+    describe, so the declaration is read where a bundle is built and by
+    `tests/install/test_release_urls.py`, which measures it against the live
+    release and fails in both directions.
+    """
+
+    @property
+    def stageable(self) -> bool:
+        """The two fields `cargo.stage` expands.
+
+        An entry missing either is invisible to an offline machine and has no
+        asset for a checksum to describe.
+        """
+        return bool(self.github_repo and self.binary_pattern)
+
     @property
     def owner(self) -> str | None:
         return owner_of(self.github_repo) if self.github_repo else None
+
+    def problems(self) -> tuple[str, ...]:
+        return (*checksum_problem(self.checksum), *unstageable_checksum(self), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -537,6 +621,7 @@ class WingetPackage(Entry):
     """
 
     section: ClassVar[str] = 'winget_packages'
+    declares_its_asset: ClassVar[bool] = True
 
     winget: str
     """The Microsoft Store id, which is not derivable from `repo`: ripgrep is
@@ -552,6 +637,31 @@ class WingetPackage(Entry):
     The tag is not known until the release is looked up, so the asset carries
     `{version}` or `{version_num}` where the publisher stamps one in — the tag as
     written and the tag from its first digit on."""
+
+    checksum: str = CHECKSUM_REQUIRED
+    """What upstream publishes for the asset a bundle downloads for this package.
+
+    The three words `GithubRelease` carries, asked of the Windows asset.
+    `create_bundle.add_winget_binaries` checks the download against the release
+    before a zip gives up its `.exe`, so the subject is the published file rather
+    than the executable pulled out of it.
+
+    Nothing reads this on a machine that can reach the Store, which installs and
+    verifies its own way. It describes the offline channel, and the machine that
+    channel exists for is the one whose network blocks the Store outright — so an
+    asset staged unverified there has no second route to compare against.
+    """
+
+    @property
+    def stageable(self) -> bool:
+        """The two fields `winget.stage` and the bundler expand.
+
+        Both are required, so this is true of every row today. It is stated
+        rather than assumed because the corpus measuring the declaration above is
+        built from it, and a row that stopped naming its release would otherwise
+        leave that corpus without saying so.
+        """
+        return bool(self.repo and self.asset)
 
     @property
     def filename(self) -> str:
@@ -571,18 +681,51 @@ class WingetPackage(Entry):
     def owner(self) -> str | None:
         return owner_of(self.repo)
 
+    def problems(self) -> tuple[str, ...]:
+        return (*checksum_problem(self.checksum), *unstageable_checksum(self), *Entry.problems(self))
+
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class GoTool(Entry):
     section: ClassVar[str] = 'go_tools'
+    declares_its_asset: ClassVar[bool] = True
 
     package: str
     github_repo: str = ''
     binary_pattern: str = ''
 
+    checksum: str = CHECKSUM_REQUIRED
+    """What upstream publishes for the asset a bundle downloads for this tool.
+
+    The three words `GithubRelease` carries, asked of a different file. The
+    subject is the **downloaded** archive: `create_bundle.verify_against_upstream`
+    runs before `extract_go_binary` consumes it, so the digest is checked against
+    the file the release published rather than against the binary pulled out of
+    it, which no release ever named. A tool whose asset is the bare executable is
+    the same question with one fewer step.
+
+    `go install` reaches the module proxy and verifies through Go's own checksum
+    database, which is a different mechanism on a different artifact. This
+    describes the release asset alone, and is read where a bundle is built and by
+    `tests/install/test_release_urls.py`, which measures it against the live
+    release and fails in both directions.
+    """
+
+    @property
+    def stageable(self) -> bool:
+        """The two fields `gotool.stage` expands.
+
+        An entry missing either is installed from the proxy alone and has no
+        asset for a checksum to describe.
+        """
+        return bool(self.github_repo and self.binary_pattern)
+
     @property
     def owner(self) -> str | None:
         return owner_of(self.github_repo) if self.github_repo else owner_of(self.package)
+
+    def problems(self) -> tuple[str, ...]:
+        return (*checksum_problem(self.checksum), *unstageable_checksum(self), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
