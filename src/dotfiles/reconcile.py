@@ -51,7 +51,7 @@ from dotfiles.output import SUBJECT_COLUMN
 from dotfiles.output import Phrase
 from dotfiles.output import announce
 from dotfiles.output import console
-from dotfiles.output import counted
+from dotfiles.output import counted_phrase
 from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.output import hint
@@ -107,17 +107,28 @@ def declaration_row(findings: Sequence[validate.Finding], broken: Sequence[valid
     resource — which reads as a stray sentence rather than as the row it is.
     """
     if not broken:
-        warned = f' ({counted(len(findings), Phrase.SEE_MACHINES_CHECK, "warning")})' if findings else ''
+        warned = f' ({counted_phrase(len(findings), Phrase.SEE_MACHINES_CHECK, "warning")})' if findings else ''
         return ResourceResult('machines', ResourceVerdict.CONVERGED, f'the declaration is sound{warned}', lens=Lens.CHECK)
 
     return ResourceResult(
         'machines',
         ResourceVerdict.ISSUE,
-        counted(len(broken), Phrase.IN_THE_DECLARATION, 'problem'),
+        broken_declaration(broken),
         lens=Lens.CHECK,
         invalid=tuple((finding.section, finding.message) for finding in broken),
         attention=len(broken),
     )
+
+
+def broken_declaration(broken: Sequence[validate.Finding]) -> str:
+    """How many things are wrong with the declaration, worded for both doors.
+
+    A builder rather than the call each door was making, because the noun is half
+    the clause and only the phrase had an owner. `check`'s row and the verdict
+    that stops an `apply` describe one set, so reading `problem` off two sites is
+    the fault the table removes with one argument still outside it.
+    """
+    return counted_phrase(len(broken), Phrase.IN_THE_DECLARATION, 'problem')
 
 
 def sift(changes: Sequence[Change]) -> tuple[list[Change], list[Change], list[Change]]:
@@ -180,9 +191,9 @@ def from_changes(
     if lens is Lens.PLAN:
         # Said here rather than at a prompt: root is acquired when a write needs
         # it, so the only warning anyone gets is the one the plan prints.
-        root = f', {root_needed} needing root' if root_needed else ''
-        return row(verdict=ResourceVerdict.DRIFT, detail=f'{counted(len(kept), Phrase.DIFFER_FROM_DECLARED)}{root}')
-    return row(verdict=ResourceVerdict.ISSUE, detail=f'{counted(len(kept), Phrase.NEED_ATTENTION)}{lead(kept)}')
+        root = f', {root_needed} {Phrase.NEEDING_ROOT}' if root_needed else ''
+        return row(verdict=ResourceVerdict.DRIFT, detail=f'{counted_phrase(len(kept), Phrase.DIFFER_FROM_DECLARED)}{root}')
+    return row(verdict=ResourceVerdict.ISSUE, detail=f'{counted_phrase(len(kept), Phrase.NEED_ATTENTION)}{lead(kept)}')
 
 
 def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
@@ -527,11 +538,11 @@ def _clause(subjects: Sequence[str], phrase: Phrase, noun: str = 'item') -> str:
     Empty for an empty set, so `_sentence` decides the punctuation rather than
     every caller deciding whether its clause needs a leading separator.
 
-    The count and the wording come from `output.counted`, which is the same shape
+    The count and the wording come from `output.counted_phrase`, which is the same shape
     a resource's own detail and both closing lines are built from. Only the naming
     is this function's own, because only this end knows the limit `named` applies.
     """
-    return f'{counted(len(subjects), phrase, noun)}: {named(subjects)}' if subjects else ''
+    return f'{counted_phrase(len(subjects), phrase, noun)}: {named(subjects)}' if subjects else ''
 
 
 def _sentence(*clauses: str) -> str:
@@ -848,7 +859,7 @@ def apply_machine(
         # either out again here is a second opinion that can disagree with it.
         gate = declaration_row(found, broken)
         render_result(gate, err_console)
-        problems = counted(len(broken), Phrase.IN_THE_DECLARATION, 'problem')
+        problems = broken_declaration(broken)
         render_verdict(
             str(gate.verdict),
             f'{problems}, so there is nothing safe to apply — run: dotfiles machines check',
@@ -981,10 +992,10 @@ def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[C
     **What nothing could measure is named, not just counted**, because this is the
     line a scheduled run's summary keeps once the rows are gone.
     """
-    repaired = counted(changed, Phrase.CHANGED) if changed else ''
+    repaired = counted_phrase(changed, Phrase.CHANGED) if changed else ''
     failed = _clause(unsuccessful, Phrase.DID_NOT_CONVERGE)
     head = _sentence(repaired, failed) or Phrase.NOTHING_TO_CHANGE
-    attention = counted(len(deferred), Phrase.NEED_ATTENTION) if deferred else ''
+    attention = counted_phrase(len(deferred), Phrase.NEED_ATTENTION) if deferred else ''
     return _sentence(head, attention, _clause([change.item for change in unmeasured], Phrase.COULD_NOT_BE_MEASURED))
 
 
@@ -1020,7 +1031,7 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
     ):
         if not group:
             continue
-        render_section(section.heading, counted(len(group), why), mark=NOTICE_MARK, color=color)
+        render_section(section.heading, counted_phrase(len(group), why), mark=NOTICE_MARK, color=color)
         width = max([SUBJECT_COLUMN, *(len(change.item) for change in group)])
         for change in group:
             render_change(change, min(width, SUBJECT_CEILING))
@@ -1061,7 +1072,7 @@ def converging_line(changes: Sequence[Change]) -> str:
     can only be read by driving a whole `apply`, so what pins its wording is a
     walk that had to arrange for work to exist.
     """
-    return f'{counted(len(changes), Phrase.TO_CONVERGE)}{tally((len(privileged(changes)), Phrase.NEED_A_PASSWORD))}'
+    return f'{counted_phrase(len(changes), Phrase.TO_CONVERGE)}{tally((len(privileged(changes)), Phrase.NEED_A_PASSWORD))}'
 
 
 def _address(event: Event) -> str:

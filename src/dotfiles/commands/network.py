@@ -187,7 +187,11 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
     for reason in measurement.unprobed:
         # Nothing to ask rather than asked and refused, which is the same
         # distinction `unmeasured` carries everywhere else in this report.
-        render_row('unprobed', '', reason, 'magenta', width)
+        #
+        # The same member the tally above counts with, because it is the same word
+        # for the same set on the same screen. A literal here reworded only the
+        # rows or only the count, and the two sit three lines apart.
+        render_row(Phrase.UNPROBED, '', reason, 'magenta', width)
 
     console.print()
     render_verdict(verdict_word, _closing(len(blocked), len(intercepted)), console)

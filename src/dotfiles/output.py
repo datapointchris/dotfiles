@@ -47,7 +47,15 @@ the logic. `tests/cli/test_output.py` asserts the two agree."""
 
 
 class Phrase(StrEnum):
-    """Every wording the whole-machine verbs put after a count, and the set of them.
+    """Every wording `plan`, `check`, `apply` and `network check` render, and the set of them.
+
+    **Not "the wordings that follow a count", which five members are not.**
+    `NOTHING_WRONG`, `NOTHING_TO_CHANGE` and `NOTHING_FOR_APPLY_TO_CHANGE` replace
+    the counted clause rather than following one, `NOT_MEASURABLE` names a
+    section, and `SEE_MACHINES_CHECK` follows a count and says where to read the
+    warnings rather than what is true of them. The boundary is the report a
+    wording appears in, so the test for whether a new phrase belongs is whether
+    one of those four verbs prints it.
 
     One owner per phrase, so rewording one is this table rather than a sweep of
     the sites that print it. A phrase typed where it renders is the same thing a
@@ -59,6 +67,13 @@ class Phrase(StrEnum):
     member added here is inside every guard without a second declaration. A
     tuple gathering those constants for the guard to walk is a second copy of the
     set, and a phrase left out of it narrows the guard in silence.
+
+    **What refuses a wording typed at a call site is the annotation, not a test.**
+    `counted_phrase`, `tally` and `reconcile._clause` each take a `Phrase`, so a
+    literal is an argument-type error under `uv run mypy .` — a whole-repo
+    pre-commit hook and a CI step. That reaches further than a walk of the call
+    sites could: it refuses a wording arriving through a variable or a return
+    value, which no check over a string constant can see.
 
     Here rather than beside the counted quantities on `ResourceResult`, which
     would sit the prose next to the fields it describes and cost this module its
@@ -94,6 +109,14 @@ class Phrase(StrEnum):
 
     NEED_A_PASSWORD = 'need a password'
     """Items whose repair acquires root, warned about before the write asks."""
+
+    NEEDING_ROOT = 'needing root'
+    """The same items, worded to hang off a drift sentence rather than a tally.
+
+    Distinct from `NEED_A_PASSWORD` because the grammar is: the tally states a
+    fact about a count and this qualifies the count in the sentence beside it.
+    One `plan` row carries both — `2 item(s) differ from what this machine
+    declares, 1 needing root  ·  1 need a password`."""
 
     UNPROBED = 'unprobed'
     """The `network check` tally label for a source the run never reached."""
@@ -269,21 +292,20 @@ def tally(*counts: tuple[int, Phrase]) -> str:
     are dropped rather than printed down every line of a healthy machine.
 
     A label rather than a clause, so no noun: this trailer rides on a heading that
-    has already named its subject, and `counted` is the shape for a line that has
+    has already named its subject, and `counted_phrase` is the shape for a line that has
     not.
     """
     shown = [f'{count} {label}' for count, label in counts if count]
     return f'  ·  {", ".join(shown)}' if shown else ''
 
 
-def counted(count: int, phrase: Phrase, noun: str = 'item') -> str:
+def counted_phrase(count: int, phrase: Phrase, noun: str = 'item') -> str:
     """How many of a thing, and what is true of them.
 
-    The one shape every counted line in `reconcile` is built from — a resource's
-    own detail, both read verbs' closing clauses, an `apply`'s closing line, and
-    the headings over what it walked past. Seven sites each wrote their own, so
-    the noun, the plural marker and the spacing were seven decisions that happened
-    to agree.
+    The one shape every counted report line in `reconcile` is built from — a
+    resource's own detail, both read verbs' closing clauses, an `apply`'s closing
+    line, and the headings over what it walked past. The noun, the plural marker
+    and the spacing are decided here, so no site decides them again.
 
     Never joined to the subjects here: only `reconcile._clause` knows the naming
     limit, and a line that names its subjects is a longer sentence rather than a

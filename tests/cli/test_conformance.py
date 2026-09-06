@@ -20,6 +20,7 @@ import functools
 import importlib
 import io
 import pkgutil
+import re
 import sys
 from collections.abc import Callable
 from collections.abc import Sequence
@@ -519,25 +520,35 @@ def functions_naming(*names: str) -> set[str]:
 # One table holds every rendered phrase, and no site types one
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# Three guards read the source, because the defect has three doors into it. A
-# site can pass its wording to a builder as a literal, build the whole counted
-# line itself out of an f-string, or read a member that nothing renders. Each
-# walks a population it derives — the call sites in the package, the functions in
-# the two vocabulary modules, and `list(Phrase)` — so adding a member or a site is
-# what turns one red, never breaking the walk. What each of them looks for is
-# planted in a synthetic module beside it, so a guard that stopped detecting
-# anything is red rather than quiet.
+# A wording typed where a builder is *called* is refused by the annotation, not
+# by anything here. `counted_phrase(count, phrase: Phrase)`, `tally(*counts:
+# tuple[int, Phrase])` and `_clause(subjects, phrase: Phrase)` each make a literal
+# an argument-type error, and `uv run mypy .` is a whole-repo pre-commit hook and
+# a CI step. The annotation is also wider than a walk of the call sites: it
+# refuses a wording arriving through a variable or a return value, which no AST
+# predicate over `ast.Constant` can see.
 #
-# The fourth door is a line that reads the table and renders the wrong spelling of
-# it, and source cannot see that. `test_every_rendered_line_reads_its_wording_from_the_table`
-# is the half that renders.
+# What the annotation cannot see is a site that calls no builder at all, a member
+# nothing renders, and a line that renders the wrong spelling. Those are the three
+# guards below, and each walks a population it derives — the functions in the two
+# vocabulary modules, `list(Phrase)`, and the lines `rendered_lines` builds — so
+# adding a member or a site is what turns one red, never breaking the walk. Each
+# guard has what it looks for planted beside it, so one that stopped detecting
+# anything goes red rather than quiet.
 #
-# **Not a search for the prose**, because the prose is not the table's alone.
-# `unmeasured` is also a `--json` key on `ResourceResult` and the classification
-# `sinks.intention` returns; `unprobed` is also a `--json` key and a `render_row`
-# label in `network check`. A search for those two wordings reaches four sites and
-# not one of them is a copy. Coupling a rendered phrase to a machine contract that
-# spells it the same way is the sweep this removes, pointed the other way.
+# **None of them searches for the prose**, because the prose is not the table's
+# alone. `unmeasured` is also a `--json` key on `ResourceResult` and the
+# classification `sinks.intention` returns; `unprobed` is also a `--json` key on
+# `network check`'s document. Both of those are machine contracts that a reworded
+# sentence must not move, and coupling them to a rendered phrase is the sweep this
+# removes, pointed the other way.
+#
+# **A docstring quoting a wording is out of reach for the same reason, and that is
+# a loss.** One member is the word `differ` and another is `changed`, so a scan of
+# the package's docstrings returns hundreds of hits and every one of them is
+# ordinary English. A phrase distinctive enough to search for can be searched for;
+# a table holding a common verb cannot, and rewording one leaves whatever prose
+# quoted it stale with nothing to say so.
 
 VOCABULARY = (Path(output.__file__), Path(reconcile.__file__))
 """The two modules that own the whole-machine verbs' wording.
@@ -556,46 +567,6 @@ source walk is asked its question inside that swap — so reading the name off t
 live attribute answers whatever the swap put there.
 """
 
-PHRASE_ARGUMENT = {'tally': None, 'counted': 1, '_clause': 1}
-"""Where the wording sits in each builder's signature.
-
-`tally` takes `(count, phrase)` pairs and the rest take it second, so `None`
-means "the second element of every tuple argument" rather than a position.
-"""
-
-
-def phrase_arguments(tree: ast.Module, where: str) -> list[tuple[str, ast.expr]]:
-    """Every wording handed to a builder in this module, with the line it sits on.
-
-    Walked from the call sites rather than from the table, so a builder called
-    somewhere nobody thought of is inside this the moment it is written.
-    """
-    handed = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        name = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, 'id', '')
-        if name not in PHRASE_ARGUMENT:
-            continue
-        site = f'{where}:{node.lineno}'
-        position = PHRASE_ARGUMENT[name]
-        if position is None:
-            handed += [(site, pair.elts[1]) for pair in node.args if isinstance(pair, ast.Tuple) and len(pair.elts) == 2]
-        elif len(node.args) > position:
-            handed.append((site, node.args[position]))
-        handed += [(site, word.value) for word in node.keywords if word.arg == 'phrase']
-    return handed
-
-
-def wordings_typed_at_a_call_site(sources: dict[str, str]) -> list[str]:
-    """Where a builder was handed prose spelled at the point of call."""
-    return [
-        site
-        for where, text in sources.items()
-        for site, word in phrase_arguments(ast.parse(text), where)
-        if isinstance(word, ast.Constant | ast.JoinedStr)
-    ]
-
 
 def counted_builders(tree: ast.Module) -> set[str]:
     """Which functions in this module compose `N noun(s) …` out of an f-string.
@@ -610,14 +581,19 @@ def counted_builders(tree: ast.Module) -> set[str]:
         if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             continue
         for inner in ast.walk(node):
-            if isinstance(inner, ast.JoinedStr) and any(_marks_a_plural(part) for part in inner.values):
+            if isinstance(inner, ast.JoinedStr) and any(marks_a_plural(part) for part in inner.values):
                 building.add(node.name)
     return building
 
 
-def _marks_a_plural(part: ast.expr) -> bool:
-    """Whether this literal piece of an f-string carries the plural marker."""
-    return isinstance(part, ast.Constant) and isinstance(part.value, str) and '(s) ' in part.value
+def marks_a_plural(part: ast.expr) -> bool:
+    """Whether this literal piece of an f-string carries the plural marker.
+
+    `(s)` and then anything that is not a word character, rather than `(s)` and a
+    space. A comma, a semicolon or the end of the string follows it as readily as
+    a space does, and requiring the space walks past those with the guard green.
+    """
+    return isinstance(part, ast.Constant) and isinstance(part.value, str) and re.search(r'\(s\)(\W|$)', part.value) is not None
 
 
 def members_read(paths: Sequence[Path] = SOURCE) -> set[str]:
@@ -625,18 +601,18 @@ def members_read(paths: Sequence[Path] = SOURCE) -> set[str]:
     reached = set()
     for path in paths:
         tree = ast.parse(path.read_text())
-        declared = {id(inner) for node in ast.walk(tree) if _is_phrase_table(node) for inner in ast.walk(node)}
+        declared = {id(inner) for node in ast.walk(tree) if is_phrase_table(node) for inner in ast.walk(node)}
         for node in ast.walk(tree):
-            if isinstance(node, ast.Attribute) and id(node) not in declared and _names_the_table(node.value):
+            if isinstance(node, ast.Attribute) and id(node) not in declared and names_the_table(node.value):
                 reached.add(node.attr)
     return reached
 
 
-def _is_phrase_table(node: ast.AST) -> bool:
+def is_phrase_table(node: ast.AST) -> bool:
     return isinstance(node, ast.ClassDef) and node.name == TABLE
 
 
-def _names_the_table(node: ast.expr) -> bool:
+def names_the_table(node: ast.expr) -> bool:
     """Whether this expression is the table, spelled bare or through its module."""
     if isinstance(node, ast.Name):
         return node.id == TABLE
@@ -671,43 +647,35 @@ def test_one_function_composes_the_retention_rule() -> None:
     assert functions_naming('base_of', 'superseded') == {'retention'}
 
 
-def test_no_site_hands_a_builder_a_wording_of_its_own() -> None:
-    """A phrase typed where it renders is out of step with its siblings the moment
-    one of them is reworded, and nothing says so.
+NOT_A_REPORT_LINE = {'_fetched_bundle'}
+"""Counted lines in the two modules that no report renders.
 
-    The literal is what is refused, not the wording: `_report_untouched` reaches
-    its phrase through a loop variable and that is a member arriving by another
-    route. What no call site may do is spell the prose at the point of call.
-    """
-    typed = wordings_typed_at_a_call_site({path.name: path.read_text() for path in SOURCE})
+`_fetched_bundle` warns that the remote would not answer, and its count and its
+prose are one sentence — `could not reach the remote after 2 attempt(s), so
+nothing was fetched`. A comma follows the plural marker, which `counted_phrase`
+cannot put there, and the sentence appears on no report row.
 
-    assert not typed, f'a builder was handed a wording written at the call site: {typed}'
-
-
-def test_the_call_site_guard_sees_a_wording_typed_where_it_renders() -> None:
-    """The guard's subject is "no site was left out", so no breakage of the walk
-    can reach it — break the walk and it goes red for the wrong reason. Proved by
-    handing each builder the thing it refuses and requiring the detector to say so.
-
-    Both argument shapes, because they are found by different code: `tally` reads
-    the second element of a pair and the other two read a position.
-    """
-    bypassed = {'a_module.py': "_clause(items, 'went wrong')\ntally((3, 'unmeasured'))\ncounted(1, f'{x} went wrong')\n"}
-
-    assert wordings_typed_at_a_call_site(bypassed) == ['a_module.py:1', 'a_module.py:2', 'a_module.py:3']
+**Every name here is asserted producible by the walk that subtracts it.** A row
+naming a function the walk never reaches makes a narrow population read as an
+accounted-for one, and nothing else would say so.
+"""
 
 
-def test_one_builder_composes_every_counted_line() -> None:
+def test_one_builder_composes_every_report_line_that_carries_a_count() -> None:
     """`N noun(s) …` is one shape, so one function composes it.
 
-    Refused at the f-string rather than at the call, because a site that composes
-    the whole line calls no builder and so is invisible to the guard above. That
-    is the door a call-site rule cannot reach, and it is the one a new render site
-    goes through: writing the sentence out is easier than finding the builder.
+    Refused at the f-string rather than at the argument, because a site that
+    composes the whole line hands nothing to a builder — the annotation on
+    `counted_phrase`, `tally` and `_clause` never sees it. That is the door a type
+    refuses nothing at, and it is the one a new render site goes through: writing
+    the sentence out is easier than finding the builder.
     """
+    composed = set()
     for path in VOCABULARY:
-        builders = counted_builders(ast.parse(path.read_text()))
-        assert builders <= {'counted'}, f'{path.name} composes a counted line in {sorted(builders - {"counted"})}'
+        composed |= counted_builders(ast.parse(path.read_text()))
+
+    assert composed >= NOT_A_REPORT_LINE, f'exempted but unreachable: {sorted(NOT_A_REPORT_LINE - composed)}'
+    assert composed - NOT_A_REPORT_LINE == {'counted_phrase'}, f'a counted line is composed in {sorted(composed - NOT_A_REPORT_LINE)}'
 
 
 def test_the_counted_line_guard_sees_a_function_that_composes_its_own() -> None:
@@ -948,18 +916,23 @@ class StandIn(str):
     has to answer is `Phrase.MEMBER` and `.heading`, and an enum built for that
     buys a class the type checker cannot follow.
 
-    The heading form carries the member's own stand-in whole, so a line rendering
-    either one counts as rendering that member. Which of the two spellings reached
-    the screen is `test_every_rendered_line_reads_its_wording_from_the_table`'s
-    question, and it asks it of the shipped English rather than of these.
+    **Neither spelling contains the other**, which is the whole point of the pair.
+    A heading built as `<NAME>-HEADING` is satisfied by a search for `<NAME>`, so
+    a site rendering the member where the heading belongs — a plural verb over a
+    singular subject — reads as correct to every assertion here.
     """
 
     heading: str
 
     def __new__(cls, name: str) -> StandIn:
         member = super().__new__(cls, f'<{name}>')
-        member.heading = f'<{name}>-HEADING'
+        member.heading = f'<HEADING-{name}>'
         return member
+
+    @property
+    def spellings(self) -> tuple[str, str]:
+        """Both forms, for a caller asking whether this member reached a line at all."""
+        return (str(self), self.heading)
 
 
 def stand_in_phrases() -> SimpleNamespace:
@@ -1007,9 +980,9 @@ def rendered_lines(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """Every line the whole-machine verbs word with a phrase from the table.
 
     Reached through the function that builds each one rather than through a
-    command, so nothing here walks a machine. That is also why `converging_line`
-    is a function: the heading over a group of work was composed inside the loop
-    that printed it, and reading it meant arranging for an `apply` to have work.
+    command, so nothing here walks a machine. That is what `converging_line` is
+    for: a heading composed inside the loop that prints it is readable only by
+    arranging for an `apply` to have work.
 
     Which lines these are is not a claim anyone has to trust —
     `test_the_swap_reaches_every_phrase_these_two_modules_render` measures the set
@@ -1018,7 +991,9 @@ def rendered_lines(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     buffer = capture(monkeypatch)
     declined = a_declined_change()
     blind = a_change(verdict=Verdict.UNKNOWN, repair=Repair.NONE, item='ghrelease/yazi')
-    drifting = a_change(item='go/forge')
+    # Privileged, so the plan row carries its root clause as well as its drift
+    # clause — one row wording both counts is what the shipped one does.
+    drifting = a_change(item='go/forge', privileged=True)
     warning = validate.Finding('packages', validate.Severity.WARNING, 'a tool nothing declares')
     fatal = validate.Finding('packages', validate.Severity.ERROR, 'a manifest that will not parse')
 
@@ -1060,16 +1035,21 @@ def test_every_rendered_line_reads_its_wording_from_the_table(monkeypatch: pytes
     the member. A site that typed its wording renders the shipped English after the
     swap while every sibling renders a stand-in — and searching for the English
     instead cannot be done here, because `unmeasured` and `unprobed` are also
-    `--json` keys and a column label.
+    `--json` keys.
+
+    **Both spellings are in the population**, or the singular is unguarded: it is
+    reached only by `.heading`, so a search built from `str(phrase)` alone never
+    holds a wording that a render site could type.
     """
-    shipped = [str(phrase) for phrase in output.Phrase]
+    shipped = [spelling for phrase in output.Phrase for spelling in {str(phrase), phrase.heading}]
     stand_ins = stand_in_phrases()
     swept = rebind(monkeypatch, TABLE, stand_ins)
 
     for where, text in rendered_lines(monkeypatch).items():
         typed = [phrase for phrase in shipped if phrase in text]
         assert not typed, f'{where} types {typed} rather than reading it, with {sorted(set(swept))} swapped: {text!r}'
-        assert any(member in text for member in vars(stand_ins).values()), f'{where} words no phrase at all: {text!r}'
+        reached = [spelling for member in vars(stand_ins).values() for spelling in member.spellings if spelling in text]
+        assert reached, f'{where} words no phrase at all: {text!r}'
 
 
 def test_the_swap_reaches_every_phrase_these_two_modules_render(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1080,14 +1060,38 @@ def test_the_swap_reaches_every_phrase_these_two_modules_render(monkeypatch: pyt
     Measured against what the two modules actually reach rather than against the
     whole table, so a phrase belonging to another report — `network check` words
     its own `unprobed` tally — is out by construction rather than by exemption.
+
+    Either spelling counts, because the subject is whether the member reached a
+    line at all. Which spelling reached it is
+    `test_a_section_name_renders_the_singular_spelling`.
     """
     stand_ins = stand_in_phrases()
     rebind(monkeypatch, TABLE, stand_ins)
     rendered = ' '.join(rendered_lines(monkeypatch).values())
 
-    missing = {name for name in members_read(VOCABULARY) if getattr(stand_ins, name) not in rendered}
+    missing = {name for name in members_read(VOCABULARY) if not any(word in rendered for word in getattr(stand_ins, name).spellings)}
 
     assert not missing, f'these two modules render a phrase no line here does: {sorted(missing)}'
+
+
+def test_a_section_name_renders_the_singular_spelling(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`render_section(section, …)` where `render_section(section.heading, …)` was
+    meant puts a plural verb over a singular subject — `! need attention`.
+
+    Nothing else here sees it. The swap guard asks only that no shipped English
+    survives, and the member is as much a stand-in as its heading; the coverage
+    guard accepts either spelling by design. So the affordance the table adds is
+    guarded by this and by the wording pinned in `tests/cli/test_apply.py`.
+    """
+    stand_ins = stand_in_phrases()
+    rebind(monkeypatch, TABLE, stand_ins)
+    buffer = capture(monkeypatch)
+
+    reconcile._report_untouched([a_declined_change()], [a_change(verdict=Verdict.UNKNOWN, repair=Repair.NONE)])
+
+    written = buffer.getvalue()
+    for member in (stand_ins.NEED_ATTENTION, stand_ins.NOT_MEASURABLE):
+        assert member.heading in written, f'a section is named by the counted spelling: {written!r}'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

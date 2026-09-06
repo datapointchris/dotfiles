@@ -737,12 +737,19 @@ class TestWhatApplyDeclinedToTouch:
         self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
     ) -> None:
         """These were printed as bare rows with no heading, so they read as a
-        continuation of whatever provider had acted last."""
+        continuation of whatever provider had acted last.
+
+        **The one place the singular spelling is pinned**, written out rather than
+        read from `Phrase.NEED_ATTENTION.heading`. An assertion that reads the
+        member takes the same value the renderer took, so a typo in the second
+        wording reaches a screen with the suite green — and `heading` is reached
+        from one line of `src/`, which leaves the affordance itself unguarded.
+        """
         walked(monkeypatch, Walk(drift('atuin', Repair.BY_HAND), outcomes=()))
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        assert output.Phrase.NEED_ATTENTION.heading in capsys.readouterr().err
+        assert 'needs attention' in capsys.readouterr().err
 
     def test_stdout_stays_empty(self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
         """`--json` owns stdout, so every one of these rows is a diagnostic."""
