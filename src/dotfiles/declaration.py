@@ -107,36 +107,22 @@ def print_section(title: str, color: Color = Color.BRIGHT_CYAN) -> None:
     print(colorize(line, color) if USE_COLOR else line)
 
 
-def print_header(title: str) -> None:
-    """Print a main header with box drawing."""
-    line = '━' * 50
-    if USE_COLOR:
-        print(colorize(line, Color.BRIGHT_CYAN))
-        print(colorize(f' {title}', Color.BRIGHT_CYAN))
-        print(colorize(line, Color.BRIGHT_CYAN))
-    else:
-        print(line)
-        print(f' {title}')
-        print(line)
+def get_packages_file() -> Path:
+    """The declaration this checkout carries, or a refusal naming its absence.
 
-
-def get_packages_file(root: Path | None = None) -> Path:
-    """Find packages.yml. If root is given, look under <root>/install/; else walk to git root."""
-    if root is not None:
-        packages_file = root / 'install' / 'packages.yml'
-        if packages_file.exists():
-            return packages_file
-        raise Refusal(f'packages.yml not found at {packages_file}')
-
+    `paths` is the one module that resolves the checkout, and `$DOTFILES_DIR` is
+    the knob it reads — so a caller wanting a different tree sets that rather
+    than passing a root down through every reader.
+    """
     if paths.PACKAGES_FILE.exists():
         return paths.PACKAGES_FILE
 
     raise Refusal('packages.yml not found')
 
 
-def load_packages(root: Path | None = None) -> dict[str, Any]:
-    """Load and parse packages.yml, optionally rooted at an override path."""
-    with get_packages_file(root).open() as f:
+def load_packages() -> dict[str, Any]:
+    """Load and parse packages.yml."""
+    with get_packages_file().open() as f:
         return yaml.safe_load(f)
 
 
@@ -233,8 +219,13 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
     # uv installs a tool per directory, and some of them are libraries pulled in
     # for another tool's benefit (numpy for the Jupyter stack) with no console
     # script of their own.
+    #
+    # An empty `$UV_TOOL_DIR` names no directory and falls through to the
+    # default, which is `evidence.uv_tool_dir`'s spelling and uv's own reading.
+    # Taking it as the answer resolves `Path('') / name` against the working
+    # directory, so the verdict would depend on where the command was run.
     if section in ('uv_tools', 'git_uv_tools'):
-        uv_dir = Path(os.environ.get('UV_TOOL_DIR', Path.home() / '.local/share/uv/tools')) / name
+        uv_dir = Path(os.environ.get('UV_TOOL_DIR') or Path.home() / '.local/share/uv/tools') / name
         if uv_dir.is_dir():
             return InstallStatus.INSTALLED, str(uv_dir)
 
@@ -284,11 +275,18 @@ def truncated_description(description: str) -> str:
 
 
 def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_widths: dict[str, int] | None = None) -> dict[str, int]:
-    """Calculate optimal column widths for a list of items."""
+    """Each field's column, measured to its widest value and capped where asked.
+
+    No items measures the same as one empty value, which is what keeps the
+    callers' own emptiness checks a rendering choice rather than a crash guard —
+    they print their own wording for a query that matched nothing, and would
+    otherwise be the only thing standing between an empty result and `max()`
+    raising on an empty sequence.
+    """
     max_widths = max_widths or {}
     widths = {}
     for field in fields:
-        width = max(len(str(item.get(field, ''))) for item in items) + 2
+        width = max((len(str(item.get(field, ''))) for item in items), default=0) + 2
         if field in max_widths:
             width = min(width, max_widths[field])
         widths[field] = width
@@ -381,7 +379,7 @@ def sections_named(args: argparse.Namespace) -> list[str]:
     covers three and `toolchains` covers one, and `registry.sections_for` is what
     each of them reads to say which.
     """
-    named = list(args.section or ())
+    named: list[str] = list(args.section or ())
     unknown = [section for section in named if section not in PACKAGE_SECTIONS]
     if unknown:
         raise Refusal(
@@ -410,7 +408,32 @@ def _listing(named: list[str]) -> str:
 
 
 PLATFORM_FIELDS = ('apt', 'brew', 'pacman', 'aur')
-METADATA_FIELDS = (('package', 'Package'), ('repo', 'Repository'), ('github_repo', 'GitHub'))
+METADATA_FIELDS = (('package', 'Import path'), ('repo', 'Repository'), ('github_repo', 'GitHub'))
+"""The entry keys `show` reports as metadata, and the label each is printed under.
+
+`package` is a go tool's `go install` argument, named the way Go names it.
+The block's own heading already reads `Package: <name>`, so a second row under
+that label would put two different values on one question with nothing on either
+row to say which was which.
+"""
+
+FIXED_LABELS = ('Description', 'Section', 'Tags', 'Status')
+"""The labels `show` prints that name no key of the entry's own."""
+
+LABEL_COLUMN = max(len(label) for label in (*FIXED_LABELS, *(label for _, label in METADATA_FIELDS))) + 2
+"""What every label in the `show` block is padded to, colon included.
+
+Measured off the labels rather than typed, so a metadata field added above
+cannot leave its own row the only misaligned one.
+"""
+
+PLATFORM_COLUMN = max(len(field) for field in PLATFORM_FIELDS) + 2
+"""The same, for the indented block of per-manager names."""
+
+
+def detail_row(label: str, value: object) -> str:
+    """One `show` row, its value starting at the column every other row starts at."""
+    return f'{f"{label}:":<{LABEL_COLUMN}}{value}'
 
 
 def described(pkg: dict[str, Any]) -> dict[str, Any]:
@@ -471,26 +494,26 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
         print('━' * 40)
         print()
 
-        print(f'Description: {pkg.get("description", "N/A")}')
-        print(f'Section:     {pkg["_section"]}')
-        print(f'Tags:        {", ".join(pkg.get("tags", [])) or "none"}')
+        print(detail_row('Description', pkg.get('description', 'N/A')))
+        print(detail_row('Section', pkg['_section']))
+        print(detail_row('Tags', ', '.join(pkg.get('tags', [])) or 'none'))
 
         platforms = [(f, pkg[f]) for f in PLATFORM_FIELDS if f in pkg]
         if platforms:
             print('\nPlatform Packages:')
             for field, value in platforms:
-                print(f'  {field}:    {value}')
+                print(f'  {f"{field}:":<{PLATFORM_COLUMN}}{value}')
 
         for field, label in METADATA_FIELDS:
             if field in pkg:
-                print(f'{label}:     {pkg[field]}')
+                print(detail_row(label, pkg[field]))
 
-        # Installation status
-        if is_available_on_platform(pkg):
-            status, path = check_installed(pkg)
-            status_str = format_status(status, path)
-            if status_str:
-                print(f'\nStatus:      {status_str}')
+        # `format_status` answering None is the status row an unavailable package
+        # deliberately does not get, which is why availability is read there
+        # rather than guarded for again here.
+        status_str = format_status(*check_installed(pkg))
+        if status_str:
+            print(f'\n{detail_row("Status", status_str)}')
 
         print()
 
@@ -683,9 +706,7 @@ def main(argv: list[str] | None = None) -> None:
         parser.print_help()
         return
 
-    root_override = getattr(args, 'root', None)
-    root_path = Path(root_override).resolve() if root_override else None
-    data = load_packages(root=root_path)
+    data = load_packages()
     args.func(args, data)
 
 

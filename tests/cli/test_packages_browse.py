@@ -404,6 +404,70 @@ def test_show_prints_every_field_the_entry_declares(
     assert described['installed'] == InstallStatus.NOT_INSTALLED.value
 
 
+A_GO_TOOL: dict[str, Any] = {
+    'go_tools': [
+        {
+            'name': 'task',
+            'command': 'absent-by-construction',
+            'description': 'a task runner',
+            'package': 'github.com/go-task/task/v3/cmd/task',
+            'github_repo': 'go-task/task',
+        }
+    ]
+}
+"""The one section that declares a `package`, which is a go install argument.
+
+Every other section leaves the key out, so `go_tools` is the whole population
+that reaches the metadata label at all.
+"""
+
+
+def test_the_heading_is_the_only_row_a_package_is_named_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The heading answers "which entry is this" and the metadata row answers
+    "what does `go install` take", so the two carry different labels.
+
+    A `go_tools` entry is the only one that prints both, which is what makes it
+    the case where one label over the pair would be ambiguous.
+    """
+    point_at(tmp_path / 'repo', A_GO_TOOL, monkeypatch)
+
+    declaration.main(['show', 'task'])
+    rows = capsys.readouterr().out.splitlines()
+
+    assert [row for row in rows if row.startswith('Package:')] == ['Package: task']
+    assert 'Import path: github.com/go-task/task/v3/cmd/task' in rows
+
+
+DETAIL_ROWS = ('Description', 'Section', 'Tags', 'Import path', 'GitHub', 'Status')
+"""Every row `show` prints for `A_GO_TOOL`, in the order it prints them."""
+
+
+def value_column(row: str) -> int:
+    """Where the value starts, counted from the front of the row."""
+    label, _, rest = row.partition(':')
+    return len(label) + 1 + (len(rest) - len(rest.lstrip(' ')))
+
+
+def test_every_detail_row_starts_its_value_at_one_column(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The widest label decides the column and every other row is padded to it.
+
+    `Import path` is the widest, and an entry carrying it is the only one where
+    a per-row pad and a shared column give different answers — every other row's
+    label is short enough that any pad wide enough for it also lines up.
+    """
+    point_at(tmp_path / 'repo', A_GO_TOOL, monkeypatch)
+
+    declaration.main(['show', 'task'])
+    rows = [row for row in capsys.readouterr().out.splitlines() if row.partition(':')[0] in DETAIL_ROWS]
+
+    assert [row.partition(':')[0] for row in rows] == list(DETAIL_ROWS)
+    assert {value_column(row) for row in rows} == {declaration.LABEL_COLUMN}
+
+
 def test_an_entry_declaring_no_tags_says_none_rather_than_leaving_the_row_empty(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """The document carries the empty list and the table carries the word, which is
     the split `--json` exists for: one is the value and one is for a person."""
@@ -499,7 +563,7 @@ def test_an_unknown_section_refuses_and_names_every_section_there_is(declared: P
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# `search`, and the empty-list crash it is one line away from
+# `search`, and the columns it measures over whatever it matched
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -528,15 +592,14 @@ def test_search_prints_no_status_row_for_a_package_this_platform_cannot_install(
     assert 'ghostty' in rows[0]
 
 
-def test_search_returns_before_it_would_measure_a_column_over_nothing(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """`calculate_column_widths` takes `max()` over the items, which raises on an
-    empty sequence. `cmd_search` survives a query matching nothing only because
-    its early return comes first, so the two are pinned together: reorder them
-    and every unmatched search becomes a traceback.
-    """
-    with pytest.raises(ValueError):
-        declaration.calculate_column_widths([], ['name', '_section'])
+def test_a_query_matching_nothing_says_so_without_measuring_a_column(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """The early return decides the wording and nothing else.
 
+    `calculate_column_widths` answers for an empty list, which the last row of
+    WIDTHS below asserts. So moving the measurement in front of the return
+    changes no output, and this test is about the sentence rather than about
+    surviving the call.
+    """
     declaration.main(['search', 'nothing-declares-this'])
     empty = capsys.readouterr().out
 
@@ -544,14 +607,21 @@ def test_search_returns_before_it_would_measure_a_column_over_nothing(declared: 
     assert empty.strip()
 
 
-WIDTHS = (
+WIDTHS: tuple[tuple[str, list[dict[str, Any]], list[str], dict[str, int] | None, dict[str, int]], ...] = (
     ('the widest value plus two', [{'name': 'ab'}, {'name': 'abcd'}], ['name'], None, {'name': 6}),
     ('a field the item does not carry', [{'name': 'ab'}, {}], ['name'], None, {'name': 4}),
     ('a cap the widest value exceeds', [{'name': 'a-very-long-package-name'}], ['name'], {'name': 10}, {'name': 10}),
     ('a cap the widest value stays under', [{'name': 'ab'}], ['name'], {'name': 10}, {'name': 4}),
     ('a value that is not a string', [{'count': 1234}], ['count'], None, {'count': 6}),
     ('two fields measured apart', [{'name': 'ab', 'section': 'go_tools'}], ['name', 'section'], None, {'name': 4, 'section': 10}),
+    ('no items at all', [], ['name', 'section'], None, {'name': 2, 'section': 2}),
 )
+"""Every width the function answers, the empty list last.
+
+No items measures the same as one empty value. That is what makes the function
+total, so `cmd_search` and `cmd_list` are not the only thing standing between an
+unmatched query and `max()` over an empty sequence.
+"""
 
 
 @pytest.mark.parametrize(('label', 'items', 'fields', 'caps', 'expected'), WIDTHS, ids=[row[0] for row in WIDTHS])
@@ -663,24 +733,18 @@ def test_version_and_the_bare_invocation_answer_without_reading_the_declaration(
         declaration.main(['list'])
 
 
-def test_a_declaration_can_be_read_from_a_root_the_caller_names(declared: Path, tmp_path: Path) -> None:
-    """`get_packages_file(root=...)` is reachable only by a direct call — no
-    subcommand declares a `--root`, so `main` always passes None.
+def test_the_declaration_read_is_the_one_the_resolved_checkout_holds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`$DOTFILES_DIR` is the only way to read a different tree, and `paths` is
+    where it is read.
 
-    Read from `elsewhere` while the checkout still holds a different declaration,
-    or the argument would pass by agreeing with what `paths` already answers.
+    Pointed at a second checkout holding a different declaration, or the
+    assertion would pass by agreeing with the tree it would have found anyway.
     """
     elsewhere = tmp_path / 'elsewhere'
-    (elsewhere / 'install').mkdir(parents=True)
-    (elsewhere / 'install' / 'packages.yml').write_text('go_tools:\n  - name: task\n')
-    missing = tmp_path / 'nowhere'
+    point_at(elsewhere, {'go_tools': [{'name': 'task'}]}, monkeypatch)
 
-    assert declaration.load_packages(root=elsewhere) == {'go_tools': [{'name': 'task'}]}
-    assert declaration.get_packages_file() == declared / 'install' / 'packages.yml'
-
-    with pytest.raises(Refusal) as refused:
-        declaration.get_packages_file(root=missing)
-    assert str(missing / 'install' / 'packages.yml') in str(refused.value)
+    assert declaration.get_packages_file() == elsewhere / 'install' / 'packages.yml'
+    assert declaration.load_packages() == {'go_tools': [{'name': 'task'}]}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -847,6 +911,30 @@ def test_a_packages_status_is_read_from_the_evidence_its_section_allows(
 
     assert status is expected
     assert path == (expected_path if expected in (InstallStatus.INSTALLED, InstallStatus.APP_ONLY) else None)
+
+
+def test_an_empty_uv_tool_dir_is_read_as_unset_rather_than_as_the_working_directory(
+    machine: Machine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Set-but-empty is not a request, and uv itself reads it as unset.
+
+    Taken as the answer it resolves `Path('') / name` against the process's own
+    working directory, so `packages show` would report a tool installed or absent
+    according to where the command was typed. Proven by making that reading
+    succeed: a directory of the tool's name sits in the CWD, and the entry is
+    still measured against `$HOME`.
+    """
+    monkeypatch.setattr(platform, 'system', lambda: 'Linux')
+    monkeypatch.setenv('UV_TOOL_DIR', '')
+    (tmp_path / 'decoy').mkdir()
+    (tmp_path / 'decoy' / 'numpy').mkdir()
+    monkeypatch.chdir(tmp_path / 'decoy')
+    (machine.home / '.local' / 'share' / 'uv' / 'tools' / 'numpy').mkdir(parents=True)
+
+    status, path = declaration.check_installed({'name': 'numpy', '_section': 'uv_tools', 'command': 'absent-by-construction'})
+
+    assert status is InstallStatus.INSTALLED
+    assert path == str(machine.home / '.local' / 'share' / 'uv' / 'tools' / 'numpy')
 
 
 LINUX_MANAGERS = (('pacman', True), ('aur', True), ('apt', False))
