@@ -3,20 +3,25 @@
 # involves:@me -author:@me, none of which can ever match for a solo fleet — three
 # empty sections and one real one.
 #
-# Order is the triage order: what can land, what is broken, what is still being
-# checked, what has been sitting too long, what is not ready yet. "Stale" is the
-# gauge — a pile there means code went out faster than it was read.
+# `Open` leads and is unfiltered, because the first section is the one gh-dash
+# lands on and every other section here can be empty while PRs are open. The
+# state split below it is the triage order: what can land, what is broken, what is
+# still being checked, what has been sitting too long, what is not ready yet.
+# "Stale" is the gauge — a pile there means code went out faster than it was read.
 #
 # Pending is negated rather than `status:pending` because a PR with no checks at
 # all carries no status and would match neither. Search indexes a PR's status when
 # it is opened and often never revisits it, so `status:success` is far narrower
 # than "checks passed" and most open PRs land here — without it a green PR is
-# invisible in every section. Measure it on any busy repo:
+# invisible in every section. That narrowness is also why `Ready` cannot lead: it
+# is the section a green PR is least likely to be in. Measure it on any busy repo:
 #   for s in '' status:success status:failure '-status:success -status:failure'; do
 #     gh api graphql -f query='query($s:String!){search(query:$s,type:ISSUE){issueCount}}' \
 #       -f s="repo:cli/cli is:open is:pr $s" --jq .data.search.issueCount
 #   done
 prSections:
+    - title: Open
+      filters: is:open author:@me
     - title: Ready
       filters: is:open author:@me draft:false status:success
     - title: Failing
@@ -38,7 +43,24 @@ repo:
 defaults:
     preview:
         open: true
-        width: 50
+        # A fraction, which gh-dash scales by the screen. A value above 1 is taken
+        # as a literal column count instead, and a column count cannot be right on
+        # more than one machine — the terminals this deploys to differ by a factor
+        # of three in width, and a sidebar narrow enough starves the
+        # charmbracelet/glamour markdown renderer until the tab bar, the header and
+        # the Changes card collapse into a column of wrapped fragments.
+        #
+        # The scaling needs v4.23.0 or newer. Below that the field is an int, 0.45
+        # truncates to zero, and gh-dash panics in `viewChecksBar` on a negative
+        # `strings.Repeat` before it draws anything. `github_releases` installs the
+        # newest release and `dotfiles check` reports a machine behind it, so that
+        # floor is held by the same mechanism holding every other release binary
+        # here and there is no constraint to declare. A copy installed by `gh
+        # extension install` is outside that mechanism, which is why gh-dash is not
+        # installed that way.
+        width: 0.45
+        height: 0.60
+        position: auto
     prsLimit: 20
     prApproveComment: LGTM
     issuesLimit: 20

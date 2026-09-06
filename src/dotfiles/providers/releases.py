@@ -230,6 +230,14 @@ def fzf(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'fzf-{_bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf')
 
 
+def gh_dash(tag: str, target: Target) -> ReleaseArtifact:
+    """The tag whole, `v` included, which is unusual enough to be the reason this
+    docstring exists — `_bare` appears in most of the functions here and would
+    name an asset the release does not publish."""
+    suffix = ('darwin-arm64' if target.is_arm else 'darwin-amd64') if target.is_darwin else 'linux-amd64'
+    return ReleaseArtifact(f'gh-dash_{tag}_{suffix}', Archive.RAW)
+
+
 def glow(tag: str, target: Target) -> ReleaseArtifact:
     """Nested under a directory named after the archive, on both platforms.
 
@@ -438,6 +446,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'duckdb': duckdb,
     'duf': duf,
     'fzf': fzf,
+    'gh-dash': gh_dash,
     'glow': glow,
     'hadolint': hadolint,
     'icb': _go_release_cli('icb'),

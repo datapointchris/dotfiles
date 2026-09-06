@@ -858,6 +858,17 @@ github_releases:
     description: Markdown renderer for terminal
     tags: [cli]
 
+  # Distributed both as a `gh` extension and as plain release binaries, and this
+  # takes the binaries. `gh extension install` verifies no checksum, keeps its own
+  # copy under ~/.local/share/gh/extensions where nothing here can measure it, and
+  # moves only when someone runs `gh extension upgrade` by hand. The binary is the
+  # same program, so the whole cost is that it is invoked as `gh-dash` rather than
+  # as `gh dash`.
+  - name: gh-dash
+    repo: dlvhdr/gh-dash
+    description: Terminal dashboard for GitHub pull requests and issues
+    tags: [cli, git, github]
+
   - name: duf
     repo: muesli/duf
     description: Disk usage analyzer

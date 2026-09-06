@@ -34,6 +34,7 @@ github_releases:
   - neovim
   - lazygit
   - yazi
+  - gh-dash
   - glow
   - duf
   - tflint
