@@ -62,12 +62,12 @@ OS_TARGETS = {
 
 
 def declaration() -> catalog.Catalog:
-    """This checkout's `packages.yml`, never the machine's.
+    """This checkout's `packages.yml`, named rather than resolved.
 
-    A load with no path resolves through `DOTFILES_DIR`, and `.zshenv` exports
-    that to the primary checkout on every machine here. A bare load run from a
-    worktree therefore measures what `main` declares while the branch under test
-    sits unread — green against a file the change never touched.
+    What this buys is one spelling for the file across this module, not a
+    different answer. A load with no path reads `paths.PACKAGES_FILE`, which
+    `tests/conftest.py` pins to the checkout the suite lives in — so the bare
+    form is correct here too, and `tests/test_suite_checkout.py` is what runs that.
     """
     return catalog.load(PACKAGES_YML)
 
