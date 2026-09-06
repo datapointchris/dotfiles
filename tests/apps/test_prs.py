@@ -22,6 +22,7 @@ import json
 import os
 import pty
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -89,6 +90,31 @@ def write_stub(bin_dir: Path, name: str, body: str) -> None:
 
 def stub_pr_list(bin_dir: Path, rows: tuple[dict[str, Any], ...]) -> None:
     write_stub(bin_dir, 'pull-requests', f"cat <<'JSON'\n{json.dumps(list(rows))}\nJSON")
+
+
+def withheld(bin_dir: Path, tools: tuple[str, ...]) -> str:
+    """A PATH where `tools` cannot be found, and everything else still can.
+
+    Removing the stub is not enough: `script_env` keeps the real PATH after
+    `bin_dir`, so the real tool is found one directory later. Narrowing to
+    `bin_dir` alone is not the answer either — the stubs are shell scripts, so
+    that takes `cat` and the rest of coreutils with it, and the run fails for a
+    reason the test is not about.
+
+    So the directory holding each withheld tool is dropped, and anything the
+    harness needs from it is linked into `bin_dir` first. `uv` is the one that
+    matters: it shares `~/.local/bin` with `claude`, and it is what runs the
+    script at all.
+    """
+    homes = {Path(found).parent for tool in tools if (found := shutil.which(tool))}
+    for rescued in ('uv',):
+        link = bin_dir / rescued
+        if Path(shutil.which(rescued) or '/').parent in homes and not link.exists():
+            link.symlink_to(shutil.which(rescued) or rescued)
+    for tool in tools:
+        (bin_dir / tool).unlink(missing_ok=True)
+    kept = [entry for entry in os.environ['PATH'].split(os.pathsep) if Path(entry) not in homes]
+    return os.pathsep.join([str(bin_dir), *kept])
 
 
 def script_env(tmp_path: Path, bin_dir: Path, **extra: str) -> dict[str, str]:
@@ -220,7 +246,21 @@ def session(tmp_path: Path, bin_dir: Path):
     room = tmp_path / 'fzf'
     room.mkdir()
 
-    def _session(*rows: dict[str, Any], replies: tuple[str, ...] = (), answer: str = '\n', refuses: bool = False) -> Session:
+    def _session(
+        *rows: dict[str, Any],
+        replies: tuple[str, ...] = (),
+        answer: str = '\n',
+        refuses: bool = False,
+        attended: bool = True,
+        without: tuple[str, ...] = (),
+    ) -> Session:
+        # Cleared per call, so a test may run the picker more than once. The stub
+        # counts fzf invocations in `count` and reads `reply.$call`, so a second
+        # run against a room still holding the first one's count asks for a reply
+        # nothing wrote and fzf exits 130 — a picker that was cancelled, which
+        # every assertion downstream then reads as the action not having fired.
+        shutil.rmtree(room, ignore_errors=True)
+        room.mkdir(parents=True)
         stub_pr_list(bin_dir, rows)
         write_stub(bin_dir, 'fzf', FZF_STUB.format(room=room))
         write_stub(bin_dir, 'nvim', 'exit 0')
@@ -229,6 +269,23 @@ def session(tmp_path: Path, bin_dir: Path):
         # thing left to assert on.
         write_stub(bin_dir, 'tmux', 'printf \'tmux %s\\n\' "$*"')
         write_stub(bin_dir, 'gh', 'printf \'gh %s\\n\' "$*"')
+        # `open_window` refuses before launching when a tool it needs is absent,
+        # because tmux reports whether the launch was accepted and never what the
+        # launched command did. These two are what the page and review actions
+        # need on PATH for that check to pass.
+        write_stub(bin_dir, 'claude', 'exit 0')
+        write_stub(bin_dir, 'less', 'exit 0')
+        # The real `wl-copy` is on PATH on every Wayland box and exits 1 with no
+        # compositor to reach, which is what a test run is.
+        write_stub(bin_dir, 'wl-copy', 'cat >/dev/null')
+        # A tool is only absent if it is absent from the whole of PATH, and
+        # `script_env` keeps the real one after `bin_dir` — `claude` and `uv` share
+        # `~/.local/bin`, so no directory can be dropped that keeps the shebang
+        # working. So PATH narrows to `bin_dir` alone and `uv` is linked into it,
+        # which makes the stubs the entire world this run can see.
+        narrowed = {}
+        if without:
+            narrowed['PATH'] = withheld(bin_dir, without)
         for index, reply in enumerate(replies, start=1):
             (room / f'reply.{index}').write_text(reply)
 
@@ -237,11 +294,11 @@ def session(tmp_path: Path, bin_dir: Path):
             os.write(controller, answer.encode())
             result = subprocess.run(
                 [str(PRS)],
-                stdin=terminal,
+                stdin=terminal if attended else subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=60,
-                env=script_env(tmp_path, bin_dir, TMUX='/tmp/tmux-fixture,1,0'),
+                env=script_env(tmp_path, bin_dir, TMUX='/tmp/tmux-fixture,1,0', **narrowed),
             )
         finally:
             os.close(terminal)
@@ -522,7 +579,7 @@ def test_enter_answers_the_merge_confirm(session) -> None:
 def test_an_answer_that_is_not_yes_leaves_the_pr_alone(session) -> None:
     """Enter being yes only works if a stray key is still no. Treating anything
     unrecognized as agreement would make a mistimed keypress a merge."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),), answer='x\n')
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),), answer='x\n\n')
 
     assert 'left alone' in run.stdout
     assert 'gh pr merge' not in run.stdout
@@ -533,10 +590,38 @@ def test_enter_does_not_close_a_pull_request(session) -> None:
     merge. Enter is the key pressed by reflex, and the two actions differ in what
     a reflex costs — a merge lands work that was going to land, a close discards a
     branch nobody read."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'x'),), answer='\n')
+    # Two newlines: the first answers the confirm, the second dismisses the pause
+    # that holds `left open` on screen long enough to be read.
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'x'),), answer='\n\n')
 
     assert 'left open' in run.stdout
+    assert 'press enter to close' in run.stdout
     assert 'gh pr close' not in run.stdout
+
+
+@pytest.mark.parametrize(('key', 'verb'), [('x', 'close'), ('m', 'merge')])
+def test_a_guarded_action_refuses_when_there_is_no_terminal_to_ask_on(session, key, verb) -> None:
+    """`interactive` is `sys.stdin.isatty()`, and both guarded actions used to read
+    a false there as permission to skip the confirm and act. There is no flag that
+    supplies the answer instead, so the only correct move is to refuse."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, key),), attended=False, refuses=True)
+
+    assert f'{verb} needs a terminal' in run.stderr
+    assert f'gh pr {verb}' not in run.stdout
+
+
+def test_the_review_action_refuses_when_claude_is_not_installed(session, tmp_path) -> None:
+    """tmux reports whether the launch was accepted, never what the launched
+    command did — it exits 0 for a binary that does not exist, and the pane dies
+    after the popup has already torn down. So the check happens before the launch
+    or it does not happen. The manifest for a network that blocks claude.ai leaves
+    `claude-code` uninstalled, which makes this a real machine."""
+    checkout = tmp_path / 'a-checkout'
+    checkout.mkdir()
+    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, 'r'),), without=('claude',), refuses=True)
+
+    assert 'claude is not installed' in run.stderr
+    assert 'tmux new-window' not in run.stdout
 
 
 def test_close_takes_an_explicit_yes(session) -> None:
@@ -560,8 +645,9 @@ def test_the_page_action_asks_gh_for_a_rendering_and_for_the_comments(session) -
 
 
 def test_the_review_action_opens_a_claude_window_on_that_pr(session, tmp_path) -> None:
-    """The number and the repo both travel. `prs` reaches PRs across the whole
-    registry, so the window's directory does not decide which one is reviewed.
+    """The number travels and the repo does not. The skill takes a count in the
+    slot after the number, and it resolves the repo from the working directory —
+    which is the window's `-c`, this PR's own checkout.
 
     The path is a directory this test makes, not the one `pr` defaults to. That
     default is `/home/chris/<repo>`, which is a literal the rendering tests want
@@ -573,7 +659,7 @@ def test_the_review_action_opens_a_claude_window_on_that_pr(session, tmp_path) -
     checkout.mkdir()
     run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, 'r'),))
 
-    assert '/review-pr 7 dotfiles' in run.stdout
+    assert "/review-pr 7'" in run.stdout
     assert f'-c {checkout}' in run.stdout
 
 
@@ -602,7 +688,7 @@ def test_the_description_is_rendered_rather_than_printed_as_its_source(session) 
 
 def test_the_action_menu_names_the_keys_that_scroll_the_description(session) -> None:
     """A description longer than the pane reads as a truncated one until something
-    on screen says it moves. The keys were bound before this and unnamed."""
+    on screen says it moves, so the footer is what makes the pane usable at all."""
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
     footer = next(arg for arg in run.argv(2) if arg.startswith('--footer='))
 
@@ -636,9 +722,27 @@ def test_the_action_menu_names_the_key_that_takes_each_action(session) -> None:
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
     rows = [plain(row.split('\t', 1)[1]) for row in run.fed(2).splitlines()]
 
-    assert [row.split()[0] for row in rows] == ['d', 'p', 'r', 'o', 'b', 'c', 'x', 'm']
-    labels = ['view diff', 'page and comments', 'claude review', 'open in browser', 'copy branch', 'comment', 'close', 'merge']
-    assert all(label in row for label, row in zip(labels, rows, strict=True))
+    assert [row.split()[0] for row in rows] == bound_keys()
+
+
+def test_only_the_merge_key_merges(session) -> None:
+    """Every other key pressed on a row, and none of them lands the PR.
+
+    The assertion nothing made while `perform` ended on a bare
+    `return merge(...)`: an action reaching no branch fell through to the one
+    irreversible handler, and the pinned key lists were the only thing that fired,
+    which an author updates by reflex. Handlers now hang off `ACTIONS`, so an
+    action with none cannot be built — this is what says so from the outside.
+    """
+    merged = []
+    for key in bound_keys():
+        # Enough newlines for whichever prompt this key reaches: a confirm, and
+        # the pause behind a decline. Extra input is read by nobody.
+        run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, key),), answer='\n\n')
+        if 'gh pr merge' in run.stdout:
+            merged.append(key)
+
+    assert merged == ['m']
 
 
 def test_a_letter_in_the_action_menu_takes_that_action(session) -> None:
@@ -655,7 +759,7 @@ def test_the_list_binds_a_letter_for_every_action(session) -> None:
     action cannot arrive with a row and no key."""
     run = session(pr('dotfiles', 7, 'a-branch'))
 
-    assert '--expect=d,p,r,o,b,c,x,m' in run.argv(1)
+    assert f'--expect={",".join(bound_keys())}' in run.argv(1)
 
 
 def test_the_list_names_its_keys_in_a_footer(session) -> None:
@@ -675,6 +779,23 @@ def help_screen(**extra: str) -> subprocess.CompletedProcess[str]:
         text=True,
         env={**os.environ, 'NO_COLOR': '1', 'UV_CACHE_DIR': UV_CACHE, **extra},
     )
+
+
+def bound_keys() -> list[str]:
+    """Every action letter, in order, read off the tool's own help screen.
+
+    Derived rather than listed. `help_screen` draws one row per `ACTIONS` member,
+    so this asks the tool what it binds; a list written here is a second
+    declaration, and the one a reader updates by reflex when a row fails.
+
+    The `Keys` section is bounded because two sections below it also carry key
+    rows, and single characters are how an action row is told from the `enter`
+    row beside it.
+    """
+    shown = help_screen()
+    assert shown.returncode == 0, shown.stderr
+    section = shown.stdout.split('\nKeys\n', 1)[1].split('\nReading the description', 1)[0]
+    return [fields[0] for line in section.splitlines() if len(fields := line.split()) > 1 and len(fields[0]) == 1]
 
 
 def test_the_help_screen_names_every_key_the_picker_binds() -> None:
