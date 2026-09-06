@@ -26,7 +26,7 @@ for work that grew into a large feature — push the branch and open one — whi
 why the landing decision is made at the end rather than guessed at the start.
 
 A worktree that went the PR route is finished somewhere this tool never sees: the
-merge happens on the forge and the branch is deleted there, so `land` never runs
+merge happens on GitHub and the branch is deleted there, so `land` never runs
 and nothing disposes of the directory. `sweep` is what collects them, from wherever
 you are standing, and it removes one only when the tree is clean, no session is in
 it, its changes are already on the base branch, and the remote branch it was pushed
@@ -1705,8 +1705,8 @@ def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
     """Dispose of every worktree whose work is finished, from wherever you are standing.
 
     `land` and `drop` both read Path.cwd() and refuse outside a linked worktree, so
-    neither can reach one you are not in. Work that goes through a PR is merged on the
-    forge and the remote branch deleted there, and nothing ever runs `drop` — so the
+    neither can reach one you are not in. Work that goes through a PR is merged on
+    GitHub and the remote branch deleted there, and nothing ever runs `drop` — so the
     directories accumulate, and every tool that reports branch state reports each one
     forever.
     """

@@ -28,7 +28,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 PULL_REQUESTS = REPO / 'apps' / 'common' / 'pull-requests'
 
-# The stub gh and bbkt behind `with-demo`, first on PATH. Both forges answer from
+# The stub gh and bbkt behind `with-demo`, first on PATH. Both providers answer from
 # here, so one listing covers both spellings of a row.
 DEMO = Path(__file__).resolve().parent / 'fixtures' / 'demo'
 
@@ -190,7 +190,7 @@ def test_a_repo_the_registry_does_not_name_is_left_out(run) -> None:
 
 def test_a_bitbucket_pr_reports_its_branch_under_the_same_key(run, tmp_path: Path) -> None:
     """Bitbucket Server spells it `fromRef.displayId` and GitHub `headRefName`.
-    A consumer choosing a column must not have to know which forge answered."""
+    A consumer choosing a column must not have to know which provider answered."""
     checkout = tmp_path / 'service'
     checkout.mkdir()
     payload = json.dumps(
@@ -216,7 +216,7 @@ def test_a_bitbucket_pr_reports_its_branch_under_the_same_key(run, tmp_path: Pat
 
 
 def test_an_unauthenticated_gh_skips_github_rather_than_failing_the_run(run) -> None:
-    """A registry can span forges, so one provider being unreachable must not take
+    """A registry can span providers, so one being unreachable must not take
     the whole listing with it — and the message has to name the fix."""
     result = run(
         registry('github', ('dotfiles', '~/dotfiles')),

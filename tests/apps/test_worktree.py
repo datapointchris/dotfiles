@@ -1048,7 +1048,7 @@ class TestSweep:
 
     `land` and `drop` both read Path.cwd(), which means the only worktrees they can
     dispose of are ones a session is already in. Work that goes through a PR is
-    merged on the forge and its branch deleted there, so `land` never runs and the
+    merged on GitHub and its branch deleted there, so `land` never runs and the
     directory outlives the work by months. `sweep` is what reaches those, and the
     price of reaching them is that it acts on trees whose owner is not present to
     object.
