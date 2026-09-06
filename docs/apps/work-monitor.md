@@ -12,17 +12,17 @@ Bound to ++super+ctrl+w++. Workspace 9 is reachable with ++super+9++, and ++supe
 
 ## The Problem This Solves
 
-The two desks sit far enough apart that both screens cannot be read at once. Debugging a problem on the machine at one desk from the other therefore means memorizing error output and carrying it across the room. Running a cable from the Arch box to the second desk's spare monitor input removes that, and it does so over a pure video path — nothing crosses either machine's network.
+A second desk out of reading range of the first means both screens cannot be read at once. Debugging a problem on the machine at one desk from the other therefore means memorizing error output and carrying it across. Running a cable from the Arch box to the second desk's spare monitor input removes that, and it does so over a pure video path — nothing crosses either machine's network.
 
-The obstacle is what happens the rest of the time. Hyprland's catch-all `monitor = , preferred, auto, 1` rule adopts any output that appears, so a permanently connected second monitor means workspaces spread across two desks and windows open on a panel that is usually showing the other machine instead.
+The obstacle is what happens the rest of the time. Hyprland's catch-all `monitor = , preferred, auto, 1` rule adopts any output that appears, so a permanently connected second monitor means workspaces spread across both displays and windows open on a panel that is usually showing the other machine instead.
 
-Leaving the cable plugged in and letting the output come and go on its own does not help either. When the Dell switches to another input it de-asserts hotplug detect, so the source sees a genuine disconnect: Hyprland tears the layout down, migrates workspaces, and rebuilds on reconnect. That reshuffling is the actual complaint, and no display setting prevents it, because from the compositor's point of view the monitor really did disappear.
+Leaving the cable plugged in and letting the output come and go on its own does not help either. When that monitor switches to another input it de-asserts hotplug detect, so the source sees a genuine disconnect: Hyprland tears the layout down, migrates workspaces, and rebuilds on reconnect. That reshuffling is the actual complaint, and no display setting prevents it, because from the compositor's point of view the monitor really did disappear.
 
 ## How It Works
 
 The output is declared disabled in `conf/monitors.conf`, after the catch-all so it overrides it. A disabled output is not a monitor at all — Hyprland assigns it no workspaces and nothing can open on it, so the default state is a clean single-monitor setup regardless of what the cable is doing.
 
-`work-monitor on` applies a live `monitor` rule with `hyprctl keyword`, which enables the output for that session only. Workspace 9 is bound to the connector in `conf/workspaces.conf`, so it lands there and nothing else moves. `work-monitor off` re-disables it, and any windows still on 9 migrate back to the 43".
+`work-monitor on` applies a live `monitor` rule with `hyprctl keyword`, which enables the output for that session only. Workspace 9 is bound to the connector in `conf/workspaces.conf`, so it lands there and nothing else moves. `work-monitor off` re-disables it, and any windows still on 9 migrate back to the primary display.
 
 Because the rule is applied at runtime and the config default is `disable`, a Hyprland reload always returns to the single-monitor state.
 
@@ -32,13 +32,13 @@ The one gap is a config reload while the output is on: `hyprctl reload` restores
 
 ## Configuration
 
-Defaults suit the Minisforum, whose 43" runs on `DP-4`, leaving the HDMI connectors free. Override with environment variables when the hardware changes:
+Defaults assume the primary display occupies `DP-4`, leaving the HDMI connectors free. Override with environment variables when the hardware differs:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `WORK_MONITOR_OUTPUT` | `HDMI-A-1` | Connector name from `hyprctl monitors all` |
 | `WORK_MONITOR_MODE` | `preferred` | Set explicitly when a long cheap cable cannot hold 4K60 |
-| `WORK_MONITOR_POSITION` | `auto-right` | Placement relative to the 43" |
+| `WORK_MONITOR_POSITION` | `auto-right` | Placement relative to the primary display |
 | `WORK_MONITOR_SCALE` | `1` | |
 
 Confirm the connector name once, with the cable plugged in and the monitor switched to that input:
@@ -53,4 +53,4 @@ A cheap cable at that length may negotiate 4K60 and then fail to sync. Drop the 
 
 ## Monitor Side
 
-Turn **Auto Select** off in the Dell's OSD. Left on, it jumps to the Arch box the moment that output goes live, pulling the browser and chat off screen mid-work.
+Turn **Auto Select** off in the second desk's monitor OSD. Left on, it jumps to the Arch box the moment that output goes live, pulling the browser and chat off screen mid-work.
