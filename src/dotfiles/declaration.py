@@ -219,13 +219,8 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
     # uv installs a tool per directory, and some of them are libraries pulled in
     # for another tool's benefit (numpy for the Jupyter stack) with no console
     # script of their own.
-    #
-    # An empty `$UV_TOOL_DIR` names no directory and falls through to the
-    # default, which is `evidence.uv_tool_dir`'s spelling and uv's own reading.
-    # Taking it as the answer resolves `Path('') / name` against the working
-    # directory, so the verdict would depend on where the command was run.
     if section in ('uv_tools', 'git_uv_tools'):
-        uv_dir = Path(os.environ.get('UV_TOOL_DIR') or Path.home() / '.local/share/uv/tools') / name
+        uv_dir = paths.uv_tool_dir() / name
         if uv_dir.is_dir():
             return InstallStatus.INSTALLED, str(uv_dir)
 

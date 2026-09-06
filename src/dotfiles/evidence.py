@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Protocol
 
 from dotfiles import catalog
+from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.plan import DesiredItem
@@ -67,15 +68,6 @@ class Evidence:
     """
 
 
-def uv_tool_dir() -> Path:
-    """Where `uv tool install` puts a tool's own environment.
-
-    From the environment, because that is the knob uv itself honors — which is
-    also what lets a test point it somewhere without patching anything.
-    """
-    return Path(os.environ.get('UV_TOOL_DIR') or Path.home() / '.local/share/uv/tools')
-
-
 def uv_tool_pin(name: str) -> str | None:
     """The revision `uv tool install` recorded for a tool, or None if unpinned.
 
@@ -91,7 +83,7 @@ def uv_tool_pin(name: str) -> str | None:
     declaration, is what decides whether a version can be compared at all.
     """
     try:
-        recorded = tomllib.loads((uv_tool_dir() / name / 'uv-receipt.toml').read_text())
+        recorded = tomllib.loads((paths.uv_tool_dir() / name / 'uv-receipt.toml').read_text())
     except (OSError, tomllib.TOMLDecodeError):
         return None
     for requirement in recorded.get('tool', {}).get('requirements', ()):
@@ -273,7 +265,7 @@ def by_uv_tool(item: DesiredItem) -> Evidence:
     numpy is pulled in for the Jupyter stack and has nothing for `which` to find,
     so asking PATH about it answers "missing" forever.
     """
-    directory = uv_tool_dir() / item.name
+    directory = paths.uv_tool_dir() / item.name
     if directory.is_dir():
         return Evidence(Verdict.MATCHED, str(directory))
     if item.executable:

@@ -12,9 +12,9 @@ would exercise none of it, and a second copy of the layer list would drift from
 the real one.
 
 **The chain case is the one that matters.** A violation here is a route rather
-than an edge, and every import along it is ordinary — `evidence` reaches `paths`
-in three hops and names it nowhere. A gate reporting only direct imports sees
-none of them.
+than an edge, and every import along it is ordinary — `context` reaches `paths`
+through other modules and names it nowhere. A gate reporting only direct imports
+sees none of them.
 
 **`--no-cache` on every run.** `lint-imports` keys its cache on mtime, so a
 `git restore`, a branch change or an edit inside the same second each answer
@@ -92,9 +92,9 @@ def stale_order(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def paths_above_evidence(tmp_path: Path) -> Path:
-    """`paths` lifted over `evidence`, which reaches it only through other modules."""
-    return relayered(tmp_path, 'dotfiles.paths', above='dotfiles.evidence')
+def paths_above_context(tmp_path: Path) -> Path:
+    """`paths` lifted over `context`, which reaches it only through other modules."""
+    return relayered(tmp_path, 'dotfiles.paths', above='dotfiles.context')
 
 
 def test_the_declared_layers_hold() -> None:
@@ -113,23 +113,27 @@ def test_a_direct_import_against_the_layer_order_is_reported(stale_order: Path) 
     assert 'dotfiles.resolve is not allowed to import dotfiles.registry' in ran.stdout
 
 
-def test_a_route_with_no_direct_import_between_its_ends_is_reported(paths_above_evidence: Path) -> None:
+def test_a_route_with_no_direct_import_between_its_ends_is_reported(paths_above_context: Path) -> None:
     """The shape a violation of this contract has, and the reason it exists.
 
-    `evidence` names `paths` nowhere. It reaches it in three hops through
-    `resources`, `providers` and `diagnose`, and every import along the way is
-    ordinary. So the assertion is the headline plus the absence of a direct edge,
-    never the hops between — `lint-imports` prints one exemplar per violated
-    contract and picks a different route between runs on identical code.
+    `context` names `paths` nowhere and reaches it through other modules, every
+    import along the way ordinary. So the assertion is the headline plus the
+    absence of a direct edge, never the hops between — `lint-imports` prints one
+    exemplar per violated contract and picks a different route between runs on
+    identical code.
+
+    The pair has to be one with no direct edge, and which pairs those are is a
+    property of the package rather than of this file. `grimp.build_graph` answers
+    it: `direct_import_exists` false and `find_shortest_chain` not None.
     """
-    ran = contract(paths_above_evidence)
+    ran = contract(paths_above_context)
 
     assert ran.returncode == 1
-    assert 'dotfiles.evidence is not allowed to import dotfiles.paths' in ran.stdout
-    assert 'dotfiles.evidence -> dotfiles.paths' not in ran.stdout
+    assert 'dotfiles.context is not allowed to import dotfiles.paths' in ran.stdout
+    assert 'dotfiles.context -> dotfiles.paths' not in ran.stdout
 
 
-def test_every_mutation_still_produces_a_config_the_tool_can_analyze(stale_order: Path, paths_above_evidence: Path) -> None:
+def test_every_mutation_still_produces_a_config_the_tool_can_analyze(stale_order: Path, paths_above_context: Path) -> None:
     """A guard on `relayered`, which is the only thing here that can be wrong silently.
 
     Layer order is not an input to graph construction, so equal `Analyzed` lines
@@ -143,4 +147,4 @@ def test_every_mutation_still_produces_a_config_the_tool_can_analyze(stale_order
         return next(line for line in ran.stdout.splitlines() if line.startswith('Analyzed '))
 
     assert analyzed(contract(stale_order)) == analyzed(contract(CONFIG))
-    assert analyzed(contract(paths_above_evidence)) == analyzed(contract(CONFIG))
+    assert analyzed(contract(paths_above_context)) == analyzed(contract(CONFIG))
