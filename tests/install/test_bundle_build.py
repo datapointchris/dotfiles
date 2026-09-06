@@ -239,21 +239,30 @@ class ReachedTheNetwork(BaseException):
     """Raised where a real socket was about to be opened, and not an `Exception`.
 
     `download` narrows on `(httpx2.HTTPError, OSError)` and retries three times,
-    and `latest_version` answers None for anything it catches — so a guard raised
-    as an ordinary exception would be absorbed into a plausible refusal and the
-    test would pass without anyone learning the network was reached. Same
-    reasoning as `WouldInstall` in `tests/conftest.py`.
+    and `latest_version` turns anything it catches into a None or an `Unreadable`
+    its caller refuses on — so a guard raised as an ordinary exception would be
+    absorbed into a plausible refusal and the test would pass without anyone
+    learning the network was reached. Same reasoning as `WouldInstall` in
+    `tests/conftest.py`.
     """
 
 
-class Refused(httpx2.HTTPError):
-    """What this fake answers a request the real service would not serve.
+class Refused(httpx2.HTTPStatusError):
+    """A 404 from this fake, which is what the real service answers here.
 
-    An `httpx2.HTTPError`, because that is the exception every caller in
+    An `httpx2.HTTPError` subclass, because that is the exception every caller in
     `github_release` and `create_bundle` narrows on — a bespoke type would travel
-    past `download`'s retry loop and `latest_version`'s fallback as a crash, so
-    the tests would pass for the wrong reason.
+    past `download`'s retry loop and `latest_version`'s `Unreadable` as a crash,
+    so the tests would pass for the wrong reason.
+
+    **The status is carried rather than only spelled in the message.**
+    `latest_version` reads a 404 from `releases/latest` as a repo publishing
+    nothing and anything else as an API it could not reach, so a fake raising a
+    status-less error makes the no-release case arrive as a rate limit.
     """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, request=httpx2.Request('GET', 'https://api.github.com/'), response=httpx2.Response(404))
 
 
 @dc.dataclass
@@ -318,7 +327,7 @@ class Upstream:
         remaining = self.flaky.get(url, 0)
         if remaining:
             self.flaky[url] = remaining - 1
-            raise Refused(f'the connection to {url} was reset')
+            raise httpx2.ConnectError(f'the connection to {url} was reset')
 
         if (latest := re.fullmatch(r'https://api\.github\.com/repos/(.+)/releases/latest', url)) is not None:
             repo = latest.group(1)
@@ -762,9 +771,7 @@ def test_every_release_asset_carries_the_digest_upstream_published_for_it(upstre
     same comparison the offline installer makes.
 
     Every digest `checksums.txt` carries has to be right, which is what this
-    asserts. It deliberately does not assert *which* assets get a row: the go
-    and cargo staging loops write none, and whether that is intended is a
-    question for the module rather than something to pin here either way.
+    asserts. Which assets get a row is the sibling below.
     """
     built = run('--machine', MACHINE, '--arch', 'x86_64')
 
@@ -776,6 +783,53 @@ def test_every_release_asset_carries_the_digest_upstream_published_for_it(upstre
         for folder in ('binaries', 'wheels', 'bin'):
             if f'{create_bundle.ARCHIVE_MEMBER}/{folder}/{name}' in built.names():
                 assert expected == digest(built.staged(f'{folder}/{name}'))
+
+
+def test_a_go_or_cargo_asset_is_checked_on_the_side_that_can_still_ask_upstream(upstream: Upstream, cache: Path) -> None:
+    """The offline machine cannot resolve a checksum for a Go or Rust binary any
+    more than for a release binary, so a row missing here is a tool installing
+    unverified with the mechanism to verify it sitting beside it.
+
+    All four shapes, because what is checked is the asset and the four differ in
+    what happens to it afterwards: a Go tarball and a Go gzip are both consumed
+    by the extraction, a cargo tarball is staged as it arrived, and a cargo zip
+    is repacked under a name no release published.
+
+    **Two of the four publish no checksums file**, which is the population a
+    third of the declared go and cargo entries are in — `cheat` and `fnm` among
+    them. A fixture where every release publishes one asserts a state the real
+    declaration is not in, and leaves the tools that still stage unverified
+    after this change invisible to the suite.
+    """
+    upstream.publish(CHEAT_REPO, CHEAT_TAG, {'cheat.gz': gzipped(b'CHEAT')}, checksums=False)
+    upstream.publish(FNM_REPO, FNM_TAG, {'fnm.zip': zipped('fnm', b'FNM')}, checksums=False)
+
+    built = run('--machine', MACHINE, '--arch', 'x86_64')
+
+    recorded = built.checksums
+    published = upstream.assets[(RIPGREP_REPO, RIPGREP_TAG)]
+    assert {'task.tar.gz', 'ripgrep.tar.gz'} <= set(recorded), 'a release that publishes a digest gets a row'
+    assert recorded['ripgrep.tar.gz'] == digest(published['ripgrep.tar.gz'])
+    assert recorded['ripgrep.tar.gz'] == digest(built.staged('binaries/ripgrep.tar.gz'))
+    assert 'cheat.gz' not in recorded, 'a digest nobody published is never written as one that was checked'
+    assert 'fnm.zip' not in recorded
+    assert 'fnm.tar.gz' not in recorded, "the repack is this bundler's file, and nothing published a digest for it"
+    staged = {name for _category, name, *_ in built.rows}
+    assert {'cheat', 'fnm'} <= staged, 'both are still carried; what they lack is a row, not a place in the bundle'
+
+
+def test_a_go_binary_whose_bytes_fail_against_upstream_ends_the_build(upstream: Upstream, cache: Path) -> None:
+    """The check is worth having only if it refuses. A Go tool is the loop that
+    had none, and it is staged into `go-binaries/` rather than `binaries/`, so
+    the refusal has to come from the loop rather than from where the file lands.
+    """
+    upstream.tampered.add('task.tar.gz')
+    upstream.publish(TASK_REPO, TASK_TAG, {'task.tar.gz': tarball('task', b'TASK')})
+
+    with pytest.raises(create_bundle.BundleError, match='Checksum mismatch while bundling task.tar.gz'):
+        build()
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
 
 
 @pytest.mark.parametrize(
@@ -920,12 +974,14 @@ def test_a_machine_with_no_manifest_is_named_rather_than_built_for(upstream: Ups
 
 
 def test_a_repo_that_publishes_no_release_ends_the_build_naming_it(upstream: Upstream, cache: Path) -> None:
-    """`latest_version` answers None for a release it cannot read, which is
-    right for an installer deciding whether to update. A build cannot name the
-    asset without the version, so the miss is fatal here."""
+    """A build cannot name the asset without the version, so a repo publishing
+    nothing is fatal here where an installer would leave the machine alone.
+
+    The refusal names `packages.yml`'s repo rather than the network, which is
+    what the 404 split in `latest_version` is for."""
     upstream.releases.pop(TASK_REPO)
 
-    with pytest.raises(create_bundle.BundleError, match=TASK_REPO):
+    with pytest.raises(create_bundle.BundleError, match=f'Could not fetch version for {re.escape(TASK_REPO)}'):
         build()
 
     assert not list(paths.archive_dir().glob('*.tar.gz'))
@@ -1196,7 +1252,14 @@ def test_a_checksum_already_confirmed_is_not_confirmed_again(upstream: Upstream,
 def test_a_release_that_publishes_no_checksums_is_not_asked_about_twice(upstream: Upstream, cache: Path) -> None:
     """The answer is about one immutable asset, so caching it is as safe as
     caching the asset — and it is the expensive half, one API call plus one
-    download, spent to learn there is nothing to compare against."""
+    download, spent to learn there is nothing to compare against.
+
+    The saying is not cached with it. A warm cache is the normal state, so a
+    report that fires only on the build that discovered the gap is a report
+    nobody sees — and an asset staged with no digest is the one fact
+    `checksums.txt` structurally cannot carry, because it records what was
+    checked.
+    """
     upstream.publish(LAZYGIT_REPO, LAZYGIT_TAG, {asset_named('lazygit'): tarball('lazygit', b'LAZYGIT')}, checksums=False)
     run('--machine', MACHINE, '--arch', 'x86_64')
     upstream.fetched.clear()
@@ -1205,6 +1268,7 @@ def test_a_release_that_publishes_no_checksums_is_not_asked_about_twice(upstream
 
     assert f'https://api.github.com/repos/{LAZYGIT_REPO}/releases/tags/{LAZYGIT_TAG}' not in upstream.fetched
     assert asset_named('lazygit') not in built.checksums, 'a cached answer must not become a digest nobody checked'
+    assert f'publishes no checksum for {asset_named("lazygit")}, staged unverified' in built.stderr
 
 
 def test_no_cache_asks_upstream_for_every_asset_again(upstream: Upstream, cache: Path) -> None:

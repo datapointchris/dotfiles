@@ -240,12 +240,15 @@ def tail_lines(text: str, limit: int = FAILURE_DETAIL_MAX_LINES) -> str:
 def fetch_latest_version(repo: str) -> str:
     """The tag of a repo's latest release, as a hard requirement.
 
-    github_release.latest_version returns None for a release it cannot read,
-    which is the right answer for an installer deciding whether to update. A
-    bundle build has no such fallback: it cannot name the asset without the
-    version, so the miss is fatal here.
+    A bundle cannot name an asset without the version, so both of the misses are
+    fatal here — and they are two sentences rather than one, because a repo that
+    published nothing sends the reader to `packages.yml` and an unreadable API
+    sends them to the network or the rate limit.
     """
-    tag = github_release.latest_version(repo)
+    try:
+        tag = github_release.latest_version(repo)
+    except github_release.Unreadable as unreachable:
+        raise BundleError(str(unreachable)) from unreachable
     if not tag:
         raise BundleError(f'Could not fetch version for {repo}')
     return tag
@@ -281,7 +284,14 @@ class DownloadCache:
         self.hits = 0
         self.downloads = 0
         if enabled:
-            cache_root().mkdir(parents=True, exist_ok=True)
+            try:
+                cache_root().mkdir(parents=True, exist_ok=True)
+            except OSError as unwritable:
+                # A root that cannot be made is a cache that can serve nothing and
+                # store nothing, so the build runs cold rather than warning per
+                # asset about the same directory.
+                log.warning(f'    could not open the download cache at {cache_root()}: {unwritable}')
+                self.enabled = False
 
     def digest_file(self, asset: BundleAsset) -> Path:
         cached = cache_path_for(asset.key)
@@ -314,9 +324,12 @@ class DownloadCache:
                 # count as use — otherwise a tool that never changes ages out
                 # precisely because the cache kept working for it.
                 now = None
-                for path in (cached, digest_file, self.status_file(asset)):
-                    if path.exists():
-                        os.utime(path, now)
+                try:
+                    for path in (cached, digest_file, self.status_file(asset)):
+                        if path.exists():
+                            os.utime(path, now)
+                except OSError as unwritable:
+                    log.warning(f'    could not refresh the cache entry for {destination.name}: {unwritable}')
                 self.hits += 1
                 return
             log.warning(f'    cached copy of {destination.name} is corrupt, re-downloading')
@@ -332,15 +345,17 @@ class DownloadCache:
         # Publish through a temp name: an interrupted build must not leave a
         # truncated file that a later build reads as complete. A cache that
         # cannot be written is a slow build, not a failed one, so this never
-        # aborts.
-        cached.parent.mkdir(parents=True, exist_ok=True)
+        # aborts — and the guard opens at the directory, because making one is
+        # itself a write into the cache and it is the write an asset nothing has
+        # cached before needs first.
         try:
+            cached.parent.mkdir(parents=True, exist_ok=True)
             partial = cached.with_name(f'{cached.name}.partial.{os.getpid()}')
             shutil.copyfile(destination, partial)
             partial.replace(cached)
             digest_file.write_text(github_release.sha256_of(cached) + '\n')
-        except OSError:
-            log.warning(f'    could not cache {destination.name}')
+        except OSError as unwritable:
+            log.warning(f'    could not cache {destination.name}: {unwritable}')
 
     def remember_status(self, asset: BundleAsset, status: str) -> None:
         """Written only once the asset is cached, so a status cannot outlive the
@@ -348,7 +363,10 @@ class DownloadCache:
         """
         if not self.enabled or not self.digest_file(asset).is_file():
             return
-        self.status_file(asset).write_text(status + '\n')
+        try:
+            self.status_file(asset).write_text(status + '\n')
+        except OSError as unwritable:
+            log.warning(f'    could not record the checksum verdict for {asset.filename}: {unwritable}')
 
     def status(self, asset: BundleAsset) -> str | None:
         if not self.enabled or not self.status_file(asset).is_file():
@@ -361,7 +379,12 @@ class DownloadCache:
     def evict(self, asset: BundleAsset) -> None:
         cached = cache_path_for(asset.key)
         for path in (cached, self.digest_file(asset), self.status_file(asset)):
-            path.unlink(missing_ok=True)
+            try:
+                path.unlink(missing_ok=True)
+            except OSError as unwritable:
+                # A caller evicts on its way to a refusal it states itself, so
+                # raising from here would replace that sentence with this one.
+                log.warning(f'    could not evict {path.name}: {unwritable}')
 
     def prune(self) -> None:
         """Drop entries not used for CACHE_RETENTION_DAYS.
@@ -373,10 +396,17 @@ class DownloadCache:
             return
         cutoff = dt.datetime.now().timestamp() - (CACHE_RETENTION_DAYS * 86400)
         for path in sorted(cache_root().rglob('*'), reverse=True):
-            if path.is_file() and path.stat().st_mtime < cutoff:
-                path.unlink(missing_ok=True)
-            elif path.is_dir() and not any(path.iterdir()):
-                path.rmdir()
+            # Per entry, because one locked directory says nothing about the
+            # rest: a guard around the walk would let the first refusal keep
+            # every later entry past its retention, behind a warning naming only
+            # the one that failed.
+            try:
+                if path.is_file() and path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
+                elif path.is_dir() and not any(path.iterdir()):
+                    path.rmdir()
+            except OSError as unwritable:
+                log.warning(f'    could not sweep {path.name}: {unwritable}')
 
 
 def installed_versions(document: Any) -> dict[str, str]:
@@ -590,6 +620,13 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
         bundle.record_checksum(cache.recorded_digest(asset), path.name)
         return
     if status == 'unpublished':
+        # Said again on every build, not only the one that discovered it. The
+        # cache short-circuits the API call and must not short-circuit the
+        # report: an asset staged with no digest is the one thing a reader of
+        # this log cannot recover afterwards, and a warm cache is the normal
+        # state. `checksums.txt` records what was checked, so it cannot name
+        # what was not.
+        log.warning(f'    {repo} publishes no checksum for {asset_name}, staged unverified')
         return
 
     published = github_release.release_assets(repo, tag)
@@ -911,6 +948,11 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
     installs from it. Naming it here as well is what went wrong before: the two
     sides expanded `binary_pattern` off different data, so a pattern change moved
     one and not the other, silently, on the one machine the bundle exists for.
+
+    Verified against the checksum the release published, like every other GitHub
+    asset here. The archive is what carries a published digest, and the binary
+    pulled out of it is a file no release ever named — so the check happens on
+    the archive, before `extract_go_binary` consumes it.
     """
     log.info('Downloading Go tool binaries...')
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
@@ -929,6 +971,9 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
 
         archive_path = bundle.go_binaries / asset.filename
         cache.fetch(asset, archive_path, f'  {entry.executable} ({version})')
+        # Before the extraction, because the archive is the file upstream
+        # published a digest for and the extraction consumes it.
+        verify_against_upstream(bundle, cache, archive_path, asset)
         extract_go_binary(archive_path, entry.executable, bundle.go_binaries / entry.executable)
         # Keyed by `name` and filed under `executable`. Every version lookup asks
         # by the declared name — `packages._bundled` reads `item.name` — while
@@ -943,6 +988,11 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
     Recorded under the *crate* name rather than the binary's, because that is what
     `providers.cargo` looks the row up by — a declaration agreeing with itself,
     rather than two halves agreeing by convention.
+
+    Verified against the checksum the release published, like every other GitHub
+    asset here. A crate shipping a zip is repacked as a tarball, so the digest is
+    recorded for the zip that was checked rather than for the file this bundler
+    wrote in its place.
     """
     log.info('Downloading Cargo tool binaries...')
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
@@ -958,6 +1008,10 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
 
         destination = bundle.binaries / filename
         cache.fetch(asset, destination, f'  {entry.name} ({version})')
+        # Before the repack, for the reason `add_go_binaries` records: the zip is
+        # what the digest was published for, and the tarball written in its place
+        # is this bundler's own file that no release ever named.
+        verify_against_upstream(bundle, cache, destination, asset)
 
         if filename.endswith('.zip'):
             filename = repackage_zip_as_tarball(destination, entry.executable, cargo.asset_target(entry, target), version.lstrip('v'))
@@ -1295,7 +1349,11 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     log.info(f'  Downloads: {cache.downloads}')
     if bundle.built_from:
         log.info(f'  Left out as already current: {len(bundle.current)}')
-    if use_cache:
+    # `cache.enabled` and never `use_cache`: the flag is what the run asked for
+    # and the attribute is what it got, and they part company when the root could
+    # not be opened. Reporting the flag prints `From cache: 0` beside a directory
+    # that does not exist, hundreds of lines below the one warning that said so.
+    if cache.enabled:
         log.info(f'  From cache: {cache.hits} ({cache_root()})')
     log.info('To use this bundle:')
     log.info('  1. Copy the tarball to ~/ or ~/dotfiles/ on the target machine')
@@ -1303,7 +1361,7 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     log.info('  3. Install:   dotfiles apply --machine <name> --offline')
 
     # After the tarball, so a build is never delayed or failed by housekeeping.
-    if use_cache:
+    if cache.enabled:
         cache.prune()
 
     return tarball_path

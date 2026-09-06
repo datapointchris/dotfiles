@@ -53,6 +53,7 @@ from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
 from dotfiles.providers import local_dir
 from dotfiles.providers import script
+from dotfiles.providers import unreadable_kind
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -502,9 +503,12 @@ def _terraform_ls(request: Request) -> Result:
             refused=True,
         )
 
-    latest = github_release.latest_version(entry.repo, '')
+    try:
+        latest = github_release.latest_version(entry.repo, '')
+    except github_release.Unreadable as unreachable:
+        return Result(False, str(unreachable), kind=unreadable_kind(unreachable.reached))
     if latest is None:
-        return Result(False, f'{entry.repo} did not answer with a release', kind=Kind.VERSION_UNRESOLVED)
+        return Result(False, f'{entry.repo} publishes no release', kind=Kind.VERSION_UNRESOLVED)
 
     version = latest.lstrip('v')
     os_word = 'darwin' if request.target.is_darwin else 'linux'
@@ -585,9 +589,12 @@ def _bats(request: Request) -> Result:
     if offline := _present_and_offline(request, installed is not None):
         return offline
 
-    latest = github_release.latest_version(entry.repo, '')
+    try:
+        latest = github_release.latest_version(entry.repo, '')
+    except github_release.Unreadable as unreachable:
+        return Result(False, str(unreachable), kind=unreadable_kind(unreachable.reached))
     if latest is None:
-        return Result(False, f'{entry.repo} did not answer with a release', kind=Kind.VERSION_UNRESOLVED)
+        return Result(False, f'{entry.repo} publishes no release', kind=Kind.VERSION_UNRESOLVED)
 
     core = _bats_repos(entry)[0]
     with tempfile.TemporaryDirectory(prefix='dotfiles-bats-') as scratch:

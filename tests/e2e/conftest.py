@@ -119,8 +119,11 @@ def pytest_report_header(config: pytest.Config) -> str:
     """Say whether a container run is authenticated, before anything installs.
 
     Anonymous GitHub API calls are 60 an hour per public IP and a full install
-    spends most of them, so an unauthenticated run fails on every release tool with
-    "did not answer with a release" — which reads exactly like a broken installer.
+    spends most of them, so an unauthenticated run fails on every release tool
+    with a release API it could not read — which looks exactly like a broken
+    installer. A rate limit answers 403, so those rows come back `download-failed`
+    and nothing about them names a declaration.
+
     Naming it in the header is what keeps a red run from being argued about: either
     the line says the calls are authenticated, or the failures are suspect.
     """

@@ -163,6 +163,20 @@ def latest(monkeypatch, tag: str | None) -> None:
     monkeypatch.setattr(github_release, 'latest_version', lambda repo, prefix='': tag)
 
 
+def unreadable(monkeypatch, *, reached: bool = True) -> None:
+    """The releases API refusing to answer, which `latest` cannot express: None
+    there is a repo that published nothing, and the two want different sentences.
+
+    `reached` is what the exception carries to tell a service that answered and
+    refused from bytes that never arrived.
+    """
+
+    def refuse(repo: str, prefix: str = '') -> str:
+        raise github_release.Unreadable(f'could not read the releases of {repo}', reached=reached)
+
+    monkeypatch.setattr(github_release, 'latest_version', refuse)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The registry itself
 # ─────────────────────────────────────────────────────────────────────────────
@@ -653,7 +667,7 @@ class TestBats:
         assert result.ok, result.detail
         assert 'bats-assert' in capsys.readouterr().err
 
-    def test_an_upstream_that_will_not_answer_is_a_failure_not_a_guess(self, declared, home, bundle, effected, monkeypatch):
+    def test_a_repo_publishing_no_release_is_a_failure_not_a_guess(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, bats=None)
         latest(monkeypatch, None)
         effected()
@@ -662,6 +676,40 @@ class TestBats:
 
         assert not result.ok
         assert result.kind is Kind.VERSION_UNRESOLVED
+
+
+@pytest.mark.parametrize('installer', ['terraform-ls', 'bats'])
+def test_a_transport_that_delivered_nothing_is_not_reported_as_a_version_problem(
+    declared, home, bundle, effected, monkeypatch, installer: str
+):
+    """Three states reach these two installers and they want three answers.
+
+    A repo publishing nothing is `packages.yml`'s to correct. A service that
+    answered and refused is a rate limit or a credential, and the machine's
+    network is fine — `VERSION_UNRESOLVED`, whose docstring says exactly that.
+    Bytes that never arrived are a CA, a proxy or a firewall, which is what
+    `DOWNLOAD_FAILED` names.
+
+    Asserted on `kind` rather than on the sentence, since a caller reading
+    `--json` has only the kind to act on.
+    """
+    reports(monkeypatch, **{installer: None})
+    effected()
+    entry = declared.find('custom_installers', installer)
+
+    latest(monkeypatch, None)
+    empty = custom.install(entry, LINUX)
+    unreadable(monkeypatch, reached=True)
+    refused = custom.install(entry, LINUX)
+    unreadable(monkeypatch, reached=False)
+    unreachable = custom.install(entry, LINUX)
+
+    assert [result.ok for result in (empty, refused, unreachable)] == [False] * 3
+    assert empty.kind is Kind.VERSION_UNRESOLVED
+    assert refused.kind is Kind.VERSION_UNRESOLVED
+    assert unreachable.kind is Kind.DOWNLOAD_FAILED
+    assert 'publishes no release' in empty.detail
+    assert 'could not read the releases of' in unreachable.detail
 
 
 # ─────────────────────────────────────────────────────────────────────────────

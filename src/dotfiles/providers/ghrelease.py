@@ -56,6 +56,7 @@ from dotfiles.providers import launchd
 from dotfiles.providers import local_dir
 from dotfiles.providers import locate
 from dotfiles.providers import systemd
+from dotfiles.providers import unreadable_kind
 from dotfiles.providers.releases import AGENTS
 from dotfiles.providers.releases import ASSETS
 from dotfiles.providers.releases import COMPANIONS
@@ -117,7 +118,7 @@ def install(
     try:
         tag = tag or resolve_tag(entry, offline=offline)
     except github_release.Unreadable as unreachable:
-        return Result(False, str(unreachable), kind=Kind.VERSION_UNRESOLVED)
+        return Result(False, str(unreachable), kind=unreadable_kind(unreachable.reached))
     if tag is None:
         return Result(False, unresolved(entry, offline=offline), kind=Kind.VERSION_UNRESOLVED)
 
@@ -180,6 +181,15 @@ def resolve_tag(entry: catalog.GithubRelease, *, offline: bool = False) -> str |
 
     A declared pin that matches no release answers None rather than falling
     through to latest. Falling through is exactly what a pin exists to prevent.
+
+    **Raises `github_release.Unreadable`, which the annotation cannot say.** Both
+    online branches do — `tag_for_version` and `latest_version` alike — so None
+    means the API answered and named nothing, and a caller treating None as the
+    only failure gets a traceback out of an `apply` the first time GitHub is
+    unreachable. `install` below and `create_bundle.add_github_releases` each
+    catch it and turn it into their own refusal;
+    `test_resolve_tag_lets_an_unreadable_api_reach_the_caller_that_refuses_on_it`
+    is what keeps a third caller from being written without one.
     """
     if offline:
         version = bundle_version(entry.name)
@@ -212,12 +222,17 @@ def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
 
     Public because `create_bundle` resolves a tag itself — to decide what to
     stage for an offline machine — and must report the same reason this would.
+
+    Every branch here is a `None`, which means the API answered and named
+    nothing. An API that could not be read raises `github_release.Unreadable`
+    and never arrives here, so no sentence below may describe one — "did not
+    answer" reads as exactly that and is the wording `custom.py` retired.
     """
     if offline:
         return f'no bundle staged at {paths.staging_dir()} carries a version of {entry.name}'
     if entry.version:
         return f'pinned to {entry.version}, which {entry.repo} publishes no release for'
-    return f'{entry.repo} did not answer with a release'
+    return f'{entry.repo} publishes no release'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

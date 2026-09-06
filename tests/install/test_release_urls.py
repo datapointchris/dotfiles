@@ -433,9 +433,15 @@ def test_a_bundled_pattern_names_an_asset_the_release_publishes(section, name, p
     # `latest_version`, which is what the bundler calls — not `latest_tag`. A
     # workspace repo tags its subcrates too, and the newest tag in `BurntSushi/
     # ripgrep` is `ignore-0.4.33`, a crate release carrying no assets at all.
-    tag = github_release.latest_version(entry.github_repo)
+    try:
+        tag = github_release.latest_version(entry.github_repo)
+    except github_release.Unreadable as unreachable:
+        # Skipped rather than failed, and the two skips say different things: a
+        # shared rate limit takes every entry here at once and says nothing about
+        # any declaration, while a repo with no release is about this one.
+        pytest.skip(str(unreachable))
     if not tag:
-        pytest.skip(f'{entry.github_repo} answered with no release')
+        pytest.skip(f'{entry.github_repo} publishes no release')
 
     target = Target(OSFamily('linux'), Arch('x86_64'))
     staged = (cargo.stage if section == 'cargo_packages' else gotool.stage)(entry, tag, target)

@@ -513,6 +513,7 @@ class TestBundleRoundTrip:
 
         monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: version)
         monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', fetch)
+        monkeypatch.setattr(create_bundle, 'verify_against_upstream', lambda *args: None)
 
         items = (planned(entry, 'cargo_packages'),)
         create_bundle.add_cargo_binaries(bundle, create_bundle.DownloadCache(enabled=False), items)

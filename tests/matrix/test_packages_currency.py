@@ -22,9 +22,9 @@ against the guard.
 `reconcile.apply_machine` resolves its Session with `refresh=not offline`, so an
 online `packages apply` refreshes the cache for every present currency-capable
 tool before it decides anything — measured, and it lands on
-`github_release.latest_version` inside `observe`. There is no flag that turns it
-off, so the online write verb is unreachable from a suite that may not use the
-network.
+`github_release.newest_version` inside `observe`, by way of `releases.refresh`.
+There is no flag that turns it off, so the online write verb is unreachable from
+a suite that may not use the network.
 
 **Which flag each verb takes is itself part of the matrix.** `--source` narrows to
 one section, so `plan` and `apply` take it and `check` refuses it — a

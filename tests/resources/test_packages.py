@@ -1135,7 +1135,7 @@ def test_a_release_that_cannot_be_fetched_leaves_the_package_installed(
     executable(fake_bin, 'brew', BREW_HOLDING_SYNCTHING)
 
     def unreachable(entry, target=None, *, offline=False, before_place=None):
-        return ghrelease.Result(False, 'someone/syncthing did not answer with a release', kind=Kind.VERSION_UNRESOLVED)
+        return ghrelease.Result(False, 'someone/syncthing publishes no release', kind=Kind.VERSION_UNRESOLVED)
 
     monkeypatch.setattr(ghrelease, 'install', unreachable)
     live = dc.replace(session(tmp_path, SYNCTHING, DECLARES_SYNCTHING), force=True)

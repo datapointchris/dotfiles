@@ -41,6 +41,7 @@ from dotfiles.effects import Output
 from dotfiles.output import warn
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
+from dotfiles.providers import unreadable_kind
 
 SLUG = re.compile(r'^(?:https://github\.com/|git@github\.com:)([^/:]+/[^/:]+?)(?:\.git)?/?$')
 """`owner/name` out of a clone URL, in either the https or the ssh form.
@@ -64,7 +65,25 @@ def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Res
 
 
 def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False) -> Result:
-    return _uv_tool_install(entry.name, requirement(entry), offline=offline, again=again)
+    """Refuses where the release API could not be read, rather than installing.
+
+    The fallback below it is the bare repo, and a tool installed that way has a
+    dead `update` for the reason the module docstring records. Reaching that
+    fallback on an unreadable API would spend a rate-limited minute on the one
+    outcome nothing afterwards can tell from a declared `tracks_branch`.
+
+    **Offline reaches this on every entry that pins**, because resolving a tag is
+    the one thing here that leaves the machine. So the sentence carries the
+    clause `_uv_tool_install` would have carried: the refusal was going to happen
+    either way, and a reader told only that an API could not be read would go
+    looking for a network they already know is absent.
+    """
+    try:
+        target = requirement(entry)
+    except github_release.Unreadable as unreachable:
+        stranded = ', and the offline bundle stages no Python tools to fall back on' if offline else ''
+        return Result(False, f'{entry.name}: {unreachable}{stranded}', kind=unreadable_kind(unreachable.reached))
+    return _uv_tool_install(entry.name, target, offline=offline, again=again)
 
 
 def requirement(entry: catalog.GitUvTool) -> str:
@@ -94,6 +113,11 @@ def latest_release(repo: str) -> str | None:
     None for a host that is not GitHub as well as for a repo publishing no
     release: both mean "nothing to pin to", and the caller does the same thing
     with either.
+
+    **Raises `github_release.Unreadable`, which the annotation cannot say.** An
+    API that could not be read is neither of the two above, and the exception
+    travels through `requirement` to `install_git`, which is the only caller and
+    refuses on it.
     """
     found = SLUG.match(repo)
     return github_release.latest_version(found.group(1)) if found else None
