@@ -119,6 +119,14 @@ def reviewer_request(tmuxctl):
     return make
 
 
+def every_pane(tmuxctl) -> list:
+    """Every pane on the server, flattened out of the windows holding them."""
+    found = []
+    for window in tmuxctl.read_workspace():
+        found.extend(window.panes)
+    return found
+
+
 def refusal(tmuxctl, raised) -> str:
     """The refusal a raised `Usage` carries, as a value rather than its wording."""
     assert isinstance(raised.value, tmuxctl.Usage)
@@ -1318,7 +1326,8 @@ def test_a_real_reviewer_that_moved_windows_still_blocks_a_second_one(tmuxctl, s
     reviewer = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '', 'agents')
 
     server.run('break-pane', '-d', '-s', reviewer.pane, '-n', 'hold')
-    moved = [pane for pane in tmuxctl.read_workspace() for pane in pane.panes if pane.pane_id == reviewer.pane]
+    live = every_pane(tmuxctl)
+    moved = [pane for pane in live if pane.pane_id == reviewer.pane]
     assert moved[0].pair == worker.pane, 'the mark did not survive break-pane'
 
     with pytest.raises(tmuxctl.Usage) as raised:
@@ -1347,7 +1356,8 @@ def test_the_command_functions_run_end_to_end_against_a_real_server(tmuxctl, ser
     assert 'coordinator' in listing and 'worker' in listing
 
     # The plan said beside, and the pane the command made is where it said.
-    placed = [p for window in tmuxctl.read_workspace() for p in window.panes if p.pane_id == pane]
+    live = every_pane(tmuxctl)
+    placed = [p for p in live if p.pane_id == pane]
     assert placed[0].role is tmuxctl.Role.WORKER
     assert placed[0].width == tmuxctl.even_share(WINDOW, 2)
 
@@ -1360,7 +1370,8 @@ def test_a_real_release_clears_every_mark_it_wrote(tmuxctl, server):
     tmuxctl.mark(caller, tmuxctl.Role.COORDINATOR)
 
     assert tmuxctl.release([]) >= 2
-    roles = {pane.role for window in tmuxctl.read_workspace() for pane in window.panes}
+    live = every_pane(tmuxctl)
+    roles = {pane.role for pane in live}
     assert roles == {tmuxctl.Role.UNKNOWN}
     assert not any(window.dedicated for window in tmuxctl.read_workspace())
 
@@ -1372,18 +1383,55 @@ def test_a_handle_may_not_be_spelled_like_a_pane_id(tmuxctl):
     # `resolve` tells an id from a handle by the leading `%`, so a handle that
     # could start with one would make the two indistinguishable and the lookup
     # would silently return whatever was passed in.
-    assert not tmuxctl.HANDLE.match('%93')
-    assert tmuxctl.HANDLE.match('phase-3-worker')
-    assert tmuxctl.HANDLE.match('review.2')
+    assert not tmuxctl.usable_handle('%93')
+    assert tmuxctl.usable_handle('phase-3-worker')
+    assert tmuxctl.usable_handle('review.2')
 
 
-def test_a_handle_may_not_hold_a_tab_or_a_space(tmuxctl):
-    # It is read back out of a tab-separated `list-panes` row, so a tab in one
-    # would shift every field after it and a pane would parse as another pane.
-    assert not tmuxctl.HANDLE.match('phase\t3')
-    assert not tmuxctl.HANDLE.match('phase 3')
-    assert not tmuxctl.HANDLE.match('-leading-dash')
-    assert not tmuxctl.HANDLE.match('')
+def test_a_handle_may_not_hold_a_separator(tmuxctl):
+    # It is read back out of a tab-separated `list-panes` row, so a tab shifts
+    # every field after it and a newline splits the row in two.
+    assert not tmuxctl.usable_handle('phase\t3')
+    assert not tmuxctl.usable_handle('phase 3')
+    assert not tmuxctl.usable_handle('-leading-dash')
+    assert not tmuxctl.usable_handle('')
+
+
+def test_the_last_column_absorbs_what_did_not_divide(tmuxctl):
+    # 377 divides exactly at two and three columns, so every fixture in this file
+    # is blind to the remainder. 250 is not, and the plan and the outcome differ
+    # there by one column.
+    assert tmuxctl.even_share(250, 2) == 124
+    assert tmuxctl.final_share(250, 2) == 125
+    assert tmuxctl.even_share(250, 2) + 1 + tmuxctl.final_share(250, 2) == 250
+
+    assert tmuxctl.even_share(377, 3) == tmuxctl.final_share(377, 3) == 125
+    assert tmuxctl.final_share(200, 1) == 200
+
+
+def test_a_correct_placement_in_an_uneven_window_reports_as_planned(tmuxctl, build, worker_request):
+    # The check exists to catch a placement tmux did not honor. Graded against
+    # the share the reflow applies rather than the one the new pane receives, it
+    # fired on every correct placement in a window whose width has a remainder.
+    window = build('@1', [[('%1', 'coordinator')]], width=250, height=60)
+    placement = tmuxctl.place([window], worker_request())
+
+    assert placement.size == tmuxctl.even_share(250, 2)
+    assert placement.expect == tmuxctl.final_share(250, 2)
+    assert placement.size != placement.expect, 'a window with no remainder cannot see this'
+
+
+def test_a_handle_ending_in_a_newline_is_refused(tmuxctl):
+    # `$` matches before a trailing newline, so an anchored pattern admits the
+    # one separator that splits the record rather than shifting a field in it.
+    # A mark carrying it makes every later PANE_FIELDS read raise, including the
+    # read `release` walks -- so the tool could not clear its own bad input.
+    assert not tmuxctl.usable_handle('w1\n')
+    assert not tmuxctl.usable_handle('w1\nw2')
+
+    with pytest.raises(tmuxctl.Usage) as raised:
+        tmuxctl.wanted_handle('w1\n')
+    assert refusal(tmuxctl, raised) is tmuxctl.Refusal.BAD_HANDLE
 
 
 def test_a_taken_handle_is_refused_rather_than_shadowing(tmuxctl, monkeypatch):
@@ -1493,14 +1541,32 @@ def test_a_dead_pane_whose_status_cannot_be_read_is_still_dead(tmuxctl, monkeypa
 
 
 @needs_tmux
-def test_close_drops_the_marks_before_the_pane_that_carries_them(tmuxctl, server):
+def test_close_drops_the_marks_before_it_kills_the_pane(tmuxctl, server, monkeypatch):
     # `release` walks live panes, so a mark on a pane tmux has already destroyed
     # is unreachable and nothing would ever clear it.
+    #
+    # Asserted on the order. tmux destroys a pane's options with the pane, so
+    # "no handles remain" holds whether or not release ran, and a check that
+    # something else satisfies is not evidence about its subject.
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
     landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents', 'phase-3-worker')
+
+    order: list[str] = []
+    released, killed = tmuxctl.release, tmuxctl.tmux_soft
+    monkeypatch.setattr(tmuxctl, 'release', lambda panes: (order.append('release'), released(panes))[1])
+    monkeypatch.setattr(tmuxctl, 'tmux_soft', lambda *args: (order.append(args[0]), killed(*args))[1])
+
     assert tmuxctl.cmd_close('phase-3-worker', False) == 0
+    assert 'kill-pane' in order, 'the pane was never killed'
+    assert order.index('release') < order.index('kill-pane'), f'killed before the marks were cleared: {order}'
     assert tmuxctl.pane_state(landed.pane)[0] is tmuxctl.PaneState.GONE
-    assert not any(pane.handle for window in tmuxctl.read_workspace() for pane in window.panes)
+
+
+@needs_tmux
+def test_closing_a_pane_that_is_already_gone_is_a_success(tmuxctl, server):
+    # A caller closing a pane wants it gone, and it is. Refusing there loses the
+    # diagnosis that caller was carrying about why the pane went.
+    assert tmuxctl.cmd_close('%9999', False) == 0
 
 
 @needs_tmux
@@ -1510,4 +1576,5 @@ def test_release_clears_a_handle_as_well_as_a_role(tmuxctl, server):
     caller = tmuxctl.caller_pane()
     tmuxctl.mark(caller, tmuxctl.Role.UNKNOWN, handle='left-behind')
     assert tmuxctl.release([caller]) == 1
-    assert not any(pane.handle for window in tmuxctl.read_workspace() for pane in window.panes)
+    live = every_pane(tmuxctl)
+    assert not any(pane.handle for pane in live)

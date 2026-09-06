@@ -13,17 +13,51 @@
 #
 # It execs rather than running the adapter and relaying. The port's meaning is
 # carried by stdout, stderr and the exit code together, and replacing the
-# process is the only way to pass all three through untouched: a relay would
-# have to re-emit JSON it had parsed, and one stray line on stdout is the
-# failure `cli-design.md` § "stdout is data, stderr is everything else" exists
-# to prevent.
+# process is the only way to pass all three through untouched. A relay would
+# have to re-emit JSON it had parsed, and one stray line on stdout breaks the
+# parse for every caller.
 
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: muxctl <resource> <verb> [args]
+
+Route a multiplexer command to the adapter for whichever one you are in, and
+get out of the way. The verbs, the JSON and the exit codes are the adapter's,
+and every adapter answers the same ones.
+
+  muxctl pane open worker --name ph3 --cwd DIR -- claude '...'
+  muxctl pane status ph3
+  muxctl pane read ph3 --lines 40 --color
+  muxctl pane close ph3
+
+Adapters, in the order they are tried:
+  $MUXCTL_ADAPTER   a binary named outright; how a candidate is exercised
+  $TMUX             tmuxctl
+  $ZELLIJ           zellijctl
+
+Exit codes: 0 success, 2 a refusal different arguments would avoid, other
+non-zero the multiplexer itself failing.
+
+`muxctl <resource> --help` reaches the resolved adapter's own screen, which
+needs a multiplexer to resolve.
+EOF
+}
+
+# Answered before an adapter is resolved. Help is never wrong, and the one
+# screen explaining the tool would otherwise be unreachable from any shell that
+# is not already inside a multiplexer.
+case "${1:-}" in
+  '' | -h | --help)
+    usage
+    exit 0
+    ;;
+esac
+
 # The environment says which multiplexer this pane is inside, so nothing has to
 # be configured and nothing is detected. MUXCTL_ADAPTER comes first because it
-# is how a candidate binary is exercised before it is the one you are sitting
-# in -- the conformance suite sets it, and so does anyone testing a new adapter.
+# is how a candidate binary is exercised before it is the one you are sitting in.
 adapter=""
 if [[ -n ${MUXCTL_ADAPTER:-} ]]; then
   adapter="$MUXCTL_ADAPTER"

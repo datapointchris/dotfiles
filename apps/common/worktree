@@ -135,14 +135,13 @@ MUXCTL = 'muxctl'
 """The multiplexer, reached by the one name that is not a multiplexer's.
 
 `muxctl` resolves tmux, or whatever else the pane is inside, and answers the same
-verbs either way. Nothing in this file knows which one it got, which is the whole
-point: a worktree is git, briefs and session lifecycle, and where a pane goes is
-somebody else's problem.
+verbs either way.
 
-`rg -n "'tmux'" apps/common/worktree` is the test, and it is meant to find no
-command. The word survives in two places it is not this file's to remove: the
-`tmux` field `claude-sessions` puts in its JSON, and the prose explaining why that
-field's window and session halves rot when a pane moves.
+The claim is scoped to panes: opening one, reading it, measuring it and closing
+it are asked of the port, and nothing here decides where a pane goes. It is not
+that the word `tmux` is absent. `claude-sessions` names a `tmux` field in its
+JSON, and `cmd_choose` picks `fzf-tmux` over `fzf` off `$TMUX` — a popup that
+exists in one multiplexer and degrades to a full-screen picker everywhere else.
 """
 
 WORKER = 'worker'
@@ -239,7 +238,14 @@ class Fault(StrEnum):
     WORKTREE_OCCUPIED = 'worktree_occupied'
     SESSIONS_UNREADABLE = 'sessions_unreadable'
     NOT_A_WORKTREE = 'not_a_worktree'
-    SPLIT_REFUSED = 'split_refused'
+    PORT_REFUSED = 'port_refused'
+    PORT_FAILED = 'port_failed'
+
+
+USAGE_FAULTS = frozenset({Fault.PORT_REFUSED})
+"""Refusals a caller could have avoided, which exit 2 rather than 1.
+
+Only a different argument fixes one, and 1 says there is no argument to try."""
 
 
 class Refused(Exception):
@@ -456,11 +462,20 @@ def ctl(*args: str) -> dict[str, Any]:
     argv = list(args)
     cut = argv.index('--') if '--' in argv else len(argv)
     done = run([MUXCTL, *argv[:cut], '--json', *argv[cut:]])
+    said = port_said(done.stderr)
     if done.returncode == 2:
-        raise Refused(done.stderr.strip() or f'{MUXCTL} refused', fault=Fault.SPLIT_REFUSED)
+        raise Refused(said or f'{MUXCTL} refused', fault=Fault.PORT_REFUSED)
     if done.returncode != 0:
-        raise Refused(done.stderr.strip() or f'{MUXCTL} failed', fault=Fault.SPLIT_REFUSED)
+        raise Refused(said or f'{MUXCTL} failed', fault=Fault.PORT_FAILED)
+    if said:
+        say_warning(said)
     return json.loads(done.stdout)
+
+
+def port_said(stderr: str) -> str:
+    """The port's own prose, with the machine-readable refusal line dropped."""
+    lines = [line for line in stderr.strip().splitlines() if not line.startswith('{')]
+    return '\n'.join(lines).strip()
 
 
 def ctl_text(*args: str) -> str:
@@ -951,8 +966,12 @@ def registered_pane(address: str) -> str:
 
 
 def capture_pane(address: str) -> str | None:
-    """What is on a session's screen, or None where it could not be read."""
-    screen = ctl_text('pane', 'read', registered_pane(address), '--lines', '40')
+    """What is on a session's screen, color included, or None where unreadable.
+
+    Two sessions in one worktree are told apart by what is on their screens, and
+    a Claude pane is mostly color.
+    """
+    screen = ctl_text('pane', 'read', registered_pane(address), '--lines', '40', '--color')
     return screen or None
 
 
@@ -1188,8 +1207,13 @@ def require_caller_pane() -> str:
     try:
         return str(ctl('pane', 'current')['pane'])
     except Refused as refusal:
+        # Only a refusal is the environment. Anything else is the port itself
+        # failing, and its own sentence names a cause this one would replace with
+        # advice that cannot fix it.
+        if refusal.fault is not Fault.PORT_REFUSED:
+            raise
         raise Refused(
-            'Not inside a multiplexer, so there is no pane to place against',
+            refusal.reason,
             'Run this from a session that is itself in a pane',
             fault=Fault.NO_TMUX,
         ) from refusal
@@ -1331,7 +1355,7 @@ def last_words(pane: str) -> str:
     screen comes back as blank lines and the multiplexer's own notice that the pane
     is dead — which says nothing the exit status has not already said.
     """
-    return ctl_text('pane', 'read', pane)
+    return ctl_text('pane', 'read', pane, '--strip')
 
 
 def claimants(sessions: Sequence[Session], pane: str) -> list[Session]:
@@ -1344,9 +1368,9 @@ def claimants(sessions: Sequence[Session], pane: str) -> list[Session]:
     keeps the address it recorded at startup — so the address as a whole names a place the
     pane has left.
 
-    A tmux session name may itself contain a dot, so the split has to come from the right.
+    Through `registered_pane`, which owns that split.
     """
-    return [session for session in sessions if session.tmux and session.tmux.rsplit('.', 1)[-1] == pane]
+    return [session for session in sessions if session.tmux and registered_pane(session.tmux) == pane]
 
 
 def session_in_pane(sessions: Sequence[Session], pane: str, pane_pid: int | None) -> str | None:
@@ -1903,7 +1927,7 @@ def main() -> int:
         say_error(refusal.reason)
         for hint in refusal.hints:
             say_info(hint)
-        return 1
+        return USAGE_ERROR if refusal.fault in USAGE_FAULTS else 1
 
 
 if __name__ == '__main__':

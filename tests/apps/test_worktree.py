@@ -316,10 +316,14 @@ def rows(result: subprocess.CompletedProcess[str]) -> list[str]:
 
 TMUX = shutil.which('tmux')
 
-RIG_COLUMNS = 200
-"""How wide the rig's window is, so a layout claim can be a share of it rather than a
-comparison between two panes. `split-window -h` halves a pane on its own, so "the caller
-is wider than what it spawned" is true with the sizing removed."""
+RIG_COLUMNS = 260
+RIG_ROWS = 76
+"""Big enough that the placement has a choice to make.
+
+Two readable columns need 241 and two readable rows need 72. Below either, every
+worker request falls through to opening a window of its own and every layout
+assertion measures a fresh full-size window instead of a placement — so no change
+to the packing, the reflow or the promotion could turn one red."""
 
 CLAUDE_STUB = r"""
 __PREAMBLE__
@@ -473,7 +477,7 @@ def rig(tmp_path: Path, tmux_socket: Path, bin_dir: Path, spawn_state: Path):
     socket = tmux_socket
     server = os.environ | {'PATH': f'{bin_dir}:{os.environ["PATH"]}', 'HOME': str(tmp_path)}
     subprocess.run(
-        [str(TMUX), '-S', str(socket), 'new-session', '-d', '-s', 'rig', '-x', str(RIG_COLUMNS), '-y', '50', '-c', str(tmp_path)],
+        [str(TMUX), '-S', str(socket), 'new-session', '-d', '-s', 'rig', '-x', str(RIG_COLUMNS), '-y', str(RIG_ROWS), '-c', str(tmp_path)],
         check=True,
         capture_output=True,
         env=server,
@@ -520,7 +524,7 @@ def refuse_to_open_a_pane(bin_dir: Path) -> None:
     Stubbed at the port rather than at tmux, because that is where this command's
     contract is. Refusing one tmux subcommand only reaches the case where the
     multiplexer would have chosen that subcommand, and which one it chooses is
-    exactly what this command no longer knows.
+    not this command's business.
     """
     write_stub(bin_dir, 'muxctl', 'echo "muxctl: nowhere to put a pane that could be followed" >&2\nexit 1')
 
@@ -2172,24 +2176,27 @@ class TestSpawnLayout:
     the multiplexer is free to reach its own way.
     """
 
-    def test_a_worker_lands_somewhere_it_can_be_followed(self, fleet, spawn, rig, tmp_path):
-        """The port's whole promise, and the one this command relies on. `readable` is
-        its claim about the pane it made, and the pane is measured here rather than
-        the claim taken on trust."""
+    def test_a_worker_is_packed_beside_the_caller_and_can_be_followed(self, fleet, spawn, rig, tmp_path):
+        """The port's whole promise, measured off tmux rather than taken from the
+        record. The window assertion is what keeps the rest honest: below 241
+        columns nothing fits beside the caller, every request opens a window of
+        its own, and the size below is then the whole window rather than a
+        placement."""
         spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
         spawned = rig.spawned()
-        width, height = rig.size(spawned)
 
+        assert rig.window_of(spawned) == rig.window_of(rig.caller), 'the worker opened a window instead of packing'
+        width, height = rig.size(spawned)
         assert width >= 120 and height >= 35, f'{spawned} came out {width}x{height}'
 
     def test_a_spawn_never_makes_the_caller_unreadable(self, fleet, spawn, rig, tmp_path):
         """The pane carrying prose is the one being read continuously, and a dispatcher
         that halved its own pane on every spawn is the failure all of this exists to
-        stop. It is asserted about the caller rather than about the pair, because a
-        spawn that opened a window of its own leaves nothing to compare against."""
+        stop."""
         spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
-        width, height = rig.size(rig.caller)
 
+        assert rig.window_of(rig.spawned()) == rig.window_of(rig.caller), 'nothing was split beside the caller'
+        width, height = rig.size(rig.caller)
         assert width >= 120 and height >= 35, f'the caller was left {width}x{height}'
 
     def test_a_reviewer_lands_directly_under_the_worker_it_reviews(self, fleet, spawn, rig, tmp_path):

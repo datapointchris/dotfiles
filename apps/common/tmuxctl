@@ -150,6 +150,7 @@ class Refusal(StrEnum):
     NO_SUCH_HANDLE = 'no_such_handle'
     BAD_HANDLE = 'bad_handle'
     HANDLE_TAKEN = 'handle_taken'
+    BAD_LINES = 'bad_lines'
 
 
 REFUSALS: dict[Refusal, str] = {
@@ -166,6 +167,7 @@ REFUSALS: dict[Refusal, str] = {
     Refusal.NO_SUCH_HANDLE: 'no pane is named {handle}; `pane list` shows the ones that are',
     Refusal.BAD_HANDLE: '{handle} is not a usable name: letters, digits, dot, dash and underscore, starting with a letter or digit',
     Refusal.HANDLE_TAKEN: '{handle} already names {pane}',
+    Refusal.BAD_LINES: '--lines takes a count of lines, and {lines} is not one',
 }
 
 
@@ -223,18 +225,26 @@ class Pane:
     handle: str = ''
 
 
-HANDLE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*$')
+HANDLE = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*')
 """What a caller may name a pane, and the two things the pattern is load-bearing for.
 
-A handle is read back out of a tab-separated `list-panes` row, so a tab in one
-would shift every field after it -- and unlike the session name, which is tmux's
-to contain anything and is read last with a maxsplit, this field is the caller's
-and can simply be refused.
+A handle is read back out of a tab-separated `list-panes` row, so a separator in
+one would corrupt the read -- and unlike the session name, which is tmux's to
+contain anything and is read last with a maxsplit, this field is the caller's and
+can simply be refused.
 
 It also may not start with `%`, which is how `resolve()` tells an address that is
 already a pane id from one it has to look up. Requiring the first character to be
 alphanumeric settles that and leaves `%` unspellable.
+
+Matched with `fullmatch`: `$` matches before a trailing newline, which is the one
+separator that splits the row rather than shifting a field in it.
 """
+
+
+def usable_handle(name: str) -> bool:
+    """Whether a name may be written onto a pane. One site, so one anchoring."""
+    return HANDLE.fullmatch(name) is not None
 
 
 @dataclass(frozen=True)
@@ -332,12 +342,19 @@ def fits_down(height: int) -> int:
 
 
 def even_share(extent: int, parts: int) -> int:
-    """One part's size when `extent` is divided `parts` ways with dividers between.
-
-    The remainder goes to the *first* part, which is what tmux does: a split
-    passes the new pane an explicit size and the pane being split keeps the rest.
-    """
+    """The size `balance_columns` gives every part except the last."""
     return (extent - (parts - 1)) // parts if parts > 0 else extent
+
+
+def final_share(extent: int, parts: int) -> int:
+    """What the last part comes out at, absorbing whatever did not divide.
+
+    `balance_columns` resizes every column but the last, and `execute` splits
+    `rightmost_ours`, so the pane being made is always this one.
+    """
+    if parts <= 1:
+        return extent
+    return extent - (parts - 1) * (even_share(extent, parts) + 1)
 
 
 def ours(column: Sequence[Pane]) -> bool:
@@ -436,6 +453,10 @@ class Placement:
     after, so it lands in that window's session rather than wherever tmux would
     have put it. `size` is `None` in that branch, because nothing is being divided
     and a number there would be a measurement of a window that does not exist.
+
+    `size` is what the reflow applies to every column but the last. `expect` is
+    what the pane being made should come out at, which is the last column, and it
+    is what `measure` grades against.
     """
 
     role: Role
@@ -444,9 +465,11 @@ class Placement:
     target: str
     direction: Direction
     size: int | None
+    expect: int | None
     balance: bool
     readable: bool
     why: str
+    across: int | None = None
     pair: str = ''
     promote: Promotion | None = None
 
@@ -559,7 +582,7 @@ def beneath(windows: Sequence[Window], request: Request) -> Placement:
     fits = readable(worker.width, rows) and readable(worker.width, kept)
     why = f'below its worker in {window.window_id}, splitting {worker.height} rows into {kept} and {rows}'
     if not fits:
-        why += f'; a pair needs {fits_down(2 * MIN_ROWS + 1)} readable rows and this column stacks {fits_down(worker.height)}'
+        why += f'; a pair needs {2 * MIN_ROWS + 2} rows and this column has {worker.height}'
     return Placement(
         role=Role.REVIEWER,
         window=window.window_id,
@@ -567,10 +590,12 @@ def beneath(windows: Sequence[Window], request: Request) -> Placement:
         target=worker.pane_id,
         direction=Direction.BELOW,
         size=rows,
+        expect=rows,
         balance=False,
         readable=fits,
         why=why,
         pair=worker.pane_id,
+        across=worker.width,
     )
 
 
@@ -614,9 +639,11 @@ def alongside(windows: Sequence[Window], request: Request) -> Placement:
         target='',
         direction=Direction.BESIDE,
         size=None,
+        expect=None,
         balance=False,
         readable=readable(home.width, home.height),
         why='every window this tool placed into is full, so the pair gets one of its own',
+        across=home.width,
     )
 
 
@@ -656,6 +683,7 @@ def column_in(window: Window, why: str) -> Placement:
 
     columns = len(window.columns) + 1
     width = even_share(window.width, columns)
+    landing = final_share(window.width, columns)
     return Placement(
         role=Role.WORKER,
         window=window.window_id,
@@ -663,9 +691,11 @@ def column_in(window: Window, why: str) -> Placement:
         target=target.pane_id,
         direction=Direction.BESIDE,
         size=width,
+        expect=landing,
         balance=True,
         readable=readable(width, window.height),
         why=f'{window.window_id} {why}, so {columns} columns of {width}',
+        across=landing,
     )
 
 
@@ -742,11 +772,11 @@ def tmux_soft(*args: str) -> str | None:
 def tmux_read(*args: str) -> str | None:
     """For a call whose failure is an answer rather than a fault.
 
-    `repo-structure.md` § "A chokepoint's error check is only as strict as the
-    command it wraps" is the reason this is its own door rather than a flag on
-    `tmux()`: the subcommands that fail meaningfully are the ones answering a
-    question, and `list-panes -t %99` refusing is how a pane's absence is
-    detected. Raising there would turn the answer into an error.
+    Its own door rather than a flag on `tmux()`, because a wrapper that raises
+    is only as strict as the command it wraps. The subcommands that fail
+    meaningfully are the ones answering a question, and `list-panes -t %99`
+    refusing is how a pane's absence is detected. Raising turns that into an
+    error.
 
     None is the refusal, and it is distinguishable from empty output, which is a
     pane that exists and has printed nothing.
@@ -824,16 +854,19 @@ def pane_process(pane_id: str) -> int | None:
     return int(process) if process.isdigit() else None
 
 
-def pane_contents(pane_id: str, lines: int | None) -> str | None:
-    """What a pane has on screen, or its whole scrollback when `lines` is None.
+def pane_contents(pane_id: str, lines: int | None, color: bool = False) -> str | None:
+    """What a pane has on screen, whole scrollback included.
 
-    The whole scrollback is what a dead pane is worth reading for: a command that
-    wrote one line and exited leaves it above the visible region, so a capture
-    without `-S -` comes back as blank lines and tmux's own "Pane is dead"
-    notice, which says nothing the exit status has not.
+    Always the whole capture, sliced here. `-S -N` has no end, so it runs to the
+    bottom of the visible pane and returns N plus the pane's own height.
+
+    `-e` keeps the escapes, for a caller rendering the pane rather than reading it.
     """
-    span = ['-S', '-', '-E', '-'] if lines is None else ['-S', f'-{lines}']
-    return tmux_read('capture-pane', '-p', *span, '-t', pane_id)
+    escapes = ['-e'] if color else []
+    captured = tmux_read('capture-pane', '-p', *escapes, '-S', '-', '-E', '-', '-t', pane_id)
+    if captured is None or lines is None:
+        return captured
+    return '\n'.join(captured.splitlines()[-lines:]) if lines else ''
 
 
 def read_role(name: str) -> Role:
@@ -918,11 +951,25 @@ def resolve(address: str) -> str:
     """
     if address.startswith('%'):
         return address
-    for line in tmux('list-panes', '-a', '-F', f'#{{pane_id}}\t#{{@{PANE_HANDLE}}}').splitlines():
-        pane_id, _, handle = line.partition('\t')
-        if handle and handle == address:
+    for pane_id, handle in handles().items():
+        if handle == address:
             return pane_id
     raise Usage(Refusal.NO_SUCH_HANDLE, handle=address)
+
+
+def handles() -> dict[str, str]:
+    """Every pane's handle, by pane id, with the unnamed left out."""
+    found = {}
+    for line in tmux('list-panes', '-a', '-F', f'#{{pane_id}}\t#{{@{PANE_HANDLE}}}').splitlines():
+        pane_id, _, handle = line.partition('\t')
+        if handle:
+            found[pane_id] = handle
+    return found
+
+
+def handle_of(pane_id: str) -> str:
+    """The name a pane carries, read off the pane rather than off the argument."""
+    return handles().get(pane_id, '')
 
 
 def dedicate(window_id: str) -> None:
@@ -1033,16 +1080,20 @@ class Landed:
 
 
 def measure(pane: str, placement: Placement) -> Landed:
-    """Read the pane back and say whether it matches what was announced."""
-    row = tmux('display-message', '-p', '-t', pane, '#{pane_width}\t#{pane_height}').strip()
-    width, height = (int(part) for part in row.split('\t'))
+    """Read the pane back and say whether it matches what was announced.
+
+    Through `pane_size`, which checks the reading: `display-message` exits 0 and
+    prints an empty line for a pane that is gone, and a pane can die between the
+    split and this read.
+    """
+    width, height = pane_size(pane)
     got = height if placement.direction is Direction.BELOW else width
     return Landed(
         pane=pane,
         width=width,
         height=height,
         readable=readable(width, height),
-        as_planned=placement.size is None or got == placement.size,
+        as_planned=placement.expect is None or got == placement.expect,
     )
 
 
@@ -1158,10 +1209,8 @@ def request_from(args: argparse.Namespace) -> Request:
 def wanted_handle(name: str) -> str:
     """The handle a caller asked for, once it is usable and nobody else holds it.
 
-    Both checks run before anything is placed, because `cli-design.md` §
-    "Everything that can refuse runs before the first byte of data" is what lets
-    a caller retry a refused open without first working out whether a pane was
-    made anyway.
+    Both checks run before anything is placed, so a caller retrying a refused
+    open does not first have to work out whether a pane was made anyway.
 
     A duplicate is refused rather than allowed to shadow: two panes answering one
     name makes `resolve()` return whichever `list-panes` happened to reach first,
@@ -1170,7 +1219,7 @@ def wanted_handle(name: str) -> str:
     """
     if not name:
         return ''
-    if not HANDLE.match(name):
+    if not usable_handle(name):
         raise Usage(Refusal.BAD_HANDLE, handle=name)
     for line in tmux('list-panes', '-a', '-F', f'#{{pane_id}}\t#{{@{PANE_HANDLE}}}').splitlines():
         pane_id, _, held = line.partition('\t')
@@ -1192,14 +1241,15 @@ def placed(placement: Placement, handle: str, landed: Landed | None = None) -> d
     so `plan` reports the sizes it intends and `open` reports the sizes it got --
     and those disagreeing is the thing `as_planned` exists to surface.
     """
+    down = placement.direction is Direction.BELOW
     record = {
         'handle': handle,
         'pane': landed.pane if landed else '',
         'window': placement.window,
         'role': str(placement.role),
         'pair': placement.pair,
-        'width': landed.width if landed else placement.size,
-        'height': landed.height if landed else None,
+        'width': landed.width if landed else placement.across,
+        'height': landed.height if landed else (placement.expect if down else None),
         'readable': landed.readable if landed else placement.readable,
         'opened_window': placement.opens_window,
         'how': placement.why,
@@ -1331,7 +1381,7 @@ def cmd_status(address: str, as_json: bool) -> int:
     if as_json:
         emit(
             {
-                'handle': address if not address.startswith('%') else '',
+                'handle': handle_of(pane_id),
                 'pane': pane_id,
                 'state': str(state),
                 'exit_code': code,
@@ -1346,12 +1396,20 @@ def cmd_status(address: str, as_json: bool) -> int:
     return 0
 
 
-def cmd_read(address: str, lines: int | None) -> int:
+def cmd_read(address: str, lines: int | None, color: bool, strip: bool, as_json: bool) -> int:
     """A pane's content, on stdout."""
-    contents = pane_contents(resolve(address), lines)
+    if lines is not None and lines < 0:
+        raise Usage(Refusal.BAD_LINES, lines=lines)
+    pane_id = resolve(address)
+    contents = pane_contents(pane_id, lines, color)
     if contents is None:
         raise Usage(Refusal.NO_SUCH_PANE, pane=address)
-    print('\n'.join(line for line in contents.splitlines() if line.strip()))
+    if strip:
+        contents = '\n'.join(line for line in contents.splitlines() if line.strip())
+    if as_json:
+        emit({'pane': pane_id, 'handle': handle_of(pane_id), 'contents': contents})
+    else:
+        print(contents)
     return 0
 
 
@@ -1362,13 +1420,13 @@ def cmd_close(address: str, as_json: bool) -> int:
     with it, and a mark on a pane tmux has already destroyed is unreachable --
     `release` walks live panes, so nothing would ever clear it.
 
-    A mutating verb still answers `--json` with the object it affected, so a
-    caller reading every response the same way does not have one verb that
-    returns nothing and parses as a failure.
+    A pane that is already gone is a success. Closing is asked for by a caller
+    that wants it gone, and refusing there loses whatever diagnosis that caller
+    was carrying about why it went.
     """
     pane_id = resolve(address)
     release([pane_id])
-    if problem := tmux_soft('kill-pane', '-t', pane_id):
+    if pane_state(pane_id)[0] is not PaneState.GONE and (problem := tmux_soft('kill-pane', '-t', pane_id)):
         raise TmuxFailed(f'tmux kill-pane: {problem}')
     if as_json:
         emit({'pane': pane_id, 'state': str(PaneState.GONE)})
@@ -1408,10 +1466,10 @@ formatted; the epilog is not, which is why the examples spell `%id` once.
 def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
     """`tmuxctl pane <verb>`, which is the port every adapter answers.
 
-    A resource above the verbs because `cli-design.md` § "A resource that could
-    ever grow a second command is a namespace today" is the default for anything
-    new, and because `session` and `layout` are verbs on other nouns of the same
-    tool. A bare `tmuxctl open` would occupy the noun slot with a verb's job.
+    A resource above the verbs, because a resource that could grow a second
+    command is a namespace today, and because `session` and `layout` are verbs on
+    other nouns of the same tool. A bare `tmuxctl open` would occupy the noun
+    slot with a verb's job.
     """
     sub = pane.add_subparsers(dest='pane_verb')
 
@@ -1474,6 +1532,9 @@ def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
     )
     reading.add_argument('address', metavar='ADDRESS', help=ADDRESS)
     reading.add_argument('--lines', type=int, default=None, metavar='N', help='the last N lines instead of the whole scrollback')
+    reading.add_argument('--color', action='store_true', help='keep the escape sequences, for rendering rather than reading')
+    reading.add_argument('--strip', action='store_true', help='drop blank lines, for reading what a dead pane printed')
+    reading.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
     closing = command('close', 'destroy a pane', 'Kill a pane and drop the marks that would otherwise outlive it.')
     closing.add_argument('address', metavar='ADDRESS', help=ADDRESS)
@@ -1517,7 +1578,7 @@ PANE_VERBS = {
     'plan': cmd_plan,
     'open': cmd_open,
     'status': lambda args: cmd_status(args.address, args.json),
-    'read': lambda args: cmd_read(args.address, args.lines),
+    'read': lambda args: cmd_read(args.address, args.lines, args.color, args.strip, args.json),
     'close': lambda args: cmd_close(args.address, args.json),
     'release': lambda args: cmd_release(args.panes, args.json),
 }
@@ -1528,8 +1589,7 @@ def main() -> int:
     args = parser.parse_args()
     # A node with nothing under it shows what is under it rather than erroring:
     # a namespace can be walked down one token at a time only if every level
-    # answers. `cli-design.md` § "A resource that could ever grow a second
-    # command is a namespace today" is what makes that walk the way it is found.
+    # answers, which is what makes the namespace worth the extra token.
     if not args.resource:
         parser.print_help()
         return 0
@@ -1543,8 +1603,13 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except Usage as problem:
+        # The key as well as the sentence, on stderr, because stdout carries data
+        # and a refusal is not data. Without it a caller has to match the wording,
+        # which is what `Refusal` exists to stop.
         err(f'tmuxctl: {problem}')
+        err(json.dumps({'refusal': str(problem.refusal), 'message': str(problem)}))
         sys.exit(USAGE_ERROR)
     except TmuxFailed as problem:
         err(f'tmuxctl: {problem}')
+        err(json.dumps({'refusal': 'tmux_failed', 'message': str(problem)}))
         sys.exit(FAILURE)
