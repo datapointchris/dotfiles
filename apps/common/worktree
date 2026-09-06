@@ -1886,6 +1886,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     drop = commands.add_parser('drop', parents=[quiet], help='abandon the worktree you are in, without landing it')
     drop.add_argument('--force', action='store_true', help='throw the work away, commits included')
+    # Caught here for `list --all`'s reason, and one worse failure of its own. A
+    # slug is what the name invites, and every recorded attempt was piped into a
+    # pager — so argparse exited 2 into a pipe whose own status was 0, and the
+    # caller read success. This is the only chance to say the command takes none.
+    drop.add_argument('slug', nargs='?', help=argparse.SUPPRESS)
+    drop.set_defaults(subparser=drop)
 
     # `sweep` is the counterpart to `drop`, not a bulk spelling of it. `drop` abandons
     # work that was never landed and needs you standing in it; `sweep` disposes of work
@@ -1952,6 +1958,11 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
         case 'land':
             return cmd_land()
         case 'drop':
+            if args.slug:
+                args.subparser.error(
+                    f"no slug: 'worktree drop' removes the worktree you are standing in, so cd to {args.slug} "
+                    "and run it there — or 'worktree sweep <repo>' for work that already merged"
+                )
             return cmd_drop(args.force)
         case 'sweep':
             return cmd_sweep(args.repo, args.yes)

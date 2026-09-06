@@ -704,6 +704,21 @@ class TestNothingIsDestroyed:
         assert result.returncode == 0
         assert not alpha.exists()
 
+    def test_a_slug_is_refused_and_says_where_to_run_it_instead(self, fleet, run):
+        """`drop` removes the worktree the caller stands in, and the name invites a
+        slug. Left to argparse it exits 2 on `unrecognized arguments`, which every
+        recorded attempt piped into a pager — so the status the caller read was the
+        pager's 0 and the command looked like it had worked."""
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        run(fleet['primary'], 'new', 'alpha')
+
+        result = run(alpha, 'drop', 'beta')
+
+        assert result.returncode == 2
+        assert 'no slug' in result.stderr
+        assert 'worktree sweep <repo>' in result.stderr
+        assert alpha.exists()
+
     def test_landing_work_that_is_already_on_the_base_branch_is_refused(self, fleet, run):
         """The rebase would replay patches whose content main already carries, and the
         push would put a second copy of merged work on it.
