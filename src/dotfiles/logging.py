@@ -140,7 +140,7 @@ actually reading.
 its transport under that name rather than `httpcore`, so a pin on the obvious
 spelling does not reach it. Its DEBUG records carry whole response-header tuples
 as the event text, and unpinned they dominate the log — around three quarters of
-the events in a real apply, in a file that is copied to every machine, burying
+the events in a real apply, in a file replicated to every machine, burying
 the failure the run actually had.
 
 The unprefixed pair stays: naming a logger that does not exist is free. What it

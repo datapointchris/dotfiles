@@ -16,9 +16,8 @@ this script.
 
 ## Where the notebook lives
 
-`~/notes` is replicated between machines, not a git repo and not in iCloud. It
-holds personal notes. This repo configures the notebook and never carries its
-contents.
+`~/notes` is replicated between machines, not a git repo and not in iCloud. This
+repo configures the notebook and never carries its contents.
 
 zk's configuration is `configs/common/.config/zk/config.toml`, symlinked to
 `~/.config/zk/`. Its `[group.*]` blocks define per-section note templates and

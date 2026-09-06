@@ -408,7 +408,8 @@ def no_stopping_this_machines_daemons(request, monkeypatch):
     answers and the argv is what gets asserted. `systemd.disable` is the exception:
     `syspkg.stop_service` reaches it from a *displacement*, which a test stubs at
     `syspkg.uninstall` one line further on, and the manager deciding the branch is
-    the machine's rather than the test's. On this desk that call stops syncthing.
+    the machine's rather than the test's. On a developer machine that call stops
+    a real daemon.
 
     A test that means to exercise it overrides `systemd.disable` with a spy of its
     own, which shadows this for the duration.

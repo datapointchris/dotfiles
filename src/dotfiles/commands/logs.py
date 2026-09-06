@@ -266,8 +266,9 @@ def _newer_than(current: Path) -> Path | None:
 
     Compared by name rather than by mtime: `Identity.stem` leads with a
     basic-format UTC timestamp precisely so the directory sorts chronologically
-    as text, and an mtime comparison would instead follow whichever file
-    arrived from another machine last.
+    as text, and an mtime comparison would instead follow whichever file was
+    written last. On a replicated directory that is not the name order, because
+    a copy arriving from another machine is written when it arrives.
     """
     newest = runs.latest_event_log()
     return newest if newest is not None and newest.name > current.name else None

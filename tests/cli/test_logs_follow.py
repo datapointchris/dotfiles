@@ -13,8 +13,8 @@ the real ones: *which* file a follower moves to is the property under test, and 
 stub for any of them would answer it in the test's own words.
 
 `runs/` is replicated between machines, so a peer's stream, a stream from a box
-whose name starts with this one's, and a `.sync-conflict-` copy of a local run
-all land in the same directory. The `shared` fixture is that directory, and every
+whose name starts with this one's, and a conflict copy of a local run all land
+in the same directory. The `shared` fixture builds that directory, and every
 selector in this module is one that has to keep telling them apart.
 """
 
@@ -85,9 +85,9 @@ def emitted(result) -> list[dict]:
 def shared(runs_dir: Path) -> dict[str, Path]:
     """A directory holding what a synced `runs/` accumulates.
 
-    The conflict copy carries the `.sync-conflict-` suffix a replicator writes,
-    named for this machine's newest run and carrying that run's id, so nothing
-    but the middle of the stem separates it from the file it was copied from.
+    The conflict copy built below is named for this machine's newest run and
+    carries that run's id, so nothing but the middle of the stem separates it
+    from the file it was copied from.
     """
     mine_new = stream(runs_dir, '20260815T110000Z', ran('go install', run_id='444455556666'))
     conflict = runs_dir / f'{mine_new.stem}.sync-conflict-20260815-120000-A6FGHT2.jsonl'
@@ -177,7 +177,7 @@ def test_a_listing_holds_only_the_runs_this_boxs_own_name_selects(
     """`runs.list_event_logs(machine=paths.MACHINE_ID)` is the whole of this verb,
     and `report._send` spells the same selector one module over. The machine is
     matched against the whole middle of the stem, so a peer's run, a run from a box
-    whose name merely starts with this one's, and a `.sync-conflict-` copy of this
+    whose name merely starts with this one's, and the conflict copy of this
     box's own newest run are each excluded for their own reason.
 
     Newest first, and `--limit` cuts from that end — a limit applied before the

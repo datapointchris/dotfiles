@@ -131,9 +131,10 @@ def test_a_seconds_field_is_not_rendered_twice(runs_dir: Path) -> None:
 
 def test_a_newer_run_is_chosen_by_name_rather_than_mtime(runs_dir: Path) -> None:
     """`Identity.stem` leads with a UTC timestamp precisely so the directory
-    sorts chronologically as text. Comparing mtimes would instead follow whichever
-    file was written to disk last, which on a shared directory is not the same
-    ordering at all."""
+    sorts chronologically as text. Comparing mtimes would instead follow
+    whichever file was written last. On a replicated directory that is not the
+    name order, because a copy arriving from another machine is written when it
+    arrives."""
     current = stream(runs_dir, '20260815T100000Z', ran('git status'))
     later = stream(runs_dir, '20260815T110000Z', ran('go install'))
     later.touch()
