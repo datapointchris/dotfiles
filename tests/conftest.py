@@ -59,26 +59,18 @@ REPO = Path(__file__).resolve().parent.parent
 assert 'dotfiles.paths' not in sys.modules, 'something above imported dotfiles.paths, so DOTFILES_DIR is already resolved'
 os.environ['DOTFILES_DIR'] = str(REPO)
 
-# Below the line above rather than with the imports at the top, because both reach
-# `dotfiles.paths` and the assert holds that module out until the root is pinned.
+# Below the line above rather than with the imports at the top, because each of
+# these reaches `dotfiles.paths` and the assert holds that module out until the
+# root is pinned. `guards` is the one to watch: it reads `paths.STATE_HOME` and
+# `settings.config_file()` at its own import, so moved above the assert it would
+# name the roots of whatever tree the shell was standing in.
 # `github_release` and `Privilege` reach it through nothing, so they stay up there.
+import guards  # noqa: E402
+from guards import WouldInstall  # noqa: E402
+from guards import WroteOntoThisMachine  # noqa: E402
+
 from dotfiles import machine as machines  # noqa: E402
-from dotfiles import paths  # noqa: E402
 from dotfiles import settings  # noqa: E402
-
-REAL_STATE_HOME = paths.STATE_HOME
-REAL_CONFIG_DIR = settings.config_file().parent
-"""The two directories this tool owns on the box running the suite.
-
-Read here, at import, while the environment is still the operator's. Everything
-below redirects `$XDG_STATE_HOME` and `$XDG_CONFIG_HOME`, and `paths` answers the
-redirect — so a guard asking `paths` at call time would name wherever the test had
-already moved to and could never fire.
-
-`~/.config/dotfiles/config.toml` is a symlink into this checkout on a deployed
-machine, so a write there does not stay in `$HOME`: it follows the link and
-truncates the tracked file, or unlinks it and leaves the deployed path a stray.
-"""
 
 
 def declared_names() -> tuple[str, ...]:
@@ -261,21 +253,6 @@ def would_change_this_machine(argv: tuple[str, ...]) -> bool:
     return not (redirected and argv[:2] in REDIRECTABLE)
 
 
-class WouldInstall(BaseException):
-    """Raised where an install was attempted, and deliberately not an `Exception`.
-
-    `engine._measure` and `engine._act` both wrap a resource in `except Exception`
-    and turn what it raised into a `Refusal`, because one checker crashing must not
-    end the walk. That isolation swallows a guard raised as an `AssertionError`:
-    the install is still refused, but the run reports a refused resource and exits
-    3, which reads as a resource that could not be examined rather than as a test
-    that tried to change this machine.
-
-    A `BaseException` passes straight through, which is the same reason
-    `pytest.fail` raises one.
-    """
-
-
 @pytest.fixture(autouse=True)
 def logging_is_configured():
     """Unconfigured structlog writes to stdout, which the suite must never see.
@@ -425,17 +402,6 @@ def no_stopping_this_machines_daemons(request, monkeypatch):
     monkeypatch.setattr(systemd, 'disable', refuse)
 
 
-class WroteOntoThisMachine(BaseException):
-    """Raised where a test wrote into a directory this tool owns on the real box.
-
-    A `BaseException` for the reason `WouldInstall` gives: `engine._measure` and
-    `engine._act` wrap a resource in `except Exception`, so an `AssertionError`
-    here would be turned into a `Refusal` and the run would exit 3 — reading as a
-    resource that could not be examined rather than as a test writing onto the
-    machine.
-    """
-
-
 @pytest.fixture(autouse=True)
 def no_writing_into_this_machines_own_directories(request, monkeypatch):
     """Refuse a write under the real `~/.config/dotfiles` or `$XDG_STATE_HOME/dotfiles`.
@@ -452,10 +418,14 @@ def no_writing_into_this_machines_own_directories(request, monkeypatch):
     else's, and a guard over the whole home would fire on `uv`, on coverage and on
     pytest itself.
 
-    The roots are read at import, above, while they still describe the operator's
-    machine. A test redirecting `$XDG_STATE_HOME` moves what `paths` answers and
-    moves nothing here, which is the point: the guard has to keep naming the place
-    the test was supposed to be redirected away from.
+    `guards.OWNED` reads the roots at its own import, while they still describe the
+    operator's machine. A test redirecting `$XDG_STATE_HOME` moves what `paths`
+    answers and moves nothing there, which is the point: the guard has to keep
+    naming the place the test was supposed to be redirected away from.
+
+    Both clauses of the predicate carry a caller. `status.record` names
+    `paths.STATE_HOME` itself at `src/dotfiles/status.py:71`, so `self == owned` is
+    the only one that reaches it; every writer under `runs/` reaches the other.
 
     A directory sweep cannot do this job. Replication delivers a peer's record
     into `runs/` while the suite is running, and a person or a second session can
@@ -469,7 +439,7 @@ def no_writing_into_this_machines_own_directories(request, monkeypatch):
 
     def refuse_if_real(original, verb):
         def guarded(self, *args, **kwargs):
-            for owned in (REAL_STATE_HOME, REAL_CONFIG_DIR):
+            for owned in guards.OWNED:
                 if self == owned or owned in self.parents:
                     raise WroteOntoThisMachine(
                         f'{verb} on {self} would write into this machine’s own {owned} — '
