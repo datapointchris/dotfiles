@@ -601,9 +601,9 @@ def test_enter_does_not_close_a_pull_request(session) -> None:
 
 @pytest.mark.parametrize(('key', 'verb'), [('x', 'close'), ('m', 'merge')])
 def test_a_guarded_action_refuses_when_there_is_no_terminal_to_ask_on(session, key, verb) -> None:
-    """`interactive` is `sys.stdin.isatty()`, and both guarded actions used to read
-    a false there as permission to skip the confirm and act. There is no flag that
-    supplies the answer instead, so the only correct move is to refuse."""
+    """`interactive` is `sys.stdin.isatty()`, and a false there is not permission.
+    It says the confirm cannot be asked, and no flag supplies the answer instead,
+    so refusing is the only move left that is not acting unasked."""
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, key),), attended=False, refuses=True)
 
     assert f'{verb} needs a terminal' in run.stderr

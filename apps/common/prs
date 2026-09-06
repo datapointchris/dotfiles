@@ -698,11 +698,11 @@ def preview_width() -> int:
     """How wide the description pane actually is, measured rather than assumed.
 
     Not `TABLE_WIDTH`. That constant is a *popup* measurement — its own comment
-    defines it as `display-popup -w 150` less the border and padding — and the
-    action menu also runs in a plain terminal, where `pick`'s docstring says
-    sizing belongs to the caller. Using it here made the rendering depend on a
-    number that describes a different window, so editing the popup width in
-    tmux.conf for a layout reason silently changed how a body was laid out.
+    defines it as `display-popup -w 150` less the border and padding — and this
+    pane is not always in that popup, since `pick`'s docstring gives sizing to
+    the caller and the menu runs in a plain terminal too. A width taken from
+    there would tie how a body lays out to a number describing another window,
+    with the tmux.conf line that sets it saying nothing about this one.
 
     `--padding=1,{SIDE_PAD}` is what fzf takes off each side, and the preview
     window carries only a top border, so the two paddings are the whole
@@ -877,10 +877,11 @@ def copy_branch(pr: PullRequest, *, interactive: bool = False) -> int:
     if not clipboard:
         return fail('no clipboard tool found — install wl-clipboard, or xclip')
     argv = [clipboard, '-selection', 'clipboard'] if clipboard == 'xclip' else [clipboard]
-    # Present on PATH is not the same as able to run. `wl-copy` is installed on
-    # every Wayland box and exits 1 with no compositor to talk to — over ssh, in a
-    # login shell, under a test — and `check=True` turned that into a traceback
-    # out of a picker whose popup had already closed.
+    # Present on PATH is not the same as able to run, which is why the failure is
+    # read rather than raised. `wl-copy` is installed on every Wayland box and
+    # exits 1 with no compositor to talk to — over ssh, in a login shell, under a
+    # test — and a raise here surfaces as a traceback into a popup that has
+    # already torn down, which leaves the picker nothing to report it with.
     written = subprocess.run(argv, input=pr.branch, text=True, capture_output=True, check=False)
     if written.returncode != 0:
         said = written.stderr.strip().splitlines()
