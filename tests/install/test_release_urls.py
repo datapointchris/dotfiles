@@ -62,12 +62,15 @@ OS_TARGETS = {
 
 
 def declaration() -> catalog.Catalog:
-    """This checkout's `packages.yml`, never the machine's.
+    """This checkout's `packages.yml`, anchored to this module's own path.
 
-    A load with no path resolves through `DOTFILES_DIR`, and `.zshenv` exports
-    that to the primary checkout on every machine here. A bare load run from a
-    worktree therefore measures what `main` declares while the branch under test
-    sits unread — green against a file the change never touched.
+    `PACKAGES_YML` derives from `__file__` rather than from `$DOTFILES_DIR`, so it
+    holds in a run that collects no root conftest. `tests/conftest.py` is what
+    makes a bare load read this checkout, and a run that never loaded it would
+    send one to whatever the shell names instead.
+
+    One spelling for the file across this module comes with that, rather than
+    being the reason for it.
     """
     return catalog.load(PACKAGES_YML)
 
