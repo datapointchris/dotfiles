@@ -429,7 +429,7 @@ def packages_apply(
     refused for as long as another manager holds the name, because installing beside
     it would leave two copies of one daemon over one config directory. With the flag,
     the removal and the install are one act. `--package NAME` narrows it to the one
-    entry, which is what `check` prints.
+    entry, and NAME is the name `check` prints for it.
 
     `--reinstall` additionally installs the ones that are already there, from
     whichever source this run has — the proxy and the release API online, the

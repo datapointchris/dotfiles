@@ -1021,6 +1021,7 @@ def rendered_lines(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
         "check's closing line, over a resource that refused": reconcile.verdict_line([refused], Lens.CHECK),
         "apply's closing line": reconcile.applied_line(1, ['claude-code'], [declined], [blind]),
         "apply's closing line, having done nothing": reconcile.applied_line(0, [], [], []),
+        "apply's closing line, narrowed and current": reconcile.applied_line(0, [], [], [], ['custom/theme theme v7.1.0']),
         'the heading over a group of work': reconcile.converging_line([a_change(privileged=True)]),
         'the headings over what apply walked past': buffer.getvalue(),
         'the machines row, sound but not silent': reconcile.declaration_row([warning], []).detail,

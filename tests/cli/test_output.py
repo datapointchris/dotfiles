@@ -396,6 +396,13 @@ def test_the_label_on_a_listed_item_is_the_verdict_a_change_would_carry(capsys: 
     assert output.MATCHED in capsys.readouterr().err
 
 
+def test_the_row_label_and_the_sentence_phrase_for_a_matched_item_agree() -> None:
+    """Two spellings of one word, because the two render under different rules: a
+    row's own label, and a clause following a count. Both name an `Examined` row,
+    so a reword of either alone is the drift this refuses."""
+    assert str(output.Phrase.MATCHED) == output.MATCHED
+
+
 def test_retracting_without_a_progress_line_to_take_back_writes_nothing(capsys: pytest.CaptureFixture) -> None:
     """It erases the line above it, so a run where `announce` printed nothing would
     eat whatever was there instead. Both are gated on the same two questions."""
