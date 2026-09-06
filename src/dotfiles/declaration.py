@@ -400,12 +400,13 @@ def _listing(named: list[str]) -> str:
 
 
 PLATFORM_FIELDS = ('apt', 'brew', 'pacman', 'aur')
-METADATA_FIELDS = (('package', 'Import path'), ('repo', 'Repository'), ('github_repo', 'GitHub'))
+METADATA_FIELDS = (('package', 'Go package'), ('repo', 'Repository'), ('github_repo', 'GitHub'))
 """The entry keys `show` reports as metadata, and the label each is printed under.
 
-`package` is a go tool's `go install` argument, named the way Go names it. The
-block's heading already reads `Package: <name>`, so one label over both would put
-two questions under one word.
+Each label carries the key's own word, so a row read on screen is a string that
+finds the entry in `packages.yml` and the field in `show --json`. `package` takes
+the language as well, because the block's heading already reads `Package: <name>`
+and one word over both would put two questions under one label.
 """
 
 

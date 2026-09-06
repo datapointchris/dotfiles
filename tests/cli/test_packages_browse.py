@@ -463,8 +463,8 @@ def test_the_heading_is_the_only_row_a_package_is_named_on(
     """The heading answers "which entry is this" and the metadata row answers
     "what does `go install` take", so the two carry different labels.
 
-    A `go_tools` entry is the only one that prints both, which is what makes it
-    the case where one label over the pair would be ambiguous.
+    Both labels keep the `package` key's own word, so either row read on screen
+    is a string that finds the entry in the declaration.
     """
     point_at(tmp_path / 'repo', EVERY_ROW, monkeypatch)
 
@@ -472,10 +472,10 @@ def test_the_heading_is_the_only_row_a_package_is_named_on(
     printed = capsys.readouterr().out
 
     assert [line for line in printed.splitlines() if line.startswith('Package:')] == ['Package: task']
-    assert 'Import path: github.com/go-task/task/v3/cmd/task' in printed
+    assert 'Go package:  github.com/go-task/task/v3/cmd/task' in printed
 
 
-METADATA_BLOCK = ['Description', 'Section', 'Tags', 'Import path', 'Repository', 'GitHub', 'Status']
+METADATA_BLOCK = ['Description', 'Section', 'Tags', 'Go package', 'Repository', 'GitHub', 'Status']
 PLATFORM_BLOCK = ['Description', 'Section', 'Tags', 'apt', 'brew', 'pacman', 'Status']
 
 BLOCKS = (
@@ -495,7 +495,7 @@ def test_every_row_of_a_show_block_starts_its_value_at_one_column(
     indented row spends part of the column on its indent, which is why the
     per-manager values land level with the rest rather than two columns short.
 
-    `Import path` is the widest label at 11, so it sets the column for both
+    `Description` is the widest label at 11, so it sets the column for both
     blocks. `Repository` at 10 is the row a fixed per-row pad puts furthest from
     it, which is why the go tool declares a `repo` no real one carries.
     """
