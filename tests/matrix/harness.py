@@ -56,7 +56,7 @@ class ReachedTheNetwork(BaseException):
     a plausible answer, so the test passes its exit-code assertion and nobody
     learns the network was reached. `plan --refresh` is the verb that reaches it.
 
-    Same reasoning as `WouldInstall` in `tests/conftest.py`, and the same reason
+    Same reasoning as `WouldInstall` in `tests/guards.py`, and the same reason
     `pytest.fail` raises one.
     """
 

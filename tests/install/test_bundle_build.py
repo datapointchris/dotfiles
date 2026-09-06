@@ -243,7 +243,7 @@ class ReachedTheNetwork(BaseException):
     its caller refuses on — so a guard raised as an ordinary exception would be
     absorbed into a plausible refusal and the test would pass without anyone
     learning the network was reached. Same reasoning as `WouldInstall` in
-    `tests/conftest.py`.
+    `tests/guards.py`.
     """
 
 
