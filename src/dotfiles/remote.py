@@ -555,15 +555,32 @@ def listed(remote: Remote, directory: str) -> tuple[str, ...] | None:
     )
 
 
-def _lists_above(remote: Remote, directory: str) -> bool:
-    """Whether any ancestor lists, up to and including the configured root."""
-    root = remote.root.rstrip('/')
+def _ancestors(directory: str, stop: str) -> tuple[str, ...]:
+    """Every directory between `directory` and `stop`, nearest first.
+
+    `stop` is included where the walk reaches it, and `''` — the top of whatever
+    the transport addresses — ends it either way. That second terminator is what
+    lets a root carrying no separator be walked at all: `artifacts` has exactly
+    one ancestor and it is the top.
+    """
     walking = directory.rstrip('/')
-    while '/' in walking and walking != root:
-        walking = walking.rsplit('/', 1)[0]
-        if _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': walking}).ok:
-            return True
-    return False
+    found = []
+    while walking and walking != stop:
+        walking = walking.rsplit('/', 1)[0] if '/' in walking else ''
+        found.append(walking)
+    return tuple(found)
+
+
+def _lists_above(remote: Remote, directory: str, *, stop: str | None = None) -> bool:
+    """Whether any ancestor lists, nearest first, stopping at `stop`.
+
+    `stop` defaults to the configured root, which is as far as a caller reading a
+    shelf under it has any business looking. `remote check` measures the root
+    itself and passes `''`, because the root's own absence has no ancestor inside
+    the root to prove it.
+    """
+    edge = (remote.root if stop is None else stop).rstrip('/')
+    return any(_ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': above}).ok for above in _ancestors(directory, edge))
 
 
 def exists(remote: Remote, directory: str) -> bool:
@@ -679,6 +696,20 @@ class Reach:
     "converged machine reports a problem" failure the exit codes exist to avoid.
     """
 
+    facts: Mapping[str, int | str] = dc.field(default_factory=dict)
+    """What this row measured, as values rather than as the sentence spelling them.
+
+    `detail` is prose for a person and every number in it — the probe attempts,
+    the entry count, the path `which` resolved — reached a `--json` caller only
+    inside that sentence. A caller wanting the attempt count had to match English,
+    which is rewritten for the reader and breaks the caller with nothing wrong.
+
+    A nested object rather than keys on the row itself, so a subject naming its
+    measurement `ok` cannot collide with the row's own fields. Named keys rather
+    than one `measurement`, because `3` is only a number until something says
+    whether it counts probes or entries.
+    """
+
     @property
     def faulty(self) -> bool:
         return self.required and not self.ok
@@ -702,7 +733,7 @@ def measure(found: Configured) -> tuple[Reach, ...]:
     program = remote.transport.program
     where = shutil.which(program)
     measured = [
-        Reach('transport', bool(where), where or f'{program} is not on PATH'),
+        Reach('transport', bool(where), where or f'{program} is not on PATH', facts={'path': where} if where else {}),
         Reach('configured', True, remote.root),
     ]
     if where is None:
@@ -715,20 +746,50 @@ def measure(found: Configured) -> tuple[Reach, ...]:
     # what a single combined row could never say.
     answer = answered(remote)
     tried = f' after {answer.attempts} attempts' if answer.attempts > 1 else ''
-    measured.append(Reach('reachable', answer.ok, f'the server answered{tried}' if answer.ok else f'{answer.detail}{tried}'))
+    spoken = f'the server answered{tried}' if answer.ok else f'{answer.detail}{tried}'
+    measured.append(Reach('reachable', answer.ok, spoken, facts={'attempts': answer.attempts}))
     if not answer.ok:
         return tuple(measured)
 
-    listed = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': remote.root})
-    if listed.ok:
-        entries = tuple(line for line in listed.stdout.splitlines() if line.strip())
-        measured.append(Reach('root', True, f'{len(entries)} entry(s) under {remote.root}', required=False))
-    else:
-        measured.append(Reach('root', False, f'{remote.root} is not there yet; the first upload creates it', required=False))
-
+    measured.append(_root(remote))
     measured.append(_declares(remote, Operation.MKDIR, 'a new directory is created by hand'))
     measured.append(_declares(remote, Operation.DELETE, 'retention is reported and never performed'))
     return tuple(measured)
+
+
+UNPROVEN_ROOT = 'list the root with the transport by hand; a shelf nobody has published to and a refused listing answer the same way'
+"""What a person does about a root whose failure to list could not be explained.
+
+`listed` refuses on this state and names this verb as the way to tell the two
+apart, so the verb has to say something more than the refusal did. What it has
+that `listed` does not is the ancestor walk above the root, and when that comes
+back empty there is nothing left to ask the transport for.
+"""
+
+
+def _root(remote: Remote) -> Reach:
+    """Whether the root lists, is absent, or would not say which of the two.
+
+    **The third answer is why this is a function.** A listing that fails is a root
+    nobody has created yet as easily as a refused one, and the transport reports
+    one exit status for both — so calling it absence, which is what the row said,
+    reported a permission boundary as a fresh remote and exited 0. `listed` refuses
+    on that same state and sends the reader here, which made this verb the end of a
+    loop rather than the answer to it.
+
+    **An ancestor that lists is what separates them**, exactly as it does in
+    `listed`. Above the root rather than under it, because the root is the subject:
+    a top that lists while the root does not proves the transport is working and
+    the failure is scoped to a directory nobody has made. Nothing listing anywhere
+    proves nothing, and that stays a fault for a person.
+    """
+    listing = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': remote.root})
+    if listing.ok:
+        entries = tuple(line for line in listing.stdout.splitlines() if line.strip())
+        return Reach('root', True, f'{len(entries)} entry(s) under {remote.root}', required=False, facts={'entries': len(entries)})
+    if _lists_above(remote, remote.root, stop=''):
+        return Reach('root', False, f'{remote.root} is not there yet; the first upload creates it', required=False)
+    return Reach('root', False, f'{remote.root} would not list, and nothing above it would either')
 
 
 def _why(ran: effects.Completed, program: str) -> str:

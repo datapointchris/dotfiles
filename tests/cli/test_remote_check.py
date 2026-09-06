@@ -28,6 +28,13 @@ be scenery. The day it starts reading a third, this file should move.
   asked that question, so it answers 3.
 - **An undeclared `mkdir` or `delete` is a fact, not a fault.** Backwards, every
   working remote that never needed one exits non-zero.
+- **A root that will not list is a fault only where its absence is unproven.**
+  `remote.listed` refuses on the unproven state and names this verb as the way to
+  tell it from a shelf nobody has published to, so 0 there is the end of a loop
+  and not an answer.
+- **Every number a row spells in English is a value in `facts`.** A caller
+  reading the probe attempts out of a sentence breaks the day the sentence is
+  reworded.
 
 Nothing here monkeypatches `remote.read`, `remote.measure` or `remote.answered`.
 The transport is a real program on a real `PATH` serving a real directory —
@@ -186,7 +193,12 @@ def no_mkdir_and_no_delete_declared(bench: Bench) -> None:
 
 
 def a_root_that_will_not_list(bench: Bench) -> None:
-    """The probe answers and the listing is refused, for a reason that is not absence."""
+    """The probe answers and every listing is refused, the root's ancestors included.
+
+    `deny_listing` refuses the whole tree, which is what makes this the state the
+    ancestor walk cannot resolve. `a_fresh_root` is the other half of the pair: the
+    same failed root listing over a top that lists perfectly well.
+    """
     install_relay(bench.bin, bench.server)
     deny_listing(bench.server)
     declare(bench.config)
@@ -285,11 +297,11 @@ STATES: dict[str, State] = {
             ('transport', True, True),
             ('configured', True, True),
             ('reachable', True, True),
-            ('root', False, False),
+            ('root', False, True),
             ('mkdir', True, False),
             ('delete', True, False),
         ),
-        ExitCode.CONVERGED,
+        ExitCode.ISSUE,
         (True, '/artifacts', 'relay'),
     ),
 }
@@ -301,11 +313,12 @@ exiting 0; `installed-and-not-answering` is one `False` and exit 3. Collapse the
 distinction and the first row moves to 3, which is every machine that never needed
 a `mkdir`.
 
-`a-root-that-will-not-list` asserts what the verb does today, and it is the row to
-read twice. A refused listing over an answering probe is the state `remote.listed`
-refuses on — it cannot be told from a tree nobody has created — and `check` calls
-it converged. That is a deliberate consequence of `root` being non-required, and
-this row is here so a change to it is a failing test rather than a discovery.
+`a-fresh-root` and `a-root-that-will-not-list` are the pair to read together. Both
+answer their probe and refuse to list the root, and the transport reports one exit
+status for each — so the only thing separating them is the ancestor walk above the
+root that `_root` runs. The first proves absence and stays converged, the second
+proves nothing and is a fault. Give them the same `required` and one of the two is
+wrong whichever value is chosen.
 """
 
 
@@ -327,6 +340,17 @@ def document(ran: Result) -> dict[str, Any]:
     one stray diagnostic there turns a caller's parse into a syntax error.
     """
     return json.loads(ran.stdout)
+
+
+def spoken(ran: Result) -> str:
+    """Everything a person saw, with Rich's wrapping undone.
+
+    The console wraps to the terminal width, so a sentence long enough to be worth
+    asserting whole is exactly the one that arrives split across two lines. Joining
+    on whitespace asserts the words rather than the column the runner happened to
+    render at.
+    """
+    return ' '.join(ran.output.split())
 
 
 def faults(row: State) -> int:
@@ -381,11 +405,11 @@ def test_the_rendered_answer_reaches_the_same_verdict_and_leaves_stdout_free_of_
 def test_the_probe_is_retried_before_the_remote_is_called_unreachable(bench: Bench) -> None:
     """One dropped packet is indistinguishable from an outage in a single call.
 
-    Asserted on the argv the transport was handed rather than on the sentence the
-    document carries, because the attempt count exists in that document only
-    inside `detail` — a caller cannot read it without parsing English. Three
-    entries is also what proves `a_probe_that_does_not_wait` zeroed the sleep and
-    not the loop.
+    The argv the transport was handed is the independent witness, and the count in
+    the document has to agree with it. Asserting only the document would pass
+    against a verb that wrote `3` without probing three times; asserting only the
+    argv is what left the count reachable through English alone. Three entries is
+    also what proves `a_probe_that_does_not_wait` zeroed the sleep and not the loop.
     """
     installed_and_not_answering(bench)
 
@@ -393,4 +417,41 @@ def test_the_probe_is_retried_before_the_remote_is_called_unreachable(bench: Ben
 
     assert ran.exit_code == ExitCode.ISSUE
     assert recorded(bench.record) == [['probe'], ['probe'], ['probe']]
-    assert document(ran)['measured'][-1]['subject'] == 'reachable'
+    reachable = document(ran)['measured'][-1]
+    assert reachable['subject'] == 'reachable'
+    assert reachable['facts']['attempts'] == len(recorded(bench.record))
+
+
+def test_every_number_a_row_states_in_prose_is_a_value_beside_it(bench: Bench) -> None:
+    """The three facts that reached a caller only inside a sentence.
+
+    A count, a path and an attempt total are what a dashboard branches on, and
+    each was spelled into `detail` and nowhere else. Asserted against the sentence
+    too, so the pair cannot silently disagree — a `facts` written by hand beside
+    prose built from something else is the failure a value-only assertion allows.
+    """
+    a_root_with_entries(bench)
+
+    facts = {row['subject']: (row['facts'], row['detail']) for row in document(check('--json'))['measured']}
+
+    assert Path(facts['transport'][0]['path']).resolve() == (bench.bin / 'relay').resolve()
+    assert facts['transport'][0]['path'] in facts['transport'][1]
+    assert facts['reachable'][0] == {'attempts': 1}
+    assert facts['root'][0] == {'entries': 1}
+    assert '1 entry(s)' in facts['root'][1]
+
+
+def test_a_root_whose_absence_cannot_be_proved_names_both_readings(bench: Bench) -> None:
+    """The verb `remote.listed` sends the reader to, answering rather than agreeing.
+
+    `listed` refuses on this state and says to run this. Reporting it converged
+    left the reader with a refusal pointing at a clean bill of health, so the row
+    is a fault and the advice names what a person can still do about it.
+    """
+    a_root_that_will_not_list(bench)
+
+    ran = check()
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert 'would not list, and nothing above it would either' in spoken(ran)
+    assert transport.UNPROVEN_ROOT in spoken(ran)
