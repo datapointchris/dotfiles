@@ -470,13 +470,13 @@ def test_the_sweep_drops_an_entry_by_when_it_was_last_used(cache_home, wire, tmp
     cache = DownloadCache(enabled=True)
     cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
     cache.remember_status(ASSET, 'verified')
-    sidecars = (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))
+    sidecars = cache.entry_files(ASSET)
     for path in sidecars:
         age(path, aged.days)
 
     cache.prune()
 
-    assert [path.exists() for path in sidecars] == [aged.survives] * 3, 'an entry ages as one thing, sidecars included'
+    assert [path.exists() for path in sidecars] == [aged.survives] * len(sidecars), 'an entry ages as one thing, sidecars included'
     assert cache_home.is_dir(), 'the sweep empties the cache, never removes it'
     assert entry_of(ASSET).parent.exists() is aged.survives, 'a directory with nothing left in it goes too'
 
@@ -763,14 +763,18 @@ def test_evicting_something_that_was_never_cached_is_not_an_error(cache_home):
     assert cache_home.is_dir()
 
 
-def test_an_entry_and_both_its_sidecars_share_one_directory(cache_home):
+def test_every_file_of_an_entry_shares_one_directory(cache_home):
     """Which is what makes retention able to drop them as a unit, and what
-    `cache_path_for`'s one-level-per-key-part layout is for."""
+    `cache_path_for`'s one-level-per-key-part layout is for.
+
+    Asked of `entry_files` rather than of a triple written here, so a fourth file
+    joining an entry has to share the directory too rather than being outside
+    what this covers."""
     cache = DownloadCache(enabled=False)
-    paths = (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))
+    paths = cache.entry_files(ASSET)
 
     assert len({path.parent for path in paths}) == 1
-    assert len(set(paths)) == 3
+    assert len(set(paths)) == len(paths)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
