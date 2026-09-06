@@ -392,8 +392,9 @@ class Action:
     `handler` is what `perform` calls, and it is a field rather than a branch in
     a dispatch so that an action with no handler cannot be constructed. Every
     other property of an action — its key, its legend row, its help row — is
-    already derived from this tuple, so a *binding* could never go unmentioned
-    while a *handler* could, and the fallthrough it fell through to was merge.
+    already derived from this tuple, so a *binding* cannot go unmentioned while a
+    handler named anywhere else could, and the least conservative thing for a
+    half-wired action to reach is the one that lands the pull request.
 
     Every handler takes the same pair, `(pr, interactive=...)`, whether or not it
     reads the second. That is what keeps `perform` one call: a signature that

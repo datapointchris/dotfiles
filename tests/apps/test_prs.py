@@ -48,6 +48,22 @@ UTF8_LOCALE = 'en_US.UTF-8' if sys.platform == 'darwin' else 'C.UTF-8'
 ANSI = re.compile(r'\x1b\[[0-9;]*m')
 
 
+ABSENT = '/nonexistent-checkout'
+"""Where a row's checkout is, unless the test says otherwise — a path no machine has.
+
+The default cannot be a real directory on somebody's disk. Every rendering test
+only ever *prints* this, so any absolute path serves them; the actions that
+*stat* it behave differently depending on whether it happens to be there, and a
+literal naming one developer's home is there on that developer's machine and
+nowhere else. That difference is invisible in the fixture, invisible in a new
+test, and shows up as a green suite here and a red one on a runner.
+
+Absent everywhere is the property that makes it the same measurement on every
+machine. A test that needs a checkout to exist makes one under `tmp_path` and
+passes it, which is the only way an action that opens a directory is exercised.
+"""
+
+
 def pr(repo: str, number: int, branch: str, **overrides: Any) -> dict[str, Any]:
     row = {
         'repo': repo,
@@ -60,7 +76,7 @@ def pr(repo: str, number: int, branch: str, **overrides: Any) -> dict[str, Any]:
         'draft': False,
         'created_at': '2026-08-01T10:00:00Z',
         'age_days': 3,
-        'path': f'/home/chris/{repo}',
+        'path': f'{ABSENT}/{repo}',
         'additions': 12,
         'deletions': 4,
         'changed_files': 2,
@@ -250,7 +266,7 @@ def session(tmp_path: Path, bin_dir: Path):
         *rows: dict[str, Any],
         replies: tuple[str, ...] = (),
         answer: str = '\n',
-        refuses: bool = False,
+        exits: int | None = 0,
         attended: bool = True,
         without: tuple[str, ...] = (),
     ) -> Session:
@@ -303,11 +319,17 @@ def session(tmp_path: Path, bin_dir: Path):
         finally:
             os.close(terminal)
             os.close(controller)
-        # `refuses` is a claim about the exit code, not a way of not making one.
-        # An action that declines has to say so *and* exit non-zero, and a test
-        # that only read stderr would pass on a refusal printed on the way to
-        # exit 0 — which is a run the caller's shell reads as having worked.
-        assert result.returncode == (1 if refuses else 0), result.stderr
+        # `exits` is a claim about the exit code, and the default makes it. An
+        # action that declines has to say so *and* exit non-zero, so a test
+        # reading only stderr would pass on a refusal printed on the way to exit
+        # 0 — a run the caller's shell reads as having worked.
+        #
+        # None is for a test sweeping every key at once, where the codes differ by
+        # key and the question is about something else entirely. It is the one
+        # shape that must not be reached for by a test that simply does not want
+        # to think about the code its own action returns.
+        if exits is not None:
+            assert result.returncode == exits, result.stderr
         return Session(result.stdout, result.stderr, room)
 
     return _session
@@ -372,9 +394,12 @@ def test_a_row_names_the_branch_and_not_only_the_number(listing) -> None:
 def test_a_row_names_where_the_repo_is_on_this_disk(listing) -> None:
     """A repo name is a label and two can collide across a registry; the path is
     what identifies a checkout, and it is what you go on to open."""
-    only = listed(listing(pr('dotfiles', 1, 'a-branch', path='/home/chris/dotfiles')))[0]
+    # An absolute path, and deliberately not one belonging to a real machine:
+    # this row is only ever printed, and a literal naming somebody's home reads
+    # as a checkout a later test could open.
+    only = listed(listing(pr('dotfiles', 1, 'a-branch', path='/somewhere/dotfiles')))[0]
 
-    assert '/home/chris/dotfiles' in only or '~/dotfiles' in only
+    assert '/somewhere/dotfiles' in only
 
 
 def test_a_repo_this_machine_has_not_cloned_says_so(listing) -> None:
@@ -604,7 +629,7 @@ def test_a_guarded_action_refuses_when_there_is_no_terminal_to_ask_on(session, k
     """`interactive` is `sys.stdin.isatty()`, and a false there is not permission.
     It says the confirm cannot be asked, and no flag supplies the answer instead,
     so refusing is the only move left that is not acting unasked."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, key),), attended=False, refuses=True)
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, key),), attended=False, exits=1)
 
     assert f'{verb} needs a terminal' in run.stderr
     assert f'gh pr {verb}' not in run.stdout
@@ -618,7 +643,7 @@ def test_the_review_action_refuses_when_claude_is_not_installed(session, tmp_pat
     `claude-code` uninstalled, which makes this a real machine."""
     checkout = tmp_path / 'a-checkout'
     checkout.mkdir()
-    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, 'r'),), without=('claude',), refuses=True)
+    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, 'r'),), without=('claude',), exits=1)
 
     assert 'claude is not installed' in run.stderr
     assert 'tmux new-window' not in run.stdout
@@ -649,11 +674,8 @@ def test_the_review_action_opens_a_claude_window_on_that_pr(session, tmp_path) -
     slot after the number, and it resolves the repo from the working directory —
     which is the window's `-c`, this PR's own checkout.
 
-    The path is a directory this test makes, not the one `pr` defaults to. That
-    default is `/home/chris/<repo>`, which is a literal the rendering tests want
-    to *see* and which the two path-dependent actions want to *open* — and on the
-    machine it names, opening it succeeds for reasons the test has nothing to do
-    with. It exists here and not on a CI runner, which is where that showed.
+    The path is a directory this test makes, because `ABSENT` is absent and this
+    action opens what it is given.
     """
     checkout = tmp_path / 'a-checkout'
     checkout.mkdir()
@@ -667,7 +689,7 @@ def test_a_review_needs_the_code_and_says_so_when_it_is_absent(session) -> None:
     """A repo the registry names and this machine has not cloned. Launching Claude
     in a directory that is not the repo would produce a review of whatever it
     found there."""
-    run = session(pr('dotfiles', 7, 'a-branch', path=''), replies=(chose(0, 'r'),), refuses=True)
+    run = session(pr('dotfiles', 7, 'a-branch', path=''), replies=(chose(0, 'r'),), exits=1)
 
     assert 'not checked out here' in run.stderr
     assert 'review-pr' not in run.stdout
@@ -725,20 +747,24 @@ def test_the_action_menu_names_the_key_that_takes_each_action(session) -> None:
     assert [row.split()[0] for row in rows] == bound_keys()
 
 
-def test_only_the_merge_key_merges(session) -> None:
-    """Every other key pressed on a row, and none of them lands the PR.
+def test_only_the_merge_key_merges(session, tmp_path) -> None:
+    """Every bound key pressed on a row, and exactly one of them lands the PR.
 
-    The assertion nothing made while `perform` ended on a bare
-    `return merge(...)`: an action reaching no branch fell through to the one
-    irreversible handler, and the pinned key lists were the only thing that fired,
-    which an author updates by reflex. Handlers now hang off `ACTIONS`, so an
-    action with none cannot be built — this is what says so from the outside.
+    Handlers hang off `ACTIONS`, so an action carrying none cannot be built. This
+    is what says so from outside the module, where nothing can see the tuple —
+    and it is the shape of assertion that a key list written into a test cannot
+    make, because such a list is what an author updates by reflex when it fails.
+
+    `exits=None` because the codes differ by key and this asks a different
+    question. A real checkout because half these actions open one.
     """
+    checkout = tmp_path / 'a-checkout'
+    checkout.mkdir()
     merged = []
     for key in bound_keys():
         # Enough newlines for whichever prompt this key reaches: a confirm, and
         # the pause behind a decline. Extra input is read by nobody.
-        run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, key),), answer='\n\n')
+        run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, key),), answer='\n\n', exits=None)
         if 'gh pr merge' in run.stdout:
             merged.append(key)
 
