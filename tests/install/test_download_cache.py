@@ -625,6 +625,71 @@ def test_a_verdict_is_refused_until_there_are_bytes_for_it_to_describe(cache_hom
     assert cache.status(ASSET) == 'verified'
 
 
+def test_a_verdict_whose_digest_is_gone_is_no_verdict(cache_home, wire, tmp_path):
+    """`remember_status` refuses to write a verdict without a digest beside it,
+    and nothing kept the pair level afterwards. `evict` and `prune` both unlink
+    the three files one at a time and warn-and-continue on `OSError`, so either
+    leaves this state.
+
+    The old read was a bare `read_text` on the digest, which raised
+    `FileNotFoundError` out of the middle of a bundle build.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+    cache.remember_status(ASSET, 'verified')
+
+    cache.digest_file(ASSET).unlink()
+
+    assert cache.status(ASSET) is None
+    assert cache.recorded_digest(ASSET) == ''
+
+
+def test_a_verdict_whose_bytes_are_gone_is_no_verdict(cache_home, wire, tmp_path):
+    """The quiet half, and the one that reaches `checksums.txt`.
+
+    With the bytes gone and both sidecars surviving, `fetch` re-downloads and
+    writes a fresh digest from the new bytes. A surviving `verified` then hands
+    `verify_against_upstream` that digest to record — as upstream-checked, when
+    the only thing that checked it was an earlier build looking at different
+    bytes. `checksums.txt` is what the install machine verifies against.
+    """
+    recorder = wire()
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
+    cache.fetch(ASSET, destination, '  fd')
+    cache.remember_status(ASSET, 'verified')
+
+    entry_of(ASSET).unlink()
+
+    assert cache.status(ASSET) is None, 'the bytes the verdict describes are not there'
+    cache.fetch(ASSET, destination, '  fd')
+    assert len(recorder.calls) == 2, 'and the re-download is what leaves a digest of bytes nobody checked'
+    assert cache.status(ASSET) is None, 'which the fresh digest does not make verified'
+
+
+def test_the_files_an_entry_is_are_the_files_a_verdict_requires(cache_home, wire, tmp_path):
+    """`evict` removes a set and `status` requires a set, and a verdict trusted
+    over a file eviction leaves behind is the fault above.
+
+    Asserted through the two callers rather than against a literal list, so a
+    fourth file added to an entry is covered by whichever of them forgets it.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+    cache.remember_status(ASSET, 'verified')
+
+    for path in cache.entry_files(ASSET):
+        assert path.is_file(), path
+        held = path.read_bytes()
+        path.unlink()
+        assert cache.status(ASSET) is None, f'{path.name} is part of the entry and the verdict does not survive it'
+        path.write_bytes(held)
+
+    assert cache.status(ASSET) == 'verified'
+
+
 def test_a_disabled_cache_neither_records_a_verdict_nor_reads_one(cache_home, wire, tmp_path):
     """`--no-cache` is asked for by somebody who does not trust what is on
     disk, so a verdict read out of it would be the one thing that survived

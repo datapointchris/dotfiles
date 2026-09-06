@@ -304,6 +304,14 @@ class DownloadCache:
         cached = cache_path_for(asset.key)
         return cached.with_name(cached.name + '.checksum-status')
 
+    def entry_files(self, asset: BundleAsset) -> tuple[Path, Path, Path]:
+        """The three files one cache entry is: the bytes, their digest, their verdict.
+
+        `evict` removes exactly these and `status` requires exactly these, so what
+        is written and what is trusted cannot come to describe different sets.
+        """
+        return cache_path_for(asset.key), self.digest_file(asset), self.status_file(asset)
+
     def fetch(self, asset: BundleAsset, destination: Path, label: str) -> None:
         """Put an asset at `destination`, from the cache when it is there.
 
@@ -336,6 +344,11 @@ class DownloadCache:
             self.evict(asset)
 
         log.info(label)
+        # A verdict is about one set of bytes and this download supplies another,
+        # so the entry keeps none across it. Dropped before rather than after, so
+        # an interrupted build leaves an entry with no verdict — which is
+        # re-checked, and is the answer a cold build already gets.
+        self.forget_status(asset)
         download(asset.url, destination)
         self.downloads += 1
 
@@ -357,6 +370,25 @@ class DownloadCache:
         except OSError as unwritable:
             log.warning(f'    could not cache {destination.name}: {unwritable}')
 
+    def forget_status(self, asset: BundleAsset) -> None:
+        """Drop the verdict, leaving the bytes and their digest alone.
+
+        Narrower than `evict`, which throws the bytes away too. `fetch` is about
+        to supply different bytes and the digest is rewritten from them, so the
+        verdict is the only part of the entry that has nothing left to describe.
+
+        A verdict that cannot be removed is one that would be read as describing
+        bytes it has never seen, so this warns and the build carries on —
+        `status` refuses an entry whose files disagree, which is what makes the
+        failure survivable rather than silent.
+        """
+        if not self.enabled:
+            return
+        try:
+            self.status_file(asset).unlink(missing_ok=True)
+        except OSError as unwritable:
+            log.warning(f'    could not drop the stale checksum verdict for {asset.filename}: {unwritable}')
+
     def remember_status(self, asset: BundleAsset, status: str) -> None:
         """Written only once the asset is cached, so a status cannot outlive the
         digest it refers to.
@@ -369,16 +401,41 @@ class DownloadCache:
             log.warning(f'    could not record the checksum verdict for {asset.filename}: {unwritable}')
 
     def status(self, asset: BundleAsset) -> str | None:
-        if not self.enabled or not self.status_file(asset).is_file():
+        """The verdict an earlier build recorded, or None where there is not a whole entry.
+
+        `remember_status` refuses to write a verdict without the digest beside
+        it. This is that same invariant on the read side, and nothing was keeping
+        the two level: `evict` and `prune` both unlink the three files one at a
+        time and warn-and-continue on `OSError`, so either can leave a verdict
+        whose digest or whose bytes are gone.
+
+        The two halves that leaves are not equally loud, and the quiet one is
+        worse. A missing digest raised `FileNotFoundError` out of the middle of a
+        build. A missing *asset* said nothing: `fetch` re-downloads it and writes
+        a fresh digest from the new bytes, and a surviving `verified` then
+        records that digest into `checksums.txt` as upstream-checked when nothing
+        checked it — on the file the install machine verifies against.
+
+        None costs one release lookup and re-runs the check, which is what a
+        build with no cached verdict already does.
+        """
+        if not self.enabled or not all(path.is_file() for path in self.entry_files(asset)):
             return None
         return self.status_file(asset).read_text().strip()
 
     def recorded_digest(self, asset: BundleAsset) -> str:
-        return self.digest_file(asset).read_text().strip()
+        """The digest `fetch` wrote for the cached bytes, or '' where it is gone.
+
+        Reached only after `status` found a whole entry, so '' means the entry
+        was removed between the two reads. Empty rather than raising, because the
+        caller answers both the same way — treat it as no cached verdict — and a
+        bare `read_text` here raises out of the middle of a build instead.
+        """
+        digest_file = self.digest_file(asset)
+        return digest_file.read_text().strip() if digest_file.is_file() else ''
 
     def evict(self, asset: BundleAsset) -> None:
-        cached = cache_path_for(asset.key)
-        for path in (cached, self.digest_file(asset), self.status_file(asset)):
+        for path in self.entry_files(asset):
             try:
                 path.unlink(missing_ok=True)
             except OSError as unwritable:
@@ -616,8 +673,8 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
     # from an earlier build still holds — and it is the expensive half, one API
     # call to find the checksums asset plus one download to read it.
     status = cache.status(asset)
-    if status == 'verified':
-        bundle.record_checksum(cache.recorded_digest(asset), path.name)
+    if status == 'verified' and (digest := cache.recorded_digest(asset)):
+        bundle.record_checksum(digest, path.name)
         return
     if status == 'unpublished':
         # Said again on every build, not only the one that discovered it. The
