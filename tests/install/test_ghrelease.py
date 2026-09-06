@@ -724,7 +724,7 @@ class TestSystemdUnit:
     A plist under `~/Library/LaunchAgents` is loaded at the next login whether or not
     anything asked. A systemd user unit is inert until something enables it, so
     placing the file and stopping is a daemon that never runs — and `check` reported
-    that machine converged, on the one box in the fleet that actually runs syncthing.
+    that machine converged, on a box that actually runs the unit.
     """
 
     def test_a_placed_unit_is_enabled(self, home, bundle, tmp_path, monkeypatch):

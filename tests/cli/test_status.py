@@ -32,9 +32,9 @@ def state_at(monkeypatch: pytest.MonkeyPatch, xdg_state: Path) -> Path:
     `status-box.json` is the filename this produces, and it is produced rather
     than written down. `STATUS_FILE` carries the *hostname*, never the machine
     name `record` is passed — two boxes legitimately declare one manifest, and
-    keying the file on it would have the second overwrite the first in a directory
-    Syncthing shares. A fixture spelling the name itself cannot tell those apart,
-    so it would agree with the module by coincidence.
+    keying the file on it would have the second overwrite the first in a shared
+    directory. A fixture spelling the name itself cannot tell those apart, so it
+    would agree with the module by coincidence.
 
     The host is answered as `Box.local` and the file comes out `status-box.json`,
     which is what pins the two things `machine_id` does to it. Answered bare and

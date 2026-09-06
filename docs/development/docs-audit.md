@@ -121,7 +121,7 @@ way to start the next audit.
 | `tools/hooks.md` | `pre-commit install --hook-type post-commit` | Matches nothing, and omits the registered `prepare-commit-msg` |
 | `tools/tasks.md` | 16 tasks | 22 — missing `doctor`, `update`, `link`, `relink` |
 | `apps/notes.md` | `notes journal` (×2), interactive menu on bare `notes` | Dispatch handles only `search`/`new`/`recent`/`browse` |
-| `apps/notes.md` | Notebook is git-tracked, iCloud-synced at `~/Documents/notes` | Not a repo, Syncthing-synced, that path does not exist, layout differs entirely |
+| `apps/notes.md` | Notebook is git-tracked, iCloud-synced at `~/Documents/notes` | Not a repo, replicated between machines, that path does not exist, layout differs entirely |
 | `apps/index.md` | Safekeep lives here | It moved to its own repo; `Workflows` and `Work Monitor` were omitted despite having pages |
 | `tools/symlinks.md` | Per-platform exclusion mechanism | No such code — invented feature. Listed 5 of 18 exclusion patterns |
 | `support/corporate.md` | `pip install --user` for language servers | Repo installs via uv; page never mentioned `install/offline/` or the bundle flags, the machinery that actually exists |

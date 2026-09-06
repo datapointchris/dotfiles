@@ -84,8 +84,8 @@ def a_home_this_test_owns(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.Mo
     monkeypatch.setenv('PATH', os.pathsep.join([str(fake_bin), *map(str, installed), os.environ['PATH']]))
     # Anything resolving an XDG directory prefers the variable over `$HOME`, so a
     # developer whose `$XDG_CONFIG_HOME` is set has `ghrelease.unit_dir` reading
-    # their real `~/.config/systemd/user` — where this desk will have a syncthing
-    # unit the moment the migration this file tests is run on it.
+    # their real `~/.config/systemd/user` — where a developer machine will have a
+    # syncthing unit the moment the migration this file tests is run on it.
     monkeypatch.setenv('XDG_CONFIG_HOME', str(home / '.config'))
     return home
 

@@ -677,9 +677,9 @@ def test_the_gate_refuses_a_test_that_newly_asserts_on_prose(tmp_path: Path) -> 
 
 
 def test_the_comparison_reads_this_boxs_own_history_and_not_a_peers(tmp_path: Path) -> None:
-    """`$XDG_STATE_HOME` is a Syncthing folder, so the newest file in the runs
-    directory is usually another machine measuring another commit. Selecting
-    without the machine made the gate follow a peer."""
+    """`$XDG_STATE_HOME` is replicated between machines, so the newest file in
+    the runs directory is usually another machine measuring another commit.
+    Selecting without the machine made the gate follow a peer."""
     score.record(a_run(score_of=0.2, stamped='20260817T000000Z'), tmp_path, 'a-peer-box')
     mine = score.record(a_run(score_of=1.0, stamped='20260817T010000Z'), tmp_path, 'thisbox')
     newest_peer = score.record(a_run(score_of=0.2, stamped='20260817T020000Z'), tmp_path, 'a-peer-box')

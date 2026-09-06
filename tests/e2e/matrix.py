@@ -48,9 +48,10 @@ RUNS_DIR = paths.STATE_HOME / 'test-runs'
 """Logs and one record per matrix run, named for when it started.
 
 Beside `dotfiles`' own run records rather than in the checkout, and for the
-reason `paths.STATE_HOME` already gives: it is its own Syncthing folder, so the
-fleet shares one history and every machine reports the same data. A directory in
-the repo would be per-clone, gitignored, and lost with the worktree.
+reason `paths.STATE_HOME` already gives: it is replicated between machines as
+its own unit, so the fleet shares one history and every machine reports the same
+data. A directory in the repo would be per-clone, gitignored, and lost with the
+worktree.
 
 State rather than data, which is how the product's runs are filed too: it survives
 runs, nobody authored it, and deleting it costs an answer rather

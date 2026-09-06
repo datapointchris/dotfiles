@@ -6,7 +6,7 @@ downward, and the comparison that actually catches a regression is this module's
 each survivor that was not there before.
 
 Runs are kept under `$XDG_STATE_HOME/dotfiles/mutation-runs/` with the machine in the filename, for the reason `paths.machine_id`
-gives: state is a Syncthing folder, and four boxes writing `<timestamp>.json` would overwrite one another.
+gives: state is replicated between machines, and four boxes writing `<timestamp>.json` would overwrite one another.
 """
 
 from __future__ import annotations
