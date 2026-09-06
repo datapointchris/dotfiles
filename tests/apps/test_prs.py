@@ -6,7 +6,7 @@ across the registry and a title that is the first thing to get truncated.
 
 The seam is `pull-requests` itself, shadowed on PATH. That is the whole point of the
 split: the query lives in one place and this file only decides how a row reads,
-so a rendering test has no business reaching a forge.
+so a rendering test has no business reaching a provider.
 
 Assertions read the text of a rendered line, never a column position. The layout
 has been rebuilt several times — one line per PR, then two, fields left then
@@ -345,7 +345,7 @@ def test_a_state_nothing_has_reported_still_says_something(listing) -> None:
     assert 'review no review' in only
 
 
-def test_a_pr_the_forge_decided_nothing_about_says_how_many_reviews_were_posted(listing) -> None:
+def test_a_pr_the_provider_decided_nothing_about_says_how_many_reviews_were_posted(listing) -> None:
     """`no review` on a PR three reviewers read is the row saying the opposite of
     what happened."""
     only = listed(listing(pr('doit', 1, 'a-branch', reviews=3)))[0]
@@ -353,7 +353,7 @@ def test_a_pr_the_forge_decided_nothing_about_says_how_many_reviews_were_posted(
     assert 'review 3 posted' in only
 
 
-def test_a_forge_decision_outranks_the_reviews_posted_beside_it(listing) -> None:
+def test_a_provider_decision_outranks_the_reviews_posted_beside_it(listing) -> None:
     """One line carries one state, and it is the blocking one."""
     only = listed(listing(pr('doit', 1, 'a-branch', review='CHANGES_REQUESTED', reviews=3)))[0]
 
@@ -438,7 +438,7 @@ def test_a_repo_whose_default_branch_is_master_is_not_marked_stacked(listing) ->
 
 def test_a_pr_is_never_marked_as_stacked_on_itself(listing) -> None:
     """A row heading the branch it also targets would point at its own number. No
-    forge can create one, but the marker is built from a lookup that would find
+    provider can create one, but the marker is built from a lookup that would find
     it, and a provider reporting a degenerate base gets a sane row instead."""
     assert not re.search(r'self \S+ #\d', listed(listing(pr('dotfiles', 1, 'self', base='self')))[0])
 
@@ -501,7 +501,7 @@ def test_a_letter_on_the_list_takes_its_action_without_opening_the_menu(session)
 
 def test_a_merge_tells_gh_the_method_so_its_own_wizard_never_runs(session) -> None:
     """Without a method gh asks which one, whether to delete the branch, and then
-    to submit. All three are settled — a merge commit, and the forge deletes the
+    to submit. All three are settled — a merge commit, and GitHub deletes the
     remote branch — so every prompt is a keypress that could only be answered one
     way."""
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),))
@@ -549,19 +549,32 @@ def test_close_takes_an_explicit_yes(session) -> None:
 def test_the_page_action_asks_gh_for_a_rendering_and_for_the_comments(session) -> None:
     """Two things the menu's own preview cannot do. gh prints a `key: value` dump
     unless it believes it is writing to a terminal, and the comment threads are on
-    the forge rather than in the listing this renders from."""
+    GitHub rather than in the listing this renders from."""
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'p'),))
 
     assert 'GH_FORCE_TTY' in run.stdout
     assert 'gh pr view 7 --repo datapointchris/dotfiles --comments' in run.stdout
+    # No `-c`. This is the one window action that needs no checkout, and passing
+    # one would name a directory that need not exist on this machine.
+    assert '-c ' not in run.stdout
 
 
-def test_the_review_action_opens_a_claude_window_on_that_pr(session) -> None:
+def test_the_review_action_opens_a_claude_window_on_that_pr(session, tmp_path) -> None:
     """The number and the repo both travel. `prs` reaches PRs across the whole
-    registry, so the window's directory does not decide which one is reviewed."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'r'),))
+    registry, so the window's directory does not decide which one is reviewed.
+
+    The path is a directory this test makes, not the one `pr` defaults to. That
+    default is `/home/chris/<repo>`, which is a literal the rendering tests want
+    to *see* and which the two path-dependent actions want to *open* — and on the
+    machine it names, opening it succeeds for reasons the test has nothing to do
+    with. It exists here and not on a CI runner, which is where that showed.
+    """
+    checkout = tmp_path / 'a-checkout'
+    checkout.mkdir()
+    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, 'r'),))
 
     assert '/review-pr 7 dotfiles' in run.stdout
+    assert f'-c {checkout}' in run.stdout
 
 
 def test_a_review_needs_the_code_and_says_so_when_it_is_absent(session) -> None:
@@ -624,7 +637,7 @@ def test_the_action_menu_names_the_key_that_takes_each_action(session) -> None:
     rows = [plain(row.split('\t', 1)[1]) for row in run.fed(2).splitlines()]
 
     assert [row.split()[0] for row in rows] == ['d', 'p', 'r', 'o', 'b', 'c', 'x', 'm']
-    labels = ['view diff', 'read the page', 'claude review', 'open in browser', 'copy branch', 'comment', 'close', 'merge']
+    labels = ['view diff', 'page and comments', 'claude review', 'open in browser', 'copy branch', 'comment', 'close', 'merge']
     assert all(label in row for label, row in zip(labels, rows, strict=True))
 
 
