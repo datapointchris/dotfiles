@@ -159,6 +159,26 @@ def test_nothing_recorded_is_an_issue_rather_than_an_empty_answer(runs_dir: Path
     assert result.exit_code == 3
 
 
+LIMITS: tuple[tuple[list[str], int], ...] = (([], 2), (['--limit', '1'], 1), (['--limit', '0'], 0), (['--limit', '9'], 2))
+
+
+@pytest.mark.parametrize(('extra', 'kept'), LIMITS, ids=['unbounded', 'bounded', 'nothing-asked-for', 'more-than-there-is'])
+def test_a_limit_of_zero_is_a_request_for_nothing_and_not_a_request_for_everything(runs_dir: Path, extra: list[str], kept: int) -> None:
+    """`lines[-limit:] if limit else lines` reads zero as unset and prints the file.
+
+    Every row is here because the falsy test passes three of them: unbounded and
+    bounded are what it was written for, and asking for more lines than the run
+    holds is the harmless end of the same slice. Zero is the one that inverts, and
+    it is the value a caller computing its own bound arrives at.
+    """
+    stream(runs_dir, '20260815T100000Z', ran('git status'), ran('go install'))
+
+    result = runner.invoke(app, ['logs', 'show', '--json', *extra])
+
+    assert result.exit_code == 0
+    assert len([line for line in result.stdout.splitlines() if line.strip()]) == kept
+
+
 # The binding that makes a stream answerable about which resource spent the time
 
 

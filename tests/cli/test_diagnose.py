@@ -308,6 +308,23 @@ def test_a_permission_failure_names_who_owns_the_path(tmp_path: Path) -> None:
     assert 'may not write it' in explained[1]
 
 
+def test_a_full_filesystem_names_its_mount_point_through_the_front_door(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The third `WRITE_FAILURES` marker, driven the way the other two already are.
+
+    `explain` matches the strerror text rather than the errno, because the number
+    is not always in what a provider caught. What `_no_space` does with each shape
+    of `df` answer is
+    `tests/install/test_provider_seams.py::test_a_full_filesystem_is_named_when_df_answers_in_the_shape_it_was_asked_for`.
+    """
+    target = tmp_path / 'bundle.tar.gz'
+    monkeypatch.setattr(effects, 'run', answering(0, 'Mounted on Avail\n/home 0'))
+
+    explained = diagnose.explain('ghrelease/x', f"[Errno 28] No space left on device: '{target}'").splitlines()
+
+    assert explained[0].startswith('[Errno 28]')
+    assert explained[1] == f'/home is full (0 available), so {target.name} could not be written'
+
+
 def test_a_transient_scope_is_never_offered_as_a_thing_to_stop(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """A `.scope` is a cgroup around whatever a session started — a tmux pane, a
     shell's child — not a unit anyone manages. `systemctl stop` on one kills the

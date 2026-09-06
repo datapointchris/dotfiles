@@ -42,12 +42,23 @@ def main(argv):
         # yet is the ordinary state of a fresh remote.
         return 0 if ROOT.is_dir() else 4
     if verb == "list":
+        # An empty path is not a path, and a real transport says so — `ls ''`,
+        # `rsync` and `ssh host ls ''` all refuse it or answer about somewhere
+        # else. A fake that resolved it to the server root would report success
+        # for a caller that had nothing to ask about, which is the one answer
+        # that cannot be told from a real listing.
+        if not rest[0]:
+            print("cannot access '': No such file or directory", file=sys.stderr)
+            return 4
         # A listing fails for reasons that are not absence — an expired token, a
         # reset connection — and a fake that could only fail by absence could not
         # produce the case where the two are told apart. `deny_listing` writes it.
-        if (ROOT / ".deny-list").is_file():
-            print("403 token expired", file=sys.stderr)
-            return 5
+        denied = ROOT / ".deny-list"
+        if denied.is_file():
+            scoped = denied.read_text().strip()
+            if not scoped or scoped == rest[0].rstrip("/"):
+                print("403 token expired", file=sys.stderr)
+                return 5
         directory = resolve(rest[0])
         if not directory.is_dir():
             print(f"{{rest[0]}} is not a directory", file=sys.stderr)
@@ -128,14 +139,19 @@ def install_relay(bin_dir: Path, server: Path, name: str = 'relay') -> Path:
     return executable(bin_dir, name, RELAY.format(python=sys.executable, root=str(server)))
 
 
-def deny_listing(server: Path) -> None:
-    """Make every listing fail for a reason that is not absence.
+def deny_listing(server: Path, only: str = '') -> None:
+    """Make a listing fail for a reason that is not absence.
 
     The probe still answers, which is the shape that matters: a machine whose
     remote is reachable and whose listing is refused is the one a boolean `exists`
     reported as an empty shelf.
+
+    `only` scopes the refusal to one remote path, which is the commoner shape of
+    the two and the one a whole-tree refusal cannot express: a credential that
+    reads the parent and not the directory under it. Left empty, every listing is
+    refused.
     """
-    (server / '.deny-list').write_text('')
+    (server / '.deny-list').write_text(only)
 
 
 def install_spy(bin_dir: Path, record: Path, *, name: str = 'spy', code: int = 0) -> Path:

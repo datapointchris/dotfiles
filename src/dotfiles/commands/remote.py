@@ -49,6 +49,16 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
     An undeclared `mkdir` or `delete` is a fact rather than a finding. Both are
     optional, and reporting them as faults would exit non-zero on every working
     remote that never needed one.
+
+    A root that will not list is a fault where the directory holding it says the
+    root is there, and where nothing could establish either way. It is a fact where
+    that parent lists and does not hold it, which is every first run.
+    `remote.RootState` names the four.
+
+    Every fact a row states in English is on that row in `--json` beside it.
+    `facts` carries the probe attempts, the entry count, the resolved program path
+    and the root's state, so a caller reads a value rather than matching a
+    sentence. `advice` carries the remedy, set by whatever measured the row.
     """
     verbosity(verbose, quiet)
     found = transport.read()
@@ -64,7 +74,15 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
                 'program': found.remote.transport.program if found.remote else '',
                 'faults': len(faults),
                 'measured': [
-                    {'subject': reach.subject, 'ok': reach.ok, 'required': reach.required, 'detail': reach.detail} for reach in measured
+                    {
+                        'subject': reach.subject,
+                        'ok': reach.ok,
+                        'required': reach.required,
+                        'detail': reach.detail,
+                        'facts': dict(reach.facts),
+                        'advice': reach.advice,
+                    }
+                    for reach in measured
                 ],
             }
         )
@@ -80,5 +98,8 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
 
     if not found.declared:
         hint(transport.ADVICE)
+    for reach in measured:
+        if reach.advice:
+            hint(reach.advice)
     render_verdict(word, f'{detail} for the remote', err_console)
     raise typer.Exit(ExitCode.ISSUE if faults else ExitCode.CONVERGED)

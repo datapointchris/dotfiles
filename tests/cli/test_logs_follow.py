@@ -146,6 +146,69 @@ def test_a_follower_names_the_run_it_moved_to_unless_the_stream_has_to_parse(
         assert emitted(result) == [first, second]
 
 
+def append(path: Path, entry: dict) -> None:
+    """One more line on a stream a follower already has open, as a run would write it."""
+    with path.open('a') as handle:
+        handle.write(json.dumps(entry) + '\n')
+
+
+FOLLOWED_LIMITS: tuple[tuple[str, tuple[int, ...]], ...] = (('1', (1, 2)), ('0', (2,)))
+"""A `--limit` under `--follow`, and which of the three lines a pane gets.
+
+Indices into `git status`, `go install`, `cargo build` — the third being the one
+written while the follower is already open. It is in both rows, because a limit
+that bounded the live stream rather than the opening would drop it and every other
+assertion here would still hold.
+"""
+
+
+@pytest.mark.parametrize(('limit', 'wanted'), FOLLOWED_LIMITS, ids=['the-newest-line', 'only-what-happens-next'])
+def test_a_limit_cuts_where_a_followed_pane_opens_and_not_what_it_follows(
+    runs_dir: Path, monkeypatch: pytest.MonkeyPatch, limit: str, wanted: tuple[int, ...]
+) -> None:
+    """`--limit` bounds a followed pane's opening and leaves its live lines alone.
+
+    Both halves are asserted, because a limit read only on the non-follow branch
+    parses, does nothing and exits 0 — a caller believing the pane is bounded with
+    nothing on screen correcting them. A limit that bounded the live stream instead
+    would end the pane at one line.
+
+    Zero is the second row rather than an edge case. `tail -n 0 -f` is how a reader
+    asks for only what happens from now, and a falsy limit meaning unset puts that
+    out of reach.
+    """
+    lines = [ran('git status'), ran('go install'), ran('cargo build')]
+    path = stream(runs_dir, '20260815T100000Z', *lines[:2])
+    ticker = Ticker(stop_after=2, on_tick={1: lambda: append(path, lines[2])})
+
+    result = follow(monkeypatch, ticker, '--limit', limit, '--json')
+
+    assert result.exit_code == 0
+    assert emitted(result) == [lines[index] for index in wanted]
+
+
+def test_a_switch_gives_the_new_run_whole_rather_than_the_opening_limit_again(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--limit` bounds the pane's opening, and a run it switches to is not that.
+
+    The pane exists to narrate the run that just started, so re-applying the limit
+    drops the beginning of the thing it was opened for. How much goes is decided by
+    how long the previous run kept the loop busy, which is nothing the caller asked
+    for. GNU `tail -n 1 -F` prints a new file whole.
+
+    Five entries against `--limit 1`, because a one-entry second run passes whether
+    the limit is applied again or not.
+    """
+    opening = [ran('git status'), ran('go install')]
+    arriving = [ran(f'step {index}') for index in range(5)]
+    stream(runs_dir, '20260815T100000Z', *opening)
+    ticker = Ticker(stop_after=3, on_tick={1: lambda: stream(runs_dir, '20260815T110000Z', *arriving)})
+
+    result = follow(monkeypatch, ticker, '--limit', '1', '--json')
+
+    assert result.exit_code == 0
+    assert emitted(result) == [opening[1], *arriving]
+
+
 def test_a_named_run_is_followed_from_its_own_file_rather_than_from_the_newest(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An identifier and `--follow` together are how a reader catches up on a run
     that has already started and then stays with the machine. Resolved as `show`
@@ -167,10 +230,11 @@ def test_a_named_run_is_followed_from_its_own_file_rather_than_from_the_newest(r
 LISTINGS: tuple[tuple[list[str], tuple[str, ...]], ...] = (
     ([], ('mine_new', 'mine_old')),
     (['--limit', '1'], ('mine_new',)),
+    (['--limit', '0'], ()),
 )
 
 
-@pytest.mark.parametrize(('extra', 'expected'), LISTINGS, ids=['every-run', 'limited'])
+@pytest.mark.parametrize(('extra', 'expected'), LISTINGS, ids=['every-run', 'limited', 'nothing-asked-for'])
 def test_a_listing_holds_only_the_runs_this_boxs_own_name_selects(
     shared: dict[str, Path], extra: list[str], expected: tuple[str, ...]
 ) -> None:
@@ -187,6 +251,37 @@ def test_a_listing_holds_only_the_runs_this_boxs_own_name_selects(
 
     assert result.exit_code == 0
     assert [entry['stem'] for entry in json.loads(result.stdout)] == [shared[key].stem for key in expected]
+
+
+def test_an_empty_request_is_told_apart_from_an_empty_history(shared: dict[str, Path]) -> None:
+    """Asking for nothing and having nothing are opposite states with one shape.
+
+    `list_event_logs(limit=0)` answers `[]`, and so does a machine that has never
+    run — so a listing that put the bound in the same call as the question told a
+    caller with two runs on disk that its box had recorded nothing, and exited 3.
+    The bound is applied to what the machine answered instead.
+
+    Both halves in one test, because either alone passes against a verb that
+    always returns the same number.
+    """
+    asked_for_nothing = runner.invoke(app, ['logs', 'list', '--json', '--limit', '0'])
+    for key in ('mine_old', 'mine_new'):
+        shared[key].unlink()
+    nothing_recorded = runner.invoke(app, ['logs', 'list', '--json', '--limit', '0'])
+
+    assert asked_for_nothing.exit_code == 0
+    assert json.loads(asked_for_nothing.stdout) == []
+    assert nothing_recorded.exit_code == 3
+    assert nothing_recorded.stdout.strip() == ''
+
+
+def test_a_negative_limit_is_a_usage_error_rather_than_a_slice_from_the_far_end(shared: dict[str, Path]) -> None:
+    """`-n -1` means one run to whoever typed it and means every run but the last
+    to a slice. Both answers exit 0 and only one of them is what was asked for, so
+    the parser refuses the value rather than the command guessing at it."""
+    result = runner.invoke(app, ['logs', 'list', '--limit=-1'])
+
+    assert result.exit_code == 2
 
 
 def test_a_listed_run_carries_what_a_reader_would_otherwise_open_the_file_for(shared: dict[str, Path]) -> None:

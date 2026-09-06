@@ -442,18 +442,20 @@ DF_ANSWERS = [
         'its own default table instead',
         'printf "Filesystem Size Avail Use%% Mounted on\\n/dev/sda2 100G 12K 100%% /mnt/data\\n"',
         False,
-        False,
+        True,
     ),
-    ('nothing at all', 'exit 0', False, False),
+    ('nothing at all', 'exit 0', False, True),
     ('a non-zero exit', 'echo "df: unrecognized option" >&2\nexit 1', False, True),
 ]
-"""How `df` can answer, and what the diagnosis is left holding.
+"""How `df` can answer, what the cause names, and whether the probe says it failed.
 
-Rows two and three are the degradation worth pinning: the probe ran, exited
-clean, and the mount and the free space are simply gone from the advice. Nothing
-fails, nothing is reported unavailable, and the sentence is the same one a
-machine with no `df` would get — which is the shape `unavailable` exists to keep
-apart.
+Rows two and three are the pair worth reading. `df` runs, exits clean, and says
+something none of which is a mount point and a size — a busybox build ignoring
+`--output` writes the first, an unmounted path the second. The cause a reader gets
+is then word for word row four's, where `df` exits non-zero, and
+`test_a_missing_df_is_reported_as_a_question_that_could_not_be_asked` covers the
+third way to reach that same sentence. `unavailable` is the only thing separating
+any of them, which is what these rows hold it to.
 """
 
 
@@ -471,6 +473,11 @@ def test_a_full_filesystem_is_named_when_df_answers_in_the_shape_it_was_asked_fo
     assert ('/mnt/data' in found.cause) is names_mount, f'df answered with {answer}'
     assert ('12K' in found.cause) is names_mount, f'df answered with {answer}'
     assert bool(found.unavailable) is could_not_ask, f'df answered with {answer}'
+    if could_not_ask:
+        assert 'df' in found.unavailable[0], f'df answered with {answer}'
+        assert found.unavailable[0].rstrip().endswith(('size', 'installed here', 'exited 1')), (
+            f'a bare "could not check —" is what a reader gets when the sentence goes, and df answered with {answer}'
+        )
 
 
 def test_a_missing_df_is_reported_as_a_question_that_could_not_be_asked(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
