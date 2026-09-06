@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Route a multiplexer command to the adapter for whichever one you are in.
+#
+#   muxctl pane open worker --name phase-3 --cwd DIR -- claude '...'
+#   muxctl pane status phase-3
+#   muxctl --help                      the port's verbs, from the resolved adapter
+#
+# This is the whole abstraction. Callers name `muxctl` and never a multiplexer,
+# so "what touches a multiplexer" is `rg muxctl` rather than a search for every
+# tool that might. Each adapter -- tmuxctl, and whatever follows it -- answers
+# the same verbs, the same JSON and the same exit codes, and is free to reach
+# them however its multiplexer works.
+#
+# It execs rather than running the adapter and relaying. The port's meaning is
+# carried by stdout, stderr and the exit code together, and replacing the
+# process is the only way to pass all three through untouched: a relay would
+# have to re-emit JSON it had parsed, and one stray line on stdout is the
+# failure `cli-design.md` § "stdout is data, stderr is everything else" exists
+# to prevent.
+
+set -euo pipefail
+
+# The environment says which multiplexer this pane is inside, so nothing has to
+# be configured and nothing is detected. MUXCTL_ADAPTER comes first because it
+# is how a candidate binary is exercised before it is the one you are sitting
+# in -- the conformance suite sets it, and so does anyone testing a new adapter.
+adapter=""
+if [[ -n ${MUXCTL_ADAPTER:-} ]]; then
+  adapter="$MUXCTL_ADAPTER"
+elif [[ -n ${TMUX:-} ]]; then
+  adapter="tmuxctl"
+elif [[ -n ${ZELLIJ:-} ]]; then
+  adapter="zellijctl"
+else
+  echo "muxctl: not inside a multiplexer this knows how to drive" >&2
+  echo "muxctl: TMUX and ZELLIJ are both unset; set MUXCTL_ADAPTER to name one" >&2
+  exit 2
+fi
+
+# Checked before the exec, because a failed exec exits 127 with the shell's own
+# wording and names the binary rather than the situation. A machine that is
+# inside tmux without tmuxctl installed is a deployment gap, and saying so is
+# the difference between fixing it and reading "command not found".
+if ! command -v "$adapter" >/dev/null 2>&1; then
+  echo "muxctl: $adapter is not installed, so this multiplexer cannot be driven" >&2
+  exit 2
+fi
+
+exec "$adapter" "$@"

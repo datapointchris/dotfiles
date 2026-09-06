@@ -578,8 +578,8 @@ def tmux_rearrange():
 
 
 @pytest.fixture(scope='session')
-def tmux_place():
-    return load_app('tmux-place')
+def tmuxctl():
+    return load_app('tmuxctl')
 
 
 ANSWERED_BY_A_SHELL = 'set-by-a-shell-nothing-here-may-consult'
