@@ -34,8 +34,8 @@ from dotfiles import runs
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
-from dotfiles.output import NEED_ATTENTION
 from dotfiles.output import VERDICT_COLORS
+from dotfiles.output import Phrase
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import error
@@ -70,7 +70,7 @@ UNCONVERGED_KIND = 'unconverged'
 ATTENTION_KIND = 'attention'
 """What a machine door calls an item only a person can repair.
 
-The key rather than `NEED_ATTENTION`, which is the sentence a screen says. A
+The key rather than `Phrase.NEED_ATTENTION`, which is the sentence a screen says. A
 document key is a name and a rendering is a phrase, and one value spelled two
 ways is what `help.md` § "One concept, one word" is about.
 """
@@ -146,7 +146,7 @@ def outstanding_line(found: Mapping[str, Sequence[str]]) -> str:
     Joined rather than ranked. The two take different repairs, so a cell showing
     whichever kind sorted first sends a reader away having fixed one of them.
     """
-    clauses = (clause(found[UNCONVERGED_KIND], UNCONVERGED_KIND), clause(found[ATTENTION_KIND], NEED_ATTENTION))
+    clauses = (clause(found[UNCONVERGED_KIND], UNCONVERGED_KIND), clause(found[ATTENTION_KIND], Phrase.NEED_ATTENTION))
     return '; '.join(one for one in clauses if one)
 
 

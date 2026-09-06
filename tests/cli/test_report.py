@@ -25,7 +25,7 @@ from dotfiles.commands import report
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.main import app
-from dotfiles.output import NEED_ATTENTION
+from dotfiles.output import Phrase
 from dotfiles.plan import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
@@ -247,7 +247,7 @@ def test_a_check_that_found_something_only_a_person_can_fix_does_not_say_ok(runs
     rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
 
     assert rows[0]['verdict'] == 'issue'
-    assert rows[0]['outcome'] == f'1 {NEED_ATTENTION}: env/FRESHRSS_URL'
+    assert rows[0]['outcome'] == f'1 {Phrase.NEED_ATTENTION}: env/FRESHRSS_URL'
 
 
 def test_drift_is_not_reported_as_something_needing_attention(runs_dir: Path) -> None:
@@ -308,7 +308,7 @@ def test_the_json_row_carries_both_buckets_entire(runs_dir: Path) -> None:
     rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
 
     assert rows[0][report.ATTENTION_KIND] == sorted(f'env/{name}' for name in unset)
-    assert rows[0]['outcome'].startswith(f'5 {NEED_ATTENTION}: ')
+    assert rows[0]['outcome'].startswith(f'5 {Phrase.NEED_ATTENTION}: ')
     assert '…' not in rows[0]['outcome'], 'the count leads and the run column is the handle'
 
 
@@ -339,4 +339,4 @@ def test_both_kinds_of_fault_are_named_rather_than_one_of_them(runs_dir: Path) -
 
     rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
 
-    assert rows[0]['outcome'] == f'1 unconverged: packages/zk; 1 {NEED_ATTENTION}: env/FRESHRSS_URL'
+    assert rows[0]['outcome'] == f'1 unconverged: packages/zk; 1 {Phrase.NEED_ATTENTION}: env/FRESHRSS_URL'
