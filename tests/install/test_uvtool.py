@@ -163,6 +163,74 @@ def test_a_repo_with_no_release_installs_from_the_branch_with_a_warning(uv, rele
     assert 'refuse to run' in capsys.readouterr().err
 
 
+@pytest.fixture
+def unreadable(monkeypatch):
+    """`latest_version` refusing, as the two states a provider has to tell apart."""
+
+    def refuse(*, reached: bool) -> None:
+        def raising(repo: str, tag_prefix: str = '') -> str:
+            raise github_release.Unreadable(f'could not read the releases of {repo}', reached=reached)
+
+        monkeypatch.setattr(github_release, 'latest_version', raising)
+
+    return refuse
+
+
+def test_an_unreadable_release_api_refuses_rather_than_installing_unpinned(uv, unreadable) -> None:
+    """The sibling above is the same fallback taken on purpose, and that is what
+    makes this one wrong: nothing afterwards can tell an unpinned install that was
+    decided from one that was guessed at while the API was unreachable.
+
+    A rate-limited minute is enough, and the tool it leaves behind has a dead
+    `update` until somebody notices it is eight releases back.
+    """
+    unreadable(reached=True)
+    reached = uv()
+
+    result = uvtool.install_git(SYNCER, offline=False)
+
+    assert not result.ok
+    assert result.kind is Kind.VERSION_UNRESOLVED
+    assert reached.calls == [], 'nothing is handed to uv, pinned or otherwise'
+
+
+def test_a_service_that_refused_and_a_transport_that_failed_get_different_kinds(uv, unreadable) -> None:
+    """A rate limit is waited out and a refused connection is a CA, a proxy or a
+    firewall, so `--json` has to separate them.
+
+    Asserted on `kind` and not on `detail`, because the sentence is what the two
+    already shared: prose was the only place the split existed, which made every
+    reader of this outcome match on English to find out which one happened.
+    """
+    uv()
+
+    unreadable(reached=True)
+    refused = uvtool.install_git(SYNCER, offline=False)
+    unreadable(reached=False)
+    unreachable = uvtool.install_git(SYNCER, offline=False)
+
+    assert refused.kind is Kind.VERSION_UNRESOLVED
+    assert unreachable.kind is Kind.DOWNLOAD_FAILED
+
+
+def test_an_offline_refusal_names_the_bundle_that_stages_no_python_tools(uv, unreadable, capsys) -> None:
+    """Offline reaches this on all ten declared git tools that pin, because
+    resolving a tag is the one thing here that leaves the machine.
+
+    `_uv_tool_install` carries this clause for exactly that case and no longer
+    runs for those ten, so the refusal that replaced it owes the same sentence —
+    otherwise a reader is sent after a network they already know is absent.
+    """
+    unreadable(reached=False)
+    reached = uv()
+
+    result = uvtool.install_git(SYNCER, offline=True)
+
+    assert not result.ok
+    assert 'the offline bundle stages no Python tools to fall back on' in result.detail
+    assert reached.calls == []
+
+
 @pytest.mark.parametrize(
     ('repo', 'slug'),
     [

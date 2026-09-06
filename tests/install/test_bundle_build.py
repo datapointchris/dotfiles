@@ -239,21 +239,30 @@ class ReachedTheNetwork(BaseException):
     """Raised where a real socket was about to be opened, and not an `Exception`.
 
     `download` narrows on `(httpx2.HTTPError, OSError)` and retries three times,
-    and `latest_version` answers None for anything it catches — so a guard raised
-    as an ordinary exception would be absorbed into a plausible refusal and the
-    test would pass without anyone learning the network was reached. Same
-    reasoning as `WouldInstall` in `tests/conftest.py`.
+    and `latest_version` turns anything it catches into a None or an `Unreadable`
+    its caller refuses on — so a guard raised as an ordinary exception would be
+    absorbed into a plausible refusal and the test would pass without anyone
+    learning the network was reached. Same reasoning as `WouldInstall` in
+    `tests/conftest.py`.
     """
 
 
-class Refused(httpx2.HTTPError):
-    """What this fake answers a request the real service would not serve.
+class Refused(httpx2.HTTPStatusError):
+    """A 404 from this fake, which is what the real service answers here.
 
-    An `httpx2.HTTPError`, because that is the exception every caller in
+    An `httpx2.HTTPError` subclass, because that is the exception every caller in
     `github_release` and `create_bundle` narrows on — a bespoke type would travel
-    past `download`'s retry loop and `latest_version`'s fallback as a crash, so
-    the tests would pass for the wrong reason.
+    past `download`'s retry loop and `latest_version`'s `Unreadable` as a crash,
+    so the tests would pass for the wrong reason.
+
+    **The status is carried rather than only spelled in the message.**
+    `latest_version` reads a 404 from `releases/latest` as a repo publishing
+    nothing and anything else as an API it could not reach, so a fake raising a
+    status-less error makes the no-release case arrive as a rate limit.
     """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, request=httpx2.Request('GET', 'https://api.github.com/'), response=httpx2.Response(404))
 
 
 @dc.dataclass
@@ -318,7 +327,7 @@ class Upstream:
         remaining = self.flaky.get(url, 0)
         if remaining:
             self.flaky[url] = remaining - 1
-            raise Refused(f'the connection to {url} was reset')
+            raise httpx2.ConnectError(f'the connection to {url} was reset')
 
         if (latest := re.fullmatch(r'https://api\.github\.com/repos/(.+)/releases/latest', url)) is not None:
             repo = latest.group(1)
@@ -968,8 +977,8 @@ def test_a_repo_that_publishes_no_release_ends_the_build_naming_it(upstream: Ups
     """A build cannot name the asset without the version, so a repo publishing
     nothing is fatal here where an installer would leave the machine alone.
 
-    The refusal names the repo out of `packages.yml`, which is where whoever
-    reads it has to go."""
+    The refusal names `packages.yml`'s repo rather than the network, which is
+    what the 404 split in `latest_version` is for."""
     upstream.releases.pop(TASK_REPO)
 
     with pytest.raises(create_bundle.BundleError, match=f'Could not fetch version for {re.escape(TASK_REPO)}'):

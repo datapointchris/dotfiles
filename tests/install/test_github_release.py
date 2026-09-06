@@ -350,14 +350,76 @@ class TestLatestVersion:
 
         assert github_release.latest_version('owner/repo', 'cli/') is None
 
-    def test_an_unreachable_api_answers_nothing_rather_than_raising(self, monkeypatch):
+    def test_an_unreachable_api_is_not_the_same_answer_as_a_repo_publishing_nothing(self, monkeypatch):
+        """The sibling above is the None case, and both endpoints are asserted
+        because the prefix chooses between two of them.
+
+        Collapsing the two is what let a rate-limited minute install a git uv
+        tool from the bare repo, whose own `update` is then dead — the state
+        `providers.uvtool` records syncer sitting eight releases behind in.
+        """
+
         def refuse(url, accept=None):
             raise httpx2.ConnectError('no route to host')
 
         monkeypatch.setattr(github_release, 'request', refuse)
 
+        with pytest.raises(github_release.Unreadable, match='owner/repo'):
+            github_release.latest_version('owner/repo')
+        with pytest.raises(github_release.Unreadable, match='owner/repo'):
+            github_release.latest_version('owner/repo', 'cli/')
+
+    def test_a_404_means_two_different_things_and_the_endpoint_decides_which(self, monkeypatch):
+        """`releases/latest` answers 404 for a repo that has published nothing,
+        and `aws/aws-cli` is a declared entry in exactly that state.
+        `releases?per_page=100` answers `200 []` for that same repo, so a 404
+        there is renamed, deleted, or invisible to the credential in hand.
+
+        Both endpoints, because `_version_url` picks between them on the prefix
+        and a test asserting one leaves the other free to answer either way.
+        Five declared entries take the prefixed path.
+        """
+        asked = []
+
+        def absent(url, accept=None):
+            asked.append(url)
+            raise httpx2.HTTPStatusError('404', request=httpx2.Request('GET', url), response=httpx2.Response(404))
+
+        monkeypatch.setattr(github_release, 'request', absent)
+
         assert github_release.latest_version('owner/repo') is None
-        assert github_release.latest_version('owner/repo', 'cli/') is None
+        with pytest.raises(github_release.Unreadable, match='owner/repo'):
+            github_release.latest_version('owner/repo', 'cli/')
+
+        assert asked == [
+            'https://api.github.com/repos/owner/repo/releases/latest',
+            'https://api.github.com/repos/owner/repo/releases?per_page=100',
+        ], 'the two answers have to come from the two endpoints, not from one asked twice'
+
+    def test_a_service_that_answered_and_a_transport_that_did_not_want_different_fixes(self, monkeypatch):
+        """A 403 is the shared rate limit, waited out or authenticated. A refused
+        connection is a CA, a proxy or a firewall. `reached` is what carries the
+        difference to a provider, which has two kinds for it and no way to tell
+        them apart from the sentence.
+        """
+
+        def refuse(problem):
+            def raising(url, accept=None):
+                raise problem
+
+            monkeypatch.setattr(github_release, 'request', raising)
+
+        refuse(httpx2.HTTPStatusError('403', request=httpx2.Request('GET', 'https://x'), response=httpx2.Response(403)))
+        with pytest.raises(github_release.Unreadable) as limited:
+            github_release.latest_version('owner/repo')
+
+        refuse(httpx2.ConnectError('no route to host'))
+        with pytest.raises(github_release.Unreadable) as unreachable:
+            github_release.latest_version('owner/repo')
+
+        assert limited.value.reached is True
+        assert unreachable.value.reached is False
+        assert 'no route to host' in str(unreachable.value), 'the cause is the whole diagnosis and dies in __cause__ without this'
 
 
 class TestLatestTag:

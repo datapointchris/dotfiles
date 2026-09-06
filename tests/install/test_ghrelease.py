@@ -534,6 +534,37 @@ class TestTagResolution:
         assert 'could not read the releases' in result.detail
         assert 'publishes no release for' not in result.detail, 'the wrong sentence is the defect, not the refusal'
 
+    def test_resolve_tag_lets_an_unreadable_api_reach_the_caller_that_refuses_on_it(self, monkeypatch):
+        """Both online branches raise it and the `-> str | None` annotation cannot
+        say so, so nothing but a docstring tells a third caller it has to catch.
+
+        Asserted on `resolve_tag` itself rather than through `install`, because
+        `install` catching it is what the sibling above already covers — this is
+        the contract a provider written next month reads.
+        """
+
+        def refuse(repo, prefix):
+            raise github_release.Unreadable(f'could not read the releases of {repo}', reached=False)
+
+        monkeypatch.setattr(github_release, 'latest_version', refuse)
+
+        with pytest.raises(github_release.Unreadable):
+            ghrelease.resolve_tag(entry())
+
+    def test_a_transport_that_delivered_nothing_is_not_reported_as_a_version_problem(self, home, bundle, monkeypatch):
+        """The two siblings above are both a service that answered. This one is
+        the machine's network, and `--json` separates them on `kind` alone."""
+
+        def refuse(repo, version, prefix):
+            raise github_release.Unreadable(f'could not read the releases of {repo}', reached=False)
+
+        monkeypatch.setattr(github_release, 'tag_for_version', refuse)
+
+        result = ghrelease.install(entry('lazygit', version='0.56.0'), LINUX)
+
+        assert not result.ok
+        assert result.kind is Kind.DOWNLOAD_FAILED
+
 
 class TestPreconditions:
     def test_a_tool_with_no_asset_function_refuses_rather_than_crashing(self, home, bundle):

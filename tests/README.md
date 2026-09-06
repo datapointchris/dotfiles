@@ -141,9 +141,12 @@ describes the install, and comparing the two was comparing two different runs.
 **A container install borrows the host's `gh` credential.** GitHub allows 60
 anonymous API calls an hour *per public IP*, the container shares the host's, and
 one full install spends most of them — so an unauthenticated second run inside
-the hour answers "did not answer with a release" for every release tool, which
-reads exactly like a broken installer. The harness passes `GITHUB_TOKEN` through
-when `gh auth token` answers, and the pytest header says which run you got:
+the hour fails every release tool on a release API it could not read, which
+reads exactly like a broken installer. The rate limit answers 403, so those rows
+come back `download-failed` rather than `version-unresolved`; nothing on the
+machine is wrong and nothing in `packages.yml` is either. The harness passes
+`GITHUB_TOKEN` through when `gh auth token` answers, and the pytest header says
+which run you got:
 
 ```text
 github: authenticated

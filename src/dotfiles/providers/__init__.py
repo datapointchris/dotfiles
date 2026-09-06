@@ -168,6 +168,24 @@ class Kind(enum.StrEnum):
     """
 
 
+def unreadable_kind(reached: bool) -> Kind:
+    """Which condition a release API that would not answer is, by whether it answered.
+
+    Four providers turn `github_release.Unreadable` into a `Result` and the two
+    members below already draw the line the exception carries: a 403 rate limit,
+    an expired credential and an unparseable body all reached the service, so the
+    machine's network is fine and `VERSION_UNRESOLVED` is right; a refused
+    connection, a timeout and a TLS rejection delivered nothing, which is what
+    `DOWNLOAD_FAILED` names a CA, a firewall or an offline bundle for.
+
+    Here rather than at each site because it is one mapping, and four copies of
+    it are four chances for a provider to send an unreachable machine to
+    `packages.yml`. Takes the bool rather than the exception so this module keeps
+    importing nothing but `paths`.
+    """
+    return Kind.VERSION_UNRESOLVED if reached else Kind.DOWNLOAD_FAILED
+
+
 @dc.dataclass(frozen=True, slots=True)
 class Result:
     """What one install did, in the form a caller can turn into an Outcome."""

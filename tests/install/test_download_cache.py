@@ -24,6 +24,7 @@ from __future__ import annotations
 import dataclasses as dc
 import datetime as dt
 import os
+import re
 import shutil
 import tempfile
 from collections.abc import Callable
@@ -65,7 +66,10 @@ class Wire:
         if len(self.calls) <= self.flaky:
             raise httpx2.ConnectError(f'connection refused on attempt {len(self.calls)}')
         if url not in self.bodies:
-            raise httpx2.HTTPError(f'404 for {url}')
+            # The status is carried rather than only spelled in the message:
+            # `latest_version` reads a 404 as a repo publishing nothing and any
+            # other refusal as an API it could not reach.
+            raise httpx2.HTTPStatusError(f'404 for {url}', request=httpx2.Request('GET', url), response=httpx2.Response(404))
         return self.bodies[url]
 
 
@@ -775,21 +779,27 @@ class Answer:
     tag: str | None
     """The version, or None where the build has to refuse."""
 
+    says: str = ''
+    """The sentence the refusal carries, which is not one sentence for all four."""
+
 
 ANSWERS: dict[str, Answer] = {
     'a-published-release': Answer(b'{"tag_name": "v10.2.0"}', 'v10.2.0'),
-    'nothing-answers': Answer(None, None),
-    'a-payload-with-no-tag': Answer(b'{"draft": true}', None),
-    'a-tag-that-is-empty': Answer(b'{"tag_name": ""}', None),
-    'a-body-that-is-not-json': Answer(b'<html>rate limited</html>', None),
+    'a-repo-publishing-nothing': Answer(None, None, 'Could not fetch version for sharkdp/fd'),
+    'a-payload-with-no-tag': Answer(b'{"draft": true}', None, 'Could not fetch version for sharkdp/fd'),
+    'a-tag-that-is-empty': Answer(b'{"tag_name": ""}', None, 'Could not fetch version for sharkdp/fd'),
+    'a-body-that-is-not-json': Answer(b'<html>rate limited</html>', None, 'could not read the releases of sharkdp/fd'),
 }
 """What the release API can say, and whether a bundle can be built from it.
 
-`latest_version` answers None for all four failures, which is the right answer
-for an installer deciding whether to update — it leaves the machine on what it
-has. A bundle has no such fallback: it cannot name the asset without the
-version, so the same None has to become a refusal here or the build stages
-`None` into a URL.
+All four end the build, because a bundle cannot name the asset without the
+version. What splits them is what to tell whoever reads the refusal:
+`latest_version` raises `Unreadable` where it could not read the API at all, and
+answers None where it got an answer naming nothing to install — a 404 from
+`releases/latest` included, which is how that endpoint says a repo has published
+nothing. The first sends a reader to the network or the rate limit and the rest
+send them to `packages.yml`, so collapsing them sends three of them somewhere
+they can do nothing.
 """
 
 
@@ -804,7 +814,7 @@ def test_a_version_the_build_cannot_read_ends_the_build(cache_home, wire, named)
     wire({LATEST: answer.body} if answer.body is not None else {})
 
     if answer.tag is None:
-        with pytest.raises(create_bundle.BundleError, match='sharkdp/fd'):
+        with pytest.raises(create_bundle.BundleError, match=re.escape(answer.says)):
             create_bundle.fetch_latest_version('sharkdp/fd')
     else:
         assert create_bundle.fetch_latest_version('sharkdp/fd') == answer.tag

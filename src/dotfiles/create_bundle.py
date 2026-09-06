@@ -240,12 +240,15 @@ def tail_lines(text: str, limit: int = FAILURE_DETAIL_MAX_LINES) -> str:
 def fetch_latest_version(repo: str) -> str:
     """The tag of a repo's latest release, as a hard requirement.
 
-    github_release.latest_version returns None for a release it cannot read,
-    which is the right answer for an installer deciding whether to update. A
-    bundle build has no such fallback: it cannot name the asset without the
-    version, so the miss is fatal here.
+    A bundle cannot name an asset without the version, so both of the misses are
+    fatal here — and they are two sentences rather than one, because a repo that
+    published nothing sends the reader to `packages.yml` and an unreadable API
+    sends them to the network or the rate limit.
     """
-    tag = github_release.latest_version(repo)
+    try:
+        tag = github_release.latest_version(repo)
+    except github_release.Unreadable as unreachable:
+        raise BundleError(str(unreachable)) from unreachable
     if not tag:
         raise BundleError(f'Could not fetch version for {repo}')
     return tag

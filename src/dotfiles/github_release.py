@@ -83,7 +83,34 @@ class Unreadable(Exception):
     release that does not exist, which sends whoever reads it to `packages.yml`
     to correct a version that was right — and 60 anonymous API calls an hour is
     fewer than one full install spends.
+
+    **`reached` is the discriminator, and it exists because two remedies sit
+    behind one sentence.** A service that answered and refused — a 403 rate
+    limit, an expired credential, a body that would not parse — is waited out or
+    re-authenticated, and the machine's network is fine. Bytes that never
+    arrived are a CA, a proxy, a firewall or no route. Providers map the two
+    onto `Kind.VERSION_UNRESOLVED` and `Kind.DOWNLOAD_FAILED`, whose docstrings
+    already draw that line, so a caller reading `--json` gets the right advice
+    without parsing the sentence.
     """
+
+    def __init__(self, message: str, *, reached: bool = True) -> None:
+        super().__init__(message)
+        self.reached = reached
+
+    @classmethod
+    def because(cls, said: str, problem: Exception) -> Unreadable:
+        """The refusal for one failed read, with its cause named and classified.
+
+        Classified here rather than at each raise site, which is what keeps the
+        three readers of this API answering alike: an HTTP status means the
+        service answered, and anything else means the transport did not deliver.
+
+        The cause is carried into the sentence because the remedies behind it
+        differ — `403 Forbidden` and `no route to host` want opposite actions,
+        and without this the only place either string survives is `__cause__`.
+        """
+        return cls(f'{said} ({problem})', reached=isinstance(problem, httpx2.HTTPStatusError | json.JSONDecodeError))
 
 
 class Verification(enum.IntEnum):
@@ -321,6 +348,20 @@ def _headers(url: str, accept: str | None = None, etag: str = '') -> dict[str, s
 
 NOT_MODIFIED = 304
 
+NOT_FOUND = 404
+"""How `releases/latest` says a repo has published nothing — that endpoint alone.
+
+`aws/aws-cli` answers 404 there while `tags` lists `2.36.19`, so on that endpoint
+a 404 is an answer rather than an API that could not be reached. `releases?per_page=100`
+answers `200 []` for the same repo, which makes a 404 there a repo that is
+renamed, deleted, or invisible to the credential in hand — a different fact
+wanting a different sentence.
+
+**So every reader of this constant gates on which endpoint it asked.** The
+rationale lives here and the branches cite it, rather than each restating the
+half it needs.
+"""
+
 
 @dataclass(frozen=True, slots=True)
 class Conditional:
@@ -394,11 +435,29 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     newer by both timestamps, because GitHub ranks the tags as strings. Taking
     the first match therefore froze a tool at 0.9.x the moment it shipped 0.10.0,
     and reported the machine converged while doing it.
+
+    **None is a repo that published nothing; an API that could not be read
+    raises `Unreadable`.** Every caller is a write path and each acts on the
+    second: `uvtool.requirement` pins a git tool to the tag and installs from the
+    bare repo without one, which is the unpinned state that module's docstring
+    records syncer sitting eight releases behind in. The currency read path asks
+    `newest_version`, which keeps the two apart in its own `Newest`.
+
+    **A 404 is None on the unprefixed endpoint and `Unreadable` on the other**,
+    for the reason `NOT_FOUND` states. `_version_url` routes a prefix to the
+    listing endpoint, which answers `200 []` for a repo publishing nothing — so a
+    404 there is a repo that cannot be read, and five declared entries take that
+    path.
     """
+    said = f'could not read the releases of {repo}, so its published versions are unknown'
     try:
         payload = json.loads(request(_version_url(repo, tag_prefix)))
-    except (httpx2.HTTPError, json.JSONDecodeError):
-        return None
+    except httpx2.HTTPStatusError as refused:
+        if refused.response.status_code == NOT_FOUND and not tag_prefix:
+            return None
+        raise Unreadable.because(said, refused) from refused
+    except (httpx2.HTTPError, json.JSONDecodeError) as unreachable:
+        raise Unreadable.because(said, unreachable) from unreachable
     return _version_from(payload, tag_prefix)
 
 
@@ -578,7 +637,9 @@ def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None
     try:
         releases = json.loads(request(f'https://api.github.com/repos/{repo}/releases?per_page=100'))
     except (httpx2.HTTPError, json.JSONDecodeError) as unreachable:
-        raise Unreadable(f'could not read the releases of {repo}, so its published versions are unknown') from unreachable
+        raise Unreadable.because(
+            f'could not read the releases of {repo}, so its published versions are unknown', unreachable
+        ) from unreachable
 
     wanted = version.removeprefix('v')
     for release in releases:
