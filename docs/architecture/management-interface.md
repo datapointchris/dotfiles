@@ -278,9 +278,9 @@ failure out of the report.
 
 A converged machine is not necessarily a working one. Every binary can be
 installed, every symlink deployed and every flag set while the CLIs that do the
-work sit logged out. That was the Arch box on 2026-08-12, with `learning`,
-`meso`, `nomad` and `atuin` all unauthenticated and `dotfiles check` reporting a
-screen of converged rows. `src/dotfiles/resources/auth.py` closes that gap, and
+work sit logged out. That has happened here, with `learning`, `meso`, `nomad`
+and `atuin` all unauthenticated and `dotfiles check` reporting a screen of
+converged rows. `src/dotfiles/resources/auth.py` closes that gap, and
 its module docstring carries the decisions inside it: why the manifest names
 which tools while the module says how each is asked, why every probe is local and
 which measurement picked it, and why a finding is `Repair.BY_HAND` that `apply`

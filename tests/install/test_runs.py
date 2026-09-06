@@ -158,10 +158,10 @@ class TestSpan:
 
     def test_the_file_is_named_after_the_start_not_the_finish(self, runs_dir):
         began = dt.datetime(2026, 8, 10, 14, 0, 0, tzinfo=dt.UTC)
-        identity = runs.begin('wsl-work-workstation', 'apply', began, host='worklaptop')
+        identity = runs.begin('wsl-work-workstation', 'apply', began, host='box-a')
         path = runs.write(runs.finish(runs.start(identity)), runs_dir)
 
-        assert path.stem == '20260810T140000Z-worklaptop-apply'
+        assert path.stem == '20260810T140000Z-box-a-apply'
 
 
 class TestWhereRecordsLand:
@@ -316,7 +316,7 @@ class TestForeignFilesInTheSharedDirectory:
         not one.
         """
         written = runs.write(a_run(verb='check'), runs_dir)
-        conflict = runs_dir / f'{written.stem}.sync-conflict-20260816-055721-OY2JXOX.json'
+        conflict = runs_dir / f'{written.stem}.sync-conflict-20260816-055721-AAAAAAA.json'
         conflict.write_text(written.read_text())
 
         assert runs.list_runs(runs_dir) == [written]
@@ -357,7 +357,7 @@ class TestForeignFilesInTheSharedDirectory:
         copy it would narrate a run that already finished on another box."""
         mine = runs_dir / '20260816T133615Z-thisbox-check.jsonl'
         mine.write_text('{}\n')
-        (runs_dir / '20260816T140000Z-thisbox-check.sync-conflict-20260816-055721-OY2JXOX.jsonl').write_text('{}\n')
+        (runs_dir / '20260816T140000Z-thisbox-check.sync-conflict-20260816-055721-AAAAAAA.jsonl').write_text('{}\n')
 
         assert runs.list_event_logs(runs_dir) == [mine]
         assert runs.latest_event_log(runs_dir, machine='thisbox') == mine

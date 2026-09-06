@@ -50,8 +50,8 @@ and three of them are live at once.
 
 A **verb** answers under one lens and exits on it. `plan` keeps what `apply` can
 repair, so a plan over a box with three values only a person can set closes
-`converged` and exits 0. That is `cli-design.md` § "A verb that measures returns
-what it found, and drift is not a failure", and it is why `check` exists.
+`converged` and exits 0. A verb that measures returns what it found, and drift is
+not a failure — which is why `check` exists.
 
 The **run record** is a transcript of the walk rather than a verb's answer.
 `sinks.record` keeps every `Change` the engine yielded, under both lenses, so

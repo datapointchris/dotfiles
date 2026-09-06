@@ -161,13 +161,13 @@ def test_two_boxes_sharing_a_manifest_are_two_rows_by_host(sandbox: Sandbox, cli
     and a key that reaches only the filename is half a mechanism — the reader has
     to have something to match on.
     """
-    record(sandbox, identifier='aaaaaaaaaaaa', host='box-a', when='20260101T000000Z')
-    record(sandbox, identifier='bbbbbbbbbbbb', host='box-b', when='20260102T000000Z')
+    record(sandbox, identifier='aaaaaaaaaaaa', host='box', when='20260101T000000Z')
+    record(sandbox, identifier='bbbbbbbbbbbb', host='peer', when='20260102T000000Z')
 
     ran = cli('report', 'list', '--json')
 
     assert {row['machine'] for row in ran.document} == {sandbox.machine}
-    assert [row['host'] for row in ran.document] == ['box-b', 'box-a']
+    assert [row['host'] for row in ran.document] == ['peer', 'box']
 
 
 def test_a_record_written_before_the_host_field_is_listed_under_its_manifest(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -175,9 +175,9 @@ def test_a_record_written_before_the_host_field_is_listed_under_its_manifest(san
 
     An empty string would pool every box's whole early history into one nameless
     bucket, which is a worse answer than the manifest — that one is right for the
-    boxes that do not share it and no more wrong than it ever was for the sharers.
+    boxes that do not share it and no more wrong than it ever was for a twin pair.
     """
-    written = record(sandbox, identifier='aaaaaaaaaaaa', host='box-a', when='20260101T000000Z')
+    written = record(sandbox, identifier='aaaaaaaaaaaa', host='box', when='20260101T000000Z')
     payload = json.loads(written.read_text())
     payload['host'] = ''
     written.write_text(json.dumps(payload))
@@ -522,13 +522,13 @@ def test_a_streak_is_counted_per_box_rather_than_per_manifest(sandbox: Sandbox, 
     """Two boxes share a manifest. Keyed on it, either of them leaving an item
     alone ended the other's streak and a real fault on one read as settled."""
     for day in range(3):
-        record(sandbox, identifier=f'aaaaaaaaaa{day:02d}', host='box-b', when=f'2026010{day + 1}T000000Z', done=('packages:pkg-config',))
-        record(sandbox, identifier=f'bbbbbbbbbb{day:02d}', host='box-a', when=f'2026010{day + 1}T000100Z', done=('symlinks',))
+        record(sandbox, identifier=f'aaaaaaaaaa{day:02d}', host='peer', when=f'2026010{day + 1}T000000Z', done=('packages:pkg-config',))
+        record(sandbox, identifier=f'bbbbbbbbbb{day:02d}', host='box', when=f'2026010{day + 1}T000100Z', done=('symlinks',))
 
     ran = cli('report', 'stats', '--json')
 
     found = [(entry['address'], entry['machine']) for entry in ran.document['unconverged']]
-    assert found == [('packages:pkg-config', 'box-b'), ('symlinks', 'box-a')]
+    assert found == [('packages:pkg-config', 'peer'), ('symlinks', 'box')]
 
 
 @pytest.mark.parametrize('verb', ['plan', 'check'], ids=['plan', 'check'])

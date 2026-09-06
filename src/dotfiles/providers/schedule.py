@@ -81,10 +81,10 @@ Ten minutes was the figure while the run was read as local: filesystem reads and
 version banners off binaries already on the box. `--refresh` is what makes it
 leave the machine, and the docstring above says so — one request per declared
 release, to one host, on an exact interval. Measured 2026-08-21: a single run
-spends 66 GitHub API calls, so three machines at the old cadence spent about
-1,200 an hour. Against the 60-per-hour anonymous ceiling, which is charged per IP
-and shared by every host behind one egress, two machines were enough to keep that
-pool at zero for the whole hour."""
+spends 66 GitHub API calls, so one machine at the old cadence spent about 400 an
+hour. Against the 60-per-hour anonymous ceiling, which is charged per IP and
+shared by every host behind one egress, a single machine was already enough to
+keep that pool at zero for the whole hour."""
 
 
 UNIT_SECONDS = 30 * 60

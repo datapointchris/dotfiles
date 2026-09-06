@@ -30,7 +30,7 @@ curl failed to verify the legitimacy of the server and therefore could not
 establish a secure connection to it. To learn more about this situation and
 how to fix it, please visit the webpage mentioned above.
 """
-"""Verbatim, from `20260817T211750Z-pf5xmxfy-apply.jsonl`, an apply behind such a proxy.
+"""Verbatim, from an `apply` run behind such a proxy.
 
 Written out rather than shortened because the shape is the subject: five non-blank
 lines, the cause on the first and three lines of closing advice at the end. A

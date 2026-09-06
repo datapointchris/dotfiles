@@ -71,8 +71,8 @@ ATTENTION_KIND = 'attention'
 """What a machine door calls an item only a person can repair.
 
 The key rather than `Phrase.NEED_ATTENTION`, which is the sentence a screen says. A
-document key is a name and a rendering is a phrase, and one value spelled two
-ways is what `help.md` § "One concept, one word" is about.
+document key is a name and a rendering is a phrase, and one concept gets one
+word rather than two spellings.
 """
 
 NAMES_SHOWN = 3

@@ -4,8 +4,8 @@ icon: material/notebook
 
 # Notes
 
-A thin wrapper over [zk](https://github.com/zk-org/zk) for the `~/notes`
-notebook. `notes --help` lists the verbs; `zk --help` covers everything the
+A thin wrapper over [zk](https://github.com/zk-org/zk) for the notebook `zk` is
+configured against. `notes --help` lists the verbs; `zk --help` covers everything the
 wrapper does not wrap, and the upstream docs are the reference for query syntax
 and templates.
 
@@ -16,7 +16,8 @@ this script.
 
 ## Where the notebook lives
 
-The notebook directory is not a git repo and is not versioned here. This repo
+At the path `zk`'s own config names, outside this repo. It is replicated between
+machines rather than versioned, which is why it is not a git repo. This repo
 configures the notebook and never carries its contents.
 
 zk's configuration is `configs/common/.config/zk/config.toml`, symlinked to

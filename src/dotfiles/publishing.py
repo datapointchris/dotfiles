@@ -2,10 +2,9 @@
 
 The offline loop needs one thing to travel *from* the firewalled box: what it has
 installed, so a machine with a network can build it a bundle carrying only what it
-lacks. `~/dev/workstations.md` § "The seam between them" records the standing
-arrangement that nothing written on that machine travels back, and this is the one narrow
-exception to it. Narrow has to be a property of the code rather than of whoever
-is looking.
+lacks. The standing arrangement is that nothing written on that machine travels
+back, and this is the one narrow exception to it. Narrow has to be a property of
+the code rather than of whoever is looking.
 
 **Two leaks decide the shape, and both are real on that machine.**
 `resources/identity.py` examines `user.name` and `user.email`, and its own

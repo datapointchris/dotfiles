@@ -87,10 +87,7 @@ required:
     capacity: workstation
     file_must_exist: true
     consumers:
-      - ~/homelab/pyinfra/inventory.py
-      - ~/homelab/pyinfra/deploys/ssh_trust.py
-      - ~/homelab/scripts/lib/inventory.sh
-      - ~/homelab/scripts/vaultwarden-upgrade.sh
+      - provisioning code outside this repo
 
   # The roster beside the inventory above, on the same two axes and for the same
   # reason. It carries each workstation's public key, which is what lets the
@@ -102,8 +99,7 @@ required:
     capacity: workstation
     file_must_exist: true
     consumers:
-      - ~/homelab/pyinfra/deploys/ssh_trust.py
-      - ~/homelab/scripts/lib/machines.sh
+      - provisioning code outside this repo
 
   # A service address on the machine's own network, which this repo is public and
   # must not carry. The consumer refuses by name when it is unset, and that is

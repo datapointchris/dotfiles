@@ -85,7 +85,7 @@ def stats(machine: str = '') -> None:
     not a reason to go looking at the rung.
 
     `--machine` narrows it, because the history is fleet-shared: a median taken
-    across a 2018 Mac mini and this box describes neither of them.
+    across an old laptop and a fast desktop describes neither of them.
     """
     seen: dict[str, list[float]] = {}
     failures: dict[str, int] = {}

@@ -320,9 +320,9 @@ class RunRecord:
         repair, so a plan over a box with three unset values closes `converged` and
         exits 0 while this reads `issue`. Both are true about one walk. The record
         is a transcript — `sinks.record` keeps every `Change` the engine yielded,
-        under both lenses — so it can answer a question the verb did not ask, and
-        `cli-design.md` § "A verb that measures returns what it found, and drift is
-        not a failure" is why the verb must not start answering this one instead.
+        under both lenses — so it can answer a question the verb did not ask. A
+        verb returns what it measured and drift is not a failure, which is why the
+        verb must not start answering this one instead.
 
         **Graded over the walk rather than the lens, because a fold across the
         directory cannot choose which verb ran last.** `doit dashboard` takes the
