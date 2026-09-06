@@ -49,15 +49,20 @@ def test_the_file_keeps_what_the_console_drops(tmp_path, capsys):
 
 
 def test_the_run_is_stamped_on_every_event(tmp_path):
+    """`host`, not `machine`. The record and `status-<box>.json` both key `machine`
+    on the manifest, and two boxes share one — so a stream keyed on the box under
+    that word puts one Mac's stream and its record in different groups of any fold
+    across the directory the fleet shares."""
     event_log = tmp_path / 'run.jsonl'
     dotfiles_logging.configure(event_log=event_log)
-    dotfiles_logging.bind_run('abc123', 'macos-personal-workstation')
+    dotfiles_logging.bind_run('abc123', 'macmini')
 
     dotfiles_logging.get_logger('test').info('phase_started', phase='packages')
 
     event = events_in(event_log)[0]
     assert event['run_id'] == 'abc123'
-    assert event['machine'] == 'macos-personal-workstation'
+    assert event['host'] == 'macmini'
+    assert 'machine' not in event
     assert event['level'] == 'info'
     assert event['timestamp'].endswith('Z')
 

@@ -299,7 +299,7 @@ def test_a_run_that_converged_is_marked_ok(sandbox: Sandbox, cli: Callable[..., 
     [
         (('packages',), (), '1 unconverged: packages'),
         ((), ('packages:ruff',), '1 unconverged: packages:ruff'),
-        (('a', 'b'), ('c', 'd'), '4 unconverged: a, b, c, …'),
+        (('a', 'b'), ('c', 'd'), '4 unconverged: a, b, c'),
     ],
     ids=['refused-resource', 'failed-item', 'more-than-three'],
 )
@@ -308,7 +308,11 @@ def test_the_listing_names_what_kept_a_run_from_converging(
 ) -> None:
     """Both halves of the record answer this — an issue is a resource that could
     not be examined, a failed outcome is an item the world refused — and the column
-    exists so finding the bad run does not mean opening every record in turn."""
+    exists so finding the bad run does not mean opening every record in turn.
+
+    The count leads and three names follow, with no remainder trailer: the whole
+    list is in `report list --json`, and the `run` column beside the cell is the
+    handle that shows the rest."""
     record(sandbox, identifier='aaaaaaaaaaaa', issues=issues, failed=failed)
 
     ran = cli('report', 'list')

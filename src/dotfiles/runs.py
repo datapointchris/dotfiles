@@ -93,16 +93,24 @@ every record carries one row of this per resource. `RunRecord.verdict` reads
 `action` for that reason.
 """
 
-UNREPAIRABLE = frozenset({str(status) for status in UNCONVERGED}) | {str(Intention.DECLINED)}
+WRITE_FAILED = frozenset({str(status) for status in UNCONVERGED})
+"""`UNCONVERGED` as `RunOutcome.action` spells it: a write that did not take.
+
+An action is a bare string, and `sinks.intention` writes values that are
+deliberately not `OutcomeStatus` members at all, so the comparison is against
+text. **Derived rather than written out a second time** — written out, this half
+said `{FAILED, REFUSED}` and silently disagreed with `Outcome.ok` in both
+directions. Read it here rather than assembling it again: a second module
+building the same set is the same defect one module over.
+"""
+
+UNREPAIRABLE = WRITE_FAILED | {str(Intention.DECLINED)}
 """Every `action` meaning the item is wrong and no further `apply` will fix it.
 
 The two halves arrive by different routes and mean the same thing to a reader.
-`UNCONVERGED` is a write that was attempted and did not take; `DECLINED` is a
+`WRITE_FAILED` is a write that was attempted and did not take; `DECLINED` is a
 write that was never going to be attempted. Both leave an item differing from the
 declaration with nothing scheduled to change that, which is `ResourceVerdict.ISSUE`.
-
-**Derived from `UNCONVERGED`, never listed again.** Spelled out, the two sets
-disagree silently and a run history renders a failure green.
 """
 
 REPAIRABLE = frozenset({str(status) for status in ACTED}) | {str(Intention.PLANNED)}
@@ -114,6 +122,20 @@ REPAIRABLE = frozenset({str(status) for status in ACTED}) | {str(Intention.PLANN
 **Both halves, rather than the intention alone.** An apply writes the `Change` and
 the `Outcome` for one item, so `PLANNED` alone answers correctly here only while
 that pairing holds — and nothing enforces it. Each row says enough on its own.
+"""
+
+NEUTRAL = frozenset({str(Intention.UNMEASURED), str(Intention.OBSERVED)})
+"""Every `action` that grades nothing, named so the remainder is not a fallthrough.
+
+An unmeasurable item is not drift — a cold release cache makes every declared
+release unmeasurable at once — and an `OBSERVED` row is a resource saying it
+looked. Neither moves a verdict.
+
+**Named rather than left to fall through**, because the fallthrough is the
+permissive answer: an `Intention` member added later and forgotten would grade a
+faulty machine `converged`, which is the failure `RunRecord.verdict` exists to
+close. `test_the_three_action_sets_partition_the_vocabulary` is what fails when
+one is added, and it names which two are deliberately outside a verdict.
 """
 
 
@@ -147,6 +169,17 @@ class Identity:
     """
 
     @property
+    def box(self) -> str:
+        """Which machine this runs on, as well as an identity can say.
+
+        The same fallback `RunRecord.box` makes and for the same reason: an
+        identity built by hand carries no host, and the manifest answers correctly
+        for the three boxes that do not share one. Named here so the filename and
+        the event stream cannot disagree about which value they carry.
+        """
+        return self.host or self.machine
+
+    @property
     def stem(self) -> str:
         """The name both files share, minus the extension.
 
@@ -159,7 +192,7 @@ class Identity:
         manifest, the two Macs' records were one indistinguishable stream, and
         neither `--machine` nor the per-machine streak count could separate them.
         """
-        return f'{self.started.strftime("%Y%m%dT%H%M%SZ")}-{self.host or self.machine}-{self.verb}'
+        return f'{self.started.strftime("%Y%m%dT%H%M%SZ")}-{self.box}-{self.verb}'
 
 
 def begin(machine: str, verb: str, started: dt.datetime | None = None, host: str | None = None) -> Identity:
@@ -274,15 +307,27 @@ class RunRecord:
 
     @property
     def verdict(self) -> ResourceVerdict:
-        """What this run *found*, graded in the vocabulary `reconcile.worst` uses.
+        """What the walk found, graded in the vocabulary `reconcile.worst` uses.
 
-        Not what it left behind, which is `commands/report._standing`'s question.
-        An apply that repaired two things found a machine that differed, and
-        reading this as the state afterwards marks it the same as a run that could
-        not examine a resource at all.
+        Not what the run left behind, which is `report.outstanding`'s question. An
+        apply that repaired two things found a machine that differed, and reading
+        this as the state afterwards marks it the same as a run that could not
+        examine a resource at all.
 
-        One walk writes this record and `status-<box>.json`, so the two grade it
-        with one set of words or a reader has to know which half is stale.
+        **Not the verb's answer either, and that is the distinction to hold.** A
+        verb answers under one lens and exits on it: `plan` keeps what `apply` can
+        repair, so a plan over a box with three unset values closes `converged` and
+        exits 0 while this reads `issue`. Both are true about one walk. The record
+        is a transcript — `sinks.record` keeps every `Change` the engine yielded,
+        under both lenses — so it can answer a question the verb did not ask, and
+        `cli-design.md` § "A verb that measures returns what it found, and drift is
+        not a failure" is why the verb must not start answering this one instead.
+
+        **Graded over the walk rather than the lens, because a fold across the
+        directory cannot choose which verb ran last.** `doit dashboard` takes the
+        newest record per box whatever wrote it, so a lens-scoped grade would
+        report a box clean whenever its last run happened to be a `plan`, which is
+        the failure this property exists to close arriving through another verb.
 
         **Read off `action`, never off the item verdict.** An action says what the
         run decided about a row and a verdict says what the world is, so `declined`
@@ -294,15 +339,6 @@ class RunRecord:
         if any(outcome.action in REPAIRABLE for outcome in self.outcomes):
             return ResourceVerdict.DRIFT
         return ResourceVerdict.CONVERGED
-
-    @property
-    def converged(self) -> bool:
-        """Whether this run found nothing at all to report.
-
-        Derived from `verdict` rather than tested again, so the boolean and the
-        word cannot answer differently about one record.
-        """
-        return self.verdict is ResourceVerdict.CONVERGED
 
 
 class Stopwatch:

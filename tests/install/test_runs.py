@@ -52,9 +52,10 @@ def timed(**steps) -> runs.Timing:
 
 def a_run(machine='macos-personal-workstation', verb='apply', host=None) -> runs.RunRecord:
     """Verdicts and actions spelled by the enums the writer serializes, never by
-    hand. `converged` compared against a hand-typed `'MATCHED'` for its whole life
-    and was therefore never true, and this fixture typing the same word is the
-    reason no test noticed.
+    hand. A fixture typing its own words agrees with whatever it typed, so the
+    shape the writer emits is the one thing a record built here cannot check —
+    which is why every property read off `action` is pinned in
+    `tests/cli/test_sinks.py` instead, against records `sinks.record` produced.
 
     `host` is explicit rather than left to default, because the default is the
     real hostname of whatever box runs the suite — which put `archlinux` in the
@@ -143,19 +144,6 @@ class TestRoundTrip:
 
         assert stopwatch.steps['fetch'] > first
         assert list(stopwatch.finish().steps) == ['fetch']
-
-
-class TestConvergence:
-    """The whole of this property's behavior is pinned in `tests/cli/test_sinks.py`.
-
-    A record built here is built by hand, and the verdict is read off `action` —
-    a vocabulary only `sinks` writes. A test typing its own actions agrees with
-    whatever it typed, so the shape the writer actually emits is the one thing it
-    cannot check, and every resource summary row is that shape.
-    """
-
-    def test_a_run_with_an_issue_has_not_converged(self, runs_dir):
-        assert not a_run().converged
 
 
 class TestSpan:

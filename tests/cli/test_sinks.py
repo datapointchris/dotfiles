@@ -190,8 +190,8 @@ class TestVerdict:
 
     Built through `sinks.record` rather than by hand, because the verdict reads
     `action` and `sinks` is the only thing that writes one. A record assembled in
-    a test agrees with whatever the test typed, which is how a fold that was false
-    on every real record passed the suite.
+    a test agrees with whatever the test typed, and the shape it will not think to
+    type is the resource summary row every real record carries.
     """
 
     def test_a_run_that_found_nothing_is_converged(self) -> None:
@@ -201,15 +201,15 @@ class TestVerdict:
 
     def test_the_resource_row_alone_does_not_make_a_run_unconverged(self) -> None:
         """`examined` is not a `Verdict` member, and every record carries one row
-        of it per resource. Read as an item verdict it made `converged` false on
-        every run the fleet has ever recorded."""
+        of it per resource. Read as an item verdict it grades every run that
+        examined anything, which is all of them."""
         written = sinks.record(
             [Event(name, Summary('nothing to do'), timing=timing(0.1)) for name in ('packages', 'symlinks', 'env')],
             identity('check'),
         )
 
         assert [outcome.verdict for outcome in written.outcomes] == [runs.EXAMINED] * 3
-        assert written.converged
+        assert written.verdict is ResourceVerdict.CONVERGED
 
     def test_an_item_apply_would_repair_is_drift(self) -> None:
         written = sinks.record([Event('packages', change('zk'))], identity('plan'))
@@ -224,9 +224,9 @@ class TestVerdict:
         assert written.verdict is ResourceVerdict.DRIFT
 
     def test_an_item_only_a_person_can_repair_is_an_issue(self) -> None:
-        """The case the whole fold exists for: three unset values made
-        `status-<box>.json` say `issue` while the run record said `ok`, and
-        `doit dashboard` reads the record."""
+        """The case the whole fold exists for. A value only a person can set is
+        wrong with nothing scheduled to fix it, and `doit dashboard` reads this
+        grade rather than `status-<box>.json`."""
         written = sinks.record([Event('env', by_hand('FRESHRSS_URL'))], identity('check'))
 
         assert written.outcomes[0].action == str(runs.Intention.DECLINED)
@@ -261,25 +261,59 @@ class TestVerdict:
         assert written.verdict is ResourceVerdict.ISSUE
 
 
-def test_every_action_a_run_writes_is_a_named_intention_or_outcome() -> None:
-    """`action` carries two vocabularies and every reader compares against both.
+class TestTheVocabulariesAreClosed:
+    """Every value a record carries is compared against a named set somewhere.
 
-    A third spelling reaching the field is invisible: it is a string, it
-    serializes, it renders in the table, and it silently matches no set — which is
-    how a resource row's `examined` came to be read as an item verdict.
+    A spelling nobody named is invisible: it is a string, it serializes, it renders
+    in the table, and it matches no set — so the fold that reads it falls through to
+    the permissive answer and grades a faulty machine green.
     """
-    named = {str(word) for word in runs.Intention} | {str(status) for status in OutcomeStatus}
 
-    written = sinks.record(
-        [
-            Event('packages', change('zk')),
-            Event('packages', unmeasurable('fd')),
-            Event('packages', by_hand('yq')),
-            Event('packages', Outcome(change('zk'), OutcomeStatus.DONE, 'installed zk')),
-            Event('packages', Summary('all installed'), timing=timing(0.4)),
-        ],
-        identity('apply'),
-    )
+    def test_the_three_action_sets_partition_the_vocabulary(self) -> None:
+        """Adding an `Intention` or an `OutcomeStatus` fails this, and the message
+        says which set it is missing from. A subset assertion cannot: both sides
+        derive from the same enums, so nothing it can produce is ever outside."""
+        written = {str(word) for word in runs.Intention} | {str(status) for status in OutcomeStatus}
+        graded = runs.UNREPAIRABLE | runs.REPAIRABLE | runs.NEUTRAL
 
-    assert {outcome.action for outcome in written.outcomes} <= named
-    assert len(written.outcomes) == 5
+        assert written - graded == set(), 'these grade nothing, so a run carrying one reports converged'
+        assert graded - written == set(), 'these are graded and no writer produces them'
+        assert set() == runs.UNREPAIRABLE & runs.REPAIRABLE
+        assert set() == runs.NEUTRAL & (runs.UNREPAIRABLE | runs.REPAIRABLE)
+
+    def test_every_verdict_a_run_writes_is_a_named_word(self) -> None:
+        """The mirror of the actions guard, over the field that actually broke.
+        `EXAMINED` lives in `runs` and `Verdict` in `resources`, so a reader who
+        opens the enum sees four members and not the fifth value a record carries.
+        """
+        written = sinks.record(
+            [
+                Event('packages', change('zk')),
+                Event('packages', unmeasurable('fd')),
+                Event('env', by_hand('yq')),
+                Event('packages', Outcome(change('zk'), OutcomeStatus.DONE, 'installed zk')),
+                Event('packages', Summary('all installed'), timing=timing(0.4)),
+            ],
+            identity('apply'),
+        )
+        named = {str(word) for word in Verdict} | {runs.EXAMINED}
+
+        assert len(written.outcomes) == 5
+        assert {outcome.verdict for outcome in written.outcomes} <= named
+        assert runs.EXAMINED not in {str(word) for word in Verdict}, 'the resource row is deliberately outside'
+
+    def test_every_action_a_run_writes_is_one_of_the_two_vocabularies(self) -> None:
+        written = sinks.record(
+            [
+                Event('packages', change('zk')),
+                Event('packages', unmeasurable('fd')),
+                Event('env', by_hand('yq')),
+                Event('packages', Outcome(change('zk'), OutcomeStatus.DONE, 'installed zk')),
+                Event('packages', Summary('all installed'), timing=timing(0.4)),
+            ],
+            identity('apply'),
+        )
+        named = {str(word) for word in runs.Intention} | {str(status) for status in OutcomeStatus}
+
+        assert len(written.outcomes) == 5
+        assert {outcome.action for outcome in written.outcomes} <= named

@@ -42,21 +42,11 @@ from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import render_note
 from dotfiles.output import warn
-from dotfiles.resources import UNCONVERGED
+from dotfiles.resources import OutcomeStatus
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
-from dotfiles.vocabulary import parse_address
 
 app = typer.Typer(no_args_is_help=True, help='What past runs did, and what they cost')
-
-UNSUCCESSFUL = {str(status) for status in UNCONVERGED}
-"""`UNCONVERGED` as `RunOutcome.action` spells it.
-
-An action is a bare string, and `sinks.intention` writes values that are
-deliberately not `OutcomeStatus` members at all, so the comparison is against
-text. Derived rather than written out a second time — written out, this half said
-`{FAILED, REFUSED}` and silently disagreed with `Outcome.ok` in both directions.
-"""
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
@@ -74,58 +64,97 @@ returned the whole shelf from one and nothing from the other.
 """
 
 
-def _standing(record: runs.RunRecord) -> str:
-    """What this run found that no further `apply` will clear, named.
+UNCONVERGED_KIND = 'unconverged'
+"""What a machine door calls a write that was attempted and did not take."""
 
-    Not `RunRecord.verdict`, which grades the whole run in one word — that is the
-    right answer for `show`, whose reader is looking at one run, and too little for
-    a list, where the question is which box needs a look and what for.
+ATTENTION_KIND = 'attention'
+"""What a machine door calls an item only a person can repair.
+
+The key rather than `NEED_ATTENTION`, which is the sentence a screen says. A
+document key is a name and a rendering is a phrase, and one value spelled two
+ways is what `help.md` § "One concept, one word" is about.
+"""
+
+NAMES_SHOWN = 3
+"""How many addresses a table cell carries before the count is left to say the rest.
+
+A cell holding a hundred and eighty addresses wraps the listing into a paragraph,
+and the whole list is on the row it sits in — `report list --json` carries both
+buckets entire. No remainder trailer: the count leads the clause and the `run`
+column beside it is the handle that shows the rest.
+"""
+
+
+def outstanding(record: runs.RunRecord) -> dict[str, list[str]]:
+    """The addresses this run found that no further `apply` will clear, by kind.
+
+    Data, not a sentence. A consumer asking which items on a box need a person has
+    to be able to read them off the row, and rebuilding them means reimplementing
+    this fold, the dedupe below and the `UNREPAIRABLE` split — the fan-out
+    `_listed` exists to stop.
 
     **Drift is absent on purpose.** An item `apply` would repair is not a fault,
-    so listing it here would make every machine between two applies read as
+    so carrying it here would make every machine between two applies read as
     needing attention and train a reader to ignore the column.
 
-    **Both kinds of fault, and a `check` only ever produces the second.** A write
-    that failed and a write that was never going to be attempted both leave the
-    item wrong. Collect only the first and the verb that exists to find what is
-    wrong is the one verb that can never report anything — which is what
-    `doit dashboard` reads this string for.
+    **Both kinds, because they take different repairs.** Re-run the apply, or go
+    and set something. `runs.WRITE_FAILED` and `Intention.DECLINED` are the two
+    clauses of `runs.UNREPAIRABLE`, read from there rather than assembled again:
+    a member added to that set would otherwise grade the run `issue` while this
+    named nothing, and a row would read `"verdict": "issue"` beside
+    `"outcome": "ok"`.
     """
-    failed = {outcome.address for outcome in record.outcomes if outcome.action in UNSUCCESSFUL}
+    failed = {outcome.address for outcome in record.outcomes if outcome.action in runs.WRITE_FAILED}
     declined = {outcome.address for outcome in record.outcomes if outcome.action == runs.Intention.DECLINED}
-    # Joined rather than ranked. The two take different repairs — re-run the
-    # apply, or go and set something — so a cell showing whichever kind sorted
-    # first sends a reader away having fixed one of them.
-    clauses = (_clause(sorted(_named_once(record, failed)), 'unconverged'), _clause(sorted(declined), NEED_ATTENTION))
-    return '; '.join(clause for clause in clauses if clause)
+    return {
+        UNCONVERGED_KIND: sorted(failed | unnamed_issues(record, failed)),
+        ATTENTION_KIND: sorted(declined),
+    }
 
 
-def _named_once(record: runs.RunRecord, failed: set[str]) -> set[str]:
-    """Every address this run reports wrong, with each fault named at one altitude.
+def unnamed_issues(record: runs.RunRecord, failed: set[str]) -> set[str]:
+    """The resources whose Issue no item row already names.
 
-    A failed write is recorded twice on purpose — an Issue at the resource, so the
-    exit code and the record agree, and an outcome at the item, so the reader
-    learns which one. Counted from both lists, one failed install is two faults.
+    Two writers land an Issue at a resource. A failed outcome writes one so the
+    record and the exit code agree about a run that could not install something,
+    and it writes the item row beside it — so the resource row has nothing left to
+    add and `packages` and `packages/zk` are one fault. A `Refusal` writes one for
+    a resource that could not be examined at all, and there is no item row: the
+    raising item's name survives only inside the message, which no cell renders.
 
-    The item wins. `packages` says a reader has somewhere to look and `packages/zk`
-    says where, so the resource row is the one with nothing left to add. A resource
-    that refused produced no outcome at all, so nothing else names it and it stays.
+    **Both halves of the test, because neither alone separates them.** The kind is
+    `str(outcome.status)` on one path and `'refused'` on the other, and
+    `OutcomeStatus.REFUSED` spells that too — so kind alone drops a refused
+    resource that also failed an install. Address alone drops the refusal whenever
+    anything under that resource failed.
+
+    Matched on `address + '/'` rather than through `parse_address`, which recovers
+    the resource only while every `vocabulary.RESOURCES` member is one segment. A
+    prefix test says what it means with no such coupling.
     """
-    covered = {parse_address(address)[0] for address in failed}
-    return failed | {issue.address for issue in record.issues if issue.address not in covered}
+    named = {(outcome.address, outcome.action) for outcome in record.outcomes if outcome.action in runs.WRITE_FAILED}
+    return {
+        issue.address
+        for issue in record.issues
+        if not any(address.startswith(f'{issue.address}/') and action == issue.kind for address, action in named)
+    } - failed
 
 
-def _clause(named: Sequence[str], word: str) -> str:
-    """`n word: a, b, c` for a table cell, or nothing where the set is empty.
+def outstanding_line(found: Mapping[str, Sequence[str]]) -> str:
+    """One table cell for both kinds, or nothing where the run found neither.
 
-    Three names then an ellipsis: the count is the answer and the names are what
-    makes the row worth opening, and a cell carrying nine addresses wraps the
-    listing into a paragraph.
+    Joined rather than ranked. The two take different repairs, so a cell showing
+    whichever kind sorted first sends a reader away having fixed one of them.
     """
+    clauses = (clause(found[UNCONVERGED_KIND], UNCONVERGED_KIND), clause(found[ATTENTION_KIND], NEED_ATTENTION))
+    return '; '.join(one for one in clauses if one)
+
+
+def clause(named: Sequence[str], word: str) -> str:
+    """`n word: a, b, c` for a table cell, or nothing where the set is empty."""
     if not named:
         return ''
-    shown = ', '.join(named[:3])
-    return f'{len(named)} {word}: {shown}' + (', …' if len(named) > 3 else '')
+    return f'{len(named)} {word}: {", ".join(named[:NAMES_SHOWN])}'
 
 
 def _readable(found: Iterable[Path]) -> Iterator[tuple[Path, runs.RunRecord]]:
@@ -147,7 +176,7 @@ def _readable(found: Iterable[Path]) -> Iterator[tuple[Path, runs.RunRecord]]:
             warn(str(unreadable))
 
 
-def _listed(path: Path) -> dict[str, str]:
+def _listed(path: Path) -> dict[str, object]:
     """One listing row: what the filename says, plus what the record concluded.
 
     A record that will not parse still gets its row. The alternative drops a run
@@ -168,10 +197,12 @@ def _listed(path: Path) -> dict[str, str]:
     history into one nameless bucket. The manifest is the fallback there and not
     an equivalent — it answers correctly for the boxes that do not share one.
     """
+    empty: dict[str, object] = {UNCONVERGED_KIND: [], ATTENTION_KIND: []}
     try:
         record = runs.read(path)
     except runs.Unreadable:
-        return {'run': path.stem, 'machine': '', 'host': '', 'verb': '', 'verdict': '', 'outcome': 'unreadable'}
+        return {'run': path.stem, 'machine': '', 'host': '', 'verb': '', 'verdict': '', **empty, 'outcome': 'unreadable'}
+    found = outstanding(record)
     return {
         'run': path.stem,
         'machine': record.machine,
@@ -183,7 +214,12 @@ def _listed(path: Path) -> dict[str, str]:
         # — and a fact on screen that no door answers for is one a caller has to
         # scrape a rendering to get.
         'verdict': str(record.verdict),
-        'outcome': _standing(record) or 'ok',
+        # Both buckets entire, and the cell built from them rather than the other
+        # way round. `outcome` is a rendering and names three addresses; a caller
+        # asking which items on this box need a person reads them from here instead
+        # of reimplementing the fold that produced the sentence.
+        **found,
+        'outcome': outstanding_line(found) or 'ok',
     }
 
 
@@ -253,7 +289,10 @@ def _render(path: Path, record: runs.RunRecord) -> None:
     # was parsed as markup and dropped — every header printed a trailing blank.
     verdict = str(record.verdict)
     color = VERDICT_COLORS[verdict]
-    console.print(f'[bold]{record.id}[/]  {record.box}  {record.verb}  [{color}]{verdict}[/]')
+    # `found`, because the word sits beside the verb and a bare one reads as what
+    # the verb returned. A `plan` closes `converged` over a box with three unset
+    # values and exits 0, and the walk it recorded still found them.
+    console.print(f'[bold]{record.id}[/]  {record.box}  {record.verb}  found [{color}]{verdict}[/]')
     console.print(f'{record.started_at} · {record.duration_seconds:.1f}s')
     # What the reader wants the record *for* is usually to send it somewhere, and
     # the rendering that answers every other question about a run was the one place
@@ -292,7 +331,7 @@ def _render(path: Path, record: runs.RunRecord) -> None:
     # Only where it went wrong: a provider hands back a detail line for a success
     # too, and 112 of "installed zk" buries the four that say why nothing was.
     for outcome in record.outcomes:
-        if outcome.message and outcome.action in UNSUCCESSFUL:
+        if outcome.message and outcome.action in runs.WRITE_FAILED:
             console.print(f'[red]{outcome.action}[/] {outcome.address}: {outcome.message}')
 
     for issue in record.issues:
@@ -364,7 +403,7 @@ def list_runs(
     table.add_column('run')
     table.add_column('outcome')
     for path, record in _readable(found):
-        wrong = _standing(record)
+        wrong = outstanding_line(outstanding(record))
         color = 'red' if wrong else 'green'
         table.add_row(path.stem, f'[{color}]{wrong or "ok"}[/]')
     console.print(table)
@@ -710,7 +749,11 @@ def _never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
         streaks: dict[str, int] = {}
         alive: set[str] | None = None
         for record in ordered:
-            acted = {outcome.address for outcome in record.outcomes if outcome.action == 'done'}
+            # `DONE` alone, not `resources.ACTED`: `SKIPPED` means another change in
+            # the same batch had already repaired it, so nothing was written and no
+            # churn happened. Through the enum, because two modules spelling one
+            # literal drift apart with nothing failing.
+            acted = {outcome.address for outcome in record.outcomes if outcome.action == str(OutcomeStatus.DONE)}
             # The newest apply seeds the set: an item it left alone converged
             # there, whatever it did before, and this names what is wrong *now*.
             alive = acted if alive is None else alive & acted
