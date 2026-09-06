@@ -163,7 +163,7 @@ class Identity:
     """Which *box*, as a bare lowercased hostname.
 
     Separate from `machine`, which names the manifest — two boxes legitimately
-    share one, and macmini and mbp both declare `macos-personal-workstation`. The
+    share one, and both of them declare `macos-personal-workstation`. The
     standard's reason for keeping them apart is the same one that applies here:
     the platform prefix duplicated a separate field and drifted.
     """
@@ -174,7 +174,7 @@ class Identity:
 
         The same fallback `RunRecord.box` makes and for the same reason: an
         identity built by hand carries no host, and the manifest answers correctly
-        for the three boxes that do not share one. Named here so the filename and
+        for the boxes that do not share one. Named here so the filename and
         the event stream cannot disagree about which value they carry.
         """
         return self.host or self.machine
@@ -189,8 +189,9 @@ class Identity:
 
         The host rather than the manifest, because `runs/` is shared by the whole
         fleet and the filename is the only thing `list_runs` reads: keyed on the
-        manifest, the two Macs' records were one indistinguishable stream, and
-        neither `--machine` nor the per-machine streak count could separate them.
+        manifest, the records of two boxes sharing one were a single
+        indistinguishable stream, and neither `--machine` nor the per-machine
+        streak count could separate them.
         """
         return f'{self.started.strftime("%Y%m%dT%H%M%SZ")}-{self.box}-{self.verb}'
 
@@ -283,7 +284,7 @@ class RunRecord:
     host: str = ''
     """Empty on a record written before schema 3, which is why every reader takes
     `host or machine` rather than `host` — a bare `host` would pool the entire
-    pre-3 history of all four boxes into one nameless bucket."""
+    pre-3 history of every box into one nameless bucket."""
     outcomes: list[RunOutcome] = dataclasses.field(default_factory=list)
     issues: list[Issue] = dataclasses.field(default_factory=list)
 
@@ -292,7 +293,7 @@ class RunRecord:
         """Which machine this ran on, as well as the record can say.
 
         The manifest is the fallback and not an equivalent: it answers correctly
-        for the three boxes that do not share one, and for the two Macs it is the
+        for the boxes that do not share one, and for a box that does it is the
         same wrong answer the host field was added to fix.
         """
         return self.host or self.machine

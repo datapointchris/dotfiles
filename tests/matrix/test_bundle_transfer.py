@@ -645,9 +645,9 @@ class TestResolvingLatestForASparseBuild:
     def test_two_machines_sharing_a_manifest_make_latest_a_usage_error(
         self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]
     ) -> None:
-        """`macos-personal-workstation` is both Macs, which is why a status
-        filename carries a hostname digest at all. Nothing here can tell which one
-        a bundle is for, so picking the most recent diffs one Mac's plan against
+        """`macos-personal-workstation` is declared by two boxes, which is why a
+        status filename carries a hostname digest at all. Nothing here can tell which one
+        a bundle is for, so picking the most recent diffs one box's plan against
         the other's installed set and reports the result as measured — the outcome
         the `machine` guard exists to prevent and cannot see, because both
         documents name the same manifest."""

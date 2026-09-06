@@ -129,7 +129,7 @@ required:
   #
   # Two axes, and neither is the display stack. The launcher is a Desktop Entry
   # and reaches only a machine with a desk, but newsboat is a workstation package
-  # under `configs/common/`, so the reader is on the two Macs as well. Trust is
+  # under `configs/common/`, so the reader lands on the macOS boxes as well. Trust is
   # what says a FreshRSS is reachable at all, and capacity keeps it off the
   # servers, which install neither consumer.
   - name: FRESHRSS_URL

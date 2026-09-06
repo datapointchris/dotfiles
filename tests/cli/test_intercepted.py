@@ -1,6 +1,6 @@
 """A TLS-intercepting proxy, reported as itself rather than as an outage.
 
-The work box sits behind one. Unreported, an `apply --offline` there says
+A managed network puts a machine behind one. Unreported, an `apply --offline` there says
 `the install script exited 60` and nothing else — 60 being curl's code for a
 certificate it will not verify, which is one CA import away from fixed and reads
 as a blocked network. Every layer on that path can narrow its answer to a bool or
@@ -30,7 +30,7 @@ curl failed to verify the legitimacy of the server and therefore could not
 establish a secure connection to it. To learn more about this situation and
 how to fix it, please visit the webpage mentioned above.
 """
-"""Verbatim, from `20260817T211750Z-pf5xmxfy-apply.jsonl` on the work box.
+"""Verbatim, from `20260817T211750Z-pf5xmxfy-apply.jsonl`, an apply behind such a proxy.
 
 Written out rather than shortened because the shape is the subject: five non-blank
 lines, the cause on the first and three lines of closing advice at the end. A
@@ -95,8 +95,8 @@ class TestTheDiagnosisNamesTheFix:
         assert not found.unavailable
 
     def test_a_machine_with_no_known_store_says_so_rather_than_naming_a_wrong_one(self, tmp_path) -> None:
-        """The branch both Macs take, since none of the three Linux trust-store
-        directories exists there — macOS keeps its in the Keychain. Read off the real
+        """The branch a Mac takes, since none of the three Linux trust-store
+        directories exists there — macOS keeps its own in the Keychain. Read off the real
         machine, this was asserted by `all([])` and passed without reaching it."""
         found = diagnose._intercepted({str(tmp_path / 'absent'): 'never'})
 
@@ -179,8 +179,8 @@ class TestAFailedScriptSaysWhatItSaid:
 
     def test_curls_own_layout_keeps_the_cause_the_tail_would_drop(self) -> None:
         """curl prints its diagnosis first and five lines of advice after it, so the
-        tail is boilerplate and the marker falls outside the budget. Recorded on the
-        work box eight times on 2026-08-17, every line of it curl's closing advice."""
+        tail is boilerplate and the marker falls outside the budget. Recorded
+        eight times on 2026-08-17, every line of it curl's closing advice."""
         completed = effects.Completed(command=('bash',), returncode=60, transcript=CURL_REJECTED_A_CERTIFICATE)
 
         said = script.failure('claude-code', completed)

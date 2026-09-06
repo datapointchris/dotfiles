@@ -324,7 +324,7 @@ class Environment:
     still reported success."""
 
     firewalled: bool = False
-    """Blackhole what the work box reported blocked.
+    """Blackhole what a managed network was measured blocking.
 
     Separate from `offline` because they are different questions. Firewalled and
     *with* a bundle asks whether the bundle covers what the network cannot reach;
@@ -434,8 +434,8 @@ SCHEDULER = Environment(
     # that question — archlinux is pacman, and the other three run the wsl-work
     # manifest.
     #
-    # debian:12 rather than ubuntu, because the machine this stands in for is a
-    # Proxmox LXC cloned from a Debian 12 template.
+    # debian:12 rather than ubuntu, because the machine this stands in for is an
+    # LXC container cloned from a Debian 12 template.
     # curl and git because `install.sh` requires them by name and debian:12 ships
     # neither — measured 2026-08-16, where the base image carries `tar` alone out
     # of curl, wget, git, sudo, unzip and xz. The archlinux prepare gets away with

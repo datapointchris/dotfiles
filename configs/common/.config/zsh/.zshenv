@@ -30,5 +30,5 @@ export LANG="${LANG:-en_US.UTF-8}"
 # config over the machine's.
 export DOTFILES_DIR="$HOME/dotfiles"
 
-# sops looks in ~/Library/Application Support on macOS, so both Macs decrypted nothing.
+# sops looks in ~/Library/Application Support on macOS, so a Mac decrypted nothing.
 export SOPS_AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/sops/age/keys.txt}"

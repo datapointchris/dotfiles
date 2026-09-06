@@ -205,21 +205,21 @@ class TestListing:
         assert [path.stem.split('-')[0] for path in listed] == ['20260803T000000Z', '20260802T000000Z', '20260801T000000Z']
 
     def test_two_boxes_sharing_a_manifest_are_separate_runs(self, runs_dir):
-        """macmini and mbp both declare `macos-personal-workstation`. Keyed on the
+        """Two boxes both declare `macos-personal-workstation`. Keyed on the
         manifest their records were one indistinguishable stream — the reason
         "check the reports for both of them" could not be answered at all."""
-        runs.write(a_run(host='macmini'), runs_dir)
-        older = a_run(host='mbp')
+        runs.write(a_run(host='box-a'), runs_dir)
+        older = a_run(host='box-b')
         older.started_at = '2026-08-01T00:00:00Z'
         runs.write(older, runs_dir)
 
-        assert [runs.read(path).box for path in runs.list_runs(runs_dir, machine='macmini')] == ['macmini']
-        assert [runs.read(path).box for path in runs.list_runs(runs_dir, machine='mbp')] == ['mbp']
-        assert {runs.read(path).box for path in runs.list_runs(runs_dir)} == {'macmini', 'mbp'}
+        assert [runs.read(path).box for path in runs.list_runs(runs_dir, machine='box-a')] == ['box-a']
+        assert [runs.read(path).box for path in runs.list_runs(runs_dir, machine='box-b')] == ['box-b']
+        assert {runs.read(path).box for path in runs.list_runs(runs_dir)} == {'box-a', 'box-b'}
 
     def test_a_record_written_before_the_host_field_still_names_its_machine(self, runs_dir):
         """Every reader takes `box`, not `host`: a bare `host` would pool the whole
-        pre-schema-3 history of all four boxes into one nameless bucket."""
+        pre-schema-3 history of every box into one nameless bucket."""
         record = a_run()
         record.host = ''
         written = runs.write(record, runs_dir)
@@ -266,7 +266,7 @@ class TestListing:
     def test_latest_is_this_boxs_run_and_not_the_fleets_newest(self, runs_dir, monkeypatch):
         """The directory is shared, so the newest record in it is whichever box ran
         most recently. Narrowing on the record's machine does not fix that either:
-        it names the manifest, and both Macs declare the same one — so the answer
+        it names the manifest, and two boxes declare the same one — so the answer
         is the per-host link, which is written here and deliberately not synced.
         """
         mine = a_run()
@@ -311,8 +311,8 @@ class TestForeignFilesInTheSharedDirectory:
 
     def test_a_sync_conflict_copy_is_not_a_run(self, runs_dir):
         """The shape a losing write is set aside as when two boxes write one path,
-        which `status-macmini.json` took ten of. The device id lands where the verb
-        was, so a name that looks like a record all the way to the last token is
+        which one machine's `status-<box>.json` took ten of. The device id lands
+        where the verb was, so a name that looks like a record all the way to the last token is
         not one.
         """
         written = runs.write(a_run(verb='check'), runs_dir)
@@ -327,7 +327,7 @@ class TestForeignFilesInTheSharedDirectory:
         list` renders that as `unreadable` rather than omitting it. The predicate
         answers about the name, so it must not take this one out."""
         written = runs.write(a_run(verb='check'), runs_dir)
-        truncated = runs_dir / '20260816T133615Z-macmini-check.json'
+        truncated = runs_dir / '20260816T133615Z-box-a-check.json'
         truncated.write_text('{"id": "abc')
 
         assert set(runs.list_runs(runs_dir)) == {written, truncated}
@@ -336,10 +336,10 @@ class TestForeignFilesInTheSharedDirectory:
         'name',
         [
             'notes.json',
-            '20260816T133615Z-macmini.json',
-            '20260816T133615Z-macmini-search.json',
-            'yesterday-macmini-check.json',
-            '20260816-macmini-check.json',
+            '20260816T133615Z-boxa.json',
+            '20260816T133615Z-boxa-search.json',
+            'yesterday-boxa-check.json',
+            '20260816-boxa-check.json',
         ],
         ids=['no-structure', 'no-verb', 'not-a-recording-verb', 'no-timestamp', 'wrong-timestamp-shape'],
     )

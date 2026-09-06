@@ -90,9 +90,9 @@ pool at zero for the whole hour."""
 UNIT_SECONDS = 30 * 60
 """How long one scheduled check may run before systemd gives up on it.
 
-Half an hour, against a run that takes seconds on a desk and minutes on the work
-box's firewall — wide enough that a slow link is never mistaken for a hang, and
-far inside `INTERVAL_SECONDS` so a killed run cannot still be holding the unit
+Half an hour, against a run that takes seconds on an open network and minutes
+behind a filtering firewall — wide enough that a slow link is never mistaken for
+a hang, and far inside `INTERVAL_SECONDS` so a killed run cannot still hold the unit
 when the next fire is due.
 
 There is a floor under this rather than a preference: `Type=oneshot` disables the

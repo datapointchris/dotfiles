@@ -133,8 +133,8 @@ def update(
         # replaced the source under a running interpreter, and `engine.resources`
         # imports the resource modules lazily to keep `--help` fast — so the
         # repair loads a *new* `resources/packages.py` against the *old*
-        # `dotfiles.resources` this process imported before the pull. Measured on
-        # macmini 2026-08-10: `ImportError: cannot import name 'advice_for'`, for
+        # `dotfiles.resources` this process imported before the pull. Measured
+        # 2026-08-10: `ImportError: cannot import name 'advice_for'`, for
         # a name that was present in the file on disk. Any update adding a name to
         # an eagerly-imported module and using it from a lazily-imported one does
         # this, so the fix is a fresh interpreter rather than an import order.

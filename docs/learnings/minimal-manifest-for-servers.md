@@ -9,7 +9,7 @@ at one installed the entire workstation payload — every npm/cargo/uv tool plus
 docker, ffmpeg, and other desktop packages a server never needs.
 
 A `ubuntu-lxc-server` platform once existed and was removed in `a3378fd9` as
-"never used." That was true at that instant. The homelab LXC fleet then made a
+"never used." That was true at that instant. A fleet of LXC containers then made a
 small Linux box the *most common* deployment target, so the rationale inverted and
 the gap bit repeatedly.
 

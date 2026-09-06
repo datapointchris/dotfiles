@@ -123,7 +123,7 @@ def test_a_local_override_elsewhere_is_not_this_checkouts_problem(
 
 def personal_identity_by_remote(gitconfig: Path, session: Session) -> None:
     """The nonfleet arrangement: an employer default, and personal repos matched
-    back to a second identity by their remote. What the work box actually runs."""
+    back to a second identity by their remote. What a nonfleet machine runs."""
     (gitconfig.parent / 'personal.gitconfig').write_text('[user]\n\tname = Chris\n\temail = chris@example.com\n')
     gitconfig.write_text(
         '[user]\n\tname = Work Self\n\temail = work@employer.com\n'

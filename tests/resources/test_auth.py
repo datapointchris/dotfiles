@@ -544,9 +544,9 @@ def test_a_bbkt_token_path_that_holds_nothing_is_reported(xdg: Path, fake_bin: P
 
 
 def test_a_jira_config_file_is_read_from_the_variable_that_names_it(xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The default path is upstream convention rather than measured — jira is the
-    work box's alone — so the override is what makes the probe correct there
-    whatever that default turns out to be."""
+    """The default path is upstream convention rather than measured — jira is
+    declared by a single machine — so the override is what makes the probe correct
+    there whatever that default turns out to be."""
     executable(fake_bin, 'jira')
     config = xdg / 'jira.yml'
     config.write_text('server: https://jira.example.com\n')

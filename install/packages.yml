@@ -1856,7 +1856,7 @@ flatpak_apps:
 # Installed via: brew install --cask <name>
 
 macos_casks:
-  # Not an App Store app, despite listing there: the build on both Macs is
+  # Not an App Store app, despite listing there: the build that arrives is
   # signed `Developer ID Application: Copilot Money, Inc.` with no _MASReceipt,
   # which is what the cask installs and what copilot.money serves. Declared as a
   # mas app it could never converge — mas cannot see a bundle it did not install.

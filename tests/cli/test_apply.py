@@ -366,7 +366,7 @@ def test_what_apply_cannot_repair_is_reported_and_does_not_move_the_exit_code(qu
 
     A machine-local value nobody has set and a file only safekeep restores are
     real findings and not this run's failures — exiting non-zero for them makes
-    every freshly-installed work box look broken between the install and the
+    every freshly-installed machine look broken between the install and the
     restore, which is the permanently-failed shape the verb split exists to end.
     """
     walked(monkeypatch, Walk(drift('WINDOWS_USER', repair=Repair.BY_HAND)))
@@ -649,7 +649,7 @@ def test_apply_reports_what_each_resource_cost_before_it_acts(
     quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:
     """An apply prints its rule and then measures the whole machine before writing
-    anything, so on the work box that stretch was minutes of blank screen with the
+    anything, so on a slow machine that stretch was minutes of blank screen with the
     rule already scrolled past. The summary row is the only thing that says which
     part of the machine the wait belonged to."""
     measured = Event('packages', Summary('all 96 declared packages are installed'), timing=Timing('', 291.4))

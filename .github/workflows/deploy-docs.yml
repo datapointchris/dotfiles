@@ -29,7 +29,8 @@ jobs:
 
       - run: uv sync
 
-      # Build once (strict) for the homelab hub artifact + validation.
+      # Build once (strict): the uploaded artifact and the validation both come
+      # from this run.
       - run: uv run mkdocs build --strict
 
       - uses: actions/upload-artifact@v4

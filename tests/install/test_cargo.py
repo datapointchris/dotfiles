@@ -479,7 +479,7 @@ def test_offline_cannot_install_the_precondition_and_says_which_repo(home, stage
 
 
 def test_the_precondition_builds_from_source_when_the_release_cannot_be_had(home, staged, crates, monkeypatch) -> None:
-    """The source build is the only path that works on the work box, where release
+    """The source build is the only path that works on a network where release
     asset downloads are blocked but crates.io is reachable."""
     monkeypatch.setattr(cargo.shutil, 'which', lambda name: None if name == 'cargo-binstall' else '/usr/bin/cargo')
     monkeypatch.setattr(effects, 'fetch', lambda *_args, **_kwargs: github_release.Fetched(False, REFUSED))

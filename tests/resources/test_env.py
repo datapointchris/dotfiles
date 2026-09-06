@@ -744,8 +744,8 @@ def test_a_required_value_is_answered_by_the_config_file(tmp_path: Path, unshell
 
 
 def test_a_value_the_config_answers_is_exported_so_a_shell_consumer_finds_it(tmp_path: Path, unshelled: Path) -> None:
-    """The whole point of answering it here: `~/homelab`'s pyinfra and shell entry
-    points read the environment, and a config key they do not know about would
+    """The whole point of answering it here: the pyinfra and shell entry points
+    outside this repo read the environment, and a config key they do not know about would
     leave them finding nothing while `dotfiles check` reported the machine sound."""
     registry = tmp_path / 'repos.json'
     registry.write_text('{"repos": []}\n')

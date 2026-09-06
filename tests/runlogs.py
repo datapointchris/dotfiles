@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 
 MACHINE = 'archlinux'
-OTHER = 'macmini'
+OTHER = 'debian'
 NAMESAKE = f'{MACHINE}-vm'
 """A second box whose name starts with this one's, so a selector that matched by
 prefix rather than by identity would claim its runs as well."""

@@ -218,7 +218,7 @@ does something `prefix w` cannot: it creates sessions from zoxide directories, c
 `fd` results, so it reaches places that have no running session at all.
 
 One pre-existing sesh behavior is worth knowing, because it shows up in the status line: since
-names come from the basename, two repos sharing one (`~/homelab` and `~/code/refs/homelab`)
+names come from the basename, two repos sharing one (`~/project` and `~/code/refs/project`)
 produce the same session name. Setting `dir_length = 2` in `sesh.toml` disambiguates them.
 
 Note also what `prefix s` lists. Most of its entries are not sessions: alongside the running ones it
