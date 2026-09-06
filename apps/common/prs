@@ -18,6 +18,11 @@ Enter on a row opens the action menu. A letter takes that action there and then,
 without the menu, and the footer names them — `m` is merge, which is the one
 worth pressing from the list, since the confirm it prints is the whole flow.
 
+The menu shows the PR's description rendered as markdown, and its own footer names
+the keys that scroll it. `p` fetches the forge's page instead, with the comment
+threads the listing does not carry, and `r` opens a Claude window running
+`/review-pr` on it.
+
 Lives in dotfiles rather than in fleet because every machine has this and only
 some have fleet. The data comes from `pull-requests`, the one place that knows how to
 ask a provider for PRs; this is the renderer, the picker and the window.
@@ -57,6 +62,7 @@ from pytermstyle import help_section
 from pytermstyle import help_text
 from pytermstyle import help_usage
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.text import Text
 
 # Days before a PR reads as stale, then as ignored. A PR is meant to be read the
@@ -84,6 +90,20 @@ DIFF_ICON = ''
 BROWSER_ICON = ''
 COMMENT_ICON = ''
 MERGE_ICON = ''
+# Each carries its codepoint in the comment beside it. These are private-use
+# characters, so a diff viewer, a clipboard, or a terminal without the font all
+# render them identically to each other and to nothing at all — the codepoint is
+# the only form of the name that reads anywhere and can be grepped for.
+PAGE_ICON = ''  # U+F15C file-text, beside FILES_ICON's file
+AUDIT_ICON = ''  # U+F41E octicon checklist, beside DIFF_ICON and MERGE_ICON
+CLOSE_ICON = ''  # U+F057 times-circle, the mate of CHECKS_ICON's check-circle
+
+# Picked against each font's cmap rather than by looking at a terminal. U+F544,
+# the Material robot and the obvious glyph for a review, is in none of the seven
+# Nerd Fonts installed here — and a glyph the font lacks draws as tofu, whose
+# width is the terminal's guess rather than one cell, so it takes the whole
+# column out of line for the same reason the paragraph above rules out emoji.
+# `fontTools.ttLib.TTFont(path).getBestCmap()` is what answers.
 
 CHECK_STYLES = {'SUCCESS': 'green', 'FAILURE': 'red', 'ERROR': 'red'}
 REVIEW_STYLES = {'APPROVED': 'green', 'CHANGES_REQUESTED': 'red', 'REVIEW_REQUIRED': 'cyan'}
@@ -376,18 +396,25 @@ class Action:
         return not self.providers or provider in self.providers
 
 
-# Ordered by how often each is wanted. Merge is last because it is the one that
-# cannot be undone, so the arrow keys reach it slowest; `m` reaches it at once
-# from anywhere, and the confirm it prints is what guards it.
+# Ordered by how often each is wanted, with the three reading actions first. The
+# two that change the pull request are last, so the arrow keys reach them
+# slowest; each is reachable at once by its letter from anywhere, and the confirm
+# each prints is what guards it. Merge sits below close because a closed PR
+# reopens and a merged one does not.
 #
 # Letters are the first letter of the thing, not of the label — `b` is the
 # branch and `o` is open-in-browser, because two actions starting with `b` would
-# make one of them arbitrary.
+# make one of them arbitrary. `x` for close is the one that names nothing: `c` is
+# already the comment, and `x` is what closes a thing everywhere else on a
+# keyboard, which beats a second arbitrary letter taken off `close`.
 ACTIONS = (
     Action('diff', 'd', DIFF_ICON, 'view diff', 'fetch the ref and open it in a tmux window'),
+    Action('page', 'p', PAGE_ICON, 'read the page', 'the forge page — body, checks and comments', frozenset({'github'})),
+    Action('review', 'r', AUDIT_ICON, 'claude review', 'open a Claude window running /review-pr on it'),
     Action('browser', 'o', BROWSER_ICON, 'open in browser', 'the pull request page on its forge'),
     Action('branch', 'b', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard'),
     Action('comment', 'c', COMMENT_ICON, 'comment', 'write one in $EDITOR and post it', frozenset({'github'})),
+    Action('close', 'x', CLOSE_ICON, 'close', 'close it unmerged — asks once, and enter is no', frozenset({'github'})),
     Action('merge', 'm', MERGE_ICON, 'merge', 'merge it — asks once, and enter is yes'),
 )
 
@@ -521,6 +548,34 @@ def shortcut_legend() -> Text:
     return line
 
 
+# The shift arrows are fzf's own defaults for `preview-up` and `preview-down` and
+# always were; what was missing was anything on screen saying so, so a description
+# longer than the pane read as one that had been truncated.
+#
+# The half-page pair has no default binding at all, so PREVIEW_BINDS below is what
+# puts it on ctrl-u and ctrl-d. Both letters are free here only because
+# `--no-input` removed the query line — with one, ctrl-u is unix-line-discard and
+# ctrl-d is delete-char/eof, which aborts fzf rather than scrolling anything.
+SCROLL_KEYS = (('shift-↑ shift-↓', 'scroll a line'), ('ctrl-u ctrl-d', 'scroll half a page'))
+
+PREVIEW_BINDS = 'ctrl-u:preview-half-page-up,ctrl-d:preview-half-page-down'
+
+
+def scroll_legend() -> Text:
+    """How to move the description, as a footer under the action menu.
+
+    Only under the menu, never under the list. The list has no preview to scroll,
+    and a footer naming keys that do nothing there is worse than no footer.
+    """
+    line = Text()
+    for index, (keys, what) in enumerate(SCROLL_KEYS):
+        if index:
+            line.append('   ')
+        line.append(keys, style='bold cyan')
+        line.append(f' {what}', style='dim')
+    return line
+
+
 def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
     """Run fzf over the rendered rows, and return the PR with any key pressed on it.
 
@@ -629,10 +684,34 @@ def describe(pr: PullRequest) -> Text:
     page.append('  into  ', style='dim')
     page.append(f'{pr.base}\n\n', style='blue')
     if pr.body.strip():
-        page.append(pr.body.rstrip())
+        page.append(rendered(pr.body))
     else:
         page.append('No description.', style='dim')
     return page
+
+
+def rendered(body: str) -> Text:
+    """A PR body as markdown rather than as the source someone typed.
+
+    A body here is written to be read — headings, fenced code, backticked paths,
+    bullets — and printed raw it arrives as `##` and backticks with no styling at
+    all, which is the same characters the author was trying to get away from.
+
+    Rendered locally out of the body the listing already carries, so opening the
+    menu costs nothing. Asking the forge for its own rendering is the `page`
+    action, which is a network round trip and therefore a thing you press rather
+    than something that happens on every arrow key.
+
+    Wrapped at TABLE_WIDTH, which the preview pane shares with the table above
+    it. Passing a width at all is the load-bearing part: `Console` falls back to
+    80 columns when it cannot see a terminal, and it cannot see one here, since
+    this renders into a temporary file that fzf `cat`s. Left to itself every body
+    would wrap at 80 inside a pane half again as wide.
+    """
+    console = Console(force_terminal=True, width=TABLE_WIDTH, soft_wrap=False)
+    with console.capture() as captured:
+        console.print(Markdown(body.rstrip()))
+    return Text.from_ansi(captured.get().rstrip('\n'))
 
 
 def action_line(action: Action, pr: PullRequest) -> Text:
@@ -676,20 +755,28 @@ def choose_action(pr: PullRequest) -> Action | None:
                 '--with-nth=2',
                 '--no-sort',
                 '--reverse',
-                '--gap',
+                # No `--gap` here, unlike the list. A blank line between rows costs
+                # one row per action, and eight actions plus their gaps overflow a
+                # list pane that is 35% of a popup 60% of the screen tall — merge,
+                # the last row, falls below the fold on an 83-row terminal. The
+                # rows are one line each and lead with a column of single letters,
+                # which is separation enough without spending a row on it.
                 '--border=none',
                 '--list-border=none',
                 '--input-border=none',
                 '--no-scrollbar',
-                # No search line here. Five fixed choices are an arrow-key list,
-                # not something you filter, and a prompt invites typing that then
-                # does nothing useful.
+                # No search line here. A short fixed list of choices is an
+                # arrow-key list, not something you filter, and a prompt invites
+                # typing that then does nothing useful.
                 '--no-input',
                 f'--expect={EXPECT}',
                 '--color=bg:-1,gutter:-1,preview-bg:-1',
                 '--pointer=',
                 '--marker=',
                 f'--padding=1,{SIDE_PAD}',
+                f'--footer={to_lines([scroll_legend()], color=True)[0]}',
+                '--footer-border=top',
+                f'--bind={PREVIEW_BINDS}',
                 '--preview',
                 f'cat {preview}',
                 '--preview-window=down,65%,wrap,border-top',
@@ -739,19 +826,11 @@ def open_review(pr: PullRequest) -> int:
     # Three-dot: from where the branch diverged to its tip, which is what the
     # forge shows. Two-dot would render commits the base gained since branching
     # as changes this PR reverted.
-    subprocess.run(
-        [
-            'tmux',
-            'new-window',
-            '-n',
-            f'pr {pr.repo} #{pr.number}',
-            '-c',
-            str(checkout),
-            f"nvim --listen '{socket}' -c 'DiffviewOpen origin/{base}...{ref}'",
-        ],
-        check=True,
+    return window(
+        f'diff {pr.repo} #{pr.number}',
+        f"nvim --listen '{socket}' -c 'DiffviewOpen origin/{base}...{ref}'",
+        cwd=checkout,
     )
-    return 0
 
 
 def in_repo(pr: PullRequest) -> Path | None:
@@ -783,6 +862,84 @@ def copy_branch(pr: PullRequest) -> int:
 def comment(pr: PullRequest) -> int:
     """GitHub only. bbkt has no comment verb at all — see `bbkt pr --help`."""
     return run(['gh', 'pr', 'comment', str(pr.number), '--repo', pr.slug])
+
+
+def read_page(pr: PullRequest) -> int:
+    """The forge's own rendering of the PR, in a pager in a tmux window.
+
+    `GH_FORCE_TTY` is what makes this worth having. gh prints a `key:\tvalue`
+    dump when it is not writing to a terminal and renders the real page — colored
+    header, state, branch, check rollup, and the body through its markdown
+    renderer — when it is,
+    and it is not writing to a terminal here because it is writing to a pager.
+    The width is passed rather than left as `100%`: gh measures the pipe, not the
+    window, and gets no width from it at all.
+
+    `--comments` is the reason this exists beside the menu's own preview. The
+    preview carries the body, which the listing already holds; the review threads
+    and the discussion are only on the forge, and this is the one action that
+    fetches them.
+
+    `less -R` rather than `bat`: this is already colored ANSI, and bat would be a
+    second thing deciding how to paginate what gh has finished formatting.
+    """
+    return window(
+        f'page {pr.repo} #{pr.number}',
+        f'GH_FORCE_TTY={TABLE_WIDTH} gh pr view {pr.number} --repo {pr.slug} --comments | less -R',
+        cwd=Path(pr.path) if pr.path else None,
+    )
+
+
+def claude_review(pr: PullRequest) -> int:
+    """A Claude window with `/review-pr` already typed, run where the PR lives.
+
+    A window rather than this process, because the review runs several agents and
+    takes minutes. Nothing here waits for it.
+
+    The session is new, so it holds nothing about how the code was written. That
+    is what the skill wants: a review carries weight only from a reader who did
+    not write the diff, and a session started from the picker has read none of it.
+
+    The repo is passed even though the window opens in the checkout. `prs` reaches
+    PRs across the whole registry, and the argument is what keeps the review on
+    the PR you pointed at when the directory says otherwise.
+    """
+    checkout = in_repo(pr)
+    if not checkout:
+        return fail(f'{pr.repo} is not checked out here, and a review needs the code')
+    return window(f'review {pr.repo} #{pr.number}', f"claude '/review-pr {pr.number} {pr.repo}'", cwd=checkout)
+
+
+def window(name: str, command: str, *, cwd: Path | None) -> int:
+    """Run a command in a new tmux window, named, and hand the terminal to it.
+
+    Shared by the three actions that open one. Each was `tmux new-window` written
+    out, and they disagreed about whether `-c` was passed at all — which decides
+    whether the window inherits the popup's directory or the repo's.
+    """
+    argv = ['tmux', 'new-window', '-n', name]
+    if cwd:
+        argv += ['-c', str(cwd)]
+    return run([*argv, command])
+
+
+def close(pr: PullRequest, *, interactive: bool) -> int:
+    """Closing asks once and defaults to no, which is the opposite of merge.
+
+    The asymmetry is deliberate and is about which mistake is recoverable. A merge
+    confirmed by reflex lands work that was going to land anyway; a close
+    confirmed by reflex discards a branch nobody reviewed, and the PR reopens but
+    the moment someone would have read it does not.
+
+    So this takes `y` and nothing else, and `--comment` is not offered: a close
+    worth explaining is worth explaining in the thread, where `c` already goes.
+    """
+    if interactive:
+        answer = input(f'close {pr.slug} #{pr.number} — {pr.title}?  [y/N] ')
+        if answer.strip().lower() not in {'y', 'yes'}:
+            print('left open')
+            return 0
+    return run(['gh', 'pr', 'close', str(pr.number), '--repo', pr.slug])
 
 
 def merge(pr: PullRequest, *, interactive: bool) -> int:
@@ -828,12 +985,18 @@ def perform(action: Action, pr: PullRequest, *, interactive: bool) -> int:
         return fail(f'{action.label} is not available on {pr.provider}')
     if action.name == 'diff':
         return open_review(pr)
+    if action.name == 'page':
+        return read_page(pr)
+    if action.name == 'review':
+        return claude_review(pr)
     if action.name == 'browser':
         return open_browser(pr)
     if action.name == 'branch':
         return copy_branch(pr)
     if action.name == 'comment':
         return comment(pr)
+    if action.name == 'close':
+        return close(pr, interactive=interactive)
     return merge(pr, interactive=interactive)
 
 
@@ -859,9 +1022,13 @@ def fail(message: str) -> int:
 def help_screen() -> None:
     """The screen, in the grammar every other tool on this PATH draws.
 
-    The key rows come off `ACTIONS` rather than being written out, so a sixth
-    action cannot arrive with a binding the screen does not mention. That is the
-    same tuple the menu and the footer are built from.
+    The key rows come off `ACTIONS` rather than being written out, so a new action
+    cannot arrive with a binding the screen does not mention. That is the same
+    tuple the menu and the footer are built from.
+
+    The scroll keys come off `SCROLL_KEYS` for the same reason, and are the one
+    set here that is not an action — they move the description rather than doing
+    anything to the pull request.
     """
     help_header('prs')
     help_text('Pick an open PR and open its diff in a tmux window.')
@@ -876,6 +1043,11 @@ def help_screen() -> None:
     for action in ACTIONS:
         help_row(action.key, action.label, action.detail)
     help_row('enter', '', 'open the action menu for the row under the cursor')
+
+    help_section('Reading the description')
+    help_text('In the action menu, where the description sits under the choices.')
+    for keys, what in SCROLL_KEYS:
+        help_row(keys, '', what)
 
     help_section('Options')
     help_row('-h, --help', '', 'show this screen')

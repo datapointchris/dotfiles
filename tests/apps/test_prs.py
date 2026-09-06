@@ -164,6 +164,14 @@ call=$((call + 1))
 printf '%s' "$call" >"$room/count"
 printf '%s\\n' "$@" >"$room/argv.$call"
 cat >"$room/fed.$call"
+# The description is written to a temp file the real fzf `cat`s and `prs` unlinks
+# on the way out, so running the preview command here is the only moment it can
+# be read. Without this the rendering is asserted on a path, which exists for as
+# long as the assertion takes to be wrong about it.
+preview=$(awk '/^--preview$/ {{ getline; print; exit }}' "$room/argv.$call")
+if [ -n "$preview" ]; then
+  sh -c "$preview" >"$room/preview.$call" 2>/dev/null || true
+fi
 if [ -s "$room/reply.$call" ]; then
   cat "$room/reply.$call"
   exit 0
@@ -192,6 +200,10 @@ class Session:
     def argv(self, call: int) -> list[str]:
         return (self.room / f'argv.{call}').read_text(encoding='utf-8').splitlines()
 
+    def preview(self, call: int) -> str:
+        """What the preview pane showed, captured by the stub while it existed."""
+        return (self.room / f'preview.{call}').read_text(encoding='utf-8')
+
 
 @pytest.fixture
 def session(tmp_path: Path, bin_dir: Path):
@@ -208,11 +220,14 @@ def session(tmp_path: Path, bin_dir: Path):
     room = tmp_path / 'fzf'
     room.mkdir()
 
-    def _session(*rows: dict[str, Any], replies: tuple[str, ...] = (), answer: str = '\n') -> Session:
+    def _session(*rows: dict[str, Any], replies: tuple[str, ...] = (), answer: str = '\n', refuses: bool = False) -> Session:
         stub_pr_list(bin_dir, rows)
         write_stub(bin_dir, 'fzf', FZF_STUB.format(room=room))
         write_stub(bin_dir, 'nvim', 'exit 0')
-        write_stub(bin_dir, 'tmux', 'exit 0')
+        # Echoes like `gh` below, because the three actions that open a window
+        # hand the terminal to tmux, so what it was asked to run is the only
+        # thing left to assert on.
+        write_stub(bin_dir, 'tmux', 'printf \'tmux %s\\n\' "$*"')
         write_stub(bin_dir, 'gh', 'printf \'gh %s\\n\' "$*"')
         for index, reply in enumerate(replies, start=1):
             (room / f'reply.{index}').write_text(reply)
@@ -231,7 +246,11 @@ def session(tmp_path: Path, bin_dir: Path):
         finally:
             os.close(terminal)
             os.close(controller)
-        assert result.returncode == 0, result.stderr
+        # `refuses` is a claim about the exit code, not a way of not making one.
+        # An action that declines has to say so *and* exit non-zero, and a test
+        # that only read stderr would pass on a refusal printed on the way to
+        # exit 0 — which is a run the caller's shell reads as having worked.
+        assert result.returncode == (1 if refuses else 0), result.stderr
         return Session(result.stdout, result.stderr, room)
 
     return _session
@@ -509,6 +528,86 @@ def test_an_answer_that_is_not_yes_leaves_the_pr_alone(session) -> None:
     assert 'gh pr merge' not in run.stdout
 
 
+def test_enter_does_not_close_a_pull_request(session) -> None:
+    """The confirm that guards close defaults the other way to the one that guards
+    merge. Enter is the key pressed by reflex, and the two actions differ in what
+    a reflex costs — a merge lands work that was going to land, a close discards a
+    branch nobody read."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'x'),), answer='\n')
+
+    assert 'left open' in run.stdout
+    assert 'gh pr close' not in run.stdout
+
+
+def test_close_takes_an_explicit_yes(session) -> None:
+    """Defaulting to no is only useful if yes still reaches the action."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'x'),), answer='y\n')
+
+    assert 'gh pr close 7 --repo datapointchris/dotfiles' in run.stdout
+
+
+def test_the_page_action_asks_gh_for_a_rendering_and_for_the_comments(session) -> None:
+    """Two things the menu's own preview cannot do. gh prints a `key: value` dump
+    unless it believes it is writing to a terminal, and the comment threads are on
+    the forge rather than in the listing this renders from."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'p'),))
+
+    assert 'GH_FORCE_TTY' in run.stdout
+    assert 'gh pr view 7 --repo datapointchris/dotfiles --comments' in run.stdout
+
+
+def test_the_review_action_opens_a_claude_window_on_that_pr(session) -> None:
+    """The number and the repo both travel. `prs` reaches PRs across the whole
+    registry, so the window's directory does not decide which one is reviewed."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'r'),))
+
+    assert '/review-pr 7 dotfiles' in run.stdout
+
+
+def test_a_review_needs_the_code_and_says_so_when_it_is_absent(session) -> None:
+    """A repo the registry names and this machine has not cloned. Launching Claude
+    in a directory that is not the repo would produce a review of whatever it
+    found there."""
+    run = session(pr('dotfiles', 7, 'a-branch', path=''), replies=(chose(0, 'r'),), refuses=True)
+
+    assert 'not checked out here' in run.stderr
+    assert 'review-pr' not in run.stdout
+
+
+def test_the_description_is_rendered_rather_than_printed_as_its_source(session) -> None:
+    """A body is written to be read. Printed raw it arrives as the markdown someone
+    typed, which is the characters they were trying to get away from."""
+    run = session(
+        pr('dotfiles', 7, 'a-branch', body='## What to look at\n\nthe `guard` in one place.'),
+        replies=(chose(0),),
+    )
+    shown = plain(run.preview(2))
+
+    assert 'What to look at' in shown
+    assert '##' not in shown
+
+
+def test_the_action_menu_names_the_keys_that_scroll_the_description(session) -> None:
+    """A description longer than the pane reads as a truncated one until something
+    on screen says it moves. The keys were bound before this and unnamed."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
+    footer = next(arg for arg in run.argv(2) if arg.startswith('--footer='))
+
+    assert 'shift-↑' in plain(footer)
+    assert 'ctrl-u ctrl-d' in plain(footer)
+
+
+def test_the_half_page_keys_are_bound_because_fzf_does_not_bind_them(session) -> None:
+    """fzf ships `preview-up` and `preview-down` on the shift arrows and leaves the
+    half-page pair unbound. Naming ctrl-d in the footer without binding it here
+    would advertise a key that aborts the picker."""
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
+    bound = next(arg for arg in run.argv(2) if arg.startswith('--bind='))
+
+    assert 'ctrl-d:preview-half-page-down' in bound
+    assert 'ctrl-u:preview-half-page-up' in bound
+
+
 def test_enter_on_a_row_still_opens_the_action_menu(session) -> None:
     """The letters are an accelerator, not a replacement. Arriving with no idea
     which action you want is what the menu is for, and it is still the default."""
@@ -524,8 +623,8 @@ def test_the_action_menu_names_the_key_that_takes_each_action(session) -> None:
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
     rows = [plain(row.split('\t', 1)[1]) for row in run.fed(2).splitlines()]
 
-    assert [row.split()[0] for row in rows] == ['d', 'o', 'b', 'c', 'm']
-    labels = ['view diff', 'open in browser', 'copy branch', 'comment', 'merge']
+    assert [row.split()[0] for row in rows] == ['d', 'p', 'r', 'o', 'b', 'c', 'x', 'm']
+    labels = ['view diff', 'read the page', 'claude review', 'open in browser', 'copy branch', 'comment', 'close', 'merge']
     assert all(label in row for label, row in zip(labels, rows, strict=True))
 
 
@@ -543,7 +642,7 @@ def test_the_list_binds_a_letter_for_every_action(session) -> None:
     action cannot arrive with a row and no key."""
     run = session(pr('dotfiles', 7, 'a-branch'))
 
-    assert '--expect=d,o,b,c,m' in run.argv(1)
+    assert '--expect=d,p,r,o,b,c,x,m' in run.argv(1)
 
 
 def test_the_list_names_its_keys_in_a_footer(session) -> None:
