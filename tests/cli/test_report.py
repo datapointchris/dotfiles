@@ -25,6 +25,7 @@ from dotfiles.commands import report
 from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.main import app
+from dotfiles.output import NEED_ATTENTION
 from dotfiles.plan import Stage
 from dotfiles.resources import Change
 from dotfiles.resources import Outcome
@@ -54,6 +55,12 @@ def runs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def change(item: str, verdict: Verdict) -> Change:
     return Change('packages', Stage.TOOLS, item, verdict, repair=Repair.AUTOMATIC)
+
+
+def by_hand(item: str, resource: str = 'env') -> Change:
+    """An item that differs and only a person can repair. `BY_HAND` refuses to
+    construct without advice, which is why this is a helper rather than a literal."""
+    return Change(resource, Stage.ENVIRONMENT, item, Verdict.MISSING, repair=Repair.BY_HAND, advice=f'set {item}')
 
 
 def recorded(runs_dir: Path, *events: Event, verb: str = 'apply') -> Path:
@@ -216,8 +223,11 @@ def test_the_json_list_carries_the_same_outcome_the_table_prints(runs_dir: Path)
     assert result.exit_code == 0
     rows = json.loads(result.stdout)
     assert rows, result.stdout
-    assert set(rows[0]) == {'run', 'machine', 'host', 'verb', 'outcome'}
+    assert set(rows[0]) == {'run', 'machine', 'host', 'verb', 'verdict', 'unconverged', 'attention', 'outcome'}
     assert 'unconverged' in rows[0]['outcome']
+    # `show --json` is the record and nothing else, so this row is the only door
+    # the word the rendering leads with is reachable through.
+    assert rows[0]['verdict'] == 'issue'
 
 
 def test_the_json_list_says_ok_for_a_run_with_nothing_wrong(runs_dir: Path) -> None:
@@ -226,3 +236,107 @@ def test_the_json_list_says_ok_for_a_run_with_nothing_wrong(runs_dir: Path) -> N
     rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
 
     assert rows[0]['outcome'] == 'ok'
+
+
+def test_a_check_that_found_something_only_a_person_can_fix_does_not_say_ok(runs_dir: Path) -> None:
+    """The failure this listing exists to stop. A `check` attempts no writes, so
+    an item only a person can repair is the only fault it can find — and this cell
+    is what `doit dashboard` reads to decide a box needs a look."""
+    recorded(runs_dir, Event('env', by_hand('FRESHRSS_URL')), verb='check')
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+
+    assert rows[0]['verdict'] == 'issue'
+    assert rows[0]['outcome'] == f'1 {NEED_ATTENTION}: env/FRESHRSS_URL'
+
+
+def test_drift_is_not_reported_as_something_needing_attention(runs_dir: Path) -> None:
+    """An item `apply` repairs is not a fault. Listed here, every machine between
+    two applies reads as needing a look and the column stops being read."""
+    recorded(runs_dir, Event('packages', change('zk', Verdict.MISSING)), verb='plan')
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+
+    assert rows[0]['verdict'] == 'drift'
+    assert rows[0]['outcome'] == 'ok'
+
+
+def test_one_failed_write_is_counted_once_rather_than_at_both_altitudes(runs_dir: Path) -> None:
+    """A failed write is recorded as an Issue at the resource and an outcome at
+    the item, both on purpose. The item row names which one, so the resource row
+    has nothing left to add and the two are one fault."""
+    recorded(runs_dir, Event('packages', Outcome(change('zk', Verdict.MISSING), OutcomeStatus.FAILED, 'pacman exited 1')))
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+
+    assert rows[0]['outcome'] == '1 unconverged: packages/zk'
+
+
+def test_a_resource_that_refused_is_still_named_when_no_item_covers_it(runs_dir: Path) -> None:
+    """A checker that crashed produces an Issue and no outcome at all, so nothing
+    is naming that resource except the Issue itself."""
+    recorded(runs_dir, Event('packages', Refusal('pacman is not installed')), verb='check')
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+
+    assert rows[0]['outcome'] == '1 unconverged: packages'
+
+
+def test_a_refusal_survives_a_failed_install_in_the_same_resource(runs_dir: Path) -> None:
+    """The two Issue writers land at the same address. A failed outcome writes one
+    the item row already names; a `Refusal` writes one nothing else names, and the
+    raising item survives only inside a message no cell renders. Dropping by
+    address alone loses the second whenever the first is present."""
+    recorded(
+        runs_dir,
+        Event('packages', Outcome(change('zk', Verdict.MISSING), OutcomeStatus.FAILED, 'pacman exited 1')),
+        Event('packages', Refusal('pacman is not installed')),
+    )
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+
+    assert rows[0][report.UNCONVERGED_KIND] == ['packages', 'packages/zk']
+    assert rows[0]['outcome'] == '2 unconverged: packages, packages/zk'
+
+
+def test_the_json_row_carries_both_buckets_entire(runs_dir: Path) -> None:
+    """The cell names three and the row is the machine door. Recovering the rest
+    from the sentence means reimplementing the fold that produced it."""
+    unset = [f'FRESHRSS_{name}' for name in ('URL', 'LOGIN', 'PASSWORD', 'TOKEN', 'PORT')]
+    recorded(runs_dir, *(Event('env', by_hand(name)) for name in unset), verb='check')
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+
+    assert rows[0][report.ATTENTION_KIND] == sorted(f'env/{name}' for name in unset)
+    assert rows[0]['outcome'].startswith(f'5 {NEED_ATTENTION}: ')
+    assert '…' not in rows[0]['outcome'], 'the count leads and the run column is the handle'
+
+
+def test_an_unreadable_row_carries_the_same_keys_as_a_readable_one(runs_dir: Path) -> None:
+    """`runs/` is shared, so a truncated record is least surprising and least
+    acceptable to omit. A consumer reading the buckets must not have to branch on
+    whether a row parsed."""
+    good = recorded(runs_dir, Event('env', by_hand('FRESHRSS_URL')), verb='check')
+    (runs_dir / '20260810T150000Z-wsl-work-workstation-check.json').write_text('{"id": "abc')
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+    broken = next(row for row in rows if row['outcome'] == 'unreadable')
+
+    assert set(broken) == set(next(row for row in rows if row['run'] == good.stem))
+    assert broken[report.UNCONVERGED_KIND] == []
+    assert broken[report.ATTENTION_KIND] == []
+
+
+def test_both_kinds_of_fault_are_named_rather_than_one_of_them(runs_dir: Path) -> None:
+    """A failed write and an unset value take different repairs, so a cell showing
+    whichever sorted first sends a reader away having fixed one of them."""
+    recorded(
+        runs_dir,
+        Event('packages', Outcome(change('zk', Verdict.MISSING), OutcomeStatus.FAILED, 'pacman exited 1')),
+        Event('env', by_hand('FRESHRSS_URL')),
+        verb='apply',
+    )
+
+    rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)
+
+    assert rows[0]['outcome'] == f'1 unconverged: packages/zk; 1 {NEED_ATTENTION}: env/FRESHRSS_URL'

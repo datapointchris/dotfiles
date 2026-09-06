@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import dataclasses
 import datetime as dt
+import enum
 import json
 import time
 import uuid
@@ -38,8 +39,11 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from dotfiles import paths
+from dotfiles import vocabulary
 from dotfiles.refusal import Refusal
-from dotfiles.resources import Verdict
+from dotfiles.resources import ACTED
+from dotfiles.resources import UNCONVERGED
+from dotfiles.results import ResourceVerdict
 
 SCHEMA = 4
 
@@ -50,6 +54,89 @@ SCHEMA = 4
 # and one codebase carrying two ordering words is what made every mention of
 # either ambiguous. These sit *inside* one provider's `perform`, below a stage.
 STEPS = ('observe', 'fetch', 'verify', 'extract', 'act')
+
+
+class Intention(enum.StrEnum):
+    """What a run meant to do about one measured item, as `action` spells it.
+
+    `action` carries two vocabularies, and this is the half that reaches it
+    through a `Change`. `OutcomeStatus` is the other half and is what `perform`
+    did, so nothing here ever reaches `perform`.
+
+    Named here rather than at the one function that picks a word, because a reader
+    comparing against one of these has no enum to compare against otherwise — and
+    two modules spelling the same literal drift apart with nothing failing.
+    """
+
+    UNMEASURED = 'unmeasured'
+    """No evidence either way. Neither verb's answer, and it moves no verdict."""
+
+    DECLINED = 'declined'
+    """The item differs and `apply` cannot repair it, so a person has to."""
+
+    PLANNED = 'planned'
+    """The item differs and `apply` would repair it."""
+
+    OBSERVED = 'observed'
+    """Looked at, and nothing about it is being claimed. Also the resource's own
+    summary row, which carries what measuring the whole resource cost."""
+
+
+EXAMINED = 'examined'
+"""The `verdict` a resource's own summary row carries, and not a `Verdict` member.
+
+A resource row says the resource was looked at and claims nothing about any item,
+so no member of an item vocabulary fits it. **It shares `outcomes` with the item
+rows anyway**, which is the standing trap: a reader folding item verdicts matches
+it against nothing and gets a well-formed wrong answer, on every record, since
+every record carries one row of this per resource. `RunRecord.verdict` reads
+`action` for that reason.
+"""
+
+WRITE_FAILED = frozenset({str(status) for status in UNCONVERGED})
+"""`UNCONVERGED` as `RunOutcome.action` spells it: a write that did not take.
+
+An action is a bare string, and `sinks.intention` writes values that are
+deliberately not `OutcomeStatus` members at all, so the comparison is against
+text. **Derived rather than written out a second time** — written out, this half
+said `{FAILED, REFUSED}` and silently disagreed with `Outcome.ok` in both
+directions. Read it here rather than assembling it again: a second module
+building the same set is the same defect one module over.
+"""
+
+UNREPAIRABLE = WRITE_FAILED | {str(Intention.DECLINED)}
+"""Every `action` meaning the item is wrong and no further `apply` will fix it.
+
+The two halves arrive by different routes and mean the same thing to a reader.
+`WRITE_FAILED` is a write that was attempted and did not take; `DECLINED` is a
+write that was never going to be attempted. Both leave an item differing from the
+declaration with nothing scheduled to change that, which is `ResourceVerdict.ISSUE`.
+"""
+
+REPAIRABLE = frozenset({str(status) for status in ACTED}) | {str(Intention.PLANNED)}
+"""Every `action` meaning the item differed and `apply` is what closes it.
+
+`PLANNED` is the intention and `ACTED` is the same finding after the write, so a
+`plan` and the `apply` that followed it grade one machine the same way.
+
+**Both halves, rather than the intention alone.** An apply writes the `Change` and
+the `Outcome` for one item, so `PLANNED` alone answers correctly here only while
+that pairing holds — and nothing enforces it. Each row says enough on its own.
+"""
+
+NEUTRAL = frozenset({str(Intention.UNMEASURED), str(Intention.OBSERVED)})
+"""Every `action` that grades nothing, named so the remainder is not a fallthrough.
+
+An unmeasurable item is not drift — a cold release cache makes every declared
+release unmeasurable at once — and an `OBSERVED` row is a resource saying it
+looked. Neither moves a verdict.
+
+**Named rather than left to fall through**, because the fallthrough is the
+permissive answer: an `Intention` member added later and forgotten would grade a
+faulty machine `converged`, which is the failure `RunRecord.verdict` exists to
+close. `test_the_three_action_sets_partition_the_vocabulary` is what fails when
+one is added, and it names which two are deliberately outside a verdict.
+"""
 
 
 def _now() -> dt.datetime:
@@ -82,6 +169,17 @@ class Identity:
     """
 
     @property
+    def box(self) -> str:
+        """Which machine this runs on, as well as an identity can say.
+
+        The same fallback `RunRecord.box` makes and for the same reason: an
+        identity built by hand carries no host, and the manifest answers correctly
+        for the three boxes that do not share one. Named here so the filename and
+        the event stream cannot disagree about which value they carry.
+        """
+        return self.host or self.machine
+
+    @property
     def stem(self) -> str:
         """The name both files share, minus the extension.
 
@@ -94,7 +192,7 @@ class Identity:
         manifest, the two Macs' records were one indistinguishable stream, and
         neither `--machine` nor the per-machine streak count could separate them.
         """
-        return f'{self.started.strftime("%Y%m%dT%H%M%SZ")}-{self.host or self.machine}-{self.verb}'
+        return f'{self.started.strftime("%Y%m%dT%H%M%SZ")}-{self.box}-{self.verb}'
 
 
 def begin(machine: str, verb: str, started: dt.datetime | None = None, host: str | None = None) -> Identity:
@@ -208,21 +306,39 @@ class RunRecord:
         self.issues.append(Issue(address=address, kind=kind, message=message))
 
     @property
-    def converged(self) -> bool:
-        """Whether this run found the machine already matching what it declares.
+    def verdict(self) -> ResourceVerdict:
+        """What the walk found, graded in the vocabulary `reconcile.worst` uses.
 
-        Not whether it left it that way, which is a different question and is
-        `commands/report._unsuccessful`'s. That split is deliberate and documented
-        there: this is the right answer for `show`, whose reader is looking at one
-        run, and the wrong one for a list, where it would mark a healthy apply that
-        repaired something the same as a run that could not examine a resource at all.
+        Not what the run left behind, which is `report.outstanding`'s question. An
+        apply that repaired two things found a machine that differed, and reading
+        this as the state afterwards marks it the same as a run that could not
+        examine a resource at all.
 
-        Compared against the enum rather than a literal spelling of it. This read
-        `'MATCHED'` for as long as it existed and was therefore never true:
-        `Verdict` is a `StrEnum` whose values are lower case, so every record ever
-        written said drift — including the ones that had nothing wrong with them.
+        **Not the verb's answer either, and that is the distinction to hold.** A
+        verb answers under one lens and exits on it: `plan` keeps what `apply` can
+        repair, so a plan over a box with three unset values closes `converged` and
+        exits 0 while this reads `issue`. Both are true about one walk. The record
+        is a transcript — `sinks.record` keeps every `Change` the engine yielded,
+        under both lenses — so it can answer a question the verb did not ask, and
+        `cli-design.md` § "A verb that measures returns what it found, and drift is
+        not a failure" is why the verb must not start answering this one instead.
+
+        **Graded over the walk rather than the lens, because a fold across the
+        directory cannot choose which verb ran last.** `doit dashboard` takes the
+        newest record per box whatever wrote it, so a lens-scoped grade would
+        report a box clean whenever its last run happened to be a `plan`, which is
+        the failure this property exists to close arriving through another verb.
+
+        **Read off `action`, never off the item verdict.** An action says what the
+        run decided about a row and a verdict says what the world is, so `declined`
+        and `planned` are both `MISSING` with opposite consequences. `EXAMINED` is
+        the other half of why: a resource row carries no item verdict to compare.
         """
-        return not self.issues and all(outcome.verdict == Verdict.MATCHED for outcome in self.outcomes)
+        if self.issues or any(outcome.action in UNREPAIRABLE for outcome in self.outcomes):
+            return ResourceVerdict.ISSUE
+        if any(outcome.action in REPAIRABLE for outcome in self.outcomes):
+            return ResourceVerdict.DRIFT
+        return ResourceVerdict.CONVERGED
 
 
 class Stopwatch:
@@ -357,12 +473,17 @@ def list_runs(
     `0` asks for nothing, which is a distinction a falsy test cannot make — and
     the caller computing its own bound, `--limit "$(remaining)"`, is the one that
     reaches zero.
+
+    `names_a_run` runs before the sort, not only inside the `machine` filter. The
+    filter is optional and this listing is what every other reader is built on, so
+    a foreign `.json` skipped only when someone narrows is a foreign `.json` in the
+    default answer.
     """
     directory = runs_dir or paths.RUNS_DIR
     if not directory.exists():
         return []
 
-    found = sorted(directory.glob('*.json'), reverse=True)
+    found = sorted((path for path in directory.glob('*.json') if names_a_run(path.stem)), reverse=True)
     if machine:
         found = [path for path in found if machine_of(path.stem) == machine]
     if verb:
@@ -370,15 +491,46 @@ def list_runs(
     return found if limit is None else found[:limit]
 
 
+def names_a_run(stem: str) -> bool:
+    """Whether a filename is one `Identity.stem` produced.
+
+    **A predicate over the shape this module writes, never a list of the shapes to
+    skip.** `runs/` is replicated between machines, so what lands beside a record
+    is not this repo's to enumerate — a losing write is set aside whole as
+    `<name>.sync-conflict-<date>-<device>.json`, and an editor, a backup or a
+    person can leave anything else. Each arrives as a plausible row: it globs, it
+    sorts, and `machine_of` reads a machine name out of it.
+
+    Both ends are checked because both are load-bearing. `list_runs` sorts on the
+    name alone and reads no files, so a stem whose timestamp is not one orders
+    wrongly against every real record; and the verb is what a conflict copy loses,
+    since the device id lands where `check` was.
+
+    **A record that will not parse still passes here**, and has to: a truncated
+    write leaves a valid name and a broken body, and `report list` renders it as
+    `unreadable` on purpose rather than omitting it. This answers about the name.
+    """
+    stamp, _, rest = stem.partition('-')
+    machine, _, verb = rest.rpartition('-')
+    if not machine or verb not in vocabulary.RECONCILE_VERBS:
+        return False
+    try:
+        dt.datetime.strptime(stamp, '%Y%m%dT%H%M%SZ')
+    except ValueError:
+        return False
+    return True
+
+
 def machine_of(stem: str) -> str:
     """The machine a run filename names, or '' where the name is not a run's.
 
     The stem is `<timestamp>-<machine>-<verb>` and a machine name carries hyphens
-    of its own, so the machine is what remains after both ends come off. A name
-    with no middle is not a run record: `runs/` is a synced directory anything
-    can drop a `.json` into, and a filter asked about such a file answers that it
-    does not match, which is the only answer a filter has.
+    of its own, so the machine is what remains after both ends come off. A filter
+    asked about a name that is not a record answers that it does not match, which
+    is the only answer a filter has.
     """
+    if not names_a_run(stem):
+        return ''
     _, _, rest = stem.partition('-')
     machine, _, _ = rest.rpartition('-')
     return machine
@@ -402,7 +554,7 @@ def list_event_logs(runs_dir: Path | None = None, *, machine: str | None = None,
     if not directory.exists():
         return []
 
-    found = sorted(directory.glob('*.jsonl'), reverse=True)
+    found = sorted((path for path in directory.glob('*.jsonl') if names_a_run(path.stem)), reverse=True)
     if machine:
         found = [path for path in found if machine_of(path.stem) == machine]
     return found if limit is None else found[:limit]

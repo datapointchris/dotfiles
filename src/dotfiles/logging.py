@@ -205,13 +205,19 @@ def configure(event_log: Path | None = None) -> None:
     )
 
 
-def bind_run(run_id: str, machine: str) -> None:
+def bind_run(run_id: str, host: str) -> None:
     """Stamp every later event with the run it belongs to.
 
     Through contextvars rather than a bound logger passed around, so a function
     deep in a provider logs the run id without taking it as an argument.
+
+    **`host`, because that is the value, and `machine` is taken.** The run record
+    and `status-<box>.json` both key `machine` on the manifest, and two boxes share
+    one — so a stream keyed on the box under that word puts one Mac's stream and
+    its record in different groups of any fold across the directory the fleet
+    shares.
     """
-    structlog.contextvars.bind_contextvars(run_id=run_id, machine=machine)
+    structlog.contextvars.bind_contextvars(run_id=run_id, host=host)
 
 
 def clear_run() -> None:

@@ -52,9 +52,10 @@ def timed(**steps) -> runs.Timing:
 
 def a_run(machine='macos-personal-workstation', verb='apply', host=None) -> runs.RunRecord:
     """Verdicts and actions spelled by the enums the writer serializes, never by
-    hand. `converged` compared against a hand-typed `'MATCHED'` for its whole life
-    and was therefore never true, and this fixture typing the same word is the
-    reason no test noticed.
+    hand. A fixture typing its own words agrees with whatever it typed, so the
+    shape the writer emits is the one thing a record built here cannot check —
+    which is why every property read off `action` is pinned in
+    `tests/cli/test_sinks.py` instead, against records `sinks.record` produced.
 
     `host` is explicit rather than left to default, because the default is the
     real hostname of whatever box runs the suite — which put `archlinux` in the
@@ -62,7 +63,7 @@ def a_run(machine='macos-personal-workstation', verb='apply', host=None) -> runs
     """
     record = runs.start(runs.begin(machine, verb, host=machine if host is None else host), flags={'skip': ['system']})
     record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(observe=1, fetch=1, act=1))
-    record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
+    record.record_outcome('symlinks', runs.EXAMINED, str(runs.Intention.OBSERVED), timed(observe=1))
     record.record_issue('packages/github/yq', 'checksum', 'no checksum published')
     return runs.finish(record)
 
@@ -143,21 +144,6 @@ class TestRoundTrip:
 
         assert stopwatch.steps['fetch'] > first
         assert list(stopwatch.finish().steps) == ['fetch']
-
-
-class TestConvergence:
-    def test_a_run_with_an_issue_has_not_converged(self, runs_dir):
-        assert not a_run().converged
-
-    def test_a_run_where_everything_matched_has_converged(self):
-        record = runs.start(runs.begin('m', 'check'))
-        record.record_outcome('symlinks/common', str(Verdict.MATCHED), 'planned', timed(observe=1))
-        assert runs.finish(record).converged
-
-    def test_a_run_that_changed_something_has_not_converged(self):
-        record = runs.start(runs.begin('m', 'apply'))
-        record.record_outcome('packages/github/fzf', str(Verdict.STALE), str(OutcomeStatus.DONE), timed(act=1))
-        assert not runs.finish(record).converged
 
 
 class TestSpan:
@@ -315,3 +301,63 @@ class TestListing:
 
         assert runs.latest() == written, 'the default read has to find the link the write left'
         assert runs.latest(runs_dir) == written
+
+
+class TestForeignFilesInTheSharedDirectory:
+    """`runs/` is replicated between machines, so what lands beside a record is not
+    this repo's to enumerate. Every listing answers about the names this module
+    writes, not about everything that globs.
+    """
+
+    def test_a_sync_conflict_copy_is_not_a_run(self, runs_dir):
+        """The shape a losing write is set aside as when two boxes write one path,
+        which `status-macmini.json` took ten of. The device id lands where the verb
+        was, so a name that looks like a record all the way to the last token is
+        not one.
+        """
+        written = runs.write(a_run(verb='check'), runs_dir)
+        conflict = runs_dir / f'{written.stem}.sync-conflict-20260816-055721-OY2JXOX.json'
+        conflict.write_text(written.read_text())
+
+        assert runs.list_runs(runs_dir) == [written]
+        assert runs.machine_of(conflict.stem) == ''
+
+    def test_a_record_that_will_not_parse_is_still_listed(self, runs_dir):
+        """A truncated write leaves a valid name and a broken body, and `report
+        list` renders that as `unreadable` rather than omitting it. The predicate
+        answers about the name, so it must not take this one out."""
+        written = runs.write(a_run(verb='check'), runs_dir)
+        truncated = runs_dir / '20260816T133615Z-macmini-check.json'
+        truncated.write_text('{"id": "abc')
+
+        assert set(runs.list_runs(runs_dir)) == {written, truncated}
+
+    @pytest.mark.parametrize(
+        'name',
+        [
+            'notes.json',
+            '20260816T133615Z-macmini.json',
+            '20260816T133615Z-macmini-search.json',
+            'yesterday-macmini-check.json',
+            '20260816-macmini-check.json',
+        ],
+        ids=['no-structure', 'no-verb', 'not-a-recording-verb', 'no-timestamp', 'wrong-timestamp-shape'],
+    )
+    def test_a_name_this_module_never_writes_is_not_a_run(self, runs_dir, name):
+        """Both ends are load-bearing. `list_runs` sorts on the name and reads no
+        file, so a stem whose timestamp is not one orders wrongly against every
+        real record."""
+        written = runs.write(a_run(verb='check'), runs_dir)
+        (runs_dir / name).write_text('{}')
+
+        assert runs.list_runs(runs_dir) == [written]
+
+    def test_a_foreign_event_log_is_not_followed(self, runs_dir):
+        """`latest_event_log` is what a follow pane narrates. Pointed at a conflict
+        copy it would narrate a run that already finished on another box."""
+        mine = runs_dir / '20260816T133615Z-thisbox-check.jsonl'
+        mine.write_text('{}\n')
+        (runs_dir / '20260816T140000Z-thisbox-check.sync-conflict-20260816-055721-OY2JXOX.jsonl').write_text('{}\n')
+
+        assert runs.list_event_logs(runs_dir) == [mine]
+        assert runs.latest_event_log(runs_dir, machine='thisbox') == mine

@@ -55,13 +55,17 @@ alternative is a dependency, and the directory holds a handful of files.
 """
 
 RENDERED_ELSEWHERE = frozenset(
-    {'timestamp', 'level', 'logger', 'event', 'run_id', 'machine', 'resource', 'item', 'seconds', 'returncode', 'ok'}
+    {'timestamp', 'level', 'logger', 'event', 'run_id', 'host', 'machine', 'resource', 'item', 'seconds', 'returncode', 'ok'}
 )
 """Fields the row gives their own column or trailer, so the detail does not repeat them.
 
 The timing three are here for that reason and not because they are structural:
 `measured` carries `seconds` as an ordinary field and rendered it twice, once in
-the `key=value` fallback and once in the trailer that formats it."""
+the `key=value` fallback and once in the trailer that formats it.
+
+`host` and `machine` are both here, and only one of them is written. Streams are
+kept indefinitely in a directory the fleet shares, so the ones already on disk
+carry the box under the other word and would start rendering as detail."""
 
 
 def _resolve(identifier: str | None) -> Path:

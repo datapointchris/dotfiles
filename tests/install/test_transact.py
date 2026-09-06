@@ -81,7 +81,7 @@ def test_a_manager_that_exits_zero_and_installs_nothing_is_not_done(fake_bin: Pa
 
 @pytest.mark.usefixtures('install_succeeds')
 def test_an_absent_install_is_not_ok_so_the_run_reports_it(fake_bin: Path, unprivileged: Privilege) -> None:
-    """`ok` is what decides the tick and what `_unsuccessful` collects. An outcome
+    """`ok` is what decides the tick and what `_standing` collects. An outcome
     that reads as success here is the original defect with a new name on it."""
     pacman_holding(fake_bin, 'curl')
 

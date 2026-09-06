@@ -38,7 +38,7 @@ def open_log(identity: runs.Identity) -> None:
         logging.configure(event_log=runs.event_log_path(identity))
     except OSError:
         logging.configure()
-    logging.bind_run(identity.id, identity.host or identity.machine)
+    logging.bind_run(identity.id, identity.box)
 
 
 def intention(change: Change) -> str:
@@ -50,13 +50,14 @@ def intention(change: Change) -> str:
     those `planned` makes the record claim work nobody intended.
 
     Not members of `OutcomeStatus`: that enum is what `perform` did, and none of
-    these reaches `perform`.
+    these reaches `perform`. `runs.Intention` is the enum they are, named there
+    because `RunRecord.verdict` compares against two of them.
     """
     if change.unmeasured:
-        return 'unmeasured'
+        return str(runs.Intention.UNMEASURED)
     if change.declined:
-        return 'declined'
-    return 'planned' if change.actionable else 'observed'
+        return str(runs.Intention.DECLINED)
+    return str(runs.Intention.PLANNED if change.actionable else runs.Intention.OBSERVED)
 
 
 def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None = None) -> runs.RunRecord:
@@ -95,7 +96,7 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
                 # cost: an inventory is one query per manager rather than one per
                 # package, so the time belongs to the resource and attributing a
                 # share of it to each item would be inventing a number.
-                written.record_outcome(event.resource, 'examined', 'observed', _timing(event))
+                written.record_outcome(event.resource, runs.EXAMINED, str(runs.Intention.OBSERVED), _timing(event))
             case Started():
                 # A record is what was found, and this is the announcement that
                 # nothing has been found yet. Named rather than left to fall

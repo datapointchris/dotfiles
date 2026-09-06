@@ -77,7 +77,7 @@ def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -
     return True
 
 
-STATE_VERSION = 1
+STATE_VERSION = 2
 """Which generation of the status *file* this is.
 
 Its own number because it is its own artifact. The two were one while `record`
@@ -86,10 +86,17 @@ the rows: a bump made for the interchange document reached a file that had no
 reader for them. A shared number cannot say that one of two shapes moved, which
 is the whole job a version has.
 
-Still 1, and honestly so — this file holds exactly what it held before the
-document grew rows, so anything already reading one keeps working. `runs.SCHEMA`
-is the same arrangement for the run record: one artifact, one number, moved when
-that artifact changes and never because a neighbor did.
+**2 names the box; 1 named only the manifest.** Additive per key, and additive is
+not the test — the test is whether a consumer can *state* which generation it
+needs. A reader folding the fleet's files by machine needs 2: under 1 the only
+identity in the document is `machine`, and macmini and mbp both write
+`macos-personal-workstation` into it, so the two Macs are one row and whichever
+was read last wins. Recovering the box from the filename instead is the half
+mechanism `standards/data.md` § "A reader of a shared directory selects by the
+key that made the writes unique" exists to refuse.
+
+`runs.SCHEMA` is the same arrangement for the run record: one artifact, one
+number, moved when that artifact changes and never because a neighbor did.
 """
 
 VERSION = 2
@@ -152,11 +159,11 @@ def document(
 def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> dict[str, object]:
     """What `status.json` holds: every resource's verdict, its counts, and the time.
 
-    The same header as `document` and `as_counts` in place of `as_dict`, which is
-    the whole difference. Both cross machines and both are versioned; what they
-    are not is one artifact, and writing the document here made every scheduled
-    check push 127 KB into a replicated directory to answer a question — is this
-    machine converged — that 2.8 KB answers.
+    `as_counts` in place of `as_dict` is the whole difference from `document`.
+    Both cross machines and both are versioned; what they are not is one artifact,
+    and writing the document here made every scheduled check push 127 KB into a
+    replicated directory to answer a question — is this machine converged — that
+    2.8 KB answers.
 
     A caller wanting the items asks for them: `dotfiles check --json > wherever`
     is the composed-on-request half, and it is the same walk through a door that
@@ -167,11 +174,20 @@ def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) ->
     `verb` is here and constant, because only `check` writes this file — kept so
     the file says what produced it rather than leaving a reader to infer it from
     the filename.
+
+    **`host` is the key the filename was already split on, said again inside.**
+    `machine` is the manifest and two boxes legitimately share one, so it cannot
+    tell macmini's file from mbp's — and both of them write it. A reader folding
+    the directory has to match on the thing that made the writes unique, and a
+    discriminator reaching only the name gives it nothing to match. Plainly rather
+    than as `publishing.discriminator`'s digest: this file stays inside the
+    fleet's own synced folder, where the hostname is published on purpose.
     """
     return {
         'version': STATE_VERSION,
         'verb': 'check',
         'machine': machine,
+        'host': paths.MACHINE_ID,
         'checked': when.isoformat(),
         'verdict': _worst(results),
         'resources': [result.as_counts() for result in results],
