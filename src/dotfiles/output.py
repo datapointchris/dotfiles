@@ -68,6 +68,17 @@ class Phrase(StrEnum):
     tuple gathering those constants for the guard to walk is a second copy of the
     set, and a phrase left out of it narrows the guard in silence.
 
+    **Most of these wordings are killed by no test, and that is the intended
+    state.** `task test:mutation:diff` classifies a member's value as `logic`, so
+    each one is planted and most survive. Asserting on them is what
+    `testing.md` § "Never assert on rendered output" forbids, and the survivor
+    list is what a table of unassertable prose looks like from inside the harness.
+    The exceptions are deliberate and there are two, both pinning a spelling that
+    nothing else can catch: `tests/cli/test_reconcile.py` writes out
+    `need attention` and `tests/cli/test_apply.py` writes out `needs attention`.
+    A third assertion added to raise the score is the fault this note exists to
+    stop.
+
     **What refuses a wording typed at a call site is the annotation, not a test.**
     `counted_phrase`, `tally` and `reconcile._clause` each take a `Phrase`, so a
     literal is an argument-type error under `uv run mypy .` — a whole-repo
