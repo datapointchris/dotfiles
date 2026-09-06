@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
+from typing import TextIO
 
 import typer
 from rich.text import Text
@@ -43,7 +44,14 @@ app = typer.Typer(no_args_is_help=True, help='The debug stream a run emitted, li
 
 IdentifierArgument = typer.Argument(None, help='Run id or filename prefix (default: the newest run on this machine)')
 FollowOption = typer.Option(False, '--follow', '-f', help='Stream new lines, switching to the next run when one starts')
-LimitOption = typer.Option(None, '--limit', '-n', help='Show only the last N lines')
+LimitOption = typer.Option(None, '--limit', '-n', min=0, help='Show only the last N lines')
+"""How many lines or runs to keep from the newest end.
+
+`min=0` rather than an unbounded int, because `-n -1` is a caller that meant one
+line and gets a slice from the other end — every row but the last, silently and
+at exit 0. Zero is a legitimate request for nothing and is not the same as
+asking for everything, which is what `None` means.
+"""
 JsonOption = typer.Option(False, '--json', help='Emit the stream unchanged, one JSON object per line')
 
 POLL_SECONDS = 0.25
@@ -195,7 +203,7 @@ def _emit(line: str, as_json: bool) -> None:
 def show(
     identifier: str = IdentifierArgument,
     follow: bool = FollowOption,
-    limit: int = LimitOption,
+    limit: int | None = LimitOption,
     as_json: bool = JsonOption,
 ) -> None:
     """Print one run's debug stream.
@@ -209,20 +217,35 @@ def show(
     it — including the first one, when it is started on a machine that has never
     recorded anything.
 
+    `--limit` means the same thing on both branches: the newest N lines of what a
+    file already holds. Under `--follow` that is where the pane starts and the
+    live lines follow it, which is what `tail -n N -f` and `docker logs --tail N
+    -f` both do.
+
     `--json` emits the stream unchanged for `lnav`, `jq` or anything else that
     reads JSON lines.
     """
     if follow:
-        _follow(None if identifier is None else _resolve(identifier), as_json)
+        _follow(None if identifier is None else _resolve(identifier), as_json, limit)
         return
 
     path = _resolve(identifier)
-    lines = path.read_text(errors='replace').splitlines()
-    for line in lines[-limit:] if limit else lines:
+    for line in _tail(path.read_text(errors='replace').splitlines(), limit):
         _emit(line, as_json)
 
 
-def _follow(start: Path | None, as_json: bool) -> None:
+def _tail(lines: list[str], limit: int | None) -> list[str]:
+    """The last `limit` lines, where `None` is every one and `0` is none of them.
+
+    `lines[-limit:] if limit else lines` cannot express the second. A zero limit
+    is falsy, so it answered with the whole file, and `-0` is `0`, which slices
+    from the other end. The caller that reaches zero is the one computing its own
+    bound — `--limit "$(remaining)"` — and it asked for nothing.
+    """
+    return lines if limit is None else lines[max(0, len(lines) - limit) :]
+
+
+def _follow(start: Path | None, as_json: bool, limit: int | None) -> None:
     """Stream lines until interrupted, moving on when a newer run opens a log.
 
     A missing `start` means wait for one, so the pane can be opened on a machine
@@ -232,12 +255,12 @@ def _follow(start: Path | None, as_json: bool) -> None:
     was asked to run until stopped and stopping it is the caller doing that.
     """
     try:
-        _stream(start, as_json)
+        _stream(start, as_json, limit)
     except KeyboardInterrupt:
         console.print()
 
 
-def _stream(start: Path | None, as_json: bool) -> None:
+def _stream(start: Path | None, as_json: bool, limit: int | None) -> None:
     current = start
     handle = None
     try:
@@ -250,6 +273,7 @@ def _stream(start: Path | None, as_json: bool) -> None:
             if handle is None:
                 handle = current.open(errors='replace')
                 _announce(current, as_json)
+                _seed(handle, as_json, limit)
 
             if line := handle.readline():
                 _emit(line, as_json)
@@ -263,6 +287,24 @@ def _stream(start: Path | None, as_json: bool) -> None:
     finally:
         if handle is not None:
             handle.close()
+
+
+def _seed(handle: TextIO, as_json: bool, limit: int | None) -> None:
+    """Print what a freshly opened stream already holds, and leave the handle at its end.
+
+    Unbounded, this does nothing and the loop reads the file from the top as it
+    always has — a pane opened mid-run shows the run so far. A limit cuts that
+    opening to its newest lines, and the follower carries on from the same place
+    either way, because the read consumed the file whichever branch ran.
+
+    Every open rather than the first, so the flag means one thing on each file a
+    follower touches. Nothing about a run switched to mid-follow makes its earlier
+    lines more wanted than the ones the pane opened on.
+    """
+    if limit is None:
+        return
+    for line in _tail(handle.read().splitlines(), limit):
+        _emit(line, as_json)
 
 
 def _newer_than(current: Path) -> Path | None:
@@ -290,17 +332,23 @@ def _announce(path: Path, as_json: bool) -> None:
 
 
 @app.command('list')
-def list_logs(limit: int = LimitOption, as_json: bool = JsonOption) -> None:
+def list_logs(limit: int | None = LimitOption, as_json: bool = JsonOption) -> None:
     """The runs on this machine that have a stream, newest first.
 
     Only this machine's, for the reason `show` gives. The whole fleet's records
     are `dotfiles report list`, which is a different question about a different
     artifact.
+
+    The machine is asked for everything it has recorded and the bound is applied
+    after. `--limit 0` is a caller asking for nothing, and asking the listing for
+    nothing returns the same empty list as a machine that has never run — which
+    reported an unrecorded box and exited 3 to a caller whose history was fine.
     """
-    found = runs.list_event_logs(machine=paths.MACHINE_ID, limit=limit)
-    if not found:
+    recorded = runs.list_event_logs(machine=paths.MACHINE_ID)
+    if not recorded:
         error('no runs have been recorded on this machine yet')
         raise typer.Exit(ExitCode.ISSUE)
+    found = recorded if limit is None else recorded[:limit]
 
     if as_json:
         emit_json([{'stem': path.stem, 'run_id': _run_id(path), 'bytes': path.stat().st_size, 'path': str(path)} for path in found])

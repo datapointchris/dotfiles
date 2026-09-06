@@ -146,6 +146,32 @@ def test_a_follower_names_the_run_it_moved_to_unless_the_stream_has_to_parse(
         assert emitted(result) == [first, second]
 
 
+def append(path: Path, entry: dict) -> None:
+    """One more line on a stream a follower already has open, as a run would write it."""
+    with path.open('a') as handle:
+        handle.write(json.dumps(entry) + '\n')
+
+
+def test_a_limit_cuts_where_a_followed_pane_opens_and_not_what_it_follows(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """What `tail -n N -f` does, and what `--follow` used to discard.
+
+    The limit was read after the follow branch returned, so `--limit 2` parsed,
+    did nothing, and exited 0 — a caller believing the pane was bounded and
+    nothing on screen correcting them. Both halves are asserted: the opening is
+    cut to the newest line, and the line written afterwards still arrives, because
+    a limit that also bounded the live stream would end the pane at one line.
+    """
+    first, second = ran('git status'), ran('go install')
+    path = stream(runs_dir, '20260815T100000Z', first, second)
+    live = ran('cargo build')
+    ticker = Ticker(stop_after=2, on_tick={1: lambda: append(path, live)})
+
+    result = follow(monkeypatch, ticker, '--limit', '1', '--json')
+
+    assert result.exit_code == 0
+    assert emitted(result) == [second, live]
+
+
 def test_a_named_run_is_followed_from_its_own_file_rather_than_from_the_newest(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An identifier and `--follow` together are how a reader catches up on a run
     that has already started and then stays with the machine. Resolved as `show`
@@ -167,10 +193,11 @@ def test_a_named_run_is_followed_from_its_own_file_rather_than_from_the_newest(r
 LISTINGS: tuple[tuple[list[str], tuple[str, ...]], ...] = (
     ([], ('mine_new', 'mine_old')),
     (['--limit', '1'], ('mine_new',)),
+    (['--limit', '0'], ()),
 )
 
 
-@pytest.mark.parametrize(('extra', 'expected'), LISTINGS, ids=['every-run', 'limited'])
+@pytest.mark.parametrize(('extra', 'expected'), LISTINGS, ids=['every-run', 'limited', 'nothing-asked-for'])
 def test_a_listing_holds_only_the_runs_this_boxs_own_name_selects(
     shared: dict[str, Path], extra: list[str], expected: tuple[str, ...]
 ) -> None:
@@ -187,6 +214,37 @@ def test_a_listing_holds_only_the_runs_this_boxs_own_name_selects(
 
     assert result.exit_code == 0
     assert [entry['stem'] for entry in json.loads(result.stdout)] == [shared[key].stem for key in expected]
+
+
+def test_an_empty_request_is_told_apart_from_an_empty_history(shared: dict[str, Path]) -> None:
+    """Asking for nothing and having nothing are opposite states with one shape.
+
+    `list_event_logs(limit=0)` answers `[]`, and so does a machine that has never
+    run — so a listing that put the bound in the same call as the question told a
+    caller with two runs on disk that its box had recorded nothing, and exited 3.
+    The bound is applied to what the machine answered instead.
+
+    Both halves in one test, because either alone passes against a verb that
+    always returns the same number.
+    """
+    asked_for_nothing = runner.invoke(app, ['logs', 'list', '--json', '--limit', '0'])
+    for key in ('mine_old', 'mine_new'):
+        shared[key].unlink()
+    nothing_recorded = runner.invoke(app, ['logs', 'list', '--json', '--limit', '0'])
+
+    assert asked_for_nothing.exit_code == 0
+    assert json.loads(asked_for_nothing.stdout) == []
+    assert nothing_recorded.exit_code == 3
+    assert nothing_recorded.stdout.strip() == ''
+
+
+def test_a_negative_limit_is_a_usage_error_rather_than_a_slice_from_the_far_end(shared: dict[str, Path]) -> None:
+    """`-n -1` means one run to whoever typed it and means every run but the last
+    to a slice. Both answers exit 0 and only one of them is what was asked for, so
+    the parser refuses the value rather than the command guessing at it."""
+    result = runner.invoke(app, ['logs', 'list', '--limit=-1'])
+
+    assert result.exit_code == 2
 
 
 def test_a_listed_run_carries_what_a_reader_would_otherwise_open_the_file_for(shared: dict[str, Path]) -> None:
