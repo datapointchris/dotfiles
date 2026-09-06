@@ -483,6 +483,23 @@ def no_writing_into_this_machines_own_directories(request, monkeypatch):
         monkeypatch.setattr(Path, verb, refuse_if_real(getattr(Path, verb), verb))
 
 
+@pytest.fixture
+def refused_write() -> type[BaseException]:
+    """`WroteOntoThisMachine`, for the tests whose subject is the guard above.
+
+    A fixture rather than an import, for the reason `isolated_names` gives:
+    `tests/conftest.py` and `tests/e2e/conftest.py` are both the module `conftest`
+    to an importer, and `pythonpath` puts the second one first.
+    """
+    return WroteOntoThisMachine
+
+
+@pytest.fixture
+def this_machines_own_directories() -> tuple[Path, Path]:
+    """The two roots the guard refuses, as they stood when this module imported."""
+    return REAL_STATE_HOME, REAL_CONFIG_DIR
+
+
 def pytest_configure(config):
     """A level sets the modes it means, before anything is collected.
 
