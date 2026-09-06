@@ -495,9 +495,9 @@ def names_a_run(stem: str) -> bool:
     """Whether a filename is one `Identity.stem` produced.
 
     **A predicate over the shape this module writes, never a list of the shapes to
-    skip.** `runs/` is a Syncthing folder for the whole fleet, so what lands beside
-    a record is not this repo's to enumerate — Syncthing sets a losing write aside
-    as `<name>.sync-conflict-<date>-<device>.json`, and an editor, a backup or a
+    skip.** `runs/` is replicated between machines, so what lands beside a record
+    is not this repo's to enumerate — a losing write is set aside whole as
+    `<name>.sync-conflict-<date>-<device>.json`, and an editor, a backup or a
     person can leave anything else. Each arrives as a plausible row: it globs, it
     sorts, and `machine_of` reads a machine name out of it.
 

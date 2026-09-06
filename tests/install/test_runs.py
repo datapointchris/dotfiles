@@ -304,15 +304,16 @@ class TestListing:
 
 
 class TestForeignFilesInTheSharedDirectory:
-    """`runs/` is a Syncthing folder for the whole fleet, so what lands beside a
-    record is not this repo's to enumerate. Every listing answers about the names
-    this module writes, not about everything that globs.
+    """`runs/` is replicated between machines, so what lands beside a record is not
+    this repo's to enumerate. Every listing answers about the names this module
+    writes, not about everything that globs.
     """
 
     def test_a_sync_conflict_copy_is_not_a_run(self, runs_dir):
-        """The shape Syncthing leaves when two boxes write one path — which is what
-        `status-macmini.json` took ten of. The device id lands where the verb was,
-        so a name that looks like a record all the way to the last token is not one.
+        """The shape a losing write is set aside as when two boxes write one path,
+        which `status-macmini.json` took ten of. The device id lands where the verb
+        was, so a name that looks like a record all the way to the last token is
+        not one.
         """
         written = runs.write(a_run(verb='check'), runs_dir)
         conflict = runs_dir / f'{written.stem}.sync-conflict-20260816-055721-OY2JXOX.json'
