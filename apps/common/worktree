@@ -1804,10 +1804,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='worktree',
         description='Give a session its own index, and land it on main without a PR.',
+        # Raw, so the examples keep their columns. The default formatter reflows an
+        # epilog into a paragraph, which is what stopped one being written here.
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            'Worktrees live under $WORKTREE_ROOT (default ~/.worktrees/<repo>/<slug>). '
-            "'list' and 'choose' read every repo there. "
-            'Every command it runs is echoed to stderr as you could re-type it; -q hides them. '
+            'Examples:\n'
+            '  worktree new parser-fix                  isolate a session; prints the path\n'
+            '  worktree list dotfiles                   one repo, not every repo there\n'
+            '  worktree list dotfiles --json            the same rows for a script to read\n'
+            '  worktree spawn parser-fix --brief b.md   a session in its own worktree\n'
+            '  worktree spawn --brief review.md         a reviewer, in the checkout\n'
+            '  worktree land                            rebase, land on main, clean up\n'
+            '  worktree drop                            remove it without landing\n'
+            '  worktree sweep dotfiles --yes            remove finished worktrees\n'
+            '\n'
+            'Worktrees live under $WORKTREE_ROOT (default ~/.worktrees/<repo>/<slug>).\n'
+            "'list' and 'choose' read every repo there unless you name one, which is what\n"
+            'the positional repo is for — piping --json through a jq filter on .repo is\n'
+            'the same narrowing done by hand.\n'
+            'Every command it runs is echoed to stderr as you could re-type it; -q hides them.\n'
             "For work that grew into a large feature, 'git push -u origin HEAD' and open a PR instead."
         ),
     )
