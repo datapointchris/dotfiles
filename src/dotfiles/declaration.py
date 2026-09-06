@@ -10,6 +10,7 @@ which is exactly when a reader wants to look at it.
 """
 
 import argparse
+import dataclasses as dc
 import json
 import os
 import platform
@@ -402,29 +403,64 @@ PLATFORM_FIELDS = ('apt', 'brew', 'pacman', 'aur')
 METADATA_FIELDS = (('package', 'Import path'), ('repo', 'Repository'), ('github_repo', 'GitHub'))
 """The entry keys `show` reports as metadata, and the label each is printed under.
 
-`package` is a go tool's `go install` argument, named the way Go names it.
-The block's own heading already reads `Package: <name>`, so a second row under
-that label would put two different values on one question with nothing on either
-row to say which was which.
+`package` is a go tool's `go install` argument, named the way Go names it. The
+block's heading already reads `Package: <name>`, so one label over both would put
+two questions under one word.
 """
 
-FIXED_LABELS = ('Description', 'Section', 'Tags', 'Status')
-"""The labels `show` prints that name no key of the entry's own."""
 
-LABEL_COLUMN = max(len(label) for label in (*FIXED_LABELS, *(label for _, label in METADATA_FIELDS))) + 2
-"""What every label in the `show` block is padded to, colon included.
+@dc.dataclass(frozen=True, slots=True)
+class Row:
+    """One `label: value` line of a `show` block."""
 
-Measured off the labels rather than typed, so a metadata field added above
-cannot leave its own row the only misaligned one.
-"""
+    label: str
+    value: str
+    indent: int = 0
+    opens: str | None = None
+    """A blank line before this row, and this heading under it where non-empty.
 
-PLATFORM_COLUMN = max(len(field) for field in PLATFORM_FIELDS) + 2
-"""The same, for the indented block of per-manager names."""
+    None where the row continues the group above it.
+    """
 
 
-def detail_row(label: str, value: object) -> str:
-    """One `show` row, its value starting at the column every other row starts at."""
-    return f'{f"{label}:":<{LABEL_COLUMN}}{value}'
+def platform_rows(pkg: dict[str, Any]) -> list[Row]:
+    """The indented per-manager names, the first of them opening the group."""
+    named = [field for field in PLATFORM_FIELDS if field in pkg]
+    return [Row(field, str(pkg[field]), indent=2, opens='Platform Packages:' if index == 0 else None) for index, field in enumerate(named)]
+
+
+def show_rows(pkg: dict[str, Any]) -> list[Row]:
+    """Every row `show` prints for one entry, in the order it prints them.
+
+    The one description of the block. `value_column` measures it and `cmd_show`
+    renders it, so a row lands on the same column as its neighbors by being the
+    object they were measured from. A row printed from anywhere else would be
+    padded against a width that never saw it.
+    """
+    rows = [
+        Row('Description', str(pkg.get('description', 'N/A'))),
+        Row('Section', str(pkg['_section'])),
+        Row('Tags', ', '.join(pkg.get('tags', [])) or 'none'),
+        *platform_rows(pkg),
+        *(Row(label, str(pkg[field])) for field, label in METADATA_FIELDS if field in pkg),
+    ]
+    status = format_status(*check_installed(pkg))
+    return [*rows, Row('Status', status, opens='')] if status else rows
+
+
+def value_column(rows: list[Row]) -> int:
+    """Where every value in one block starts, counted from the front of the line.
+
+    Measured off the rows themselves, so a label added to `show_rows` widens the
+    block rather than overrunning it. An indented row spends part of the column
+    on its indent and lands its value with the rest.
+    """
+    return max(row.indent + len(row.label) for row in rows) + 2
+
+
+def render_row(row: Row, column: int) -> str:
+    """One rendered line, its value starting at `column`."""
+    return f'{" " * row.indent}{f"{row.label}:":<{column - row.indent}}{row.value}'
 
 
 def described(pkg: dict[str, Any]) -> dict[str, Any]:
@@ -489,26 +525,14 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
         print('━' * 40)
         print()
 
-        print(detail_row('Description', pkg.get('description', 'N/A')))
-        print(detail_row('Section', pkg['_section']))
-        print(detail_row('Tags', ', '.join(pkg.get('tags', [])) or 'none'))
-
-        platforms = [(f, pkg[f]) for f in PLATFORM_FIELDS if f in pkg]
-        if platforms:
-            print('\nPlatform Packages:')
-            for field, value in platforms:
-                print(f'  {f"{field}:":<{PLATFORM_COLUMN}}{value}')
-
-        for field, label in METADATA_FIELDS:
-            if field in pkg:
-                print(detail_row(label, pkg[field]))
-
-        # `format_status` answering None is the status row an unavailable package
-        # deliberately does not get, which is why availability is read there
-        # rather than guarded for again here.
-        status_str = format_status(*check_installed(pkg))
-        if status_str:
-            print(f'\n{detail_row("Status", status_str)}')
+        rows = show_rows(pkg)
+        column = value_column(rows)
+        for row in rows:
+            if row.opens is not None:
+                print()
+                if row.opens:
+                    print(row.opens)
+            print(render_row(row, column))
 
         print()
 

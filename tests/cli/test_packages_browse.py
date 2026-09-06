@@ -32,6 +32,7 @@ from __future__ import annotations
 import dataclasses as dc
 import json
 import platform
+import re
 import stat
 import sys
 from collections.abc import Callable
@@ -404,22 +405,56 @@ def test_show_prints_every_field_the_entry_declares(
     assert described['installed'] == InstallStatus.NOT_INSTALLED.value
 
 
-A_GO_TOOL: dict[str, Any] = {
+EVERY_ROW: dict[str, Any] = {
     'go_tools': [
         {
             'name': 'task',
             'command': 'absent-by-construction',
             'description': 'a task runner',
             'package': 'github.com/go-task/task/v3/cmd/task',
+            'repo': 'https://github.com/go-task/task',
             'github_repo': 'go-task/task',
         }
-    ]
+    ],
+    'system_packages': [
+        {
+            'name': 'ca-certificates',
+            'command': 'absent-by-construction',
+            'description': 'certificates',
+            'apt': 'ca-certificates',
+            'brew': 'ca-certificates',
+            'pacman': 'ca-certificates',
+        }
+    ],
 }
-"""The one section that declares a `package`, which is a go install argument.
+"""Two entries that between them reach every row `show` can print.
 
-Every other section leaves the key out, so `go_tools` is the whole population
-that reaches the metadata label at all.
+The go tool carries all three metadata keys, `repo` included — that row's value
+moves furthest of any, and it is rendered by nothing that declares only the keys
+a real `go_tools` entry has. The system package is what renders the indented
+per-manager block, which no `go_tools` entry can.
 """
+
+ROW = re.compile(r'^(?P<indent> *)(?P<label>\S[^:]*):(?P<pad> *)(?P<value>\S.*)$')
+"""A rendered `label: value` line, whatever its indent.
+
+Matched over the whole block rather than filtered against a list of expected
+labels. A list would drop an unexpected row instead of failing on it, which is
+the one thing these two tests exist to catch.
+
+**`pad` is `*` rather than `+`, which is the whole point.** A row whose label
+overruns the column renders with no space at all, so a pattern demanding one
+skips exactly the row that broke — the same miss as filtering by label.
+
+`Platform Packages:` carries no value and does not match, and the `Package:
+<name>` heading is excluded by reading only what follows the rule beneath it.
+"""
+
+
+def rendered_rows(out: str) -> list[re.Match[str]]:
+    """Every `label: value` line of the one `show` block in `out`."""
+    _, _, block = out.partition('━')
+    return [matched for line in block.splitlines() if (matched := ROW.fullmatch(line))]
 
 
 def test_the_heading_is_the_only_row_a_package_is_named_on(
@@ -431,41 +466,46 @@ def test_the_heading_is_the_only_row_a_package_is_named_on(
     A `go_tools` entry is the only one that prints both, which is what makes it
     the case where one label over the pair would be ambiguous.
     """
-    point_at(tmp_path / 'repo', A_GO_TOOL, monkeypatch)
+    point_at(tmp_path / 'repo', EVERY_ROW, monkeypatch)
 
     declaration.main(['show', 'task'])
-    rows = capsys.readouterr().out.splitlines()
+    printed = capsys.readouterr().out
 
-    assert [row for row in rows if row.startswith('Package:')] == ['Package: task']
-    assert 'Import path: github.com/go-task/task/v3/cmd/task' in rows
-
-
-DETAIL_ROWS = ('Description', 'Section', 'Tags', 'Import path', 'GitHub', 'Status')
-"""Every row `show` prints for `A_GO_TOOL`, in the order it prints them."""
+    assert [line for line in printed.splitlines() if line.startswith('Package:')] == ['Package: task']
+    assert 'Import path: github.com/go-task/task/v3/cmd/task' in printed
 
 
-def value_column(row: str) -> int:
-    """Where the value starts, counted from the front of the row."""
-    label, _, rest = row.partition(':')
-    return len(label) + 1 + (len(rest) - len(rest.lstrip(' ')))
+METADATA_BLOCK = ['Description', 'Section', 'Tags', 'Import path', 'Repository', 'GitHub', 'Status']
+PLATFORM_BLOCK = ['Description', 'Section', 'Tags', 'apt', 'brew', 'pacman', 'Status']
+
+BLOCKS = (
+    ('a go tool, which carries every metadata row', 'task', METADATA_BLOCK),
+    ('a system package, which carries the indented block', 'ca-certificates', PLATFORM_BLOCK),
+)
 
 
-def test_every_detail_row_starts_its_value_at_one_column(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+@pytest.mark.parametrize(('label', 'name', 'expected'), BLOCKS, ids=[row[0] for row in BLOCKS])
+def test_every_row_of_a_show_block_starts_its_value_at_one_column(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], label: str, name: str, expected: list[str]
 ) -> None:
-    """The widest label decides the column and every other row is padded to it.
+    """The widest label in a block decides the column and every row is padded to it.
 
-    `Import path` is the widest, and an entry carrying it is the only one where
-    a per-row pad and a shared column give different answers — every other row's
-    label is short enough that any pad wide enough for it also lines up.
+    Asserted over every line the block renders, so a row added to `cmd_show`
+    without going through `show_rows` fails here rather than being skipped. An
+    indented row spends part of the column on its indent, which is why the
+    per-manager values land level with the rest rather than two columns short.
+
+    `Import path` is the widest label at 11, so it sets the column for both
+    blocks. `Repository` at 10 is the row a fixed per-row pad puts furthest from
+    it, which is why the go tool declares a `repo` no real one carries.
     """
-    point_at(tmp_path / 'repo', A_GO_TOOL, monkeypatch)
+    point_at(tmp_path / 'repo', EVERY_ROW, monkeypatch)
 
-    declaration.main(['show', 'task'])
-    rows = [row for row in capsys.readouterr().out.splitlines() if row.partition(':')[0] in DETAIL_ROWS]
+    declaration.main(['show', name])
+    rows = rendered_rows(capsys.readouterr().out)
 
-    assert [row.partition(':')[0] for row in rows] == list(DETAIL_ROWS)
-    assert {value_column(row) for row in rows} == {declaration.LABEL_COLUMN}
+    assert [matched['label'] for matched in rows] == expected
+    assert len({matched.start('value') for matched in rows}) == 1
 
 
 def test_an_entry_declaring_no_tags_says_none_rather_than_leaving_the_row_empty(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
