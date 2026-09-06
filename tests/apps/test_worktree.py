@@ -116,7 +116,14 @@ def bin_dir(tmp_path: Path) -> Path:
 
 
 def write_stub(bin_dir: Path, name: str, body: str) -> None:
+    """Put a shell stub on the rig's PATH, replacing whatever held that name.
+
+    Unlinked first, because some of what the rig puts here are symlinks to the real
+    apps and `write_text` follows a symlink to its target. Writing a stub over one
+    would edit the app in the repo rather than the copy on this PATH.
+    """
     stub = bin_dir / name
+    stub.unlink(missing_ok=True)
     stub.write_text(f'#!/bin/sh\n{body}\n')
     stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
 
@@ -309,10 +316,14 @@ def rows(result: subprocess.CompletedProcess[str]) -> list[str]:
 
 TMUX = shutil.which('tmux')
 
-RIG_COLUMNS = 200
-"""How wide the rig's window is, so a layout claim can be a share of it rather than a
-comparison between two panes. `split-window -h` halves a pane on its own, so "the caller
-is wider than what it spawned" is true with the sizing removed."""
+RIG_COLUMNS = 260
+RIG_ROWS = 76
+"""Big enough that the placement has a choice to make.
+
+Two readable columns need 241 and two readable rows need 72. Below either, every
+worker request falls through to opening a window of its own and every layout
+assertion measures a fresh full-size window instead of a placement — so no change
+to the packing, the reflow or the promotion could turn one red."""
 
 CLAUDE_STUB = r"""
 __PREAMBLE__
@@ -414,6 +425,21 @@ class Rig:
     def window_of(self, pane: str) -> str:
         return self.tmux('display-message', '-p', '-t', pane, '#{window_id}')
 
+    def size(self, pane: str) -> tuple[int, int]:
+        """One pane's width and height, for asserting it can be followed."""
+        row = self.tmux('display-message', '-p', '-t', pane, '#{pane_width} #{pane_height}')
+        width, height = row.split()
+        return int(width), int(height)
+
+    def mark_caller_a_worker(self) -> None:
+        """Make the caller the thing a reviewer may be paired to.
+
+        Written straight onto the pane rather than by spawning a worker first,
+        because what is under test is where the reviewer goes and a real worker
+        would bring its own placement into the measurement.
+        """
+        self.tmux('set-option', '-p', '-t', self.caller, '@place_role', 'worker')
+
     def add_pane_before_the_caller(self) -> str:
         """Put an unrelated pane at index 0, so the caller no longer leads its window.
 
@@ -451,12 +477,19 @@ def rig(tmp_path: Path, tmux_socket: Path, bin_dir: Path, spawn_state: Path):
     socket = tmux_socket
     server = os.environ | {'PATH': f'{bin_dir}:{os.environ["PATH"]}', 'HOME': str(tmp_path)}
     subprocess.run(
-        [str(TMUX), '-S', str(socket), 'new-session', '-d', '-s', 'rig', '-x', str(RIG_COLUMNS), '-y', '50', '-c', str(tmp_path)],
+        [str(TMUX), '-S', str(socket), 'new-session', '-d', '-s', 'rig', '-x', str(RIG_COLUMNS), '-y', str(RIG_ROWS), '-c', str(tmp_path)],
         check=True,
         capture_output=True,
         env=server,
     )
     write_stub(bin_dir, 'tmux', f'exec {TMUX} -S {socket} "$@"')
+    # The real muxctl and the real tmuxctl, not stubs. What is under test is the
+    # command's use of the port, and a stub would let a call that no adapter
+    # accepts pass -- which is the one failure a port is for. They reach the rig's
+    # server without being told to, because tmuxctl calls plain `tmux` and the
+    # shim above is what plain `tmux` resolves to here.
+    for app in ('muxctl', 'tmuxctl'):
+        (bin_dir / app).symlink_to(REPO / 'apps' / 'common' / app)
     stub_claude(bin_dir, spawn_state)
     stub_registry(bin_dir, spawn_state)
 
@@ -483,6 +516,17 @@ def stub_claude(bin_dir: Path, spawn_state: Path, body: str = 'exec sleep 300', 
 
 def stub_registry(bin_dir: Path, spawn_state: Path) -> None:
     write_stub(bin_dir, 'claude-sessions', REGISTRY_STUB.replace('__STATE__', str(spawn_state)))
+
+
+def refuse_to_open_a_pane(bin_dir: Path) -> None:
+    """A multiplexer with nowhere to put a pane, which is the everyday refusal.
+
+    Stubbed at the port rather than at tmux, because that is where this command's
+    contract is. Refusing one tmux subcommand only reaches the case where the
+    multiplexer would have chosen that subcommand, and which one it chooses is
+    not this command's business.
+    """
+    write_stub(bin_dir, 'muxctl', 'echo "muxctl: nowhere to put a pane that could be followed" >&2\nexit 1')
 
 
 def preset_session(spawn_state: Path, name: str, cwd: Path, pane: str) -> None:
@@ -1923,11 +1967,7 @@ class TestSpawnBrief:
         and a provisioned checkout — `sweep` will not collect one, because nothing was
         ever pushed and it is held as UNPUBLISHED.
         """
-        write_stub(
-            bin_dir,
-            'tmux',
-            f'[ "$1" = split-window ] && {{ echo "no space for a new pane" >&2; exit 1; }}\nexec {TMUX} -S {rig.socket} "$@"',
-        )
+        refuse_to_open_a_pane(bin_dir)
 
         result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
 
@@ -1941,11 +1981,7 @@ class TestSpawnBrief:
         run(fleet['primary'], 'new', 'alpha')
         alpha = fleet['roots'] / 'primary' / 'alpha'
         commit_in(alpha, 'theirs.txt')
-        write_stub(
-            bin_dir,
-            'tmux',
-            f'[ "$1" = split-window ] && {{ echo "no space for a new pane" >&2; exit 1; }}\nexec {TMUX} -S {rig.socket} "$@"',
-        )
+        refuse_to_open_a_pane(bin_dir)
 
         result = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
 
@@ -2132,63 +2168,67 @@ class TestSpawnRegistration:
 
 @pytest.mark.interpreter('tmux')
 class TestSpawnLayout:
-    """The caller keeps the wide pane, because the caller is the one being read.
+    """Where a session lands, asked for as intent and answered by the multiplexer.
 
-    tmux halves the pane it splits, and `main-vertical` on its own falls back to a
-    `main-pane-width` of 80 columns — so without the sizing the pane carrying prose is the
-    narrow one, which is the failure the width exists to stop.
+    This command names a role and the pane it relates to, and never a direction, a
+    width or a window. So what is pinned here is the relationship — a reviewer under
+    its author, a worker somewhere it can be followed — rather than an arithmetic
+    the multiplexer is free to reach its own way.
     """
 
-    def test_a_beside_split_gives_the_caller_the_share_it_asked_for(self, fleet, spawn, rig, tmp_path):
-        """Asserted against the requested share of the window, not merely against the pane
-        beside it. `split-window -h` halves a pane by itself, so `caller > spawned` holds
-        with the sizing deleted and the check could never fail."""
+    def test_a_worker_is_packed_beside_the_caller_and_can_be_followed(self, fleet, spawn, rig, tmp_path):
+        """The port's whole promise, measured off tmux rather than taken from the
+        record. The window assertion is what keeps the rest honest: below 241
+        columns nothing fits beside the caller, every request opens a window of
+        its own, and the size below is then the whole window rather than a
+        placement."""
         spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
-        geometry = rig.geometry()
-        caller_left, _, caller_width = geometry[rig.caller]
-        spawned_left, _, _ = geometry[rig.spawned()]
+        spawned = rig.spawned()
 
-        assert spawned_left > caller_left, 'beside means to the right of it'
-        assert abs(caller_width - RIG_COLUMNS * 66 // 100) <= 2, f'{caller_width} of {RIG_COLUMNS} is not the 66% default'
+        assert rig.window_of(spawned) == rig.window_of(rig.caller), 'the worker opened a window instead of packing'
+        width, height = rig.size(spawned)
+        assert width >= 120 and height >= 35, f'{spawned} came out {width}x{height}'
 
-    def test_the_caller_takes_the_main_pane_even_when_it_does_not_lead_the_window(self, fleet, spawn, rig, tmp_path):
-        """`main-vertical` assigns the main pane by index, so a caller that is not the
-        window's first pane hands the wide pane to whichever one is. A session is rarely
-        the first pane of its window, so this is the ordinary case rather than the edge."""
-        rig.add_pane_before_the_caller()
-
+    def test_a_spawn_never_makes_the_caller_unreadable(self, fleet, spawn, rig, tmp_path):
+        """The pane carrying prose is the one being read continuously, and a dispatcher
+        that halved its own pane on every spawn is the failure all of this exists to
+        stop."""
         spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
-        caller_width = rig.geometry()[rig.caller][2]
 
-        assert abs(caller_width - RIG_COLUMNS * 66 // 100) <= 2, f'the caller got {caller_width} of {RIG_COLUMNS}'
+        assert rig.window_of(rig.spawned()) == rig.window_of(rig.caller), 'nothing was split beside the caller'
+        width, height = rig.size(rig.caller)
+        assert width >= 120 and height >= 35, f'the caller was left {width}x{height}'
 
-    def test_the_width_flag_reaches_tmux(self, fleet, spawn, rig, tmp_path):
-        spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--width', '25%')
-        caller_width = rig.geometry()[rig.caller][2]
+    def test_a_reviewer_lands_directly_under_the_worker_it_reviews(self, fleet, spawn, rig, tmp_path):
+        """A pair is read against itself, so the two share a column with the reviewer
+        beneath. The caller is marked a worker first because that is what it is in the
+        workflow this serves — a worker spawns the reviewer of its own output, and a
+        reviewer under something that is not a worker is refused rather than placed."""
+        rig.mark_caller_a_worker()
 
-        assert abs(caller_width - RIG_COLUMNS * 25 // 100) <= 2, f'the caller got {caller_width} of {RIG_COLUMNS}'
-
-    def test_a_width_tmux_would_silently_ignore_is_a_usage_error(self, fleet, run, rig, tmp_path):
-        """tmux answers `abc`, `-5`, `0` and `999%` with exit 0 and then falls back to 80
-        columns — the value `--width` exists to replace. Nothing downstream can catch it,
-        because no return code in the sequence carries the failure."""
-        for bogus in ('abc', '-5', '0', '0%', '999%', '66%%', ''):
-            result = run(fleet['primary'], 'spawn', 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--width', bogus)
-
-            assert result.returncode == 2, f'--width {bogus!r} was accepted'
-            assert '--width takes columns or a percentage' in plain(result.stderr)
-
-    def test_a_below_split_is_under_the_caller_and_the_same_width(self, fleet, spawn, rig, tmp_path):
-        """A reviewer is put under its author on purpose, and `main-vertical` would lift it
-        into the right-hand stack."""
-        spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--below')
+        spawn(fleet['primary'], '--brief', str(brief_at(tmp_path / 'b.md')), '--below')
         geometry = rig.geometry()
         caller_left, caller_top, caller_width = geometry[rig.caller]
         spawned_left, spawned_top, spawned_width = geometry[rig.spawned()]
 
-        assert spawned_top > caller_top
-        assert spawned_left == caller_left
+        assert spawned_top > caller_top, 'a reviewer sits below its worker'
+        assert spawned_left == caller_left, 'and in the same column'
         assert spawned_width == caller_width
+
+    def test_a_reviewer_under_something_that_is_not_a_worker_refuses(self, fleet, run, rig, tmp_path):
+        """The pair is the unit, so the thing a reviewer is paired to has to be a worker.
+        Placing it anyway would put a reviewer under a dispatcher and call it a pair."""
+        result = run(
+            fleet['primary'],
+            'spawn',
+            '--brief',
+            str(brief_at(tmp_path / 'b.md')),
+            '--below',
+            env={'TMUX': str(rig.socket), 'TMUX_PANE': rig.caller},
+        )
+
+        assert result.returncode != 0
+        assert 'reviewer sits below a worker' in plain(result.stderr)
 
 
 class TestHelp:
@@ -2229,14 +2269,6 @@ class TestSpawnRefusals:
         result = run(fleet['primary'], 'spawn', 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
 
         assert result.returncode == 1
-
-    def test_width_with_below_is_a_usage_error(self, fleet, run, tmp_path):
-        """A flag the run cannot honor says so and never parses into
-        silence — a below split leaves the layout alone, so there is no main pane to size."""
-        result = run(fleet['primary'], 'spawn', 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')), '--below', '--width', '50')
-
-        assert result.returncode == 2
-        assert 'no --width with --below' in plain(result.stderr)
 
     def test_a_brief_is_required(self, fleet, run):
         result = run(fleet['primary'], 'spawn', 'alpha')
@@ -2315,46 +2347,6 @@ class TestSessionMatching:
         assert worktree_app.session_in_pane([only], '%7', None) == 'only'
 
 
-class TestPaneState:
-    """`list-panes` answers for a whole window, so the row has to be found by id.
-
-    A caller's own healthy pane sits in the same answer as the dead one being asked about,
-    and reading the first row would report whichever tmux happened to list first.
-    """
-
-    def listing(self, monkeypatch, worktree_app, stdout: str, returncode: int = 0):
-        def fake(argv, **kwargs):
-            return subprocess.CompletedProcess(argv, returncode, stdout, '')
-
-        monkeypatch.setattr(worktree_app, 'run', fake)
-
-    def test_a_pane_still_running_is_running(self, worktree_app, monkeypatch):
-        self.listing(monkeypatch, worktree_app, '%0 0 \n%1 0 \n')
-
-        assert worktree_app.pane_state('%1') == (worktree_app.Pane.RUNNING, None)
-
-    def test_a_dead_pane_carries_the_status_its_command_exited_with(self, worktree_app, monkeypatch):
-        self.listing(monkeypatch, worktree_app, '%0 0 \n%1 1 127\n')
-
-        assert worktree_app.pane_state('%1') == (worktree_app.Pane.DEAD, 127)
-
-    def test_a_live_sibling_is_not_read_in_place_of_the_pane_asked_about(self, worktree_app, monkeypatch):
-        self.listing(monkeypatch, worktree_app, '%0 0 \n%1 1 127\n')
-
-        assert worktree_app.pane_state('%0') == (worktree_app.Pane.RUNNING, None)
-
-    def test_a_pane_tmux_refuses_to_list_is_gone(self, worktree_app, monkeypatch):
-        self.listing(monkeypatch, worktree_app, '', returncode=1)
-
-        assert worktree_app.pane_state('%1') == (worktree_app.Pane.GONE, None)
-
-    def test_an_unreadable_status_is_reported_as_dead_without_one(self, worktree_app, monkeypatch):
-        """A dead pane whose status tmux will not give up is still a launch that failed."""
-        self.listing(monkeypatch, worktree_app, '%1 1 \n')
-
-        assert worktree_app.pane_state('%1') == (worktree_app.Pane.DEAD, None)
-
-
 class TestRefusalFaults:
     """A refusal is asserted by what it is, never by the sentence it prints.
 
@@ -2374,10 +2366,16 @@ class TestRefusalFaults:
 
         assert self.refusal(worktree_app, lambda: worktree_app.require_tool('tmux', 'why')) is worktree_app.Fault.TOOL_MISSING
 
-    def test_being_outside_tmux_is_its_own_fault(self, worktree_app, monkeypatch):
+    def test_being_outside_a_multiplexer_is_its_own_fault(self, worktree_app, monkeypatch):
+        """Exit 2 is what muxctl answers when nothing on the machine says which
+        multiplexer this is inside. It is a refusal a caller could have avoided, and
+        this command turns it into the one fault that names why."""
         monkeypatch.setattr(worktree_app.shutil, 'which', lambda name: f'/usr/bin/{name}')
-        monkeypatch.delenv('TMUX', raising=False)
-        monkeypatch.delenv('TMUX_PANE', raising=False)
+        monkeypatch.setattr(
+            worktree_app,
+            'run',
+            lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 2, '', 'muxctl: not inside a multiplexer this knows how to drive'),
+        )
 
         assert self.refusal(worktree_app, worktree_app.require_caller_pane) is worktree_app.Fault.NO_TMUX
 
@@ -2393,22 +2391,6 @@ class TestRefusalFaults:
         assert occupied is worktree_app.Fault.WORKTREE_OCCUPIED
         assert unreadable is worktree_app.Fault.SESSIONS_UNREADABLE
         assert occupied is not unreadable, 'nobody is here and nobody could be asked are the same empty list'
-
-
-class TestUsableWidth:
-    """What tmux honors, which is a smaller set than what it parses.
-
-    Every rejected value here was measured against real tmux answering exit 0 and then
-    falling back to 80 columns — so `0` and `999%` are as unusable as `abc`, and only the
-    first of those three looks wrong.
-    """
-
-    def test_columns_and_percentages_are_taken(self, worktree_app):
-        assert all(worktree_app.usable_width(value) for value in ('1', '80', '120', '1%', '66%', '100%'))
-
-    def test_a_value_tmux_would_ignore_is_refused(self, worktree_app):
-        for value in ('abc', '-5', '0', '0%', '101%', '999%', '66%%', '', '12.5', '80 '):
-            assert not worktree_app.usable_width(value), value
 
 
 class TestBriefsDirectory:

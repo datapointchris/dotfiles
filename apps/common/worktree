@@ -126,19 +126,33 @@ REGISTRATION_TIMEOUT = 60.0
 """How long a spawn waits to be told the name of the session it just started.
 
 Registration is not instant — measured at about sixteen seconds — and the name is the
-whole reason a caller runs this rather than `tmux split-window` itself.
+whole reason a caller runs this rather than opening a pane itself.
 """
 
 POLL_SECONDS = 1.0
 
-MAIN_PANE_WIDTH = '66%'
-"""The caller's share of the window once panes are stacked beside it.
+MUXCTL = 'muxctl'
+"""The multiplexer, reached by the one name that is not a multiplexer's.
 
-A percentage rather than a column count, because tmux resolves it against whatever
-window the caller is in and holds it across a resize. Two thirds because the caller's
-pane is being read continuously and the spawned ones are being watched — so the larger
-share goes to the one carrying prose. tmux's own default is 80 columns, which is the
-value that made this worth setting.
+`muxctl` resolves tmux, or whatever else the pane is inside, and answers the same
+verbs either way.
+
+The claim is scoped to panes: opening one, reading it, measuring it and closing
+it are asked of the port, and nothing here decides where a pane goes. It is not
+that the word `tmux` is absent. `claude-sessions` names a `tmux` field in its
+JSON, and `cmd_choose` picks `fzf-tmux` over `fzf` off `$TMUX` — a popup that
+exists in one multiplexer and degrades to a full-screen picker everywhere else.
+"""
+
+WORKER = 'worker'
+REVIEWER = 'reviewer'
+"""What a spawn asks the multiplexer for, in the port's words.
+
+A worker gets room of its own. A reviewer goes directly under the pane it reviews,
+because the two are read against each other -- so the caller names itself as the
+partner rather than asking for a downward split. That is the same request stated as
+intent instead of as geometry, and it is what lets a multiplexer that lays out
+differently still put the pair where it belongs.
 """
 
 
@@ -171,13 +185,16 @@ class Kept(StrEnum):
 
 
 class Pane(StrEnum):
-    """What tmux says about a pane a spawn is waiting on.
+    """What the multiplexer says about a pane a spawn is waiting on.
 
-    DEAD and GONE are the same event seen with and without a corpse. `spawn` turns
-    `remain-on-exit` on for the pane it made, so a command that fails to start leaves
-    its exit status behind to be read; a pane destroyed before that option lands has
-    nothing left to say. Collapsing them would throw away the only diagnosis available
-    for the failure that is otherwise invisible.
+    The members spell the port's own words, so a report is read straight into one
+    rather than mapped through a table nothing would keep level with it.
+
+    DEAD and GONE are the same event seen with and without a corpse. A pane the
+    multiplexer opened holds its exit status to be read, so a command that failed to
+    start can be diagnosed; a pane destroyed before that could be arranged has
+    nothing left to say. Collapsing them would throw away the only diagnosis
+    available for the failure that is otherwise invisible.
     """
 
     RUNNING = 'running'
@@ -221,7 +238,14 @@ class Fault(StrEnum):
     WORKTREE_OCCUPIED = 'worktree_occupied'
     SESSIONS_UNREADABLE = 'sessions_unreadable'
     NOT_A_WORKTREE = 'not_a_worktree'
-    SPLIT_REFUSED = 'split_refused'
+    PORT_REFUSED = 'port_refused'
+    PORT_FAILED = 'port_failed'
+
+
+USAGE_FAULTS = frozenset({Fault.PORT_REFUSED})
+"""Refusals a caller could have avoided, which exit 2 rather than 1.
+
+Only a different argument fixes one, and 1 says there is no argument to try."""
 
 
 class Refused(Exception):
@@ -420,6 +444,49 @@ def run(argv: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
     if ECHO:
         ERR.print(f'    [green]$ {escape(shlex.join(argv))}[/]', highlight=False)
     return subprocess.run(argv, capture_output=True, text=True, **kwargs)
+
+
+def ctl(*args: str) -> dict[str, Any]:
+    """Ask the multiplexer, in the port's words, and read back its record.
+
+    Every multiplexer effect in this file goes through here, so what this command
+    does to a workspace is a definition rather than a search. The port's exit
+    codes are the vocabulary: 2 is a refusal a caller could have avoided, and
+    anything else non-zero is the multiplexer itself failing. Collapsing the two
+    is what makes a caller retry a command that will never work.
+    """
+    # Before any `--`, never after it. Everything past that separator is the
+    # command to run in the pane, so a flag appended to the end is handed to
+    # `claude` as an argument and the port is asked for its default output —
+    # which parses as nothing and blames the JSON rather than the placement.
+    argv = list(args)
+    cut = argv.index('--') if '--' in argv else len(argv)
+    done = run([MUXCTL, *argv[:cut], '--json', *argv[cut:]])
+    said = port_said(done.stderr)
+    if done.returncode == 2:
+        raise Refused(said or f'{MUXCTL} refused', fault=Fault.PORT_REFUSED)
+    if done.returncode != 0:
+        raise Refused(said or f'{MUXCTL} failed', fault=Fault.PORT_FAILED)
+    if said:
+        say_warning(said)
+    return json.loads(done.stdout)
+
+
+def port_said(stderr: str) -> str:
+    """The port's own prose, with the machine-readable refusal line dropped."""
+    lines = [line for line in stderr.strip().splitlines() if not line.startswith('{')]
+    return '\n'.join(lines).strip()
+
+
+def ctl_text(*args: str) -> str:
+    """The same door, for a verb whose product is text rather than a record.
+
+    Failure is empty rather than raised. Every caller is reporting on a pane that
+    has already gone wrong, and losing the diagnosis because the diagnosis could
+    not be read is the worse outcome.
+    """
+    done = run([MUXCTL, *args])
+    return done.stdout.strip() if done.returncode == 0 else ''
 
 
 def git(cwd: Path, *args: str) -> str:
@@ -887,12 +954,25 @@ def show_sessions(worktree: Worktree) -> None:
             OUT.print(f'  {line}', markup=False, highlight=False)
 
 
-def capture_pane(pane: str) -> str | None:
-    """What is on a session's screen, color included, or None if tmux cannot say."""
-    if shutil.which('tmux') is None:
-        return None
-    result = run(['tmux', 'capture-pane', '-ep', '-t', pane])
-    return result.stdout.rstrip() if result.returncode == 0 else None
+def registered_pane(address: str) -> str:
+    """The part of a registry address the multiplexer will still answer to.
+
+    The registry spells a pane as `<session>:@<window>.%<pane>` and records it when
+    the session starts, so the first two fields rot the moment the pane is moved.
+    The last one does not, and it is the only one worth handing on. A session name
+    may itself contain a dot, so the split comes from the right.
+    """
+    return address.rsplit('.', 1)[-1]
+
+
+def capture_pane(address: str) -> str | None:
+    """What is on a session's screen, color included, or None where unreadable.
+
+    Two sessions in one worktree are told apart by what is on their screens, and
+    a Claude pane is mostly color.
+    """
+    screen = ctl_text('pane', 'read', registered_pane(address), '--lines', '40', '--color')
+    return screen or None
 
 
 def preview_command() -> str:
@@ -1113,22 +1193,30 @@ def require_tool(name: str, why: str) -> None:
 
 
 def require_caller_pane() -> str:
-    """The pane a spawn splits, which is the caller's own.
+    """The pane a spawn is placed against, which is the caller's own.
 
-    tmux exports $TMUX_PANE into everything it starts, so a session's shell already
-    carries the address of the pane that session is in and nothing has to be passed.
-    Outside tmux there is no pane to split, and a session started anyway would be a
-    process nobody can see — which is the failure this refuses rather than produces.
+    Asked of the multiplexer rather than read out of the environment. Every
+    multiplexer says somewhere which pane a process is in and each says it
+    differently, so the variable to read is the one fact this command would
+    otherwise have to know a multiplexer to know.
+
+    Outside one there is no pane, and a session started anyway would be a process
+    nobody can see — which is the failure this refuses rather than produces.
     """
-    require_tool('tmux', 'A spawned session is a tmux pane, and there is nowhere else to put one')
-    pane = os.environ.get('TMUX_PANE')
-    if not os.environ.get('TMUX') or not pane:
+    require_tool(MUXCTL, 'A spawned session lands in a pane, and this is what opens one')
+    try:
+        return str(ctl('pane', 'current')['pane'])
+    except Refused as refusal:
+        # Only a refusal is the environment. Anything else is the port itself
+        # failing, and its own sentence names a cause this one would replace with
+        # advice that cannot fix it.
+        if refusal.fault is not Fault.PORT_REFUSED:
+            raise
         raise Refused(
-            'Not inside tmux, so there is no pane to split',
-            'Run this from a session that is itself in a tmux pane',
+            refusal.reason,
+            'Run this from a session that is itself in a pane',
             fault=Fault.NO_TMUX,
-        )
-    return pane
+        ) from refusal
 
 
 def require_unoccupied(path: Path) -> None:
@@ -1226,173 +1314,48 @@ def keep_brief(source: Path, repo: str, slug: str | None) -> Path:
     return destination
 
 
-def open_pane(caller: str, workdir: Path, prompt: str, *, below: bool) -> str:
-    """Split the caller's pane, start a session in it, and return the new pane's id.
+def open_session_pane(caller: str, workdir: Path, prompt: str, *, below: bool) -> dict[str, Any]:
+    """Ask for a pane to run a session in, and return what the multiplexer made.
 
-    -d leaves the focus where it was. The caller is mid-turn when it runs this, and a
-    spawn that moves the cursor interrupts whoever is reading that pane.
+    The request is intent rather than geometry. A reviewer names the pane it
+    reviews and the multiplexer puts it directly beneath; a worker asks for room
+    and gets whatever the multiplexer has that can be followed. Neither says how
+    wide, which way to split, or which window — those are answers, and asking for
+    them here would make one multiplexer's answer the only implementable one.
 
-    -P -F is tmux's own answer for which pane it just made, so nothing has to be matched
-    back afterwards by comparing pane lists before and against after.
-
-    `remain-on-exit` is turned on immediately after, and it is what makes a failed
-    launch diagnosable: without it a command that cannot start destroys its pane in
-    milliseconds, leaving no error text, no exit status and no pane — so the only
-    symptom is a session that never registers. Setting it can itself lose that race,
-    which is why `pane_state` still has a GONE to report.
+    `readable` in the record is the multiplexer's claim that the pane can be
+    followed. False is a real answer: it says nowhere on this client can be, which
+    is worth a warning and is not worth refusing a session over.
     """
-    created = run(
-        [
-            'tmux',
-            'split-window',
-            '-d',
-            '-v' if below else '-h',
-            '-P',
-            '-F',
-            '#{pane_id}',
-            '-t',
-            caller,
-            '-c',
-            str(workdir),
-            f'claude {shlex.quote(prompt)}',
-        ]
-    )
-    if created.returncode != 0:
-        raise Refused(created.stderr.strip() or 'tmux refused to split the pane', fault=Fault.SPLIT_REFUSED)
-
-    pane = created.stdout.strip()
-    run(['tmux', 'set-option', '-p', '-t', pane, 'remain-on-exit', 'on'])
-    return pane
+    role = REVIEWER if below else WORKER
+    partner = ['--for', caller] if below else []
+    made = ctl('pane', 'open', role, *partner, '--cwd', str(workdir), '--', 'claude', prompt)
+    if not made.get('readable', True):
+        say_warning(f'{made["pane"]} is {made.get("width")}x{made.get("height")}, which is small to follow an agent in')
+    return made
 
 
-def stack_beside(caller: str, width: str) -> None:
-    """Put the caller in the large left pane, with everything spawned stacked right.
+def pane_report(pane: str) -> dict[str, Any]:
+    """What the multiplexer says about a pane: its state, its status, its pid.
 
-    tmux halves the pane it splits, so a coordinator that dispatched four agents would
-    be reading its own work in a sixteenth of the window. `main-vertical` collapses that
-    into one stack, and the width says how much of the window the reading pane keeps —
-    without it tmux uses its own `main-pane-width` default of 80 columns, which puts the
-    narrow pane on the side that carries prose.
+    One call rather than three, because the three answers come from one record and
+    asking separately is three chances for them to describe different moments.
 
-    `main-vertical` assigns the main pane **by index**, so the caller is swapped into the
-    window's first slot beforehand or the large pane goes to whichever pane happens to
-    lead the window. That is not an edge case: a session is rarely the first pane of the
-    window it is in. The swap is no more intrusive than the layout it precedes, which
-    re-tiles every pane in the window either way.
-
-    Only ever called for a split beside. A split below is a reviewer deliberately placed
-    under its author, and this layout would lift it into the right-hand stack.
-
-    A failure here is reported and not raised. The session is already running by this
-    point, and losing it over a cosmetic call would be the worse outcome.
+    A pane that is gone comes back as a state rather than a refusal. Its absence is
+    the answer a caller waiting on a launch is asking for.
     """
-    window = run(['tmux', 'display-message', '-p', '-t', caller, '#{window_id}'])
-    if window.returncode != 0:
-        say_warning('tmux could not name the window, so the layout is left as it is')
-        return
-
-    target = window.stdout.strip()
-    leader = run(['tmux', 'list-panes', '-t', target, '-F', '#{pane_id}'])
-    first = leader.stdout.splitlines()[0] if leader.returncode == 0 and leader.stdout.strip() else caller
-    if first != caller:
-        run(['tmux', 'swap-pane', '-s', caller, '-t', first])
-
-    run(['tmux', 'set-window-option', '-t', target, 'main-pane-width', width])
-    if run(['tmux', 'select-layout', '-t', target, 'main-vertical']).returncode != 0:
-        say_warning('tmux refused the layout, so the panes are left as the split arranged them')
-        return
-
-    report_width(caller, width)
-
-
-def usable_width(value: str) -> bool:
-    """Whether tmux will actually honor this as a pane width: columns, or a percentage.
-
-    The test is what it honors rather than what it parses, because those are different
-    sets and only the first is useful. `abc`, `-5`, `0` and `999%` are each answered with
-    exit 0 and then resolve to the 80-column default — the value `--width` exists to
-    replace — so an unusable argument produces exactly the layout the flag was passed to
-    avoid. No return code anywhere in the sequence carries the failure, which makes this
-    the only place it can be caught.
-    """
-    number = value.removesuffix('%')
-    if not number.isdigit() or int(number) < 1:
-        return False
-    return int(number) <= 100 if value.endswith('%') else True
-
-
-def report_width(caller: str, width: str) -> None:
-    """Say so when the caller did not end up with the share it asked for.
-
-    Every tmux call above returns 0 whatever it was handed, `main-pane-width` included —
-    so the only evidence that the layout did what it was told is the geometry afterwards.
-    Without this the three ways it can go wrong all produce the outcome it exists to
-    prevent, silently: the caller in the narrow pane and the run exiting 0.
-    """
-    measured = run(['tmux', 'display-message', '-p', '-t', caller, '#{pane_width} #{window_width}'])
-    if measured.returncode != 0 or len(measured.stdout.split()) != 2:
-        return
-
-    got, window = (int(part) for part in measured.stdout.split())
-    wanted = window * int(width.rstrip('%')) // 100 if width.endswith('%') else int(width)
-    if abs(got - wanted) > max(2, wanted // 10):
-        say_warning(f'This pane is {got} columns of {window}, not the {wanted} that --width asked for')
-
-
-def pane_state(pane: str) -> tuple[Pane, int | None]:
-    """Whether a pane is running, dead with a status to read, or gone entirely.
-
-    `display-message` cannot answer the first question: it exits 0 and prints an empty
-    line for a pane that no longer exists, so a check built on it reads every dead pane
-    as healthy. `list-panes` refuses, and that refusal is the existence test.
-
-    It answers for the whole window the pane is in rather than for the pane, so the row
-    has to be found by id — a window's other panes are the caller's own and say nothing
-    about this one.
-    """
-    listed = run(['tmux', 'list-panes', '-t', pane, '-F', '#{pane_id} #{pane_dead} #{pane_dead_status}'])
-    if listed.returncode != 0:
-        return Pane.GONE, None
-
-    for row in listed.stdout.splitlines():
-        pane_id, _, rest = row.partition(' ')
-        if pane_id != pane:
-            continue
-        dead, _, status = rest.partition(' ')
-        if dead != '1':
-            return Pane.RUNNING, None
-        return Pane.DEAD, int(status) if status.strip().isdigit() else None
-    return Pane.GONE, None
+    return ctl('pane', 'status', pane)
 
 
 def last_words(pane: str) -> str:
     """What a dead pane printed before it died, scrollback included.
 
-    Without `-S -` the capture starts at the top of the visible pane, and a command that
-    wrote one line and exited leaves that line above the window — so the capture comes
-    back as blank lines and tmux's own "Pane is dead" notice, which says nothing the
-    exit status has not already said.
+    The whole scrollback rather than the visible region: a command that wrote one
+    line and exited leaves that line above the window, so a capture of what is on
+    screen comes back as blank lines and the multiplexer's own notice that the pane
+    is dead — which says nothing the exit status has not already said.
     """
-    captured = run(['tmux', 'capture-pane', '-p', '-S', '-', '-E', '-', '-t', pane])
-    if captured.returncode != 0:
-        return ''
-    return '\n'.join(line for line in captured.stdout.splitlines() if line.strip())
-
-
-def pane_process(pane: str) -> int | None:
-    """The pid of the process tmux started in a pane, or None where it cannot be read.
-
-    For a pane this command made, that pid is the `claude` process itself, which is what
-    the session registry is keyed on. tmux runs a pane command through `sh -c`, and a
-    simple command is exec'd rather than forked, so the pid survives the shell.
-
-    It is not the session's pid for a pane someone typed `claude` into — there it is the
-    shell, and the session is its child. That is exactly why this is only ever asked about
-    a pane this command just created, and never used to identify a session in general.
-    """
-    found = run(['tmux', 'display-message', '-p', '-t', pane, '#{pane_pid}'])
-    process = found.stdout.strip()
-    return int(process) if found.returncode == 0 and process.isdigit() else None
+    return ctl_text('pane', 'read', pane, '--strip')
 
 
 def claimants(sessions: Sequence[Session], pane: str) -> list[Session]:
@@ -1405,9 +1368,9 @@ def claimants(sessions: Sequence[Session], pane: str) -> list[Session]:
     keeps the address it recorded at startup — so the address as a whole names a place the
     pane has left.
 
-    A tmux session name may itself contain a dot, so the split has to come from the right.
+    Through `registered_pane`, which owns that split.
     """
-    return [session for session in sessions if session.tmux and session.tmux.rsplit('.', 1)[-1] == pane]
+    return [session for session in sessions if session.tmux and registered_pane(session.tmux) == pane]
 
 
 def session_in_pane(sessions: Sequence[Session], pane: str, pane_pid: int | None) -> str | None:
@@ -1463,7 +1426,7 @@ def await_registration(pane: str, timeout: float) -> Arrival:
         # Read once, before anything has had time to move: the pane's process does not
         # change for its lifetime, and it is what tells the session apart from any other
         # row claiming the same pane.
-        pane_pid = pane_process(pane)
+        pane_pid = pane_report(pane).get('pid')
         while time.monotonic() < deadline:
             time.sleep(POLL_SECONDS)
 
@@ -1480,12 +1443,16 @@ def await_registration(pane: str, timeout: float) -> Arrival:
             if pane_pid is not None and any(claimant.pid is None for claimant in claimants(sessions, pane)):
                 return Arrival(Registration.NO_PID_IN_REGISTRY)
 
-            state, status = pane_state(pane)
+            report = pane_report(pane)
+            state = Pane(report['state'])
             if state is Pane.RUNNING:
                 continue
             output = last_words(pane) if state is Pane.DEAD else ''
-            run(['tmux', 'kill-pane', '-t', pane])
-            return Arrival(Registration.PANE_DIED, status=status, output=output)
+            # Closed rather than left standing. A dead pane holds its corpse open so
+            # its exit status can be read, and once it has been the pane is a hole in
+            # the layout that nothing else will collect.
+            ctl('pane', 'close', pane)
+            return Arrival(Registration.PANE_DIED, status=report.get('exit_code'), output=output)
     finally:
         set_echo(echoing)
 
@@ -1519,7 +1486,7 @@ def announce(spawned: Spawned, timeout: float) -> None:
             say_info('The pane is running; the field this needs is `pid` in claude-sessions --json')
 
 
-def cmd_spawn(slug: str | None, brief: str, *, below: bool, width: str, timeout: float, as_json: bool) -> int:
+def cmd_spawn(slug: str | None, brief: str, *, below: bool, timeout: float, as_json: bool) -> int:
     """Start a Claude session in a pane of its own, and name it.
 
     Everything that can refuse is settled before anything is created —
@@ -1553,15 +1520,13 @@ def cmd_spawn(slug: str | None, brief: str, *, below: bool, width: str, timeout:
     # not collect, because nothing was ever pushed and it is held as UNPUBLISHED. So the
     # one thing this command created gets unwound before the refusal reaches the caller.
     try:
-        pane = open_pane(caller, where.path, BRIEF_PROMPT.format(brief=kept), below=below)
+        made = open_session_pane(caller, where.path, BRIEF_PROMPT.format(brief=kept), below=below)
     except Refused:
         if where.created:
             unwind(checkout, where)
         raise
 
-    if not below:
-        stack_beside(caller, width)
-
+    pane = str(made['pane'])
     spawned = Spawned(
         repo=checkout.name,
         path=where.path,
@@ -1846,7 +1811,7 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[quiet],
         help='start a Claude session in a pane: with a slug in a worktree, without one in the checkout',
         description=(
-            "Split the caller's pane, launch `claude` against a written brief, and print the name the session "
+            'Open a pane, launch `claude` in it against a written brief, and print the name the session '
             'registered under. '
             'A slug names the branch, so `spawn <slug>` creates or attaches a worktree and puts the session in '
             'it, and `spawn` with no slug stands the session in the primary checkout with no branch — which is '
@@ -1861,17 +1826,7 @@ def build_parser() -> argparse.ArgumentParser:
     spawn.add_argument(
         '--brief', required=True, metavar='PATH', help='the file the session is told to read; it is copied, and the copy is what it reads'
     )
-    spawn.add_argument('--below', action='store_true', help='split under the caller rather than beside it, and leave the layout alone')
-    # No default here, so an absent flag is distinguishable from one spelling the default
-    # out. A sentinel never steals a value the caller can mean, and with the default
-    # as the sentinel, `--below --width 66%` reads as no --width at all.
-    # argparse also runs a help string through %-formatting, so a literal percent in the
-    # default has to arrive doubled or `--help` dies rather than the command.
-    spawn.add_argument(
-        '--width',
-        metavar='WIDTH',
-        help=f"the caller's share of the window after the split, in columns or a percentage (default {MAIN_PANE_WIDTH.replace('%', '%%')})",
-    )
+    spawn.add_argument('--below', action='store_true', help='a reviewer, placed directly under the pane it reviews rather than beside it')
     spawn.add_argument(
         '--timeout',
         type=float,
@@ -1937,24 +1892,7 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
         case 'new':
             return cmd_new(args.slug)
         case 'spawn':
-            # `--width` is spawn's own flag and `--below` is what voids it: a below split
-            # leaves the layout alone, so main-pane-width would parse and reach nothing.
-            # A flag the run cannot honor says so, which makes that a usage
-            # error rather than a silent no-op.
-            if args.below and args.width is not None:
-                args.subparser.error('no --width with --below: a split below leaves the layout alone, so there is no main pane to size')
-            # Validated here rather than downstream, because tmux takes anything and then
-            # falls back to the 80 columns this flag exists to replace.
-            if args.width is not None and not usable_width(args.width):
-                args.subparser.error(f'--width takes columns or a percentage, like 120 or {MAIN_PANE_WIDTH}, not {args.width!r}')
-            return cmd_spawn(
-                args.slug,
-                args.brief,
-                below=args.below,
-                width=args.width or MAIN_PANE_WIDTH,
-                timeout=args.timeout,
-                as_json=args.as_json,
-            )
+            return cmd_spawn(args.slug, args.brief, below=args.below, timeout=args.timeout, as_json=args.as_json)
         case 'land':
             return cmd_land()
         case 'drop':
@@ -1989,7 +1927,7 @@ def main() -> int:
         say_error(refusal.reason)
         for hint in refusal.hints:
             say_info(hint)
-        return 1
+        return USAGE_ERROR if refusal.fault in USAGE_FAULTS else 1
 
 
 if __name__ == '__main__':
