@@ -15,8 +15,8 @@
 #
 # Matches the repo only where an alert actually names the app — the CI title and
 # the deploy body's first line. Matching the name anywhere in the alert put every
-# deploy failure in front of the homelab repo, because each one carries a runbook
-# URL under datapointchris/homelab.
+# deploy failure in front of whichever repo hosts the runbooks, because every
+# alert carries a runbook URL naming that repo.
 #
 # Reads the token from the hand-managed ntfy client config rather than carrying
 # one, so no secret enters this repo.

@@ -148,10 +148,10 @@ class Precondition(enum.StrEnum):
     the tuple because one consumer needed it.
 
     It also *cannot* be a coordinate, whatever the evidence said. Resolution is
-    machine-independent by construction — `machines check` validates all four
-    manifests offline from any machine, and `machines show <other>` describes that
+    machine-independent by construction — `machines check` validates every
+    manifest offline from any machine, and `machines show <other>` describes that
     machine rather than this one — so a hardware probe inside `available()` would
-    make the Mac's view of the Arch plan differ from the Arch box's.
+    make one machine's view of another's plan differ from that machine's own.
     """
 
 

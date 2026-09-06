@@ -80,12 +80,12 @@ def record(
 def three_runs(sandbox: Sandbox) -> None:
     """Two boxes, three verbs, three days. The store every filter row reads."""
     record(sandbox, identifier='aaaaaaaaaaaa', verb='plan', host='box', when='20260101T000000Z')
-    record(sandbox, identifier='bbbbbbbbbbbb', verb='apply', host='mbp', when='20260102T000000Z')
+    record(sandbox, identifier='bbbbbbbbbbbb', verb='apply', host='peer', when='20260102T000000Z')
     record(sandbox, identifier='cccccccccccc', verb='check', host='box', when='20260103T000000Z')
 
 
 BOX_PLAN = '20260101T000000Z-box-plan'
-MBP_APPLY = '20260102T000000Z-mbp-apply'
+PEER_APPLY = '20260102T000000Z-peer-apply'
 BOX_CHECK = '20260103T000000Z-box-check'
 
 
@@ -155,19 +155,19 @@ def test_two_boxes_sharing_a_manifest_are_two_rows_by_host(sandbox: Sandbox, cli
     """The listing carries the box as well as the manifest, so a consumer counting
     machines counts boxes.
 
-    macmini and mbp both declare `macos-personal-workstation`, so `machine` is the
+    Two boxes both declare `macos-personal-workstation`, so `machine` is the
     same string on both and a fold over it reports one machine where two wrote
     runs. The filenames were keyed on the host to make that collision unreachable,
     and a key that reaches only the filename is half a mechanism — the reader has
     to have something to match on.
     """
-    record(sandbox, identifier='aaaaaaaaaaaa', host='macmini', when='20260101T000000Z')
-    record(sandbox, identifier='bbbbbbbbbbbb', host='mbp', when='20260102T000000Z')
+    record(sandbox, identifier='aaaaaaaaaaaa', host='box', when='20260101T000000Z')
+    record(sandbox, identifier='bbbbbbbbbbbb', host='peer', when='20260102T000000Z')
 
     ran = cli('report', 'list', '--json')
 
     assert {row['machine'] for row in ran.document} == {sandbox.machine}
-    assert [row['host'] for row in ran.document] == ['mbp', 'macmini']
+    assert [row['host'] for row in ran.document] == ['peer', 'box']
 
 
 def test_a_record_written_before_the_host_field_is_listed_under_its_manifest(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -175,9 +175,9 @@ def test_a_record_written_before_the_host_field_is_listed_under_its_manifest(san
 
     An empty string would pool every box's whole early history into one nameless
     bucket, which is a worse answer than the manifest — that one is right for the
-    boxes that do not share it and no more wrong than it ever was for the two Macs.
+    boxes that do not share it and no more wrong than it ever was for a twin pair.
     """
-    written = record(sandbox, identifier='aaaaaaaaaaaa', host='macmini', when='20260101T000000Z')
+    written = record(sandbox, identifier='aaaaaaaaaaaa', host='box', when='20260101T000000Z')
     payload = json.loads(written.read_text())
     payload['host'] = ''
     written.write_text(json.dumps(payload))
@@ -210,23 +210,23 @@ def test_a_record_that_will_not_parse_names_no_host_rather_than_guessing_one(san
 @pytest.mark.parametrize(
     ('flags', 'expected'),
     [
-        ((), [BOX_CHECK, MBP_APPLY, BOX_PLAN]),
+        ((), [BOX_CHECK, PEER_APPLY, BOX_PLAN]),
         (('--machine', 'box'), [BOX_CHECK, BOX_PLAN]),
-        (('--machine', 'mbp'), [MBP_APPLY]),
+        (('--machine', 'peer'), [PEER_APPLY]),
         (('--machine', 'nosuch'), []),
-        (('--verb', 'apply'), [MBP_APPLY]),
+        (('--verb', 'apply'), [PEER_APPLY]),
         (('--verb', 'plan'), [BOX_PLAN]),
         (('--verb', 'nosuch'), []),
-        (('--limit', '2'), [BOX_CHECK, MBP_APPLY]),
+        (('--limit', '2'), [BOX_CHECK, PEER_APPLY]),
         (('--limit', '1'), [BOX_CHECK]),
-        (('--limit', '9'), [BOX_CHECK, MBP_APPLY, BOX_PLAN]),
+        (('--limit', '9'), [BOX_CHECK, PEER_APPLY, BOX_PLAN]),
         (('--machine', 'box', '--verb', 'plan'), [BOX_PLAN]),
         (('--machine', 'box', '--verb', 'apply'), []),
     ],
     ids=[
         'unfiltered',
         'machine-box',
-        'machine-mbp',
+        'machine-peer',
         'machine-absent',
         'verb-apply',
         'verb-plan',
@@ -243,7 +243,7 @@ def test_the_listing_filters_narrow_by_what_the_filename_carries(
 ) -> None:
     """Newest first, and read off the names rather than the records — which is why
     `--machine` matches the *host* a record was written on and not the manifest
-    both Macs share."""
+    two boxes share."""
     three_runs(sandbox)
 
     ran = cli('report', 'list', *flags, '--json')
@@ -519,16 +519,16 @@ def test_a_streak_ends_at_the_run_that_left_the_item_alone(sandbox: Sandbox, cli
 
 
 def test_a_streak_is_counted_per_box_rather_than_per_manifest(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """macmini and mbp share a manifest. Keyed on it, either Mac leaving an item
+    """Two boxes share a manifest. Keyed on it, either of them leaving an item
     alone ended the other's streak and a real fault on one read as settled."""
     for day in range(3):
-        record(sandbox, identifier=f'aaaaaaaaaa{day:02d}', host='mbp', when=f'2026010{day + 1}T000000Z', done=('packages:pkg-config',))
-        record(sandbox, identifier=f'bbbbbbbbbb{day:02d}', host='macmini', when=f'2026010{day + 1}T000100Z', done=('symlinks',))
+        record(sandbox, identifier=f'aaaaaaaaaa{day:02d}', host='peer', when=f'2026010{day + 1}T000000Z', done=('packages:pkg-config',))
+        record(sandbox, identifier=f'bbbbbbbbbb{day:02d}', host='box', when=f'2026010{day + 1}T000100Z', done=('symlinks',))
 
     ran = cli('report', 'stats', '--json')
 
     found = [(entry['address'], entry['machine']) for entry in ran.document['unconverged']]
-    assert found == [('packages:pkg-config', 'mbp'), ('symlinks', 'macmini')]
+    assert found == [('packages:pkg-config', 'peer'), ('symlinks', 'box')]
 
 
 @pytest.mark.parametrize('verb', ['plan', 'check'], ids=['plan', 'check'])
@@ -1064,8 +1064,9 @@ def test_an_unknown_machine_is_reported_rather_than_probed(sandbox: Sandbox, cli
 
 def test_no_results_file_is_written_unless_output_names_one(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """The default is a pure read, and that is a safety property rather than a
-    convention: the committed results file is the work box's measurement, and a run
-    on any unfirewalled machine would replace the only record of what work blocks."""
+    convention: the committed results file is a measurement from a restricted
+    network, and a run on any unfirewalled machine would replace the only record
+    of what that network blocks."""
     sandbox.shadow('curl', REFUSES)
     sandbox.shadow('git', REFUSES)
 

@@ -10,7 +10,7 @@ config.window_decorations = 'RESIZE'
 config.window_background_opacity = 1.0
 config.macos_window_background_blur = 0 -- Disabled for performance on older hardware
 
--- Performance optimizations for 2018 Intel Mac Mini
+-- Performance optimizations for an older integrated-GPU machine
 config.max_fps = 60 -- Limit frame rate to reduce GPU load
 config.animation_fps = 30 -- Reduce animation smoothness for better performance
 config.scrollback_lines = 10000 -- Reduce from default to save memory

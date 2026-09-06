@@ -440,7 +440,7 @@ def test_two_registries_in_one_trust_variant_is_an_error(tmp_path: Path) -> None
 def test_a_registry_named_outside_the_trust_variants_is_an_error(tmp_path: Path, directory: str) -> None:
     """Every directory but `trust/` reaches both trust domains, so one path in one
     cannot be right for both — which is exactly how the fleet's registry came to be
-    named in a config the work box also deploys."""
+    named in a config a nonfleet machine also deploys."""
     relative = f'{directory}/.config/syncer/config.toml'
     root = configs_tree(tmp_path, configs={relative: f'repos_registry = "{FLEET_REGISTRY}"\n'})
 

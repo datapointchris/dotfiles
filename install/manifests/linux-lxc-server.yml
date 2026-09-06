@@ -25,7 +25,7 @@ flatpak: false
 go_tools:
   - task      # Taskfile runner used across the repos
   - gdu       # fast disk-usage analyzer (fills-up diagnosis)
-  - sops      # decrypt homelab secrets in place
+  - sops      # decrypt deployment secrets in place
 
 github_releases:
   - fzf         # fuzzy finder — backs the shell functions

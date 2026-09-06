@@ -599,7 +599,7 @@ class TestRefusingAForeignBundle:
 class TestRefusingAPremiseFromTheOtherBox:
     """The manifest cannot answer this, which is the whole reason it exists.
 
-    Two Macs both declare `macos-personal-workstation`, so a sparse bundle
+    Two boxes both declare `macos-personal-workstation`, so a sparse bundle
     planned against one of them passes the machine check on the other — and its
     omissions are recorded as measured about a box that never reported.
     """
@@ -621,30 +621,30 @@ class TestRefusingAPremiseFromTheOtherBox:
         return tarball
 
     def test_a_bundle_planned_against_the_twin_is_refused_and_names_both(self, tmp_path, staging) -> None:
-        tarball = self.planned_against(tmp_path, 'mbp')
+        tarball = self.planned_against(tmp_path, 'box-b')
 
         with pytest.raises(offline_bundle.StagingError) as refused:
-            offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini')
+            offline_bundle.stage(tarball, 'macos-personal-workstation', 'box-a')
 
-        assert 'mbp' in str(refused.value)
-        assert 'macmini' in str(refused.value)
+        assert 'box-b' in str(refused.value)
+        assert 'box-a' in str(refused.value)
 
     def test_a_bundle_planned_against_this_box_stages(self, tmp_path, staging) -> None:
-        tarball = self.planned_against(tmp_path, 'macmini')
+        tarball = self.planned_against(tmp_path, 'box-a')
 
-        assert offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini').is_dir()
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation', 'box-a').is_dir()
 
     def test_a_full_bundle_carries_no_premise_and_is_never_refused(self, tmp_path, staging) -> None:
         """Only a sparse bundle claims anything about what the target already had,
         so only a sparse bundle can be wrong about which target."""
         tarball = self.planned_against(tmp_path, '', sparse=False)
 
-        assert offline_bundle.stage(tarball, 'macos-personal-workstation', 'macmini').is_dir()
+        assert offline_bundle.stage(tarball, 'macos-personal-workstation', 'box-a').is_dir()
 
     def test_a_box_that_cannot_name_itself_stages_anything(self, tmp_path, staging) -> None:
         """Same terms as the machine check above: a half-built box has to be able
         to unpack a bundle, or the guard is what stops the rebuild."""
-        tarball = self.planned_against(tmp_path, 'mbp')
+        tarball = self.planned_against(tmp_path, 'box-b')
 
         assert offline_bundle.stage(tarball, 'macos-personal-workstation', '').is_dir()
 

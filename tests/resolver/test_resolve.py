@@ -120,7 +120,7 @@ def test_the_windows_machine_plans_every_winget_row_and_nothing_else_does(declar
     exactly that across `/mnt/c`, and forbidding it by `os_family` would decide
     against that before the verb doing it has been retired.
 
-    So nothing but the manifest keeps these off the other four machines, and this
+    So nothing but the manifest keeps these off every other machine, and this
     is what says so the day one of them names a row.
     """
     declared = {entry.name for entry in declaration.section('winget_packages')}

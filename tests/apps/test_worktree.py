@@ -1405,7 +1405,7 @@ esac""",
         assert not marker.exists(), 'setup must not run where the repo never declared it'
 
     def test_no_task_on_path_is_not_a_failure(self, fleet, bin_dir, run):
-        """The work box has repos and may not have `task`. Absence is ordinary."""
+        """A machine can hold repos and have no `task`. Absence is ordinary."""
         write_stub(bin_dir, 'task', 'exit 127')
 
         result = run(fleet['primary'], 'new', 'alpha')

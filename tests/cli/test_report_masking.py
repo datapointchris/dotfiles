@@ -25,7 +25,7 @@ import pytest
 
 from dotfiles.commands import report
 
-NAMES = {'the Windows account': 'ab12345', 'this machine name': 'wkstn01x'}
+NAMES = {'the Windows account': 'zz00000', 'this machine name': 'hostzz00'}
 
 
 @pytest.fixture
@@ -42,12 +42,12 @@ def staging(tmp_path: Path) -> Path:
 
 
 def test_a_record_is_masked_without_its_shape_changing(tmp_path: Path, staging: Path) -> None:
-    local = tmp_path / '20260817T131536Z-wkstn01x-apply.json'
+    local = tmp_path / '20260817T131536Z-hostzz00-apply.json'
     local.write_text(
         json.dumps(
             {
                 'machine': 'wsl-work-workstation',
-                'outcomes': [{'address': 'system/step/windows-fonts', 'message': '/mnt/c/Users/ab12345/AppData'}],
+                'outcomes': [{'address': 'system/step/windows-fonts', 'message': '/mnt/c/Users/zz00000/AppData'}],
             }
         )
     )
@@ -64,9 +64,9 @@ def test_a_record_is_masked_without_its_shape_changing(tmp_path: Path, staging: 
 def test_a_stream_stays_line_delimited(tmp_path: Path, staging: Path) -> None:
     """Parsed and re-emitted per line rather than as one document, because the
     whole file is not JSON and a raw-text pass breaks on a name JSON escapes."""
-    local = tmp_path / '20260817T131536Z-wkstn01x-apply.jsonl'
+    local = tmp_path / '20260817T131536Z-hostzz00-apply.jsonl'
     local.write_text(
-        json.dumps({'argv': ['cmd.exe', '/C', 'echo %USERNAME%'], 'answer': 'ab12345', 'returncode': 0})
+        json.dumps({'argv': ['cmd.exe', '/C', 'echo %USERNAME%'], 'answer': 'zz00000', 'returncode': 0})
         + '\n'
         + json.dumps({'argv': ['systemctl', '--user', 'is-enabled'], 'returncode': 1})
         + '\n'
@@ -87,7 +87,7 @@ def test_a_path_under_this_home_reads_as_a_person_writes_it(tmp_path: Path, stag
     `/home/<account-this-runs-as>/.local/bin/dotfiles`, which is unreadable and
     throws away a `~` that was available."""
     monkeypatch.setattr(report.Path, 'home', staticmethod(lambda: Path('/home/chris')))
-    local = tmp_path / '20260817T131536Z-wkstn01x-apply.jsonl'
+    local = tmp_path / '20260817T131536Z-hostzz00-apply.jsonl'
     local.write_text(json.dumps({'argv': ['/home/chris/.local/bin/dotfiles', '--version']}) + '\n')
 
     staged = report._masked_copy(local, {'the account this runs as': 'chris'}, staging)
@@ -105,8 +105,8 @@ def test_the_record_on_this_machine_is_not_rewritten(tmp_path: Path, staging: Pa
     happens to differ proves only that today's caller behaves, so the second half
     names the record's own directory and requires the refusal.
     """
-    local = tmp_path / '20260817T131536Z-wkstn01x-apply.json'
-    original = json.dumps({'outcomes': [{'message': '/mnt/c/Users/ab12345'}]})
+    local = tmp_path / '20260817T131536Z-hostzz00-apply.json'
+    original = json.dumps({'outcomes': [{'message': '/mnt/c/Users/zz00000'}]})
     local.write_text(original)
 
     staged = report._masked_copy(local, NAMES, staging)

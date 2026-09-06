@@ -244,10 +244,10 @@ def _status_for(named: str | None, machine: str) -> Path | None:
         hint(f'publish one from that machine to make the next build sparse: dotfiles status upload --machine {machine}')
         return None
     # Which box wrote it, not just which manifest. Two machines legitimately share
-    # one — `macos-personal-workstation` is both Macs — and that is exactly why a
-    # status filename carries a digest of the hostname. Nothing here can tell
+    # one — `macos-personal-workstation` is declared by both — and that is exactly
+    # why a status filename carries a digest of the hostname. Nothing here can tell
     # which of them a bundle is for, so picking the most recent would diff one
-    # Mac's plan against the other's installed set and report the result as
+    # box's plan against the other's installed set and report the result as
     # measured.
     published = {publishing.wrote(name) for name in listed}
     if len(published) > 1:

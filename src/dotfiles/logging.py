@@ -213,7 +213,7 @@ def bind_run(run_id: str, host: str) -> None:
 
     **`host`, because that is the value, and `machine` is taken.** The run record
     and `status-<box>.json` both key `machine` on the manifest, and two boxes share
-    one — so a stream keyed on the box under that word puts one Mac's stream and
+    one — so a stream keyed on the box under that word puts one box's stream and
     its record in different groups of any fold across the directory the fleet
     shares.
     """

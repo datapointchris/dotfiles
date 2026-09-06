@@ -19,9 +19,9 @@ around push and pull. Stopping the builder makes the peer genuinely unreachable,
 which is the one thing a fake transport cannot be.
 
 The offline container reaching the builder while GitHub stays blocked is not a
-compromise in the model. It is the arrangement being rehearsed: the work box
-reaches an internal file server and cannot reach GitHub, and `firewalled`
-blackholes hosts by name rather than cutting the network.
+compromise in the model. It is the arrangement being rehearsed: a machine on a
+managed network reaches an internal file server and cannot reach GitHub, and
+`firewalled` blackholes hosts by name rather than cutting the network.
 """
 
 from __future__ import annotations

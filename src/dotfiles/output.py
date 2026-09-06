@@ -70,9 +70,9 @@ class Phrase(StrEnum):
 
     **Most of these wordings are killed by no test, and that is the intended
     state.** `task test:mutation:diff` classifies a member's value as `logic`, so
-    each one is planted and most survive. Asserting on them is what
-    `testing.md` § "Never assert on rendered output" forbids, and the survivor
-    list is what a table of unassertable prose looks like from inside the harness.
+    each one is planted and most survive. Asserting on rendered output is exactly
+    what a test must not do, and the survivor list is what a table of unassertable
+    prose looks like from inside the harness.
     The exceptions are deliberate and there are two, both pinning a spelling that
     nothing else can catch: `tests/cli/test_reconcile.py` writes out
     `need attention` and `tests/cli/test_apply.py` writes out `needs attention`.

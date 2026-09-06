@@ -89,11 +89,11 @@ is the whole job a version has.
 **2 names the box; 1 named only the manifest.** Additive per key, and additive is
 not the test — the test is whether a consumer can *state* which generation it
 needs. A reader folding the fleet's files by machine needs 2: under 1 the only
-identity in the document is `machine`, and macmini and mbp both write
-`macos-personal-workstation` into it, so the two Macs are one row and whichever
-was read last wins. Recovering the box from the filename instead is the half
-mechanism `standards/data.md` § "A reader of a shared directory selects by the
-key that made the writes unique" exists to refuse.
+identity in the document is `machine`, and two boxes both write
+`macos-personal-workstation` into it, so they are one row and whichever
+was read last wins. Recovering the box from the filename instead is a half
+mechanism: a reader of a shared directory selects by the key that made the writes
+unique, and a discriminator reaching only the name is not that key.
 
 `runs.SCHEMA` is the same arrangement for the run record: one artifact, one
 number, moved when that artifact changes and never because a neighbor did.
@@ -177,8 +177,8 @@ def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) ->
 
     **`host` is the key the filename was already split on, said again inside.**
     `machine` is the manifest and two boxes legitimately share one, so it cannot
-    tell macmini's file from mbp's — and both of them write it. A reader folding
-    the directory has to match on the thing that made the writes unique, and a
+    tell one twin's file from the other's — and both of them write it. A reader
+    folding the directory has to match on the thing that made the writes unique, and a
     discriminator reaching only the name gives it nothing to match. Plainly rather
     than as `publishing.discriminator`'s digest: this file stays inside the
     fleet's own synced folder, where the hostname is published on purpose.

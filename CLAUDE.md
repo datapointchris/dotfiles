@@ -158,7 +158,7 @@ This dotfiles setup maintains a clear separation between system package managers
 - Homebrew Python only kept if required by `brew uses --installed python@X.XX`
 - All development uses uv-managed Python, not system Python
 
-**Homebrew builds no new Intel macOS bottles, and both Macs are Intel**: a formula keeps whatever
+**Homebrew builds no new Intel macOS bottles, and the macOS machines here are Intel**: a formula keeps whatever
 Intel bottle it last published and has none once it is rebuilt, so the set with no bottle only
 grows. Intel drops to Tier 3 in September 2026 and is unsupported from September 2027. Do not
 re-derive this — it is settled, and the errors below are the expected consequence rather than a

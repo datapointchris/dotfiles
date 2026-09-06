@@ -116,17 +116,17 @@ def test_the_document_names_the_machine_and_when_it_was_measured(state: Path) ->
 def test_the_document_names_the_box_as_well_as_the_manifest(state: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The filename splits on the box and the document has to say the same thing.
 
-    macmini and mbp both declare `macos-personal-workstation`, so a reader folding
-    the fleet's files on `machine` alone sees one Mac and reads whichever it opened
+    Two boxes both declare `macos-personal-workstation`, so a reader folding
+    the fleet's files on `machine` alone sees one box and reads whichever it opened
     last. Recovering the box by parsing the filename is the half mechanism the
     split exists to avoid.
     """
-    monkeypatch.setattr(paths, 'MACHINE_ID', 'macmini')
+    monkeypatch.setattr(paths, 'MACHINE_ID', 'box-a')
 
     status.record(results(('system', ResourceVerdict.CONVERGED)), 'macos-personal-workstation', WHEN)
     written = json.loads(paths.STATUS_FILE.read_text())
 
-    assert written['host'] == 'macmini'
+    assert written['host'] == 'box-a'
     assert written['machine'] == 'macos-personal-workstation'
 
 
@@ -209,7 +209,7 @@ def test_the_schedule_runs_the_check_and_nothing_else(linux: Path, fake_bin: Pat
     """The unit invokes `dotfiles check` directly, with nothing in front of it.
 
     This repo configures machines, and a machine is not necessarily part of the
-    fleet — the work box runs the same `check` and has none of the fleet's tools.
+    fleet — a nonfleet machine runs the same `check` and has none of the fleet's tools.
     Wrapping the unit in something that reported failures to `fleet` was tried
     and reverted: it made this repo's own scheduled work depend on a tool that
     only some machines have, which is backwards. Anything the fleet wants to
@@ -379,7 +379,7 @@ def test_the_unit_path_is_declared_rather_than_inherited(monkeypatch: pytest.Mon
 
 def test_the_agent_declares_the_same_directories_as_the_unit() -> None:
     """launchd hands an agent `/usr/bin:/bin:/usr/sbin:/sbin`, so `/usr/local/bin`
-    is absent and `gh` resolves to nothing. Measured 2026-08-21 on macmini: one
+    is absent and `gh` resolves to nothing. Measured 2026-08-21: one
     scheduled run spent 26 requests of the 60-per-hour anonymous GitHub quota and
     zero authenticated ones, because `github_token` gates on `shutil.which('gh')`
     and degrades to an unauthenticated request instead of failing."""

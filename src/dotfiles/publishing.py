@@ -2,10 +2,9 @@
 
 The offline loop needs one thing to travel *from* the firewalled box: what it has
 installed, so a machine with a network can build it a bundle carrying only what it
-lacks. `~/dev/workstations.md` § "The seam between them" records the standing
-arrangement that nothing written on that machine travels back, and this is the one narrow
-exception to it. Narrow has to be a property of the code rather than of whoever
-is looking.
+lacks. The standing arrangement is that nothing written on that machine travels
+back, and this is the one narrow exception to it. Narrow has to be a property of
+the code rather than of whoever is looking.
 
 **Two leaks decide the shape, and both are real on that machine.**
 `resources/identity.py` examines `user.name` and `user.email`, and its own
@@ -44,10 +43,10 @@ nothing. `identifying` is where that single decision lives. The account name is
 never published anywhere, so it is on the list on every machine.
 
 Loosening the match itself was rejected and stays rejected. Word boundaries still
-match `syncthing@archlinux`, a minimum length stops protecting `mbp`, and an
-escape hatch is a hole in the one boundary that must not have one. Withholding is
-not a loosening — nothing carrying a name leaves under either rule, and what
-changes is only how much else goes with it.
+match `syncthing@archlinux`, a minimum length stops protecting a three-letter
+hostname, and an escape hatch is a hole in the one boundary that must not have
+one. Withholding is not a loosening — nothing carrying a name leaves under either
+rule, and what changes is only how much else goes with it.
 """
 
 from __future__ import annotations
@@ -90,7 +89,7 @@ PROTOCOL_KEYS = ('machine', 'written_by')
 `machine` is the manifest name, and `remote.statuses_for` builds the shelf
 directory out of it — so a scan that read it as a leak would refuse every
 document ever composed. It is a filename in this repo rather than a fact about
-the box: two Macs share one, and the hostname that *would* identify a machine is
+the box: two boxes share one, and the hostname that *would* identify a machine is
 deliberately not what goes here.
 
 Measured 2026-08-15: on a box named `archlinux` running the
@@ -116,9 +115,9 @@ SUFFIX = '.json'
 WRITTEN_BY = 'written_by'
 """Which box composed a document, where the composer knew.
 
-Keyed separately from `machine`, which is the manifest and is the field two Macs
-write identically. A consumer that has to tell one from the other — the sparse
-bundle builder is the only one — reads this, and `published_by` is how.
+Keyed separately from `machine`, which is the manifest and is the field two boxes
+sharing one write identically. A consumer that has to tell one from the other —
+the sparse bundle builder is the only one — reads this, and `published_by` is how.
 
 Absent rather than empty where nothing supplied it. `check --json` and `plan
 --json` are read on the machine that produced them and have no second box to be

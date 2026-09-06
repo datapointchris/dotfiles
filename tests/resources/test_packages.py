@@ -173,7 +173,7 @@ def test_a_declared_tool_in_its_provider_directory_is_matched(tmp_path: Path, fa
 
 
 def test_a_declared_tool_only_somewhere_else_on_path_is_not_matched(tmp_path: Path, fake_bin: Path) -> None:
-    """The provenance question, for a Go tool. Measured on mbp 2026-08-24: `rg` and
+    """The provenance question, for a Go tool. Measured 2026-08-24: `rg` and
     `oxker` are `cargo_packages` entries whose only copy is a brew formula somebody
     chose, and both reported MATCHED off `/usr/local/bin` while cargo had never
     installed either."""
@@ -217,7 +217,7 @@ def test_the_command_field_is_what_gets_looked_up(tmp_path: Path, fake_bin: Path
 def test_an_unreadable_entry_does_not_take_out_the_whole_scan(tmp_path: Path) -> None:
     """macOS ships `/usr/sbin/weakpass_edit` pointing into SIP-protected
     `authserver/`, so following it is denied. One such entry made the whole
-    `packages` resource report "could not be examined" on both Macs."""
+    `packages` resource report "could not be examined" on every macOS box."""
     forbidden = tmp_path / 'forbidden'
     forbidden.mkdir()
     (forbidden / 'target').write_text('')
@@ -477,7 +477,7 @@ DECLARES_LAZYGIT = {'machine': 'box', 'platform': 'linux', 'github_releases': ['
 # Provenance: which copy of a release counts as installed
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# Measured on macmini 2026-08-16. Homebrew's syncthing sat on PATH at the version
+# Measured 2026-08-16. Homebrew's syncthing sat on PATH at the version
 # the release publishes, so `packages plan` reported an entry satisfied that
 # nothing here had ever installed — and `brew uninstall` would have taken the tool
 # off the machine with every verb still calling it converged.

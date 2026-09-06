@@ -71,8 +71,8 @@ ATTENTION_KIND = 'attention'
 """What a machine door calls an item only a person can repair.
 
 The key rather than `Phrase.NEED_ATTENTION`, which is the sentence a screen says. A
-document key is a name and a rendering is a phrase, and one value spelled two
-ways is what `help.md` § "One concept, one word" is about.
+document key is a name and a rendering is a phrase, and one concept gets one
+word rather than two spellings.
 """
 
 NAMES_SHOWN = 3
@@ -185,9 +185,9 @@ def _listed(path: Path) -> dict[str, object]:
 
     **`machine` is the manifest and `host` is the box, and a consumer folding this
     stream needs the second one.** Two machines legitimately share one manifest —
-    macmini and mbp are both `macos-personal-workstation` — so a count grouped on
-    `machine` reports three boxes where four wrote runs, and either Mac's history
-    stands in for the other's. A reader of a shared directory selects by the key
+    both declare `macos-personal-workstation` — so a count grouped on `machine`
+    reports one box where two wrote runs, and either one's history stands in for
+    the other's. A reader of a shared directory selects by the key
     that made the writes unique: the filenames were keyed on the host precisely so
     the two could be told apart, and a discriminator that reaches only the filename
     is half a mechanism.
@@ -737,10 +737,10 @@ def _never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
     applies = [record for record in records if record.verb == 'apply']
     by_machine: defaultdict[str, list[runs.RunRecord]] = defaultdict(list)
     for record in applies:
-        # By box, not by manifest. Keyed on the manifest, macmini's and mbp's
-        # applies interleaved into one history, so either Mac leaving an item
-        # alone ended the other's streak and a real fault on one of them read as
-        # settled.
+        # By box, not by manifest. Keyed on the manifest, the applies of two
+        # boxes sharing one interleaved into a single history, so either of them
+        # leaving an item alone ended the other's streak and a real fault on one
+        # read as settled.
         by_machine[record.box].append(record)
 
     found: list[Unconverged] = []

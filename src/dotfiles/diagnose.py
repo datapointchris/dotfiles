@@ -486,7 +486,7 @@ def _intercepted(stores: dict[str, str] | None = None) -> Diagnosis:
     the problem.
 
     `stores` is a parameter so both branches are reachable from a test. The
-    no-store branch is not a rare one — it is what both Macs take, since none of
+    no-store branch is not a rare one — it is what macOS takes, since none of
     these directories exists there — and a test that could only run on the machine
     it happened to be written on asserted nothing about it.
     """

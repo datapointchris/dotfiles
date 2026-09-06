@@ -86,7 +86,7 @@ class TestWhatTheDocumentCovers:
         assert set(ran.document['scope']) > set(publishing.PUBLISHABLE)
 
 
-NAMED = {'this machine name': 'wkstn01x', 'the account this runs as': 'a-work-account'}
+NAMED = {'this machine name': 'hostzz00', 'the account this runs as': 'an-account-name'}
 """The two names the gate refuses, chosen rather than read off this machine.
 
 A test that reads `paths.machine_id()` and `getpass.getuser()` can only assert
@@ -101,7 +101,7 @@ class TestTheGate:
     def test_a_document_naming_this_box_is_refused(self) -> None:
         """The second guard, and the one the allowlist cannot be: an allowlist
         protects against a new resource, never against a new field on a row."""
-        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'wkstn01x'}]}, NAMED)
+        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'hostzz00'}]}, NAMED)
 
         assert problems == ('this machine name appears in it',)
 
@@ -109,12 +109,12 @@ class TestTheGate:
         """`machine_id` lowercases and Windows reports a hostname in upper, so the
         two never meet as typed. An asset tag is the shape that reached a committed
         file this way, and a case-sensitive test reads it straight past."""
-        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'WKSTN01X'}]}, NAMED)
+        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'HOSTZZ00'}]}, NAMED)
 
         assert problems == ('this machine name appears in it',)
 
     def test_a_document_naming_the_account_is_refused(self) -> None:
-        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'a-work-account'}]}, NAMED)
+        problems = publishing.redacted({'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': 'an-account-name'}]}, NAMED)
 
         assert problems == ('the account this runs as appears in it',)
 
@@ -134,7 +134,7 @@ class TestTheGate:
         has ever been. Measured on a box named `archlinux` running
         `archlinux-personal-workstation`, where the hostname is a substring of the
         key the exchange is organized by."""
-        document = {'scope': list(publishing.PUBLISHABLE), 'machine': 'wkstn01x-work-workstation', 'rows': []}
+        document = {'scope': list(publishing.PUBLISHABLE), 'machine': 'hostzz00-work-workstation', 'rows': []}
 
         assert publishing.redacted(document, NAMED) == ()
 
@@ -142,7 +142,7 @@ class TestTheGate:
         """The state the return leg was in for the whole life of the branch: a
         row's evidence is the path a tool was found at, and that path carries the
         account."""
-        document = {'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': '/home/a-work-account/go/bin/gopls'}]}
+        document = {'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': '/home/an-account-name/go/bin/gopls'}]}
 
         assert publishing.redacted(document, NAMED) == ('the account this runs as appears in it',)
 
@@ -150,9 +150,9 @@ class TestTheGate:
         """Paired with the test above, because that one passing proves only that
         the gate fires. What has to hold is that composing correctly gets through
         it, or the feature is a refusal with extra steps."""
-        document = {'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': '/home/a-work-account/go/bin/gopls'}]}
+        document = {'scope': list(publishing.PUBLISHABLE), 'rows': [{'detail': '/home/an-account-name/go/bin/gopls'}]}
 
-        rooted = publishing.rooted(document, '/home/a-work-account')
+        rooted = publishing.rooted(document, '/home/an-account-name')
 
         assert rooted['rows'][0]['detail'] == '~/go/bin/gopls'
         assert publishing.redacted(rooted, NAMED) == ()
@@ -170,20 +170,20 @@ class TestTheGate:
         assert rooted['count'] == 2, 'a non-string value is carried through unchanged'
 
     def test_every_reason_is_reported_at_once(self) -> None:
-        problems = publishing.redacted({'scope': ['identity'], 'rows': [{'detail': 'wkstn01x a-work-account'}]}, NAMED)
+        problems = publishing.redacted({'scope': ['identity'], 'rows': [{'detail': 'hostzz00 an-account-name'}]}, NAMED)
 
         assert len(problems) == 3
 
     def test_the_names_it_refuses_are_this_machine_s(self, monkeypatch) -> None:
         """The half the chosen names above cannot cover: that what reaches the gate
         in production is the hostname and the account rather than two constants."""
-        monkeypatch.setenv('WINDOWS_USER', 'ab12345')
+        monkeypatch.setenv('WINDOWS_USER', 'zz00000')
         monkeypatch.setenv('WINDOWS_DOMAIN', 'corp')
 
         assert publishing.identifying(axes.NetworkTrust.NONFLEET) == {
             'this machine name': paths.machine_id(),
             'the account this runs as': getpass.getuser(),
-            'the Windows account': 'ab12345',
+            'the Windows account': 'zz00000',
             'the Windows domain': 'corp',
         }
 
@@ -209,7 +209,7 @@ class TestTheGate:
 class TestMaskingKeepsTheEvidence:
     """A run record is read by a person, so a name is replaced rather than dropped."""
 
-    NAMES = {'the Windows account': 'ab12345', 'this machine name': 'wkstn01x'}
+    NAMES = {'the Windows account': 'zz00000', 'this machine name': 'hostzz00'}
 
     def test_the_placeholder_says_what_was_taken_out(self) -> None:
         assert publishing.placeholder('the Windows account') == '<windows-account>'
@@ -218,14 +218,14 @@ class TestMaskingKeepsTheEvidence:
     def test_the_path_around_the_name_survives(self) -> None:
         """The whole point against withholding: the line still says which path
         failed, and a dropped line says nothing at all."""
-        masked = publishing.masked({'target': '/mnt/c/Users/ab12345/AppData/Local/Fonts'}, self.NAMES)
+        masked = publishing.masked({'target': '/mnt/c/Users/zz00000/AppData/Local/Fonts'}, self.NAMES)
 
         assert masked['target'] == '/mnt/c/Users/<windows-account>/AppData/Local/Fonts'
 
     def test_it_reaches_every_field_rather_than_named_ones(self) -> None:
         """`transcript` and `target` were both found carrying paths after `argv`
         was the only field anyone had thought of."""
-        masked = publishing.masked({'argv': ['echo', 'ab12345'], 'inner': {'transcript': 'ab12345 failed'}}, self.NAMES)
+        masked = publishing.masked({'argv': ['echo', 'zz00000'], 'inner': {'transcript': 'zz00000 failed'}}, self.NAMES)
 
         assert masked['argv'] == ['echo', '<windows-account>']
         assert masked['inner']['transcript'] == '<windows-account> failed'
@@ -233,11 +233,11 @@ class TestMaskingKeepsTheEvidence:
     def test_case_does_not_let_a_name_through(self) -> None:
         """`machine_id` lowercases and Windows reports a hostname in upper, which
         is the literal that made connectivity-results.txt a leak."""
-        assert publishing.masked('WKSTN01X', self.NAMES) == '<this-machine-name>'
+        assert publishing.masked('HOSTZZ00', self.NAMES) == '<this-machine-name>'
 
     def test_a_longer_name_is_replaced_before_one_it_contains(self) -> None:
         """Shortest-first leaves the longer name half-substituted and still legible."""
-        masked = publishing.masked('ab12345-laptop', {'short': 'ab12345', 'long': 'ab12345-laptop'})
+        masked = publishing.masked('zz00000-laptop', {'short': 'zz00000', 'long': 'zz00000-laptop'})
 
         assert masked == '<long>'
 
@@ -252,7 +252,7 @@ class TestMaskingKeepsTheEvidence:
     def test_what_is_masked_no_longer_refuses_the_document(self) -> None:
         """The two halves in sequence: masking is what makes a record publishable
         at all, since the gate would otherwise refuse every one of them."""
-        record = {'outcomes': [{'target': '/mnt/c/Users/ab12345'}]}
+        record = {'outcomes': [{'target': '/mnt/c/Users/zz00000'}]}
 
         assert publishing.redacted(record, self.NAMES) != ()
         assert publishing.redacted(publishing.masked(record, self.NAMES), self.NAMES) == ()
@@ -262,18 +262,18 @@ class TestTheValuesSetByHand:
     """`WINDOWS_USER` and `WINDOWS_DOMAIN` are identifiers the machine cannot derive."""
 
     def test_the_environment_answers_first(self, monkeypatch) -> None:
-        monkeypatch.setenv('WINDOWS_USER', 'ab12345')
+        monkeypatch.setenv('WINDOWS_USER', 'zz00000')
 
-        assert publishing.declared_by_hand('WINDOWS_USER') == 'ab12345'
+        assert publishing.declared_by_hand('WINDOWS_USER') == 'zz00000'
 
     def test_the_env_file_answers_when_no_shell_sourced_it(self, monkeypatch, tmp_path) -> None:
         """A scheduled run has no interactive shell behind it, and is exactly when
         nobody is watching what left the box."""
         monkeypatch.delenv('WINDOWS_USER', raising=False)
-        (tmp_path / '.env').write_text('# OVERRIDES\nWINDOWS_USER=ab12345\n')
+        (tmp_path / '.env').write_text('# OVERRIDES\nWINDOWS_USER=zz00000\n')
         monkeypatch.setattr(publishing.Path, 'home', staticmethod(lambda: tmp_path))
 
-        assert publishing.declared_by_hand('WINDOWS_USER') == 'ab12345'
+        assert publishing.declared_by_hand('WINDOWS_USER') == 'zz00000'
 
     def test_an_unset_value_is_empty_rather_than_a_refusal(self, monkeypatch, tmp_path) -> None:
         monkeypatch.delenv('WINDOWS_USER', raising=False)
@@ -285,10 +285,10 @@ class TestTheValuesSetByHand:
         """The case this exists for. `steps.windows_fonts` asks Windows for the
         account and records the answer, so the id reaches a run record in an
         `answer` and a `target` — matching no token shape and no credential word."""
-        monkeypatch.setenv('WINDOWS_USER', 'ab12345')
+        monkeypatch.setenv('WINDOWS_USER', 'zz00000')
         named = publishing.identifying(axes.NetworkTrust.NONFLEET)
 
-        problems = publishing.redacted({'rows': [{'target': '/mnt/c/Users/ab12345/AppData'}]}, named)
+        problems = publishing.redacted({'rows': [{'target': '/mnt/c/Users/zz00000/AppData'}]}, named)
 
         assert problems == ('the Windows account appears in it',)
 
@@ -332,20 +332,20 @@ class TestWithholdingARowRatherThanRefusingTheDocument:
     """
 
     def test_the_row_carrying_the_name_does_not_travel(self) -> None:
-        screen = publishing.screened(relayed('syncthing v2.1.3 (linux-amd64) syncthing@wkstn01x 2026-08-05'), NAMED)
+        screen = publishing.screened(relayed('syncthing v2.1.3 (linux-amd64) syncthing@hostzz00 2026-08-05'), NAMED)
 
         rows = screen.document['resources'][0]['others']  # type: ignore[index]
         assert [row['item'] for row in rows] == ['cargo/bat']
-        assert 'wkstn01x' not in json.dumps(screen.document).lower()
+        assert 'hostzz00' not in json.dumps(screen.document).lower()
 
     def test_the_withheld_row_is_named_rather_than_dropped_in_silence(self) -> None:
-        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@wkstn01x'), NAMED)
+        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@hostzz00'), NAMED)
 
         assert screen.withheld == ('ghrelease/syncthing',)
 
     def test_what_is_left_publishes(self) -> None:
         """The whole point. The document travels, one row lighter."""
-        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@wkstn01x'), NAMED)
+        screen = publishing.screened(relayed('syncthing v2.1.3 syncthing@hostzz00'), NAMED)
 
         assert screen.problems == ()
         assert len(screen.document['resources'][0]['others']) == 1  # type: ignore[index,arg-type]
@@ -371,7 +371,7 @@ class TestWithholdingARowRatherThanRefusingTheDocument:
     def test_a_name_with_no_row_to_drop_still_refuses_the_document(self) -> None:
         """Withholding is not a way out. A name outside the per-item lists has
         nothing to withhold, so the document is refused exactly as before."""
-        document = {'version': 2, 'machine': 'a-manifest', 'scope': list(publishing.PUBLISHABLE), 'note': 'wkstn01x', 'resources': []}
+        document = {'version': 2, 'machine': 'a-manifest', 'scope': list(publishing.PUBLISHABLE), 'note': 'hostzz00', 'resources': []}
 
         screen = publishing.screened(document, NAMED)
 

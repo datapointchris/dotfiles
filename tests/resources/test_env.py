@@ -613,7 +613,7 @@ def test_a_value_only_a_shell_can_answer_is_never_written_above_the_marker(tmp_p
     """`~/.env` is its own store: it has no config key and no DOTFILES_ twin, so a
     shell reads it from below the marker and a copy above says the same thing twice.
     The copy is also what an employee id gets printed out of."""
-    monkeypatch.setenv('WINDOWS_USER', 'ab12345')
+    monkeypatch.setenv('WINDOWS_USER', 'zz00000')
     declared = {**FLAGS, 'required': [{'name': 'WINDOWS_USER', 'description': 'Windows account name'}]}
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
@@ -622,7 +622,7 @@ def test_a_value_only_a_shell_can_answer_is_never_written_above_the_marker(tmp_p
 
     assert 'MACHINE' in generated, 'the generated half was written, so what it omits means something'
     assert 'WINDOWS_USER' not in generated
-    assert 'ab12345' not in live.env_file.read_text()
+    assert 'zz00000' not in live.env_file.read_text()
 
 
 def test_the_same_machine_is_converged_with_and_without_a_shell(tmp_path: Path, monkeypatch) -> None:
@@ -634,10 +634,10 @@ def test_the_same_machine_is_converged_with_and_without_a_shell(tmp_path: Path, 
     live = session(tmp_path, MANIFEST, declared)
     envfile.write(live.env_file, live.machine)
     with live.env_file.open('a') as target:
-        target.write('export WINDOWS_USER=ab12345\n')
+        target.write('export WINDOWS_USER=zz00000\n')
     settled = live.env_file.read_text()
 
-    for context in ('ab12345', None):
+    for context in ('zz00000', None):
         monkeypatch.delenv('WINDOWS_USER', raising=False)
         if context:
             monkeypatch.setenv('WINDOWS_USER', context)
@@ -744,8 +744,8 @@ def test_a_required_value_is_answered_by_the_config_file(tmp_path: Path, unshell
 
 
 def test_a_value_the_config_answers_is_exported_so_a_shell_consumer_finds_it(tmp_path: Path, unshelled: Path) -> None:
-    """The whole point of answering it here: `~/homelab`'s pyinfra and shell entry
-    points read the environment, and a config key they do not know about would
+    """The whole point of answering it here: the pyinfra and shell entry points
+    outside this repo read the environment, and a config key they do not know about would
     leave them finding nothing while `dotfiles check` reported the machine sound."""
     registry = tmp_path / 'repos.json'
     registry.write_text('{"repos": []}\n')

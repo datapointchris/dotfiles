@@ -81,8 +81,8 @@ never performed.
 
 ## What travels back is packages, toolchains, and nothing else
 
-`~/dev/workstations.md` § "The seam between them" is the arrangement this cuts
-through. The status document is the single hole in that seam. It stays narrow
+Nothing written on a firewalled machine travels back, and that is the arrangement
+this cuts through. The status document is the single hole in that seam. It stays narrow
 because the code narrows it, not because somebody reads each one before it goes.
 
 Two guards stand in front of it, and `src/dotfiles/publishing.py` is the account

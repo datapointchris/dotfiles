@@ -81,18 +81,18 @@ Ten minutes was the figure while the run was read as local: filesystem reads and
 version banners off binaries already on the box. `--refresh` is what makes it
 leave the machine, and the docstring above says so — one request per declared
 release, to one host, on an exact interval. Measured 2026-08-21: a single run
-spends 66 GitHub API calls, so three machines at the old cadence spent about
-1,200 an hour. Against the 60-per-hour anonymous ceiling, which is charged per IP
-and shared by every host behind one egress, two machines were enough to keep that
-pool at zero for the whole hour."""
+spends 66 GitHub API calls, so one machine at the old cadence spent about 400 an
+hour. Against the 60-per-hour anonymous ceiling, which is charged per IP and
+shared by every host behind one egress, a single machine was already enough to
+keep that pool at zero for the whole hour."""
 
 
 UNIT_SECONDS = 30 * 60
 """How long one scheduled check may run before systemd gives up on it.
 
-Half an hour, against a run that takes seconds on a desk and minutes on the work
-box's firewall — wide enough that a slow link is never mistaken for a hang, and
-far inside `INTERVAL_SECONDS` so a killed run cannot still be holding the unit
+Half an hour, against a run that takes seconds on an open network and minutes
+behind a filtering firewall — wide enough that a slow link is never mistaken for
+a hang, and far inside `INTERVAL_SECONDS` so a killed run cannot still hold the unit
 when the next fire is due.
 
 There is a floor under this rather than a preference: `Type=oneshot` disables the

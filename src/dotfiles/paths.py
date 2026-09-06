@@ -70,8 +70,8 @@ FLAGS_FILE = INSTALL_DIR / 'flags.yml'
 # keeps its own by construction rather than by a rule.
 #
 # Run records already carry the machine in the filename. The two below do not on
-# their own, and sharing the directory without a suffix would have four machines
-# overwriting one another's "what happened last".
+# their own, and sharing the directory without a suffix would have every machine
+# overwriting the others' "what happened last".
 STATE_HOME = xdg_home('XDG_STATE_HOME', '.local/state') / 'dotfiles'
 RUNS_DIR = STATE_HOME / 'runs'
 

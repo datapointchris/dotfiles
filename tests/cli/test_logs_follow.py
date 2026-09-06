@@ -90,7 +90,7 @@ def shared(runs_dir: Path) -> dict[str, Path]:
     from the file it was copied from.
     """
     mine_new = stream(runs_dir, '20260815T110000Z', ran('go install', run_id='444455556666'))
-    conflict = runs_dir / f'{mine_new.stem}.sync-conflict-20260815-120000-A6FGHT2.jsonl'
+    conflict = runs_dir / f'{mine_new.stem}.sync-conflict-20260815-120000-AAAAAAA.jsonl'
     conflict.write_text(mine_new.read_text())
     return {
         'mine_old': stream(runs_dir, '20260815T100000Z', ran('git status', run_id='111122223333')),
