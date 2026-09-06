@@ -442,18 +442,19 @@ DF_ANSWERS = [
         'its own default table instead',
         'printf "Filesystem Size Avail Use%% Mounted on\\n/dev/sda2 100G 12K 100%% /mnt/data\\n"',
         False,
-        False,
+        True,
     ),
-    ('nothing at all', 'exit 0', False, False),
+    ('nothing at all', 'exit 0', False, True),
     ('a non-zero exit', 'echo "df: unrecognized option" >&2\nexit 1', False, True),
 ]
 """How `df` can answer, and what the diagnosis is left holding.
 
-Rows two and three are the degradation worth pinning: the probe ran, exited
-clean, and the mount and the free space are simply gone from the advice. Nothing
-fails, nothing is reported unavailable, and the sentence is the same one a
-machine with no `df` would get — which is the shape `unavailable` exists to keep
-apart.
+Rows two and three are why the last column is not simply the inverse of the
+third. The probe ran and exited clean, and the mount and the free space are still
+gone from the advice — so the sentence a reader gets is word for word the one row
+four produces, where `df` is not installed at all. Only `unavailable` separates
+them, which is what row two and row three are here to hold it to. A busybox `df`
+ignoring `--output` writes row two, and an unmounted path writes row three.
 """
 
 

@@ -391,14 +391,27 @@ def _permission(path: Path) -> Diagnosis:
 
 
 def _no_space(path: Path) -> Diagnosis:
-    """ENOSPC: the filesystem is full, and which one is the useful half."""
-    where, why = _ask(('df', '-h', '--output=target,avail', str(path)), f'which filesystem holds {path}')
+    """ENOSPC: the filesystem is full, and which one is the useful half.
+
+    **`df` answering something this cannot read is a probe that could not answer,
+    and it says so.** The fallback cause is word for word the sentence the
+    unavailable-`df` branch prints, so an empty `unavailable` beside it told a
+    reader the mount point had been measured and left out — when in fact `df` ran,
+    said something, and none of it was a target and a size. A `--output` no
+    implementation supports, an unmounted path, and a busybox `df` that ignores
+    the flag all arrive here.
+    """
+    about = f'which filesystem holds {path}'
+    where, why = _ask(('df', '-h', '--output=target,avail', str(path)), about)
     if why:
         return Diagnosis(cause=f'the filesystem holding {path} is full', unavailable=(why,))
     tail = where.splitlines()[-1].split() if where.splitlines() else []
     if len(tail) == 2:
         return Diagnosis(cause=f'{tail[0]} is full ({tail[1]} available), so {path.name} could not be written')
-    return Diagnosis(cause=f'the filesystem holding {path} is full')
+    return Diagnosis(
+        cause=f'the filesystem holding {path} is full',
+        unavailable=(f'{about}: df answered {where.strip()!r}, which is not a mount point and a size',),
+    )
 
 
 CURL_CAUSES = {
