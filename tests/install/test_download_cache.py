@@ -470,13 +470,13 @@ def test_the_sweep_drops_an_entry_by_when_it_was_last_used(cache_home, wire, tmp
     cache = DownloadCache(enabled=True)
     cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
     cache.remember_status(ASSET, 'verified')
-    sidecars = (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))
+    sidecars = cache.entry_files(ASSET)
     for path in sidecars:
         age(path, aged.days)
 
     cache.prune()
 
-    assert [path.exists() for path in sidecars] == [aged.survives] * 3, 'an entry ages as one thing, sidecars included'
+    assert [path.exists() for path in sidecars] == [aged.survives] * len(sidecars), 'an entry ages as one thing, sidecars included'
     assert cache_home.is_dir(), 'the sweep empties the cache, never removes it'
     assert entry_of(ASSET).parent.exists() is aged.survives, 'a directory with nothing left in it goes too'
 
@@ -497,7 +497,7 @@ def test_a_tool_that_never_changes_does_not_age_out_because_the_cache_kept_worki
     for asset in (wanted, superseded):
         an_entry_and_its_digest(cache, asset)
         cache.remember_status(asset, 'verified')
-        for path in (entry_of(asset), cache.digest_file(asset), cache.status_file(asset)):
+        for path in cache.entry_files(asset):
             age(path, RETENTION + 30)
 
     cache.fetch(wanted, tmp_path / 'out' / wanted.filename, '  fd')
@@ -625,6 +625,193 @@ def test_a_verdict_is_refused_until_there_are_bytes_for_it_to_describe(cache_hom
     assert cache.status(ASSET) == 'verified'
 
 
+def test_a_verdict_whose_digest_is_gone_is_no_verdict(cache_home, wire, tmp_path):
+    """A digest a partial eviction removed, under a verdict that survived it."""
+    wire()
+    cache = DownloadCache(enabled=True)
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+    cache.remember_status(ASSET, 'verified')
+
+    cache.digest_file(ASSET).unlink()
+
+    assert cache.status(ASSET) is None
+    assert cache.recorded_digest(ASSET) is None
+
+
+def test_a_verdict_whose_bytes_are_gone_is_no_verdict(cache_home, wire, tmp_path):
+    """Bytes a partial eviction removed, under a digest and a verdict that survived.
+
+    The re-download writes a fresh digest, so the entry is whole again and the
+    verdict is the only part describing anything absent.
+    """
+    recorder = wire()
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
+    cache.fetch(ASSET, destination, '  fd')
+    cache.remember_status(ASSET, 'verified')
+
+    entry_of(ASSET).unlink()
+
+    assert cache.status(ASSET) is None, 'the bytes the verdict describes are not there'
+    cache.fetch(ASSET, destination, '  fd')
+    assert len(recorder.calls) == 2, 'and the re-download is what leaves a digest of bytes nobody checked'
+    assert cache.status(ASSET) is None, 'which the fresh digest does not make verified'
+
+
+def test_the_files_an_entry_is_are_the_files_a_verdict_requires(cache_home, wire, tmp_path):
+    """No file of an entry is one `status` will answer without.
+
+    Driven off `entry_files` rather than a list written here, so a fourth file
+    joining an entry has to be required too. This covers `status` alone —
+    `test_eviction_takes_the_bytes_the_digest_and_the_verdict_together` is what
+    covers `evict`, and neither reaches `fetch`'s restamp, which is the caller
+    that can drop a file from the set without either going red.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    cache.fetch(ASSET, tmp_path / 'out' / ASSET.filename, '  fd')
+    cache.remember_status(ASSET, 'verified')
+
+    for path in cache.entry_files(ASSET):
+        assert path.is_file(), path
+        held = path.read_bytes()
+        path.unlink()
+        assert cache.status(ASSET) is None, f'{path.name} is part of the entry and the verdict does not survive it'
+        path.write_bytes(held)
+
+    assert cache.status(ASSET) == 'verified'
+
+
+ASSET_RELEASE = ASSET.release
+assert ASSET_RELEASE is not None, 'the fixture asset is a GitHub release, which is what verification needs'
+REPO, TAG = ASSET_RELEASE
+
+RELEASE_API = f'https://api.github.com/repos/{REPO}/releases/tags/{TAG}'
+CHECKSUMS_URL = f'https://github.com/{REPO}/releases/download/{TAG}/checksums.txt'
+"""The two calls verification makes: which asset carries the digests, and the digests."""
+
+BUILT_AT = dt.datetime(2026, 1, 2, 3, 4, 5, tzinfo=dt.UTC)
+"""Any fixed instant. A bundle's name carries it and nothing here reads the name."""
+
+
+def upstream_serving(payload: bytes) -> dict[str, bytes]:
+    """A release publishing one asset and a checksums file that names it."""
+    listing = f'{{"assets": [{{"name": "{ASSET.filename}", "id": 1}}, {{"name": "checksums.txt", "id": 2}}]}}'
+    return {
+        ASSET.url: payload,
+        RELEASE_API: listing.encode(),
+        CHECKSUMS_URL: f'{sha256_of_bytes(payload)}  {ASSET.filename}\n'.encode(),
+    }
+
+
+def days_since_use(path: Path) -> float:
+    return (dt.datetime.now().timestamp() - path.stat().st_mtime) / 86400
+
+
+def test_a_rebuilt_entry_is_checked_against_upstream_before_it_reaches_checksums(cache_home, wire, tmp_path):
+    """The harm, asserted where it lands rather than at the guard that stops it.
+
+    `checksums.txt` is what an install machine verifies a staged binary against,
+    on the network where the release API is unreachable. A digest reaching it
+    without having been compared to the one upstream published is a bundle
+    claiming verification rather than a bundle missing it.
+
+    Two builds. Between them the cached bytes go while the digest and the verdict
+    survive, which is what a partial `evict` or `prune` leaves. The second build
+    downloads different bytes, so the digest `fetch` writes beside them describes
+    something no earlier build ever checked.
+    """
+    recorder = wire(upstream_serving(PAYLOAD))
+    cache = DownloadCache(enabled=True)
+    staging = tmp_path / 'installers'
+    destination = tmp_path / 'out' / ASSET.filename
+
+    first = create_bundle.Bundle(staging, 'linux', 'x86_64', 'a-machine', BUILT_AT)
+    cache.fetch(ASSET, destination, '  fd')
+    create_bundle.verify_against_upstream(first, cache, destination, ASSET)
+    assert first.checksums == [f'{sha256_of_bytes(PAYLOAD)}  {ASSET.filename}']
+
+    entry_of(ASSET).unlink()
+    recorder.bodies.update(upstream_serving(STALE))
+    already_asked = len(recorder.calls)
+
+    second = create_bundle.Bundle(staging, 'linux', 'x86_64', 'a-machine', BUILT_AT)
+    cache.fetch(ASSET, destination, '  fd')
+    create_bundle.verify_against_upstream(second, cache, destination, ASSET)
+
+    assert CHECKSUMS_URL in recorder.calls[already_asked:], 'the second build asks upstream rather than trusting the verdict'
+    assert second.checksums == [f'{sha256_of_bytes(STALE)}  {ASSET.filename}']
+
+
+def test_a_release_that_publishes_nothing_stays_answered_across_a_re_download(cache_home, wire, tmp_path):
+    """`unpublished` is a fact about what a release serves for one tag, and the
+    same asset downloaded again cannot contradict it.
+
+    Losing it sends the build back to `release_assets`, which raises where that
+    API cannot be read — and 30 entries in `packages.yml` declare an exception,
+    so that is their ordinary path rather than an edge.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
+    cache.fetch(ASSET, destination, '  fd')
+    cache.remember_status(ASSET, create_bundle.VERDICT_UNPUBLISHED)
+
+    entry_of(ASSET).unlink()
+    cache.fetch(ASSET, destination, '  fd')
+
+    assert cache.status(ASSET) == create_bundle.VERDICT_UNPUBLISHED
+
+
+def test_a_hit_restamps_every_file_of_the_entry(cache_home, wire, tmp_path):
+    """The caller neither `status` nor `evict` reaches.
+
+    A file the restamp misses ages alone, `prune` takes it, and the entry is
+    unreadable as a verdict from then on — every build pays the release lookup
+    and the checksums download the cache exists to avoid, and nothing says so.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
+    cache.fetch(ASSET, destination, '  fd')
+    cache.remember_status(ASSET, create_bundle.VERDICT_VERIFIED)
+    for path in cache.entry_files(ASSET):
+        age(path, RETENTION + 30)
+
+    cache.fetch(ASSET, destination, '  fd')
+
+    assert cache.hits == 1
+    unrefreshed = [path.name for path in cache.entry_files(ASSET) if days_since_use(path) > RETENTION]
+    assert unrefreshed == [], 'a file the hit leaves stale is one the next sweep takes out of a live entry'
+
+
+def test_a_verdict_that_cannot_be_dropped_is_a_warning_and_a_build_that_carries_on(cache_home, wire, tmp_path, caplog):
+    """`fetch` drops a stale verdict on its way to replacing the bytes, and a
+    directory it cannot write is where that fails.
+
+    Survivable rather than silent: `status` refuses an entry whose files
+    disagree, so a verdict left behind is not trusted either way — which is what
+    makes a warning the right answer rather than ending the build.
+    """
+    wire()
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
+    cache.fetch(ASSET, destination, '  fd')
+    cache.remember_status(ASSET, create_bundle.VERDICT_VERIFIED)
+    entry_of(ASSET).unlink()
+    entry_of(ASSET).parent.chmod(0o555)
+
+    try:
+        with caplog.at_level('WARNING'):
+            cache.fetch(ASSET, destination, '  fd')
+    finally:
+        entry_of(ASSET).parent.chmod(0o755)
+
+    assert f'could not drop the stale checksum verdict for {ASSET.filename}' in caplog.text
+    assert destination.read_bytes() == PAYLOAD, 'the build gets its bytes'
+    assert cache.status(ASSET) is None, 'and the verdict it could not remove is not trusted'
+
+
 def test_a_disabled_cache_neither_records_a_verdict_nor_reads_one(cache_home, wire, tmp_path):
     """`--no-cache` is asked for by somebody who does not trust what is on
     disk, so a verdict read out of it would be the one thing that survived
@@ -654,7 +841,7 @@ def test_eviction_takes_the_bytes_the_digest_and_the_verdict_together(cache_home
 
     cache.evict(ASSET)
 
-    assert [path.exists() for path in (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))] == [False] * 3
+    assert [path.exists() for path in cache.entry_files(ASSET)] == [False] * 3
     cache.fetch(ASSET, destination, '  fd')
     assert (cache.hits, cache.downloads) == (0, 2)
     assert len(recorder.calls) == 2
@@ -698,14 +885,18 @@ def test_evicting_something_that_was_never_cached_is_not_an_error(cache_home):
     assert cache_home.is_dir()
 
 
-def test_an_entry_and_both_its_sidecars_share_one_directory(cache_home):
+def test_every_file_of_an_entry_shares_one_directory(cache_home):
     """Which is what makes retention able to drop them as a unit, and what
-    `cache_path_for`'s one-level-per-key-part layout is for."""
+    `cache_path_for`'s one-level-per-key-part layout is for.
+
+    Asked of `entry_files` rather than of a triple written here, so a fourth file
+    joining an entry has to share the directory too rather than being outside
+    what this covers."""
     cache = DownloadCache(enabled=False)
-    paths = (entry_of(ASSET), cache.digest_file(ASSET), cache.status_file(ASSET))
+    paths = cache.entry_files(ASSET)
 
     assert len({path.parent for path in paths}) == 1
-    assert len(set(paths)) == 3
+    assert len(set(paths)) == len(paths)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

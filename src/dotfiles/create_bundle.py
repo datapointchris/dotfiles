@@ -76,6 +76,26 @@ CACHE_RETENTION_DAYS = 90
 
 DOWNLOAD_ATTEMPTS = 3
 
+VERDICT_VERIFIED = 'verified'
+"""The cached digest was checked against the one the release published.
+
+A claim about the bytes on disk, so it does not survive them being replaced.
+"""
+
+VERDICT_UNPUBLISHED = 'unpublished'
+"""The release publishes no digest this bundler can read for the asset.
+
+A claim about what upstream serves for one released tag, which the same asset
+downloaded again cannot contradict — so it outlives a re-download, and losing it
+sends the build back to an API it may not be able to reach.
+
+Both spellings the live check reaches collapse to this one word:
+`select_checksum_asset` finding no file, and a checksums file that does not name
+the asset. The declaration keeps them apart as `unpublished` and `unlisted`
+because a reader has to fix different things; the cache does not, because both
+mean the same thing to the next build.
+"""
+
 ARCHIVE_MEMBER = 'installers'
 """The archive's single top-level directory, whatever the tarball is called.
 
@@ -304,6 +324,14 @@ class DownloadCache:
         cached = cache_path_for(asset.key)
         return cached.with_name(cached.name + '.checksum-status')
 
+    def entry_files(self, asset: BundleAsset) -> tuple[Path, Path, Path]:
+        """The three files one cache entry is: the bytes, their digest, their verdict.
+
+        `evict` removes exactly these and `status` requires exactly these, so what
+        is written and what is trusted cannot come to describe different sets.
+        """
+        return cache_path_for(asset.key), self.digest_file(asset), self.status_file(asset)
+
     def fetch(self, asset: BundleAsset, destination: Path, label: str) -> None:
         """Put an asset at `destination`, from the cache when it is there.
 
@@ -325,7 +353,12 @@ class DownloadCache:
                 # precisely because the cache kept working for it.
                 now = None
                 try:
-                    for path in (cached, digest_file, self.status_file(asset)):
+                    # `entry_files`, because a hit restamps the whole entry and
+                    # the set it restamps is the set `evict` removes and `status`
+                    # requires. The `exists` guard stays: a verdict is written
+                    # after the first fetch, so an entry legitimately arrives
+                    # here without one.
+                    for path in self.entry_files(asset):
                         if path.exists():
                             os.utime(path, now)
                 except OSError as unwritable:
@@ -336,6 +369,10 @@ class DownloadCache:
             self.evict(asset)
 
         log.info(label)
+        # Before the download rather than after, so an interrupted build leaves
+        # an entry with no verdict about its bytes — which is re-checked, and is
+        # the answer a cold build already gets.
+        self.forget_digest_verdict(asset)
         download(asset.url, destination)
         self.downloads += 1
 
@@ -357,6 +394,28 @@ class DownloadCache:
         except OSError as unwritable:
             log.warning(f'    could not cache {destination.name}: {unwritable}')
 
+    def forget_digest_verdict(self, asset: BundleAsset) -> None:
+        """Drop a verdict about the bytes, keeping one about the release.
+
+        Which is which is `VERDICT_VERIFIED` and `VERDICT_UNPUBLISHED`. Narrower
+        than `evict`, which throws the bytes away too.
+
+        Warns rather than refusing: a verdict left behind is not trusted either
+        way, because `status` declines an entry whose files disagree.
+        """
+        if not self.enabled:
+            return
+        # Read straight from the file rather than through `status`, which
+        # requires a whole entry — the entry this is called on is about to be
+        # completed and may be missing the very bytes that make it whole.
+        recorded = self.status_file(asset)
+        if not recorded.is_file() or recorded.read_text().strip() != VERDICT_VERIFIED:
+            return
+        try:
+            self.status_file(asset).unlink(missing_ok=True)
+        except OSError as unwritable:
+            log.warning(f'    could not drop the stale checksum verdict for {asset.filename}: {unwritable}')
+
     def remember_status(self, asset: BundleAsset, status: str) -> None:
         """Written only once the asset is cached, so a status cannot outlive the
         digest it refers to.
@@ -369,16 +428,52 @@ class DownloadCache:
             log.warning(f'    could not record the checksum verdict for {asset.filename}: {unwritable}')
 
     def status(self, asset: BundleAsset) -> str | None:
-        if not self.enabled or not self.status_file(asset).is_file():
-            return None
-        return self.status_file(asset).read_text().strip()
+        """The verdict this entry carries, or None where the entry is not whole.
 
-    def recorded_digest(self, asset: BundleAsset) -> str:
-        return self.digest_file(asset).read_text().strip()
+        `remember_status` refuses to write a verdict without the digest beside
+        it, and this is that invariant on the read side. `evict` and `prune` both
+        unlink an entry's files one at a time and warn-and-continue on `OSError`,
+        so either can leave a verdict whose digest or whose bytes are absent.
+
+        A verdict read over a missing file is the fault this guards: `fetch`
+        replaces absent bytes and writes a fresh digest from them, and a
+        surviving `verified` would put that digest into `checksums.txt` as
+        upstream-checked. Nothing checked it, and that file is the only check the
+        install machine has.
+
+        None costs one release lookup and re-runs the check, which is what a
+        build with no cached verdict does.
+        """
+        if not self.enabled:
+            return None
+        missing = [path.name for path in self.entry_files(asset) if not path.is_file()]
+        if not missing:
+            return self.status_file(asset).read_text().strip()
+        if len(missing) < len(self.entry_files(asset)):
+            # A partial entry is an anomaly and the only place the build meets
+            # it. Silent, the next failure downstream names the release API for
+            # a fault that is a cache entry short of a file.
+            log.warning(f'    cache entry for {asset.filename} is missing {", ".join(missing)}, re-checking upstream')
+        return None
+
+    def recorded_digest(self, asset: BundleAsset) -> str | None:
+        """The digest `fetch` wrote for the cached bytes, or None where there is not one.
+
+        `str | None` rather than `''`, so a call site handing this straight to
+        `record_checksum` is rejected by name instead of writing an empty digest
+        line into `checksums.txt`.
+
+        Two states answer None and neither is a race. The file can be gone, which
+        is an entry that lost it between this read and the last. And it can be
+        empty: `fetch` publishes the bytes through a temp name and a rename, and
+        writes the digest beside them with a bare `write_text`, so a build
+        interrupted inside that write leaves a file that exists and says nothing.
+        """
+        digest_file = self.digest_file(asset)
+        return digest_file.read_text().strip() or None if digest_file.is_file() else None
 
     def evict(self, asset: BundleAsset) -> None:
-        cached = cache_path_for(asset.key)
-        for path in (cached, self.digest_file(asset), self.status_file(asset)):
+        for path in self.entry_files(asset):
             try:
                 path.unlink(missing_ok=True)
             except OSError as unwritable:
@@ -616,10 +711,12 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
     # from an earlier build still holds — and it is the expensive half, one API
     # call to find the checksums asset plus one download to read it.
     status = cache.status(asset)
-    if status == 'verified':
-        bundle.record_checksum(cache.recorded_digest(asset), path.name)
-        return
-    if status == 'unpublished':
+    if status == VERDICT_VERIFIED:
+        digest = cache.recorded_digest(asset)
+        if digest:
+            bundle.record_checksum(digest, path.name)
+            return
+    if status == VERDICT_UNPUBLISHED:
         # Said again on every build, not only the one that discovered it. The
         # cache short-circuits the API call and must not short-circuit the
         # report: an asset staged with no digest is the one thing a reader of
@@ -639,7 +736,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
     checksum_asset = github_release.select_checksum_asset(sorted(published), asset_name)
     if checksum_asset is None:
         log.warning(f'    {repo} publishes no checksums, none recorded')
-        cache.remember_status(asset, 'unpublished')
+        cache.remember_status(asset, VERDICT_UNPUBLISHED)
         return
 
     try:
@@ -655,7 +752,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
         # algorithm), which the sha256sum parser cannot read. Its installer does
         # not verify either, so this is no worse than the online path.
         log.warning(f'    {checksum_asset} has no readable entry for {asset_name}, none recorded')
-        cache.remember_status(asset, 'unpublished')
+        cache.remember_status(asset, VERDICT_UNPUBLISHED)
         return
 
     actual = github_release.sha256_of(path)
@@ -665,7 +762,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
         raise BundleError(f'Checksum mismatch while bundling {asset_name}\n  published:  {expected}\n  downloaded: {actual}')
 
     bundle.record_checksum(actual, path.name)
-    cache.remember_status(asset, 'verified')
+    cache.remember_status(asset, VERDICT_VERIFIED)
 
 
 def extract_all(archive: tarfile.TarFile, destination: Path) -> None:
