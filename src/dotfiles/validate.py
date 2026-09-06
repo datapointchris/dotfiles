@@ -29,8 +29,6 @@ import tomllib
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from typing import Protocol
-from typing import runtime_checkable
 
 import yaml
 
@@ -181,50 +179,40 @@ def _unprobeable(manifests: dict[str, machines.Machine]) -> list[Finding]:
     return findings
 
 
-@runtime_checkable
-class _AssetPatterned(Protocol):
-    """An entry that names an asset inside a GitHub release.
-
-    Membership is the two fields, not a list of sections, so a third section
-    gaining them is covered without anyone remembering to come back here.
-    """
-
-    name: str
-    github_repo: str
-    binary_pattern: str
-
-
 def _unbuildable_assets(declared: catalogs.Catalog) -> list[Finding]:
-    """A `binary_pattern` with no repository to expand it against.
+    """Half a release coordinate: one of the pair named without the other.
 
-    The pattern names an asset inside a GitHub release, so the two fields are one
-    fact wearing two names: without the repo there is no URL to build and the
-    pattern goes unread. The loader cannot catch it — `catalog.py` refuses a key
-    the *section* never reads, which is one entry's schema, and this is a relation
-    between two fields of an entry that are individually legal.
+    The fields are one fact wearing two names, so with only one of them there is
+    no URL to build and a bundle stages nothing for the row. The loader cannot
+    catch it — `catalog.py` refuses a key the *section* never reads, which is one
+    entry's schema, and this is a relation between two fields of an entry that
+    are individually legal.
 
     A warning rather than an error, and the distinction is the point: the tool
     still installs, by whatever its manager does without a prebuilt asset. What
     is lost is the fast path, silently, which is exactly the failure that goes
     years unnoticed.
 
-    Membership is `_AssetPatterned` rather than a list of sections, so a third
-    section gaining both fields is covered — the same rule `_named_sections`
-    follows.
+    Membership and the field names are both `Entry.asset_fields`, so a section is
+    covered by declaring its pair rather than by anyone coming back here. That
+    reaches two things a `github_repo`/`binary_pattern` protocol could not: the
+    other direction, where the repo is named and the pattern is not, and
+    `winget_packages`, whose pair is spelled `repo`/`asset`.
     """
     findings = []
     for section in catalogs.SECTIONS:
         for entry in declared.section(section):
-            if not isinstance(entry, _AssetPatterned):
+            named = [field for field in entry.asset_fields if getattr(entry, field)]
+            missing = [field for field in entry.asset_fields if not getattr(entry, field)]
+            if not named or not missing:
                 continue
-            if entry.binary_pattern and not entry.github_repo:
-                findings.append(
-                    Finding(
-                        section,
-                        Severity.WARNING,
-                        f'{entry.name!r} declares binary_pattern but no github_repo, so no asset URL can be built',
-                    )
+            findings.append(
+                Finding(
+                    section,
+                    Severity.WARNING,
+                    f'{entry.name!r} declares {", ".join(named)} but no {", ".join(missing)}, so no asset URL can be built',
                 )
+            )
     return findings
 
 

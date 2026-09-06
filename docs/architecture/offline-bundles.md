@@ -94,24 +94,20 @@ trust coordinate decides which names count.
 
 Four sections stage a GitHub asset — `github_releases`, `go_tools`,
 `cargo_packages` and `winget_packages` — and `create_bundle.verify_against_upstream`
-checks each download against the digest its release published. Only the first of
-them is checked again when it installs. `providers/gotool.py`,
-`providers/cargo.py` and `providers/winget.py` open what a bundle staged and
-install it, so a machine unpacking a bundle takes those bytes on the builder's
-word.
+checks each download against the digest its release published. Only the first is
+checked again when it installs. `providers/gotool.py`, `providers/cargo.py` and
+`providers/winget.py` open what a bundle staged and install it, so a machine
+unpacking a bundle takes those bytes on the builder's word.
 
-That is why all four declare `checksum:` in `packages.yml` even though the field
-gates an install for only one. The declaration is what makes an asset upstream
-cannot verify countable rather than discovered, and
-`tests/install/test_release_urls.py` measures every one of them against the live
-release, failing when an exception stops being true as well as when it starts.
+That is why all four declare `checksum:` even though the field gates an install
+for only one. `catalog.CHECKSUM_STATES` carries the vocabulary and what the
+declaration is measured against; the decision recorded here is that a section
+whose only verifier is the builder still declares, because an asset nobody can
+verify is worth counting wherever it is staged.
 
-The subject is the file that was downloaded, never the file that was staged.
-Verification runs before `extract_go_binary` pulls a binary out of an archive,
-before `repackage_zip_as_tarball` writes a tarball in a zip's place, and before
-`extract_windows_exe` opens a Windows zip — so an extracted or repacked entry is
-as declarable as one staged whole. A digest taken after any of those steps would
-be a digest of this bundler's own output, which proves nothing about upstream.
+The bundle's own `checksums.txt` cannot stand in for it. That file records the
+digest of the file that was downloaded, and for an extracted binary or a repacked
+tarball the downloaded file is not what the bundle carries.
 
 ## The automatic legs are off by default
 

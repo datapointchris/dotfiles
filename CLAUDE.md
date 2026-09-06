@@ -123,8 +123,12 @@ check `git status` across the portfolio afterwards.
 - `src/dotfiles/providers/ghrelease.py` is the engine every one of them goes through
 - Verification is required by default; an entry that cannot satisfy it declares
   `checksum: unpublished` or `checksum: unlisted` and is measured against the live
-  release by `tests/install/test_release_urls.py --e2e`
-- See `docs/architecture/github-releases.md`
+  release by `tests/install/test_release_urls.py --e2e`. **The same field is
+  declared by `go_tools`, `cargo_packages` and `winget_packages`**, whose assets a
+  bundle downloads and verifies the same way — `catalog.CHECKSUM_STATES` is the
+  vocabulary for all four
+- See `docs/architecture/github-releases.md`, and
+  `docs/architecture/offline-bundles.md` for the three sections a bundle stages
 
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
 

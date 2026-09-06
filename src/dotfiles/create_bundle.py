@@ -821,11 +821,14 @@ def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
     asset here. The machine this is built for cannot reach the release API to
     resolve which asset carries the checksum, so verification happens on this side
     or it does not happen.
+
+    Filtered through `bundleable` like the go and cargo staging paths, so a row
+    naming no asset is refused with a log line before anything is downloaded
+    rather than raising on the shape check after it.
     """
     log.info('Downloading Windows executables...')
 
-    for item in items:
-        entry = item.entry
+    for entry in bundleable(items):
         assert isinstance(entry, catalog.WingetPackage)
         version = fetch_latest_version(entry.repo)
         if bundle.already_current('winget', 'winget', entry.name, version):
@@ -917,31 +920,37 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
             bundle.record('extra', companion.name, version, companion.name)
 
 
-def bundleable(items: tuple[DesiredItem, ...]) -> list[catalog.GoTool | catalog.CargoPackage]:
+def bundleable(items: tuple[DesiredItem, ...]) -> list[catalog.GoTool | catalog.CargoPackage | catalog.WingetPackage]:
     """The declared entries a bundle can stage, with the rest said out loud.
 
-    An entry with no repo or no `binary_pattern` cannot be staged — there is no
-    asset to name — and the machine that installs from this bundle then has no
-    source for it at all. Dropping those silently carries the same information as
-    a log line and none of the evidence.
+    An entry naming no release asset cannot be staged, and the machine that
+    installs from this bundle then has no source for it at all. Dropping those
+    silently carries the same information as a log line and none of the evidence.
 
-    The two sections are named rather than reached through `getattr` defaults: a
+    **Every staging path that names its asset from the declaration comes through
+    here.** One gate rather than a filter per staging function: `add_winget_binaries`
+    had none, so an entry with an empty `asset` reached `winget.stage`, staged a
+    file named for nothing, and raised on the shape check further down — on the one
+    machine a Windows bundle exists for, and after the download.
+
+    The sections are named rather than reached through `getattr` defaults: a
     default standing in for "this subclass has no such field" answers
     *unbundleable* for an entry whose field was merely renamed, and the symptom is
     a bundle silently one tool
     short on the machine that cannot fetch it.
 
-    `stageable` is asked rather than spelled, so this and the two corpora in
+    `names_its_asset` is asked rather than spelled, so this and the corpus in
     `tests/install/test_release_urls.py` cannot come to disagree about which
     entries a bundle reaches.
     """
     staged = []
     for item in items:
         entry = item.entry
-        if isinstance(entry, catalog.GoTool | catalog.CargoPackage) and entry.stageable:
+        if isinstance(entry, catalog.GoTool | catalog.CargoPackage | catalog.WingetPackage) and entry.names_its_asset:
             staged.append(entry)
         else:
-            log.warning(f'  {item.name} declares no github_repo/binary_pattern, so nothing is staged for it')
+            wanted = (' and '.join(entry.asset_fields) if entry else '') or 'a release asset'
+            log.warning(f'  {item.name} does not name {wanted}, so nothing is staged for it')
     return staged
 
 

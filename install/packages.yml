@@ -1140,13 +1140,9 @@ custom_installers:
 # Prebuilt release binaries where a crate publishes one for the target, and a
 # source build where it does not — see docs/learnings/cargo-binstall-needs-release-binaries.md
 #
-# `checksum:` is the declaration `github_releases` above carries, and its
-# vocabulary is written out there. Two things differ here. The subject is the
-# release archive an offline bundle downloads, checked before a zip is repacked
-# as a tarball, so a repacked crate is as declarable as one staged whole. And
-# nothing reads it on a `cargo binstall` run, which fetches its own bytes.
-# tests/install/test_release_urls.py measures each declaration against the live
-# release and fails when an exception stops being true as well as when it starts.
+# `checksum:` is the declaration `github_releases` above carries, vocabulary and
+# all. Here its subject is the archive an offline bundle downloads, and nothing
+# reads it on a `cargo binstall` run.
 
 cargo_packages:
   # Node version manager. Reads .nvmrc, and unlike nvm it is a binary rather
@@ -1298,14 +1294,9 @@ cargo_packages:
 # column, and why `asset` is data here where `github_releases` keeps its asset
 # names in code.
 #
-# `checksum:` is the declaration `github_releases` above carries, and its
-# vocabulary is written out there. Two things differ here. The subject is the
-# Windows asset an offline bundle downloads, checked before a zip gives up its
-# `.exe`. And nothing reads it on a machine that can reach the Store, which
-# installs and verifies its own way — so this describes the channel built for the
-# machine that has no second route to compare against.
-# tests/install/test_release_urls.py measures each declaration against the live
-# release and fails when an exception stops being true as well as when it starts.
+# `checksum:` is the declaration `github_releases` above carries, vocabulary and
+# all. Here its subject is the Windows asset an offline bundle downloads, and
+# nothing reads it on a machine that can reach the Store.
 
 winget_packages:
   - name: jq
@@ -1607,14 +1598,10 @@ git_uv_tools:
 # Managed by Go toolchain (installed in Phase 2)
 # These are Go CLI tools installed globally
 #
-# `checksum:` is the declaration `github_releases` above carries, and its
-# vocabulary is written out there. Two things differ here. The subject is the
-# release archive an offline bundle downloads, checked before the binary is
-# pulled out of it, so an extracted tool is as declarable as one whose asset is
-# the bare executable. And nothing reads it on a `go install` run, which goes to
-# the module proxy and verifies through Go's own checksum database instead.
-# tests/install/test_release_urls.py measures each declaration against the live
-# release and fails when an exception stops being true as well as when it starts.
+# `checksum:` is the declaration `github_releases` above carries, vocabulary and
+# all. Here its subject is the archive an offline bundle downloads, and nothing
+# reads it on a `go install` run, which verifies through Go's own checksum
+# database instead.
 
 go_tools:
   - name: task
