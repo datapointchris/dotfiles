@@ -57,10 +57,11 @@ REPO = Path(__file__).resolve().parent.parent
 # above pulls that module in today, and this fails loudly on the day something
 # does rather than silently reading the wrong tree again.
 #
-# `tests/test_suite_checkout.py` is what runs the guarantee these two lines make. It
-# hands a subprocess a decoy checkout through `$DOTFILES_DIR` and asserts the root
-# does not move, so deleting either line below goes red rather than quietly
-# pointing every bare `catalog.load()` and `machines.load(name)` at another tree.
+# `tests/test_suite_checkout.py` runs the guarantee these two lines make, and covers
+# them one each. A child pointed at a decoy checkout holds the assignment; a child
+# preloading `dotfiles.paths` as a plugin holds the assert. So deleting either line
+# turns one of them red, rather than quietly resolving every declaration a test
+# reads without a path against whatever tree the shell names.
 assert 'dotfiles.paths' not in sys.modules, 'something above imported dotfiles.paths, so DOTFILES_DIR is already resolved'
 os.environ['DOTFILES_DIR'] = str(REPO)
 

@@ -62,12 +62,15 @@ OS_TARGETS = {
 
 
 def declaration() -> catalog.Catalog:
-    """This checkout's `packages.yml`, named rather than resolved.
+    """This checkout's `packages.yml`, anchored to this module's own path.
 
-    What this buys is one spelling for the file across this module, not a
-    different answer. A load with no path reads `paths.PACKAGES_FILE`, which
-    `tests/conftest.py` pins to the checkout the suite lives in — so the bare
-    form is correct here too, and `tests/test_suite_checkout.py` is what runs that.
+    `PACKAGES_YML` derives from `__file__` rather than from `$DOTFILES_DIR`, so it
+    holds in a run that collects no root conftest. `tests/conftest.py` is what
+    makes a bare load read this checkout, and a run that never loaded it would
+    send one to whatever the shell names instead.
+
+    One spelling for the file across this module comes with that, rather than
+    being the reason for it.
     """
     return catalog.load(PACKAGES_YML)
 
