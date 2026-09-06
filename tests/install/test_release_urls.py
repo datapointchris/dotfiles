@@ -436,6 +436,21 @@ def sections_declaring_a_checksum() -> set[str]:
     return {section for section, entry_class in catalog.SECTIONS.items() if 'checksum' in {f.name for f in dc.fields(entry_class)}}
 
 
+DISPATCHER = 'build'
+"""The `create_bundle` function that calls every staging function.
+
+The walk below stops here, and it is not an optimization. `build` dispatches *to*
+the staging functions, so following a call to it inverts the direction the walk is
+asking about and every staging function reaches every other one — 125 reachable
+names from `add_github_releases` against 13 from `add_install_scripts`.
+
+A name-keyed call graph reaches it by two routes and both matter.
+`add_github_releases` binds a local `build` from `releases.ASSETS` and calls it,
+which this cannot tell from the module function; and a genuine call upward would
+do the same thing deliberately.
+"""
+
+
 def module_functions() -> dict[str, ast.FunctionDef]:
     """`create_bundle`'s top-level functions, by name, parsed once per call."""
     parsed = ast.parse(inspect.getsource(create_bundle))
@@ -470,7 +485,7 @@ def dispatched_sections() -> dict[str, str]:
     reads as coverage.
     """
     found = {}
-    for statement in ast.walk(module_functions()['build']):
+    for statement in ast.walk(module_functions()[DISPATCHER]):
         if not isinstance(statement, ast.Expr) or not isinstance(statement.value, ast.Call):
             continue
         call = statement.value
@@ -479,7 +494,7 @@ def dispatched_sections() -> dict[str, str]:
         for section in sections_named_under(call):
             found[section] = call.func.id
 
-    asked = len(sections_named_under(module_functions()['build']))
+    asked = len(sections_named_under(module_functions()[DISPATCHER]))
     assert len(found) == asked, f'{asked} sections are staged and this walk reached {len(found)}'
     return found
 
@@ -493,14 +508,15 @@ def calls_reachable_from(start: str, functions: dict[str, ast.FunctionDef]) -> s
     case still passes.
 
     Attribute calls are recorded as `module.name` so a provider's own naming
-    function can be recognised; bare names are followed.
+    function can be recognised; bare names are followed, except `DISPATCHER`,
+    which says why it is the one name this does not follow.
     """
     seen: set[str] = set()
     reached: set[str] = set()
     queue = [start]
     while queue:
         name = queue.pop()
-        if name in seen or name not in functions:
+        if name in seen or name == DISPATCHER or name not in functions:
             continue
         seen.add(name)
         for node in ast.walk(functions[name]):
@@ -649,6 +665,27 @@ class TestBundledCorpus:
             assert section in staged_by, f'{section} is not staged by create_bundle.build'
             reached = calls_reachable_from(staged_by[section], functions)
             assert staging.namer in reached, f'{staged_by[section]} does not call {staging.namer}'
+
+    def test_a_staging_path_reaches_its_own_provider_and_no_other(self):
+        """The property that makes the join above mean anything, and the walk
+        bounded enough to have it.
+
+        A call graph keyed on names has no scope, so it climbs into `DISPATCHER`
+        and from there back down into every other staging function. Every section
+        then reaches every namer, and the join passes while asserting nothing.
+
+        Asked of every dispatched section rather than of the three with a namer,
+        because the one that escapes is `add_github_releases` — it binds a local
+        `build` from `releases.ASSETS` and calls it, which a name-keyed walk
+        cannot tell from the module function. It has no namer row, so a guard
+        over `staging_functions()` alone never looks at it.
+        """
+        functions = module_functions()
+        namers = {section: staging.namer for section, staging in staging_functions().items()}
+        for section, staging_function in dispatched_sections().items():
+            reached = calls_reachable_from(staging_function, functions) & set(namers.values())
+            expected = {namers[section]} if section in namers else set()
+            assert reached == expected, f'{staging_function} reaches {sorted(reached)}, expected {sorted(expected)}'
 
     def test_the_bundler_verifies_exactly_the_sections_that_declare_a_checksum(self):
         """Set equality against a floor the bundler's source cannot move.
