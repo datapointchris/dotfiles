@@ -190,6 +190,31 @@ class Remote:
         """
         return '/'.join([self.root.rstrip('/'), *(part.strip('/') for part in parts)])
 
+    def above(self) -> str | None:
+        """The directory holding the root, or `None` where there is none to name.
+
+        Here beside `directory` because both are the remote's separator, and a
+        split that lived at the caller would be a second module deciding what a
+        path means to a transport this repo never names.
+
+        **`None` rather than `''` for a root with no parent.** The empty string is
+        not a path: substituted into a declared `list = ["list", "{dir}"]` it
+        reaches the transport as an argument that fails the way `ls ''` does, or
+        resolves to the widest target the credential can see. `PLACEHOLDERS`
+        declares which names a template must substitute and nothing declares which
+        values may arrive, so inventing one puts a requirement on the declaring
+        machine that the declaration cannot state and cannot refuse.
+
+        A root one level down has `/` as its parent, which is a real path. A
+        relative root and `/` itself have no parent this can address, and the
+        caller reports that it could not ask rather than asking with a value it
+        made up.
+        """
+        walking = self.root.rstrip('/')
+        if '/' not in walking:
+            return None
+        return walking.rsplit('/', 1)[0] or '/'
+
 
 BUNDLES = 'bundles'
 STATUSES = 'status'
@@ -555,32 +580,15 @@ def listed(remote: Remote, directory: str) -> tuple[str, ...] | None:
     )
 
 
-def _ancestors(directory: str, stop: str) -> tuple[str, ...]:
-    """Every directory between `directory` and `stop`, nearest first.
-
-    `stop` is included where the walk reaches it, and `''` — the top of whatever
-    the transport addresses — ends it either way. That second terminator is what
-    lets a root carrying no separator be walked at all: `artifacts` has exactly
-    one ancestor and it is the top.
-    """
+def _lists_above(remote: Remote, directory: str) -> bool:
+    """Whether any ancestor lists, up to and including the configured root."""
+    root = remote.root.rstrip('/')
     walking = directory.rstrip('/')
-    found = []
-    while walking and walking != stop:
-        walking = walking.rsplit('/', 1)[0] if '/' in walking else ''
-        found.append(walking)
-    return tuple(found)
-
-
-def _lists_above(remote: Remote, directory: str, *, stop: str | None = None) -> bool:
-    """Whether any ancestor lists, nearest first, stopping at `stop`.
-
-    `stop` defaults to the configured root, which is as far as a caller reading a
-    shelf under it has any business looking. `remote check` measures the root
-    itself and passes `''`, because the root's own absence has no ancestor inside
-    the root to prove it.
-    """
-    edge = (remote.root if stop is None else stop).rstrip('/')
-    return any(_ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': above}).ok for above in _ancestors(directory, edge))
+    while '/' in walking and walking != root:
+        walking = walking.rsplit('/', 1)[0]
+        if _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': walking}).ok:
+            return True
+    return False
 
 
 def exists(remote: Remote, directory: str) -> bool:
@@ -697,17 +705,21 @@ class Reach:
     """
 
     facts: Mapping[str, int | str] = dc.field(default_factory=dict)
-    """What this row measured, as values rather than as the sentence spelling them.
+    """What this row measured, and which state it found, as values.
 
-    `detail` is prose for a person and every number in it — the probe attempts,
-    the entry count, the path `which` resolved — reached a `--json` caller only
-    inside that sentence. A caller wanting the attempt count had to match English,
-    which is rewritten for the reader and breaks the caller with nothing wrong.
+    `detail` is prose for a person, and everything a caller branches on is here
+    instead. `state` carries a word from the row's own vocabulary — `RootState` for
+    the root — which `ok` and `required` cannot hold between them, and which
+    `required` must not stand in for because it says whether a row is a fault.
+    """
 
-    A nested object rather than keys on the row itself, so a subject naming its
-    measurement `ok` cannot collide with the row's own fields. Named keys rather
-    than one `measurement`, because `3` is only a number until something says
-    whether it counts probes or entries.
+    advice: str = ''
+    """What a person does about this row, where the row alone does not say.
+
+    Set by whatever decided the state, for the reason `RemoteError` carries its
+    own `advice`: the command renders rows and does not know which of them has a
+    remedy. Reconstructing that from the subject and `faulty` leaves the next
+    unprovable state silent, with nothing reporting the omission.
     """
 
     @property
@@ -757,39 +769,117 @@ def measure(found: Configured) -> tuple[Reach, ...]:
     return tuple(measured)
 
 
-UNPROVEN_ROOT = 'list the root with the transport by hand; a shelf nobody has published to and a refused listing answer the same way'
-"""What a person does about a root whose failure to list could not be explained.
+class RootState(StrEnum):
+    """What `remote check` established about the configured root.
 
-`listed` refuses on this state and names this verb as the way to tell the two
-apart, so the verb has to say something more than the refusal did. What it has
-that `listed` does not is the ancestor walk above the root, and when that comes
-back empty there is nothing left to ask the transport for.
-"""
+    Four rather than the two a bool carries, and `ok` plus `required` cannot
+    express them: `REFUSED` and `UNPROVEN` are both faults and want different
+    sentences, while `ABSENT` and `LISTED` are both ordinary. A caller reads this
+    rather than inferring the state from `required`, which says whether a row is a
+    fault and is free to change without the state changing.
+    """
+
+    LISTED = 'listed'
+    """The root answered, and `entries` counts what is on it."""
+
+    ABSENT = 'absent'
+    """The directory holding the root lists and does not hold it. The first upload creates it."""
+
+    REFUSED = 'refused'
+    """The directory holding the root lists and does hold it, and the root itself will not list."""
+
+    UNPROVEN = 'unproven'
+    """Nothing here can tell `ABSENT` from `REFUSED`, because the parent could not be asked."""
+
+
+def _entries(ran: effects.Completed) -> tuple[str, ...]:
+    return tuple(line.strip() for line in ran.stdout.splitlines() if line.strip())
 
 
 def _root(remote: Remote) -> Reach:
-    """Whether the root lists, is absent, or would not say which of the two.
+    """Which of `RootState`'s four the configured root is in.
 
-    **The third answer is why this is a function.** A listing that fails is a root
-    nobody has created yet as easily as a refused one, and the transport reports
-    one exit status for both — so calling it absence, which is what the row said,
-    reported a permission boundary as a fresh remote and exited 0. `listed` refuses
-    on that same state and sends the reader here, which made this verb the end of a
-    loop rather than the answer to it.
+    **The parent's listing is the evidence, and its contents are the half that
+    decides.** A root that will not list is a directory nobody has created as
+    easily as one the credential may not read, and the transport reports one exit
+    status for both. That a parent lists proves only that the transport reached the
+    server. Whether the root's own name appears in that listing is what separates
+    the two, and `listed` leaves it on the floor by testing an ancestor's exit code
+    and discarding its stdout.
 
-    **An ancestor that lists is what separates them**, exactly as it does in
-    `listed`. Above the root rather than under it, because the root is the subject:
-    a top that lists while the root does not proves the transport is working and
-    the failure is scoped to a directory nobody has made. Nothing listing anywhere
-    proves nothing, and that stays a fault for a person.
+    **One level up, and never a path this invented.** The parent is the only
+    ancestor whose contents answer the question, so walking further crosses
+    directories the machine never declared to learn nothing. Where there is no
+    parent to name — a relative root, or `/` — the answer is `UNPROVEN` rather
+    than a listing of a made-up path.
+
+    The transport's own words ride on every failing branch. They are what tells a
+    permission boundary from a transient fault, and every other refusal in this
+    module already carries them.
     """
     listing = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': remote.root})
     if listing.ok:
-        entries = tuple(line for line in listing.stdout.splitlines() if line.strip())
-        return Reach('root', True, f'{len(entries)} entry(s) under {remote.root}', required=False, facts={'entries': len(entries)})
-    if _lists_above(remote, remote.root, stop=''):
-        return Reach('root', False, f'{remote.root} is not there yet; the first upload creates it', required=False)
-    return Reach('root', False, f'{remote.root} would not list, and nothing above it would either')
+        found = _entries(listing)
+        return Reach(
+            'root',
+            True,
+            f'{len(found)} entry(s) under {remote.root}',
+            required=False,
+            facts={'state': RootState.LISTED, 'entries': len(found)},
+        )
+
+    spoken = _why(listing, remote.transport.program)
+    above = remote.above()
+    if above is None:
+        return _unproven(remote, f'{remote.root} would not list, and it has no parent to ask: {spoken}')
+
+    asked = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': above})
+    if not asked.ok:
+        return _unproven(remote, f'{remote.root} would not list, and neither would {above}: {spoken}')
+    if remote.root.rstrip('/').rsplit('/', 1)[-1] in _entries(asked):
+        return Reach(
+            'root',
+            False,
+            f'{remote.root} is on the remote and would not list: {spoken}',
+            facts={'state': RootState.REFUSED},
+            advice=f'the root is there and the transport would not read it; check the credential, then: {_listing(remote, remote.root)}',
+        )
+    return Reach(
+        'root',
+        False,
+        f'{remote.root} is not there yet; the first upload creates it',
+        required=False,
+        facts={'state': RootState.ABSENT, 'proved_by': above},
+    )
+
+
+def _unproven(remote: Remote, detail: str) -> Reach:
+    """The root failed to list and nothing here can say why.
+
+    `listed` refuses on this state and names this verb as the way to tell a shelf
+    nobody has published to from a refused listing. What this verb has that
+    `listed` does not is the parent's listing, and where that cannot be had there
+    is nothing left to ask the transport for. So it reports that it could not tell,
+    which is the most a verb that writes nothing can say.
+    """
+    return Reach(
+        'root',
+        False,
+        detail,
+        facts={'state': RootState.UNPROVEN},
+        advice=f'a root nobody has published to yet answers this way too; tell them apart with: {_listing(remote, remote.root)}',
+    )
+
+
+def _listing(remote: Remote, directory: str) -> str:
+    """The listing command as a person would type it, built from the declared template.
+
+    Read off `Transport.argv` rather than written out, so the advice names the
+    machine's own transport and stays right when the template changes. `help.md`
+    asks an error for the one command that changes the situation, and this verb has
+    just run exactly that command.
+    """
+    return ' '.join(remote.transport.argv(Operation.LIST, {'dir': directory}))
 
 
 def _why(ran: effects.Completed, program: str) -> str:

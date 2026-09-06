@@ -50,14 +50,15 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
     optional, and reporting them as faults would exit non-zero on every working
     remote that never needed one.
 
-    A root that will not list is a fault only where its absence could not be
-    proved. `remote.listed` refuses on the unproven state and names this verb as
-    the way to tell it from a shelf nobody has published to, so answering 0 there
-    would close a loop with the reader inside it.
+    A root that will not list is a fault where the directory holding it says the
+    root is there, and where nothing could establish either way. It is a fact where
+    that parent lists and does not hold it, which is every first run.
+    `remote.RootState` names the four.
 
-    Every number a row states in English is on that row in `--json` as well —
-    `facts` carries the probe attempts, the entry count and the resolved program
-    path, so a caller reads a value rather than matching a sentence.
+    Every fact a row states in English is on that row in `--json` beside it.
+    `facts` carries the probe attempts, the entry count, the resolved program path
+    and the root's state, so a caller reads a value rather than matching a
+    sentence. `advice` carries the remedy, set by whatever measured the row.
     """
     verbosity(verbose, quiet)
     found = transport.read()
@@ -79,6 +80,7 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
                         'required': reach.required,
                         'detail': reach.detail,
                         'facts': dict(reach.facts),
+                        'advice': reach.advice,
                     }
                     for reach in measured
                 ],
@@ -96,7 +98,8 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
 
     if not found.declared:
         hint(transport.ADVICE)
-    if any(reach.subject == 'root' and reach.faulty for reach in measured):
-        hint(transport.UNPROVEN_ROOT)
+    for reach in measured:
+        if reach.advice:
+            hint(reach.advice)
     render_verdict(word, f'{detail} for the remote', err_console)
     raise typer.Exit(ExitCode.ISSUE if faults else ExitCode.CONVERGED)
