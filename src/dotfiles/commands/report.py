@@ -53,14 +53,15 @@ JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on
 LimitOption = typer.Option(20, '--limit', '-n', min=0, help='Most recent N only')
 """One option and one meaning for both verbs that take it.
 
-**Zero asks for nothing on both**, which is the answer `runs.list_runs` already
-gives and which its own docstring argues for: the caller that computes a bound,
-`--limit "$(remaining)"`, is the one that reaches zero, and it means none of them.
-`bundle list` and `status list` read zero as "all" instead, so the meaning is
-consistent within this resource and not across all four. A flag means one thing
-across every verb of a resource, and that is the scope, with the direction kept by
-`test_a_limit_of_zero_lists_nothing`. Written out at each site, the two verbs of this resource disagreed: zero
-returned the whole shelf from one and nothing from the other.
+**Zero asks for nothing**, here and on every other `--limit` in this CLI. The
+caller that computes a bound, `--limit "$(remaining)"`, is the one that reaches
+zero, and it means none of them. `test_a_limit_of_zero_lists_nothing` keeps the
+direction.
+
+**The default is 20 rather than absent, which is the one way this option differs
+from the shared one** in `commands/__init__.py`. That one passes `None`, so an
+omitted flag returns every row. A report over run history is the set that grows
+without bound, so it bounds by default and `--limit` widens it.
 """
 
 
