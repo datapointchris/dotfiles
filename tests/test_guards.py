@@ -15,7 +15,7 @@ like one that has stopped firing.
 **Every probe below aims two levels deep into a directory that does not exist.**
 Without the guard each call raises `FileNotFoundError` rather than writing, so a
 run of this file on a machine where the guard has been narrowed fails without
-planting the artefact it is about.
+planting the artifact it is about.
 """
 
 from __future__ import annotations
