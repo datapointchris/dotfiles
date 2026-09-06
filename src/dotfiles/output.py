@@ -183,6 +183,19 @@ class Phrase(StrEnum):
     NOTHING_TO_CHANGE = 'nothing to change'
     """What `plan` and `apply` answer when there is nothing else to say."""
 
+    MATCHED = 'matched'
+    """What an `apply` narrowed to named entries says about the ones it measured.
+
+    The same word as the module-level `MATCHED` above, and for the same subject —
+    both label an `Examined` row. They are separate because the two render in
+    different places under different rules: that one is a row's own label, and
+    this one follows a count inside a sentence. `tests/cli/test_output.py` asserts
+    the pair agrees, as it already does for `Verdict.MATCHED`.
+
+    It exists because `nothing to change` alone is a verdict with its operand
+    missing — the same line whether the entry was measured and found current or
+    the provider never ran."""
+
     NOTHING_FOR_APPLY_TO_CHANGE = 'nothing for apply to change'
     """`plan`'s answer where something else on the line is not apply's to act on."""
 

@@ -170,8 +170,10 @@ def plan(
     `--cached` declines the network and answers from `$XDG_CACHE_HOME` instead,
     for a rate-limited box or one with no route to GitHub. It also declines the
     package managers that cost a round trip, which `syspkg.NETWORKED` names. And
-    the narrowings do the same job more cheaply: `--package` and `--source` cut the
+    the narrowings do the same job more cheaply: `--package` and `--owner` cut the
     refresh to the entries named, which is under a second for one entry.
+    `--source` names a `packages.yml` section, so it narrows `packages` and
+    `system` and is not offered here, where most resources have no sections.
 
     Never writes *the machine*. Two things it does write: the release cache, where
     deleting it costs a recompute, and each plugin checkout's git metadata, because

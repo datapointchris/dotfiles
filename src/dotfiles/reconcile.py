@@ -969,7 +969,7 @@ def apply_machine(
     changed = len([event for event in performed if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE])
     render_verdict(
         str(ResourceVerdict.ISSUE if unsuccessful else ResourceVerdict.CONVERGED),
-        applied_line(changed, unsuccessful, deferred, unmeasured),
+        applied_line(changed, unsuccessful, deferred, unmeasured, matched_under_package(planned, packages)),
         err_console,
     )
     _name_the_shared_fix(unmeasured)
@@ -982,7 +982,31 @@ def apply_machine(
     return ExitCode.ISSUE if unsuccessful else ExitCode.CONVERGED
 
 
-def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[Change], unmeasured: Sequence[Change]) -> str:
+def matched_under_package(planned: Sequence[Event], packages: frozenset[str]) -> tuple[str, ...]:
+    """What a `--package` run matched, worded for the closing line.
+
+    `Examined` is kept out of the run record on purpose — a whole-machine apply
+    matches hundreds of rows and the count already answers for them. A run the
+    caller narrowed to named entries is the opposite case: it matched a handful,
+    and the closing verdict is unreadable without them.
+
+    Keyed on `--package` and not on `--owner`, because one names the entries and
+    the other is a bulk filter that can still cover most of the machine.
+    """
+    if not packages:
+        return ()
+    return tuple(
+        f'{row.item} {row.detail}'.strip() for event in planned if isinstance(event.payload, Summary) for row in event.payload.examined
+    )
+
+
+def applied_line(
+    changed: int,
+    unsuccessful: Sequence[str],
+    deferred: Sequence[Change],
+    unmeasured: Sequence[Change],
+    matched: Sequence[str] = (),
+) -> str:
     """What this run did, what it walked past, and which verb owns the rest.
 
     **The repaired count is joined to the failure clause, never chosen against it.**
@@ -991,10 +1015,19 @@ def applied_line(changed: int, unsuccessful: Sequence[str], deferred: Sequence[C
 
     **What nothing could measure is named, not just counted**, because this is the
     line a scheduled run's summary keeps once the rows are gone.
+
+    **A run that changed nothing names what it matched against.** `nothing to
+    change` is a verdict with its operand missing: it reads identically whether the
+    entry was measured and found current or the provider never ran at all. A reader
+    who cannot separate those two reaches for `--reinstall` to force the write, and
+    a caller who narrowed to one entry gets a whole-machine sentence about it.
+    `matched` carries the figure the comparison turned on, which is what `plan`
+    already prints for the same entry at the same instant.
     """
     repaired = counted_phrase(changed, Phrase.CHANGED) if changed else ''
     failed = _clause(unsuccessful, Phrase.DID_NOT_CONVERGE)
-    head = _sentence(repaired, failed) or Phrase.NOTHING_TO_CHANGE
+    idle = _sentence(Phrase.NOTHING_TO_CHANGE, _clause(matched, Phrase.MATCHED))
+    head = _sentence(repaired, failed) or idle
     attention = counted_phrase(len(deferred), Phrase.NEED_ATTENTION) if deferred else ''
     return _sentence(head, attention, _clause([change.item for change in unmeasured], Phrase.COULD_NOT_BE_MEASURED))
 

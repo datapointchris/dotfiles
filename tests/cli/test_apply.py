@@ -42,6 +42,7 @@ from dotfiles.providers import gotool
 from dotfiles.providers import npm
 from dotfiles.providers import toolchain
 from dotfiles.resources import Change
+from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -903,6 +904,58 @@ class TestTheClosingLine:
         line = reconcile.applied_line(0, [], [], blind)
 
         assert line == f'{output.Phrase.NOTHING_TO_CHANGE}; 2 item(s) {output.Phrase.COULD_NOT_BE_MEASURED}: doit, syncer'
+
+    def test_a_converged_run_names_the_figure_it_matched_against(self) -> None:
+        """`nothing to change` alone reads the same whether the entry was measured
+        and found current or the provider never ran. A reader who cannot separate
+        those two reaches for `--reinstall` against a version that does not exist
+        yet, which is what the operand on this line prevents."""
+        line = reconcile.applied_line(0, [], [], [], ['custom/theme theme v7.1.0'])
+
+        assert line == 'nothing to change; 1 item(s) matched: custom/theme theme v7.1.0'
+
+    def test_work_that_was_done_outranks_what_merely_matched(self) -> None:
+        """The operand answers the question `nothing to change` leaves open, and a
+        run that changed something never leaves it open."""
+        line = reconcile.applied_line(1, [], [], [], ['custom/theme theme v7.1.0'])
+
+        assert line == '1 item(s) changed'
+
+
+class TestWhatANarrowedRunMatched:
+    """`matched_under_package` is what puts the operand on the closing line.
+
+    `Examined` rides on `Summary` and reaches neither the run record nor the exit
+    code, so a whole-machine apply that matched 173 symlinks says so as a count.
+    A run narrowed to named entries matched a handful, and the count answers
+    nothing.
+    """
+
+    def test_a_run_that_narrowed_nothing_names_nothing(self) -> None:
+        """Four arbitrary rows out of hundreds is noise, and the count above this
+        line already answers for a whole-machine run."""
+        planned = [Event('symlinks', Summary('184 in place', examined=(Examined('~/.zshrc', 'present'),)))]
+
+        assert reconcile.matched_under_package(planned, frozenset()) == ()
+
+    def test_a_package_run_carries_every_row_the_walk_examined(self) -> None:
+        planned = [Event('packages', Summary('1 of 1 installed', examined=(Examined('custom/theme', 'theme v7.1.0'),)))]
+
+        assert reconcile.matched_under_package(planned, frozenset({'theme'})) == ('custom/theme theme v7.1.0',)
+
+    def test_a_row_with_no_detail_is_named_without_a_trailing_space(self) -> None:
+        """An `Examined` detail is optional, and a bare item is still the answer to
+        what the run looked at."""
+        planned = [Event('env', Summary('matches the manifest', examined=(Examined('~/.env'),)))]
+
+        assert reconcile.matched_under_package(planned, frozenset({'anything'})) == ('~/.env',)
+
+    def test_events_that_are_not_summaries_carry_no_rows(self) -> None:
+        """An apply's stream is mostly `Change` and `Outcome`, and only `Summary`
+        holds what a resource examined and had nothing to report about."""
+        planned = [Event('packages', Refusal('pacman is not installed'))]
+
+        assert reconcile.matched_under_package(planned, frozenset({'theme'})) == ()
 
 
 class TestARunThatNeverStarted:
