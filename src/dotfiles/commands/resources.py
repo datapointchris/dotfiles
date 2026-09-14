@@ -332,7 +332,17 @@ def _apply_resource(
 packages_app = typer.Typer(no_args_is_help=True, help='Everything installed from a package manager or a release')
 
 
-@packages_app.command('plan')
+@packages_app.command(
+    'plan',
+    epilog=(
+        # Line budget as on `apply` — see the note on that command's epilog.
+        'Examples:\n\n'
+        'dotfiles packages plan — what apply would install or upgrade\n\n'
+        'dotfiles packages plan --package neovim — rehearse one entry\n\n'
+        'dotfiles packages plan --source github_releases — one section\n\n'
+        'dotfiles packages plan --cached — do not ask upstream'
+    ),
+)
 def packages_plan(
     machine: str = MachineOption,
     source: str = SourceOption,
@@ -401,7 +411,22 @@ def packages_check(
     )
 
 
-@packages_app.command('apply')
+@packages_app.command(
+    'apply',
+    epilog=(
+        # One example per line, each inside the panel width. Typer 0.24 renders
+        # \n\n as a line break rather than a blank line, so a line that overruns
+        # wraps into the next example and stops being copyable.
+        'Examples:\n\n'
+        'dotfiles packages apply — converge every declared package\n\n'
+        'dotfiles packages apply --package ripgrep — one entry and its prerequisites\n\n'
+        'dotfiles packages apply --package ripgrep --package eza — repeatable\n\n'
+        'dotfiles packages apply --source cargo_packages — one packages.yml section\n\n'
+        'dotfiles packages apply --owner datapointchris — one GitHub owner\n\n'
+        'dotfiles packages apply --package neovim --reinstall — repair one tool\n\n'
+        'dotfiles packages apply --offline — install from the staged bundle'
+    ),
+)
 def packages_apply(
     machine: str = MachineOption,
     # The three scopes are adjacent because typer renders options in
