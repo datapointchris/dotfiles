@@ -165,9 +165,8 @@ repoPaths:
     datapointchris/shadows: ~/code/shadows
     datapointchris/sql-server: ~/code/sql/sql-server
     datapointchris/stack_overflow_dev_survey_2018: ~/code/r-projects/stack_overflow_dev_survey_2018
-    datapointchris/standards: ~/code/standards
     datapointchris/syncer: ~/tools/syncer
-    datapointchris/terminal-library: ~/tools/terminal-library
+    datapointchris/terminal-library: ~/.local/share/terminal-library
     datapointchris/theme: ~/tools/theme
     datapointchris/timeline: ~/webapps/timeline
     datapointchris/todoui: ~/tools/todoui
