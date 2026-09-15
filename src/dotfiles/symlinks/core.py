@@ -39,11 +39,12 @@ class Ownership(enum.StrEnum):
 DOTFILES_DIR = paths.REPO_ROOT
 TARGET_DIR = Path.home().resolve()
 
-# The deepest deployed path sits exactly on this ceiling with no margin:
-# `Library/Application Support/Vivaldi/External Extensions/<extension>.json`,
-# five components below `$HOME`. Lowering this, or adding a directory level
-# under `External Extensions/`, drops that link out of the orphan scan silently
-# — it is still deployed, and nothing ever reports it stale.
+# The deepest deployed paths sit exactly on this ceiling with no margin —
+# `.config/nvim/lua/plugins/<plugin>.lua` is most of them, five components
+# below `$HOME`. Lowering this, or deploying anything a level deeper, drops
+# those links out of the orphan scan silently: they are still deployed, and
+# nothing ever reports them stale. `test_no_declared_config_sits_below_the_
+# search_ceiling` is what fails instead of the silence.
 SEARCH_DEPTH = 5
 
 CLEANUP_DIRS = ['.config', '.local/shell', '.local/share/applications']
@@ -81,12 +82,13 @@ EXCLUDE_PATTERNS = [
 
 # Directories to skip entirely during symlink searches (never descend into these)
 #
-# `~/Library` names its expensive subtrees rather than the whole directory,
-# because `configs/os/darwin/Library/Application Support/` is deployed and an
-# exclusion on the parent takes the deployed tree with it. Excluding
-# `Application Support` with a carve-out for the deployed path was rejected:
-# that writes one file's location into a general exclusion list, so the next
-# thing deployed beside it stops being scanned again with nothing to say so.
+# `~/Library` names its expensive subtrees rather than the whole directory.
+# It is a reachable deployment target on macOS, so an exclusion on the parent
+# would take anything deployed under it too — silently, because a link the scan
+# never reaches is a link nothing reports stale. Excluding `Application Support`
+# with a carve-out for a deployed path was rejected for the same reason: that
+# writes one file's location into a general exclusion list, so the next thing
+# deployed beside it stops being scanned with nothing to say so.
 #
 # `Messages/Attachments` and `Mail` are named because scanning `~/Library` is a
 # cost paid on every plan, apply and check, and neither is reachable as a

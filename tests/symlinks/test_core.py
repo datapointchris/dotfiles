@@ -256,33 +256,56 @@ def test_remove_symlinks_leaves_a_sibling_trees_links_alone(tmp_path):
 # ─── Search Exclusions ────────────────────────────────────────────────────────
 
 
-DARWIN_DEPLOYED_EXTENSION = Path('Library/Application Support/Vivaldi/External Extensions/nngceckbapebfimnlniiiahkandclblb.json')
+def deployed_config_depths() -> tuple[int, ...]:
+    """How far below `$HOME` every file in `configs/` lands.
+
+    A file's leading components say where it came from rather than where it
+    goes — one for `common/`, two for an `<axis>/<value>/` directory — and
+    both are dropped at the destination. What is left is the deployed depth.
+    """
+    root = paths.REPO_ROOT / 'configs'
+    files = (path for path in root.rglob('*') if path.is_file())
+    carried = []
+    for path in files:
+        parts = path.relative_to(root).parts
+        carried.append(len(parts) - (1 if parts[0] == 'common' else 2))
+    return tuple(carried)
 
 
-def test_the_scan_reaches_the_deepest_deployed_darwin_path(tmp_path):
-    """The real path `configs/os/darwin/` deploys, at its real depth.
+def test_the_scan_reaches_a_link_at_the_full_search_depth(tmp_path):
+    """A link sitting exactly on the ceiling is still found.
 
-    Five components below `$HOME`, which is exactly `SEARCH_DEPTH` with no
-    margin. A shallower stand-in is still reached by a scan that has already
-    stopped short of the shipped file, so the fixture has to spell the whole
-    path for the ceiling to be pinned at all.
+    A shallower stand-in passes under a scan that has already stopped short of
+    the real depth, so the fixture is built at `SEARCH_DEPTH` itself.
     """
     repo = (tmp_path / 'dotfiles').resolve()
     repo.mkdir()
 
     home = tmp_path / 'home'
-    orphan = home / DARWIN_DEPLOYED_EXTENSION
+    below = (f'level{n}' for n in range(core.SEARCH_DEPTH - 1))
+    orphan = home.joinpath(*below, 'deployed.json')
     orphan.parent.mkdir(parents=True)
     orphan.symlink_to(repo / 'deleted.json')
 
     assert core.find_broken_symlinks(target_dir=home, dotfiles_dir=repo).found == (orphan,)
 
 
-def test_the_darwin_variant_still_deploys_that_path():
-    """The fixture above is a copy of a path in the repo, and a copy drifts."""
-    deployed = paths.REPO_ROOT / 'configs' / 'os' / 'darwin' / DARWIN_DEPLOYED_EXTENSION
+def test_nothing_declared_sits_below_the_search_ceiling():
+    """A config deeper than the ceiling deploys and is never scanned again.
 
-    assert deployed.exists(), f'{DARWIN_DEPLOYED_EXTENSION} is no longer what configs/os/darwin/ deploys'
+    Nothing reports that, which is why it is asserted here rather than left to
+    whoever notices a stale link months later.
+    """
+    deepest = max(deployed_config_depths())
+
+    assert deepest <= core.SEARCH_DEPTH, f'a config deploys {deepest} below $HOME, ceiling is {core.SEARCH_DEPTH}'
+
+
+def test_the_search_ceiling_is_no_higher_than_what_is_deployed():
+    """`SEARCH_DEPTH` carries no margin, so it tracks the deepest config."""
+    deepest = max(deployed_config_depths())
+
+    assert deepest == core.SEARCH_DEPTH, f'deepest config is {deepest}, ceiling is {core.SEARCH_DEPTH}'
 
 
 @pytest.mark.parametrize(
