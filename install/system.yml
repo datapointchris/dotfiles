@@ -119,10 +119,12 @@ managed_files:
   # it". Both extensions that would want one carry their own off switch, which
   # is the toggle actually wanted.
   #
-  # Dark Reader, Bitwarden, uBlock Origin Lite — the three of Safari's `mas_apps`
-  # and `zen_extensions` with a Chromium build. Hush and UnTrap are Safari
-  # content blockers with no Chromium equivalent, and Zen's full uBlock Origin is
-  # MV2, which Chromium 152 dropped and Vivaldi with it.
+  # Dark Reader, Bitwarden, uBlock Origin Lite, UnTrap — Safari's `mas_apps` and
+  # `zen_extensions` that have a Chromium build, UnTrap's published by the same
+  # developer as the Safari one. Hush has no Chromium build; the cookie banners
+  # it blocked are covered by uBlock Origin Lite's `EasyList/uBO – Cookie
+  # Notices` ruleset, which is a per-profile toggle no policy can set. Zen's
+  # full uBlock Origin is MV2, which Chromium 152 dropped and Vivaldi with it.
   - name: vivaldi-extensions
     description: Extensions Vivaldi force-installs, matching Safari and Zen
     requires_package: vivaldi
@@ -132,11 +134,12 @@ managed_files:
         "ExtensionInstallForcelist": [
           "eimadpbcbfnmbkopoojfekhnkhdbieeh;https://clients2.google.com/service/update2/crx",
           "nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx",
-          "ddkjiahejlhfcafbddmgiahcphecmpfh;https://clients2.google.com/service/update2/crx"
+          "ddkjiahejlhfcafbddmgiahcphecmpfh;https://clients2.google.com/service/update2/crx",
+          "enboaomnljigfhfjfoalacienlhjlfil;https://clients2.google.com/service/update2/crx"
         ]
       }
 
-  # The same three, said the way macOS makes a policy binding. Chromium reads
+  # The same four, said the way macOS makes a policy binding. Chromium reads
   # this through CFPreferences and only treats a value as mandatory when the
   # domain is *forced*, which is what `/Library/Managed Preferences` means — a
   # `defaults write` into the user domain arrives as merely recommended, and
@@ -167,6 +170,7 @@ managed_files:
           <string>eimadpbcbfnmbkopoojfekhnkhdbieeh;https://clients2.google.com/service/update2/crx</string>
           <string>nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx</string>
           <string>ddkjiahejlhfcafbddmgiahcphecmpfh;https://clients2.google.com/service/update2/crx</string>
+          <string>enboaomnljigfhfjfoalacienlhjlfil;https://clients2.google.com/service/update2/crx</string>
         </array>
       </dict>
       </plist>
