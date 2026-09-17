@@ -530,6 +530,15 @@ system_packages:
     brew: yt-dlp
     description: Reads YouTube metadata for ypl — deliberately a binary, not a Python dependency
 
+  # Linux-only: a Chromium-based browser encrypts its cookies with a key held in the
+  # Secret Service, and yt-dlp reads that key through this module. Arch's yt-dlp does
+  # not even list it as optional, and without it every cookie fails to decrypt.
+  # macOS needs nothing, because yt-dlp reads Safari's store and the Keychain natively.
+  - name: python-secretstorage
+    apt: python3-secretstorage
+    pacman: python-secretstorage
+    description: Lets yt-dlp decrypt a Chromium-based browser's cookies, so ypl can sign in with one on Linux
+
   - name: graphviz
     apt: graphviz
     pacman: graphviz
