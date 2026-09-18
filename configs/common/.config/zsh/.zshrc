@@ -414,10 +414,11 @@ cache_completion icb icb completion zsh
 cache_completion learning learning completion zsh
 cache_completion meso meso completion zsh
 cache_completion nomad nomad completion zsh
-# ifiles completes remote paths by calling the server, so each Tab there is a
-# request rather than a lookup. The generated script is static; the network call
-# happens inside `ifiles __complete`.
+# ifiles and ypl complete names by calling their servers — remote paths, and
+# playlists — so each Tab there is a request rather than a lookup. The generated
+# script is static; the network call happens inside `<tool> __complete`.
 cache_completion ifiles ifiles completion zsh
+cache_completion ypl ypl completion zsh
 
 # The Typer tools and doit are completions too, and they are sourced rather than
 # autoloaded — which puts them below compinit, not here. See "SOURCED
