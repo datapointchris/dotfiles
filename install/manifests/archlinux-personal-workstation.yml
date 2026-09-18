@@ -24,6 +24,7 @@ go_tools:
   - helpnav
   - ifiles
   - gowall
+  - triangle
   - ascii-image-converter
   - gopls
   - sqls

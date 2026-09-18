@@ -1748,6 +1748,15 @@ go_tools:
     checksum: unpublished
     description: Recolor images to a theme palette (used for theme wallpaper backgrounds)
 
+  # Only linux ships a .tar.gz; darwin is a .zip, which `extract_go_binary` does
+  # not open. The offline box is linux, so the pattern covers the one bundle built.
+  - name: triangle
+    package: github.com/esimov/triangle/v2/cmd/triangle
+    github_repo: esimov/triangle
+    binary_pattern: "triangle-{version_num}-{os}-{go_arch}.tar.gz"
+    checksum: unpublished
+    description: Delaunay triangulation of images (used for theme lowpoly wallpaper backgrounds)
+
   # {Os_mac} exists for this asset naming: upstream capitalizes the kernel name
   # but ships macOS rather than Darwin. Without a binary_pattern the offline
   # bundler skips the tool, and the offline box then falls through to `go install`
