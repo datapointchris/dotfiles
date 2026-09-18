@@ -18,6 +18,14 @@
 -- The targets are delta's: 1.45:1 for a changed line, 2.2:1 for the emphasis
 -- inside it. DiffChange marks the line and DiffText marks the characters that
 -- actually differ, so they take the line and emphasis targets respectively.
+--
+-- A band divides the contrast of every foreground drawn on it by its own
+-- contrast with the background. A comment at 2:1 on the page reads at 1.4:1 on
+-- a 1.45:1 line band, and at 1:1 on the 2.2:1 emphasis band — invisible. The
+-- line bands leave syntax colors alone, because flattening them is the fault
+-- described above. DiffText covers only the characters that changed, so it
+-- carries a foreground of its own: the theme's text color, pushed toward white
+-- or black until it reads at 4.5:1 on the band.
 
 -- Deleted lines occupy no row on the far side of a diff, and the placeholder is
 -- blank rather than a rule of '-' across the width. Every other fillchars item
@@ -26,6 +34,7 @@ vim.opt.fillchars:append({ diff = ' ' })
 
 local LINE_CONTRAST = 1.45
 local EMPHASIS_CONTRAST = 2.2
+local TEXT_CONTRAST = 4.5
 
 local function channels(n) return { math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256 } end
 
@@ -50,6 +59,10 @@ local function mix(accent, background, fraction)
   return out
 end
 
+local function rounded(c) return { math.floor(c[1] + 0.5), math.floor(c[2] + 0.5), math.floor(c[3] + 0.5) } end
+
+local function hex(c) return string.format('#%02x%02x%02x', c[1], c[2], c[3]) end
+
 -- Capped at 0.65 so an accent already close to the background cannot resolve to
 -- an opaque slab.
 local function band(accent, background, target)
@@ -64,8 +77,24 @@ local function band(accent, background, target)
     end
     f = f + 0.01
   end
-  local c = mix(a, b, fraction)
-  return string.format('#%02x%02x%02x', math.floor(c[1] + 0.5), math.floor(c[2] + 0.5), math.floor(c[3] + 0.5))
+  return rounded(mix(a, b, fraction))
+end
+
+-- Pushed toward whichever of white and black contrasts more with the surface. The
+-- two contrasts multiply to 21, so that one is never below 4.58:1 and the target
+-- is always reachable. Each candidate is rounded before it is measured, so the
+-- check is on the color actually emitted.
+local function legible(text, surface, target)
+  local t = channels(text)
+  local base = luminance(surface)
+  local toward = contrast(1, base) >= contrast(0, base) and { 255, 255, 255 } or { 0, 0, 0 }
+  local f = 0
+  while f < 1 do
+    local c = rounded(mix(toward, t, f))
+    if contrast(luminance(c), base) >= target then return c end
+    f = f + 0.02
+  end
+  return toward
 end
 
 local function resolved(group)
@@ -87,12 +116,16 @@ local function apply()
 
   -- A theme may leave Normal's background to the terminal (solarized-osaka), and
   -- there is no way to read what the terminal chose.
-  local bg = resolved('Normal').bg or (vim.o.background == 'dark' and 0x000000 or 0xffffff)
+  local normal = resolved('Normal')
+  local dark = vim.o.background == 'dark'
+  local bg = normal.bg or (dark and 0x000000 or 0xffffff)
+  local text = normal.fg or (dark and 0xffffff or 0x000000)
 
-  vim.api.nvim_set_hl(0, 'DiffAdd', { bg = band(add, bg, LINE_CONTRAST) })
-  vim.api.nvim_set_hl(0, 'DiffDelete', { bg = band(delete, bg, LINE_CONTRAST) })
-  vim.api.nvim_set_hl(0, 'DiffChange', { bg = band(change, bg, LINE_CONTRAST) })
-  vim.api.nvim_set_hl(0, 'DiffText', { bg = band(change, bg, EMPHASIS_CONTRAST) })
+  vim.api.nvim_set_hl(0, 'DiffAdd', { bg = hex(band(add, bg, LINE_CONTRAST)) })
+  vim.api.nvim_set_hl(0, 'DiffDelete', { bg = hex(band(delete, bg, LINE_CONTRAST)) })
+  vim.api.nvim_set_hl(0, 'DiffChange', { bg = hex(band(change, bg, LINE_CONTRAST)) })
+  local emphasis = band(change, bg, EMPHASIS_CONTRAST)
+  vim.api.nvim_set_hl(0, 'DiffText', { bg = hex(emphasis), fg = hex(legible(text, emphasis, TEXT_CONTRAST)) })
 
   -- Diffview copies DiffDelete into DiffviewDiffAddAsDelete, which is the group
   -- that paints removed lines in its left pane, and it reads the colors rather
