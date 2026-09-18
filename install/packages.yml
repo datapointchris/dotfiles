@@ -1046,6 +1046,12 @@ github_releases:
     description: Fitness — mesocycle programming, workout logging, measurements
     tags: [cli, personal]
 
+  - name: ypl
+    repo: datapointchris/ypl
+    release_tag_prefix: "cli/"
+    description: Organize YouTube playlists of long DJ mixes, over the ypl server
+    tags: [cli, personal]
+
 # ================================================================
 # CUSTOM INSTALLERS
 # ================================================================
@@ -1591,10 +1597,6 @@ git_uv_tools:
   - name: logsift
     repo: https://github.com/datapointchris/logsift.git
     description: Intelligent log analysis and command monitoring tool for LLM-driven workflows
-
-  - name: ypl
-    repo: https://github.com/datapointchris/ypl.git
-    description: Organize YouTube music playlists of long DJ mixes
 
   - name: dectl
     repo: https://github.com/datapointchris/dectl.git

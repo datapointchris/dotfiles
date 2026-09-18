@@ -460,6 +460,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'shellcheck': shellcheck,
     'syncthing': syncthing,
     'tenv': tenv,
+    'ypl': _go_release_cli('ypl'),
     'terraformer': terraformer,
     'terrascan': terrascan,
     'tflint': tflint,

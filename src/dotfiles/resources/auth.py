@@ -494,6 +494,7 @@ PROBES: dict[str, Probe] = {
     'learning': _keychain_cli('learning'),
     'meso': _keychain_cli('meso'),
     'nomad': _keychain_cli('nomad'),
+    'ypl': _keychain_cli('ypl'),
     'atuin': _atuin,
     'claude': _claude,
     'aws': _aws,

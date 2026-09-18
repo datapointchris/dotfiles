@@ -27,7 +27,7 @@ from dotfiles.resources import Verdict
 from dotfiles.resources import auth
 from dotfiles.session import Session
 
-KEYCHAIN_CLIS = ('icb', 'learning', 'meso', 'nomad')
+KEYCHAIN_CLIS = ('icb', 'learning', 'meso', 'nomad', 'ypl')
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:

@@ -58,6 +58,7 @@ github_releases:
   - learning
   - nomad
   - meso
+  - ypl
 
 custom_installers:
   - bats
@@ -108,7 +109,6 @@ git_uv_tools:
   - relate
   - logsift
   - dectl
-  - ypl
   - safekeep
   - typos
 
@@ -127,5 +127,6 @@ auth:
   - learning
   - meso
   - nomad
+  - ypl
   - atuin
   - aws
