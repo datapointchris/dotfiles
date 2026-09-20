@@ -513,7 +513,7 @@ fi
 # so these are the slow ones.
 cache_eval dectl env _DECTL_COMPLETE=source_zsh dectl
 cache_eval indy env _INDY_COMPLETE=source_zsh indy
-cache_eval relate env _RELATE_COMPLETE=source_zsh relate
+cache_eval digest env _DIGEST_COMPLETE=source_zsh digest
 cache_eval syncer env _SYNCER_COMPLETE=source_zsh syncer
 
 # doit writes its own rather than using Typer's generator, so that completing a

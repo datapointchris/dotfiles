@@ -102,8 +102,11 @@ defaults:
     refetchIntervalMinutes: 30
 keybindings: {}
 # Explicit because gh-dash allows one wildcard per owner and these repos sit
-# under ~/tools, ~/code, ~/webapps and ~/. Do not hand-maintain — regenerate:
+# under ~/tools, ~/code, ~/webapps and ~/. The list starts from the registry:
 #   jq -r '.owner as $o | .repos[] | "    \($o)/\(.name): \(.path)"' ~/dev/repos.json | sort
+# Then drop every repo whose name or path would identify the employer, and every
+# fleet-only tool. This file is committed to a public repo and the registry is not,
+# so the generated list is a candidate set and never the answer.
 repoPaths:
     datapointchris/ai: ~/code/python-projects/ai
     datapointchris/bash-playground: ~/code/bash-playground
@@ -117,6 +120,7 @@ repoPaths:
     datapointchris/data-conversion: ~/code/python-projects/data-conversion
     datapointchris/datapointchris: ~/code/datapointchris
     datapointchris/dectl: ~/tools/dectl
+    datapointchris/digest: ~/tools/digest
     datapointchris/dimensional-modeling: ~/code/sql/dimensional-modeling
     datapointchris/docker-redis-cicd: ~/code/tutorials/docker-redis-cicd
     datapointchris/docs: ~/docs
@@ -159,7 +163,6 @@ repoPaths:
     datapointchris/redshift-connect: ~/code/python-projects/redshift-connect
     datapointchris/refcheck: ~/tools/refcheck
     datapointchris/reference: ~/code/reference
-    datapointchris/relate: ~/tools/relate
     datapointchris/safekeep: ~/tools/safekeep
     datapointchris/sess: ~/tools/sess
     datapointchris/shadows: ~/code/shadows

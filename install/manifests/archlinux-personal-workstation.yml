@@ -106,7 +106,7 @@ git_uv_tools:
   - syncer
   - keymap-align
   - indy
-  - relate
+  - digest
   - logsift
   - dectl
   - safekeep

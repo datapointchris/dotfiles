@@ -1580,8 +1580,8 @@ git_uv_tools:
     repo: https://github.com/datapointchris/indy.git
     description: Semantic search index for local codebases, docs, and notes
 
-  - name: relate
-    repo: https://github.com/datapointchris/relate.git
+  - name: digest
+    repo: https://github.com/datapointchris/digest.git
     requires_github_auth: true
     description: Analyze YouTube videos and web articles with Claude, building a searchable knowledge base
 
