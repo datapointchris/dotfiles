@@ -1597,6 +1597,11 @@ git_uv_tools:
     repo: https://github.com/datapointchris/safekeep.git
     description: Dated snapshots of the files no package manager will put back
 
+  - name: homelab
+    repo: https://github.com/datapointchris/homelab.git
+    requires_github_auth: true
+    description: Control CLI for the homelab — one front door onto the containers, the deploys and the homelab's condition
+
   # The analyzer half of typos. Its capture half is a Neovim plugin lazy installs
   # from the same repo, so only the workstations that write sessions need the CLI
   # that reads them.

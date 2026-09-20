@@ -29,6 +29,7 @@ go_tools:
 
 git_uv_tools:
   - syncer    # `fleet audit run` fast-forwards every checkout through it
+  - homelab   # the homelab control CLI; its hourly snapshot timer runs on this box
 
 custom_installers:
   - claude-code   # the grader
