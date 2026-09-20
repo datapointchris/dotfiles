@@ -6,6 +6,27 @@ icon: material/city
 
 How the dotfiles repository is organized and why.
 
+## Pages
+
+- [Management Interface](management-interface.md) — the `dotfiles` CLI and `task` as two front doors
+  onto one implementation, the noun-verb grammar, and why a CLI was built after being rejected
+- [Shell Libraries](shell-libraries.md) — the libraries a script sources from `~/.local/shell/`, and
+  why one of them may never touch shell options
+- [tmux Sessions](tmux-sessions.md) — a session is an initiative and a window is the unit of work;
+  why naming a session after a repo was abandoned
+- [Package Management](package-management.md) — the three install tiers, ordered by how much the
+  version matters, and why upstream beats a distro package
+- [GitHub Releases](github-releases.md) — installing from a binary a project published, and why
+  asset naming is code rather than a `packages.yml` field
+- [Custom Installers](custom-installers.md) — the entries that share no mechanism at all; check a
+  tool really is custom before writing one
+- [Offline Bundles](offline-bundles.md) — the exchange between a connected box and one that cannot
+  reach GitHub, and how narrow the channel back has to be
+- [System Configuration](system-configuration.md) — groups, units, files under `/etc`, the login
+  shell and macOS defaults; why they are a second file from packages
+- [Observability](observability.md) — the run record, the log stream and the status file, split by
+  who reads each one
+
 ## A machine is a point on six axes, not a platform string
 
 Which coordinate directories a machine deploys is decided by where it sits on the

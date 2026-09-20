@@ -4,6 +4,17 @@ Cross-platform machine configuration for macOS, WSL Ubuntu, and Arch Linux.
 Manifest-driven installation, with shared configs and one directory per machine
 coordinate beside them.
 
+## Documentation
+
+- [Apps](apps/index.md) — the personal CLI tools, each covered only where `--help` cannot say it
+- [Architecture](architecture/index.md) — how the repo is organized and why: the coordinate model,
+  what a manifest declares, how each install method works, what a run leaves behind
+- [Configuration](configuration/index.md) — per-application config that needed a decision recorded
+- [Reference](reference/index.md) — rebuilding a machine, the symlinks manager, the task runner,
+  troubleshooting, and the restricted-network runbook
+- [Development](development/index.md) — the test tiers, publishing this site, the docs audit record
+- [Learnings](learnings/index.md) — one page per bug or measured lesson, searched by symptom
+
 ## Install
 
 ```bash

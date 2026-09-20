@@ -133,15 +133,23 @@ nav:
       - System Configuration: architecture/system-configuration.md
       - Observability: architecture/observability.md
   - Configuration:
+      - configuration/index.md
       - Docker Setup: configuration/docker.md
       - Hyprland: configuration/hyprland.md
   - Reference:
+      - reference/index.md
       - Rebuilding a Machine: reference/rebuilding-a-machine.md
-      - Tool Availability: reference/platforms/tools.md
-      - Symlinks Manager: reference/tools/symlinks.md
-      - Task Reference: reference/tools/tasks.md
-      - Troubleshooting: reference/support/troubleshooting.md
-      - Restricted Networks: reference/support/corporate.md
+      - Platforms:
+          - reference/platforms/index.md
+          - Tool Availability: reference/platforms/tools.md
+      - Tools:
+          - reference/tools/index.md
+          - Symlinks Manager: reference/tools/symlinks.md
+          - Task Reference: reference/tools/tasks.md
+      - Support:
+          - reference/support/index.md
+          - Troubleshooting: reference/support/troubleshooting.md
+          - Restricted Networks: reference/support/corporate.md
   - Development:
       - development/index.md
       - VM Testing: development/testing.md
