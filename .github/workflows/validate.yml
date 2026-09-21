@@ -1,4 +1,4 @@
-# forge-toolchain: 27
+# forge-toolchain: 28
 name: CI
 
 on:
@@ -37,7 +37,7 @@ jobs:
         run: |
           shellcheck_version="0.10.0"
           mkdir -p "$RUNNER_TEMP/shellcheck"
-          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${shellcheck_version}/shellcheck-v${shellcheck_version}.linux.x86_64.tar.xz" \
+          curl -fsSL --retry 3 "https://github.com/koalaman/shellcheck/releases/download/v${shellcheck_version}/shellcheck-v${shellcheck_version}.linux.x86_64.tar.xz" \
             | tar -xJf - --strip-components=1 -C "$RUNNER_TEMP/shellcheck" "shellcheck-v${shellcheck_version}/shellcheck"
           shellcheck_bin="$RUNNER_TEMP/shellcheck/shellcheck"
           "$shellcheck_bin" --version
@@ -77,7 +77,7 @@ jobs:
         run: |
           shfmt_version="3.13.1"
           shfmt_bin="$RUNNER_TEMP/shfmt"
-          curl -fsSL -o "$shfmt_bin" \
+          curl -fsSL --retry 3 -o "$shfmt_bin" \
             "https://github.com/mvdan/sh/releases/download/v${shfmt_version}/shfmt_v${shfmt_version}_linux_amd64"
           chmod +x "$shfmt_bin"
           "$shfmt_bin" --version
@@ -169,7 +169,7 @@ jobs:
       - name: StyLua
         run: |
           stylua_version="2.5.2"
-          curl -fsSL -o "$RUNNER_TEMP/stylua.zip" \
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/stylua.zip" \
             "https://github.com/JohnnyMorganz/StyLua/releases/download/v${stylua_version}/stylua-linux-x86_64.zip"
           unzip -o -q "$RUNNER_TEMP/stylua.zip" -d "$RUNNER_TEMP/stylua"
           stylua_bin="$RUNNER_TEMP/stylua/stylua"
