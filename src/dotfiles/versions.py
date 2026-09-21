@@ -39,6 +39,13 @@ def parse(text: str) -> tuple[int, ...] | None:
     return tuple(int(part) for part in match.group(1).split('.'))
 
 
+def written_in(text: str) -> str | None:
+    """The version `parse` reads, as the tool wrote it, so a row shows `v4.25.2`
+    rather than a banner with a colored logo above it."""
+    match = NUMBERS.search(text)
+    return match.group(0) if match else None
+
+
 def at_least(current: str, floor: str) -> bool | None:
     """Whether `current` meets `floor`, or None when either cannot be read.
 

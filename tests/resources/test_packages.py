@@ -564,7 +564,7 @@ def test_a_tool_ahead_of_a_measured_release_is_stale(tmp_path: Path, fake_bin: P
 
     found = packages.currency_of(item, measured)
 
-    assert [(change.verdict, change.observed) for change in found] == [(Verdict.STALE, 'lazygit version 2.10.0')]
+    assert [(change.verdict, change.observed) for change in found] == [(Verdict.STALE, '2.10.0')]
     assert 'ahead of v0.45.0' in found[0].detail
 
 
@@ -1589,3 +1589,23 @@ def test_a_probe_that_raises_is_recorded_rather_than_dropped(
         assert packages._reported_versions((item,)) == {}
 
     assert any('probe failed' in record.getMessage() for record in caplog.records)
+
+
+@pytest.mark.parametrize(
+    ('printed', 'kept'),
+    [
+        ('\x1b[38;2;0;249;251m▜▔▚\x1b[m\ngh-dash version dev\nmodule version: v4.25.2, checksum: h1:i24B=', 'v4.25.2'),
+        ('aws-cli/2.36.49 Python/3.14.6 Linux/7.2.6-arch2-1 exe/x86_64.arch', '2.36.49'),
+        ('built from source', 'built from source'),
+    ],
+)
+def test_a_reported_version_keeps_only_the_version_it_carries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, printed: str, kept: str
+) -> None:
+    """The report shows this value as `(is '...')`, so a banner printed a logo
+    into the row. Text with no version in it stays whole for the row to name."""
+    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+    (item,) = live.plan.for_resource('packages')
+    monkeypatch.setattr(packages, '_installed_version', lambda _: printed)
+
+    assert packages._reported_versions((item,)) == {item.address: kept}

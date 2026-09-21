@@ -47,6 +47,7 @@ from collections.abc import Callable
 
 import pytest
 
+from dotfiles import versions
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
 from matrix.harness import ReachedTheNetwork
@@ -510,7 +511,8 @@ def test_a_reinstall_carries_what_the_tool_reported_even_where_it_means_nothing(
 
     ran = cli('packages', 'apply', '--offline', '--reinstall', '--package', TOOL)
 
-    assert (f"(is '{relation.reported}')" in said(ran)) is (relation.reported is not None)
+    shown = relation.reported and (versions.written_in(relation.reported) or relation.reported)
+    assert (f"(is '{shown}')" in said(ran)) is (relation.reported is not None)
 
 
 def test_a_reinstall_apply_can_act_on_is_planned_and_attempted(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

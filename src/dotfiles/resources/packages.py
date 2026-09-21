@@ -467,7 +467,7 @@ def _reported_versions(present: tuple[DesiredItem, ...]) -> dict[str, str]:
                 log.debug('probe failed', address=item.address, executable=item.executable, error=str(failed))
                 continue
             if reported:
-                found[item.address] = reported
+                found[item.address] = versions.written_in(reported) or reported
     return found
 
 
