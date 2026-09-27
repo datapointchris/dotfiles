@@ -108,6 +108,7 @@ git_uv_tools:
   - dectl
   - safekeep
   - typos
+  - homelab
 
 shell_plugins: true
 tmux_plugins: true
