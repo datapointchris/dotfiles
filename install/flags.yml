@@ -271,8 +271,8 @@ required_files:
   # answer to "where does it come back from" is the vault.
   - name: ntfy token.env
     path: ~/.config/ntfy/token.env
-    description: The read token this machine's ntfy subscriber authenticates with
-    restore: "copy it from Vaultwarden, which also holds the ntfy admin password and the ci/grafana tokens, and write it as a single NTFY_TOKEN=<token> line at mode 600"
+    description: The read-only token this machine's ntfy subscriber authenticates with
+    restore: "run `fleet machine secrets apply`, which writes the ntfy desktop user's token here at mode 600"
     display_stack: wayland
     file_must_exist: true
     consumers:
