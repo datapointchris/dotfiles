@@ -54,7 +54,7 @@ GitHub. Run `theme update` or `font update` to pull updates to the installed ver
 
 ### 4. Python Tools (Remote Install via `uv tool install`)
 
-**Examples**: `relate`, `logsift`, `indy`, `refcheck`, `syncer`, `safekeep`
+**Examples**: `digest`, `logsift`, `indy`, `refcheck`, `syncer`, `safekeep`
 
 **Installation**: declared in `install/packages.yml` under `git_uv_tools` and installed
 with `uv tool install`, pinned to the repo's newest release tag. Why the pin is not
