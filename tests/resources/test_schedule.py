@@ -13,6 +13,7 @@ path.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import json
 import plistlib
@@ -22,6 +23,7 @@ from pathlib import Path
 import pytest
 
 from dotfiles import effects
+from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import providers
 from dotfiles import reconcile
@@ -39,6 +41,9 @@ from dotfiles.results import ResourceVerdict
 from dotfiles.vocabulary import ExitCode
 
 WHEN = dt.datetime(2026, 8, 8, 12, 0, tzinfo=dt.UTC)
+
+BOX = dataclasses.replace(machines.load('archlinux-personal-workstation'), check_schedule=None)
+"""A manifest that leaves the schedule to the deployed config."""
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
@@ -170,7 +175,7 @@ def test_a_machine_with_no_systemd_is_unknown_rather_than_missing(linux: Path, m
     """Nothing can schedule a check on a box with no init manager to ask, and
     reporting drift `apply` could never repair is worse than saying so."""
     monkeypatch.setenv('PATH', str(tmp_path / 'nothing'))
-    state = schedule.observe()
+    state = schedule.observe(BOX)
 
     assert state.verdict is Verdict.UNKNOWN
     assert state.repair is Repair.NONE
@@ -179,13 +184,13 @@ def test_a_machine_with_no_systemd_is_unknown_rather_than_missing(linux: Path, m
 def test_a_fresh_machine_has_no_timer_and_gets_one(linux: Path, fake_bin: Path) -> None:
     executable(fake_bin, 'systemctl')
 
-    assert schedule.observe().verdict is Verdict.MISSING
+    assert schedule.observe(BOX).verdict is Verdict.MISSING
 
-    applied = steps.apply('check-schedule', Privilege())
+    applied = steps.apply('check-schedule', Privilege(), BOX)
     assert applied.ok
     assert applied.kind is Kind.APPLIED
     assert (linux / 'dotfiles-check.timer').is_file()
-    assert schedule.observe().verdict is Verdict.MATCHED
+    assert schedule.observe(BOX).verdict is Verdict.MATCHED
 
 
 def test_the_unit_names_the_installed_binary_not_whatever_is_on_path(linux: Path, fake_bin: Path, tmp_path: Path) -> None:
@@ -200,7 +205,7 @@ def test_the_unit_names_the_installed_binary_not_whatever_is_on_path(linux: Path
     installed.parent.mkdir(exist_ok=True)
     installed.touch()
 
-    steps.apply('check-schedule', Privilege())
+    steps.apply('check-schedule', Privilege(), BOX)
 
     assert f'ExecStart={installed} check' in (linux / 'dotfiles-check.service').read_text()
 
@@ -217,7 +222,7 @@ def test_the_schedule_runs_the_check_and_nothing_else(linux: Path, fake_bin: Pat
     """
     executable(fake_bin, 'systemctl')
 
-    steps.apply('check-schedule', Privilege())
+    steps.apply('check-schedule', Privilege(), BOX)
     execstart = next(line for line in (linux / 'dotfiles-check.service').read_text().splitlines() if line.startswith('ExecStart='))
 
     assert execstart == f'ExecStart={schedule.INSTALLED} check --refresh'
@@ -246,20 +251,20 @@ def test_something_actually_wrong_does_fail_the_unit() -> None:
 
 def test_a_unit_someone_edited_is_stale_rather_than_matched(linux: Path, fake_bin: Path) -> None:
     executable(fake_bin, 'systemctl')
-    steps.apply('check-schedule', Privilege())
+    steps.apply('check-schedule', Privilege(), BOX)
     (linux / 'dotfiles-check.timer').write_text('[Timer]\nOnUnitActiveSec=99h\n')
 
-    assert schedule.observe().verdict is Verdict.STALE
+    assert schedule.observe(BOX).verdict is Verdict.STALE
 
 
 def test_an_installed_but_disabled_timer_is_stale(linux: Path, fake_bin: Path) -> None:
     """The files being right is not the same as the timer running, and the
     difference is exactly what nobody notices."""
     executable(fake_bin, 'systemctl')
-    steps.apply('check-schedule', Privilege())
+    steps.apply('check-schedule', Privilege(), BOX)
     executable(fake_bin, 'systemctl', '#!/bin/sh\n[ "$2" = "is-enabled" ] && exit 1\nexit 0\n')
 
-    assert schedule.observe().verdict is Verdict.STALE
+    assert schedule.observe(BOX).verdict is Verdict.STALE
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -277,8 +282,8 @@ def test_a_machine_that_names_nothing_gets_no_schedule(linux: Path, fake_bin: Pa
     settings.config_file().unlink()
     executable(fake_bin, 'systemctl')
 
-    assert not schedule.enabled()
-    assert schedule.observe().verdict is Verdict.MATCHED
+    assert not schedule.answer(BOX).wanted
+    assert schedule.observe(BOX).verdict is Verdict.MATCHED
     assert not (linux / 'dotfiles-check.timer').exists()
 
 
@@ -294,11 +299,11 @@ def test_turning_it_off_removes_a_timer_that_is_already_installed(linux: Path, f
     daemon on whichever desk the suite is running on.
     """
     executable(fake_bin, 'systemctl')
-    steps.apply('check-schedule', Privilege())
+    steps.apply('check-schedule', Privilege(), BOX)
     assert (linux / 'dotfiles-check.timer').is_file()
 
     want_schedule(enabled=False)
-    assert schedule.observe().verdict is Verdict.STALE
+    assert schedule.observe(BOX).verdict is Verdict.STALE
 
     stopped: list[str] = []
 
@@ -307,13 +312,59 @@ def test_turning_it_off_removes_a_timer_that_is_already_installed(linux: Path, f
         return effects.Completed((), 0, '')
 
     monkeypatch.setattr(schedule.systemd, 'disable', spy)
-    removed = steps.apply('check-schedule', Privilege())
+    removed = steps.apply('check-schedule', Privilege(), BOX)
 
     assert removed.ok
     assert stopped == ['dotfiles-check.timer'], 'the manager is told before the files go, or the job outlives its own unit'
     assert not (linux / 'dotfiles-check.timer').exists()
     assert not (linux / 'dotfiles-check.service').exists()
-    assert schedule.observe().verdict is Verdict.MATCHED
+    assert schedule.observe(BOX).verdict is Verdict.MATCHED
+
+
+def test_a_manifest_that_declines_removes_a_timer_its_trust_domain_turned_on(
+    linux: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The config turns the timer on for every box in a trust domain, and one box
+    has its check run by another scheduler, under credentials this repo's timer
+    never sees. A timer left there would read those logins missing every day.
+
+    Declined rather than dropped from the plan, so the timer installed before the
+    manifest said so is found and removed.
+    """
+    declines = dataclasses.replace(BOX, check_schedule=False)
+    executable(fake_bin, 'systemctl')
+    steps.apply('check-schedule', Privilege(), BOX)
+
+    leftover = schedule.observe(declines)
+
+    assert leftover.verdict is Verdict.STALE
+    assert 'check_schedule is off' in leftover.detail
+
+    monkeypatch.setattr(schedule.systemd, 'disable', lambda _unit: effects.Completed((), 0, ''))
+
+    assert steps.apply('check-schedule', Privilege(), declines).ok
+    assert not (linux / 'dotfiles-check.timer').exists()
+    assert schedule.observe(declines).verdict is Verdict.MATCHED
+
+
+def test_a_manifest_that_wants_the_timer_overrides_a_config_that_declines(linux: Path, fake_bin: Path) -> None:
+    """The manifest answers for its own machine in both directions, as a manifest
+    overrides a `flags.yml` default."""
+    want_schedule(enabled=False)
+    executable(fake_bin, 'systemctl')
+
+    assert schedule.observe(dataclasses.replace(BOX, check_schedule=True)).verdict is Verdict.MISSING
+    assert schedule.observe(BOX).verdict is Verdict.MATCHED
+
+
+def test_the_answer_names_the_setting_that_decided(linux: Path) -> None:
+    """`config show` prints this line, and a machine that declines in its manifest
+    must not read as one whose config file turned the timer off."""
+    declines = dataclasses.replace(BOX, check_schedule=False)
+
+    assert schedule.answer(declines).because() == f'check_schedule is off ({paths.under_home(BOX.source)})'
+    assert schedule.answer(BOX).because() == f'schedule.enabled is on ({paths.under_home(settings.config_file())})'
+    assert schedule.answer(None).wanted is True
 
 
 @pytest.fixture
@@ -329,13 +380,13 @@ def darwin(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> P
 def test_a_mac_gets_a_launch_agent(darwin: Path, fake_bin: Path) -> None:
     executable(fake_bin, 'launchctl')
 
-    assert schedule.observe().verdict is Verdict.MISSING
+    assert schedule.observe(BOX).verdict is Verdict.MISSING
 
-    applied = steps.apply('check-schedule', Privilege())
+    applied = steps.apply('check-schedule', Privilege(), BOX)
     assert applied.ok
     assert applied.kind is Kind.APPLIED
     assert darwin.is_file()
-    assert schedule.observe().verdict is Verdict.MATCHED
+    assert schedule.observe(BOX).verdict is Verdict.MATCHED
 
 
 def test_the_agent_is_serialized_by_plistlib_on_both_sides(darwin: Path, fake_bin: Path) -> None:
@@ -345,7 +396,7 @@ def test_the_agent_is_serialized_by_plistlib_on_both_sides(darwin: Path, fake_bi
     import plistlib
 
     executable(fake_bin, 'launchctl')
-    steps.apply('check-schedule', Privilege())
+    steps.apply('check-schedule', Privilege(), BOX)
     written = plistlib.loads(darwin.read_bytes())
 
     assert written['Label'] == schedule.LABEL

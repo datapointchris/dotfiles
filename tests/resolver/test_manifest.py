@@ -275,6 +275,29 @@ def test_a_misspelt_auth_key_is_still_refused(tmp_path: Path) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# The periodic check — whether this machine installs the timer
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(('declared', 'read'), [({}, None), ({'check_schedule': False}, False), ({'check_schedule': True}, True)])
+def test_a_manifest_answers_for_the_schedule_only_where_it_says(tmp_path: Path, declared: dict[str, bool], read: bool | None) -> None:
+    """Absent is None, so the deployed config's `[schedule] enabled` decides,
+    rather than `false` reading as a machine that declined."""
+    loaded = load(tmp_path, {**LINUX, **declared})
+
+    assert loaded.check_schedule is read
+    assert loaded.as_dict()['check_schedule'] is read
+
+
+def test_check_schedule_declared_as_anything_but_a_boolean_is_refused(tmp_path: Path) -> None:
+    """`check_schedule: "no"` is truthy, so reading it as a bool would install the
+    timer the line was written to decline."""
+    found = issues(tmp_path, {**LINUX, 'check_schedule': 'no'})
+
+    assert any('declares check_schedule as a str' in issue for issue in found), found
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Flags
 # ─────────────────────────────────────────────────────────────────────────────
 

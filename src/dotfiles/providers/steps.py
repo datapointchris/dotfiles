@@ -31,6 +31,7 @@ import shutil
 import stat
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotfiles.effects import Output
 from dotfiles.effects import run
@@ -43,6 +44,9 @@ from dotfiles.providers import schedule
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+
+if TYPE_CHECKING:
+    from dotfiles.machine import Machine
 
 FINDER_INFO = 'com.apple.FinderInfo'
 ORBSTACK_PLUGINS = Path('/Applications/OrbStack.app/Contents/MacOS/xbin')
@@ -400,42 +404,68 @@ def _link_psql() -> Result:
 # The table
 # ─────────────────────────────────────────────────────────────────────────────
 
-Observer = Callable[[], State]
-Applier = Callable[[Escalates], Result]
+Observer = Callable[['Machine'], State]
+Applier = Callable[[Escalates, 'Machine'], Result]
+"""One signature for every row, so the resource never has to ask which kind a row
+is. The adapters below hand each row only what it reads: the schedule reads the
+manifest, the Xcode license reads the privilege, and the rest read neither."""
+
+
+def _anywhere(observe: Callable[[], State]) -> Observer:
+    """A row whose state reads the same whichever manifest asks."""
+
+    def observe_it(_machine: Machine) -> State:
+        return observe()
+
+    return observe_it
 
 
 def _unprivileged(apply: Callable[[], Result]) -> Applier:
-    """Adapt a step that needs no root to the one signature the table carries.
+    """A row that needs neither root nor the manifest to converge."""
 
-    One signature rather than two, so the resource never has to ask which kind a
-    row is — the `Escalates` it hands down is simply ignored by four of the five.
-    """
-
-    def run_it(_privilege: Escalates) -> Result:
+    def run_it(_privilege: Escalates, _machine: Machine) -> Result:
         return apply()
 
     return run_it
 
 
+def _escalating(apply: Callable[[Escalates], Result]) -> Applier:
+    """A row that needs root and not the manifest."""
+
+    def run_it(privilege: Escalates, _machine: Machine) -> Result:
+        return apply(privilege)
+
+    return run_it
+
+
+def _per_machine(apply: Callable[[Machine], Result]) -> Applier:
+    """A row that reads the manifest and needs no root."""
+
+    def run_it(_privilege: Escalates, machine: Machine) -> Result:
+        return apply(machine)
+
+    return run_it
+
+
 STEPS: dict[str, tuple[Observer, Applier]] = {
-    'check-schedule': (schedule.observe, _unprivileged(schedule.apply)),
-    'library-visible': (_library_visible, _unprivileged(_show_library)),
-    'screenshot-directory': (_screenshots_exist, _unprivileged(_make_screenshots)),
-    'xcode-license': (_xcode_license, _accept_xcode_license),
-    'orbstack-docker-plugins': (_orbstack_plugins, _unprivileged(_add_orbstack_plugins)),
-    'windows-fonts': (_windows_fonts, _unprivileged(_write_fontconfig)),
-    'psql-linked': (_psql_linked, _unprivileged(_link_psql)),
+    'check-schedule': (schedule.observe, _per_machine(schedule.apply)),
+    'library-visible': (_anywhere(_library_visible), _unprivileged(_show_library)),
+    'screenshot-directory': (_anywhere(_screenshots_exist), _unprivileged(_make_screenshots)),
+    'xcode-license': (_anywhere(_xcode_license), _escalating(_accept_xcode_license)),
+    'orbstack-docker-plugins': (_anywhere(_orbstack_plugins), _unprivileged(_add_orbstack_plugins)),
+    'windows-fonts': (_anywhere(_windows_fonts), _unprivileged(_write_fontconfig)),
+    'psql-linked': (_anywhere(_psql_linked), _unprivileged(_link_psql)),
 }
 """Every `steps` row, and the pair of functions that answers for it."""
 
 
-def observe(entry_name: str) -> State:
+def observe(entry_name: str, machine: Machine) -> State:
     if entry_name not in STEPS:
         return State(Verdict.UNKNOWN, f'no function in providers/steps.py for {entry_name}', repair=Repair.NONE)
-    return STEPS[entry_name][0]()
+    return STEPS[entry_name][0](machine)
 
 
-def apply(entry_name: str, privilege: Escalates) -> Result:
+def apply(entry_name: str, privilege: Escalates, machine: Machine) -> Result:
     if entry_name not in STEPS:
         return Result(False, f'no function in providers/steps.py for {entry_name}', kind=Kind.DECLARATION_INVALID)
-    return STEPS[entry_name][1](privilege)
+    return STEPS[entry_name][1](privilege, machine)

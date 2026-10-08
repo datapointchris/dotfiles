@@ -26,6 +26,8 @@ repos_registry = "~/.config/repos.json"
 #
 # Stated rather than left to the default it matches, so the key is visible on the
 # machine where it matters most. A validator holds both variants to naming it.
+#
+# A manifest's `check_schedule` answers for its own machine ahead of this line.
 [schedule]
 enabled = false
 

@@ -41,6 +41,7 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles.providers import schedule
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import ANSWERS
 from matrix.harness import REFUSED
@@ -928,6 +929,42 @@ def test_a_row_declaring_it_needs_no_root_is_written_without_root(sandbox: Sandb
 
     assert ran.exit_code == ExitCode.CONVERGED
     assert (sandbox.root / 'etc' / 'thing.conf').read_text() == 'hello\n'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A step that reads the manifest it is measured for
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+SCHEDULE_STEP = {'steps': [{'name': 'check-schedule', 'description': 'The periodic dotfiles check', 'excludes_os_family': 'windows'}]}
+
+
+def test_a_timer_the_manifest_declines_is_reported_as_left_behind(
+    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
+) -> None:
+    """The config turns the timer on and this machine's manifest turns it off.
+
+    Through the verb rather than the step, because the step learns the manifest
+    only from the session that planned it, and that hand-off is what a declining
+    box depends on: read without it, the config's answer stands and the timer is
+    called correct.
+    """
+    monkeypatch.setattr(schedule, '_is_darwin', lambda: False)
+    sandbox.declare(manifest={**LINUX, 'check_schedule': False})
+    declare_system(sandbox, SCHEDULE_STEP)
+    (sandbox.config / 'dotfiles').mkdir(parents=True, exist_ok=True)
+    (sandbox.config / 'dotfiles' / 'config.toml').write_text('[schedule]\nenabled = true\n')
+    units = sandbox.config / 'systemd' / 'user'
+    units.mkdir(parents=True)
+    (units / 'dotfiles-check.timer').write_text('[Timer]\n')
+    sandbox.shadow('systemctl', ANSWERS)
+
+    ran = cli('system', 'check', '--json')
+    row = resource(ran, 'system')
+    (step,) = [change for change in [*row['findings'], *row['others']] if change['item'] == 'step/check-schedule']
+
+    assert step['verdict'] == 'stale'
+    assert 'check_schedule is off' in step['detail']
 
 
 # ─────────────────────────────────────────────────────────────────────────────

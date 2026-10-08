@@ -12,11 +12,14 @@ where everything resolved had no way to ask which rung it resolved through.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import typer
 
+from dotfiles import machine as machines
 from dotfiles import remote as transport
+from dotfiles import session
 from dotfiles import settings
 from dotfiles.output import console
 from dotfiles.output import emit_json
@@ -53,6 +56,8 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     # worth running in is one where ~/.env answered nothing, and resolving a
     # machine first would exit before printing why.
     described = settings.describe(config, Path.home() / '.env')
+    machine, unread = _this_machine()
+    decided = schedule.answer(machine, config)
 
     if as_json:
         emit_json(
@@ -80,7 +85,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
                     'from_table': sorted(remote.remote.from_table) if remote.remote else [],
                     **{name: bool(remote.remote and getattr(remote.remote, name)) for name in transport.FLAGS},
                 },
-                'schedule': {'enabled': schedule.enabled(config)},
+                'schedule': {'enabled': decided.wanted, 'setting': decided.setting, 'source': decided.where, 'manifest_problem': unread},
             }
         )
         return
@@ -112,12 +117,28 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
             console.print(f'  {"":<{width}}  {name} {"on" if getattr(remote.remote, name) else "off"} ({_layer(remote.remote, name)})')
 
     console.print()
-    wanted = schedule.enabled(config)
-    stated = isinstance(config.values.get(schedule.TABLE), dict) and 'enabled' in config.values[schedule.TABLE]
-    console.print(f'  {"SCHEDULE":<{width}}  {"a check every " + schedule.cadence() if wanted else "no periodic check"}')
-    console.print(
-        f'  {"":<{width}}  {schedule.TABLE}.enabled {"on" if wanted else "off"} ({str(path) if stated else "this tool’s default"})'
-    )
+    console.print(f'  {"SCHEDULE":<{width}}  {"a check every " + schedule.cadence() if decided.wanted else "no periodic check"}')
+    console.print(f'  {"":<{width}}  {decided.because()}')
+    if unread:
+        console.print(f'  {"":<{width}}  [yellow]the manifest could not be read[/] — {unread}')
+
+
+def _this_machine() -> tuple[machines.Machine | None, str]:
+    """The manifest `~/.env` names, and why it could not be read where it could not.
+
+    Resolved in the same order a Session resolves it, without the refusal a
+    Session raises: the state `show` is most worth running in is one where nothing
+    names a machine. `check_schedule` lives in the manifest, so without it the
+    schedule's answer is the config's alone, and a manifest that will not load is
+    said rather than read as one that declines nothing.
+    """
+    name = os.environ.get('MACHINE') or session.declared_machine()
+    if not name:
+        return None, ''
+    try:
+        return machines.load(name), ''
+    except machines.MachineError as failure:
+        return None, str(failure)
 
 
 def _layer(found: transport.Remote, key: str) -> str:
