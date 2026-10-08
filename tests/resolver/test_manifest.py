@@ -290,8 +290,6 @@ def test_a_manifest_answers_for_the_schedule_only_where_it_says(tmp_path: Path, 
 
 
 def test_check_schedule_declared_as_anything_but_a_boolean_is_refused(tmp_path: Path) -> None:
-    """`check_schedule: "no"` is truthy, so reading it as a bool would install the
-    timer the line was written to decline."""
     found = issues(tmp_path, {**LINUX, 'check_schedule': 'no'})
 
     assert any('declares check_schedule as a str' in issue for issue in found), found

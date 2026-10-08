@@ -123,14 +123,12 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
 
 
 def _this_machine() -> tuple[machines.Machine | None, str]:
-    """The manifest this machine resolves to, and why it could not be read where it
-    could not.
+    """The manifest this machine resolves to, or None and the reason it would not load.
 
-    `session.resolve_machine` answers, so this names the machine every other verb
-    names. Its refusal is caught because the state `show` is most worth running in
-    is one where nothing names a machine. `check_schedule` lives in the manifest,
-    so without it the schedule's answer is the config's alone. A manifest that will
-    not load is said rather than read as one that declines nothing.
+    `session.resolve_machine` names the machine, as it does for every other verb.
+    `NoMachine` is caught, so `show` still prints the config's answer where nothing
+    names a machine. A manifest that will not load returns its error, which `show`
+    prints as `manifest_problem` rather than reading the manifest as silent.
     """
     try:
         name = session.resolve_machine()

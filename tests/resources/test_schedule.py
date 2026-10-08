@@ -321,13 +321,6 @@ def test_turning_it_off_removes_a_timer_that_is_already_installed(linux: Path, f
 def test_a_manifest_that_declines_removes_a_timer_its_trust_domain_turned_on(
     linux: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The config turns the timer on for every box in a trust domain, and one box
-    has its check run by another scheduler, under credentials this repo's timer
-    never sees. A timer left there would read those logins missing every day.
-
-    Declined rather than dropped from the plan, so the timer installed before the
-    manifest said so is found and removed.
-    """
     declines = dataclasses.replace(BOX, check_schedule=False)
     executable(fake_bin, 'systemctl')
     schedule.apply(BOX)
@@ -345,8 +338,6 @@ def test_a_manifest_that_declines_removes_a_timer_its_trust_domain_turned_on(
 
 
 def test_a_manifest_that_wants_the_timer_overrides_a_config_that_declines(linux: Path, fake_bin: Path) -> None:
-    """The manifest answers for its own machine in both directions, as a manifest
-    overrides a `flags.yml` default."""
     want_schedule(enabled=False)
     executable(fake_bin, 'systemctl')
 

@@ -10,9 +10,9 @@ unit and a LaunchDaemon: the check reads `$HOME`, `~/.env` and the user's
 release cache, so running it as root would measure a machine nobody uses. It also
 means nothing here escalates.
 
-**Off unless a machine declares it on, through `check_schedule` in its manifest or
-`schedule.enabled` in its deployed config, and `answer` is the whole of how this
-row decides who runs one.** A timer is periodic by construction, so what it
+**Off unless a machine declares it on**, in its manifest's `check_schedule` or
+its deployed config's `schedule.enabled`. `answer` reads both, and nothing else
+decides who runs one. A timer is periodic by construction, so what it
 sends becomes a beacon: this one runs `check --refresh`, which is a call per
 declared release through a thread pool, once a day, to one host. On a machine
 behind a monitored egress that is a workstation calling out on an exact
@@ -62,7 +62,8 @@ MANIFEST_KEY = 'check_schedule'
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class Answer:
-    """Whether this machine wants the timer, and the setting that said so."""
+    """Whether this machine wants the timer, the setting that said so, and the file
+    that setting is in."""
 
     wanted: bool
     setting: str
@@ -75,12 +76,12 @@ class Answer:
 def answer(machine: Machine | None, config: settings.Config | None = None) -> Answer:
     """Whether to install the timer at all, declared rather than inferred.
 
-    **The manifest first, then the config, then off.** The config's
-    `[schedule] enabled` is the trust domain's answer and both deployed variants
-    state it. A manifest's `check_schedule` answers for one machine inside that
-    domain, where another scheduler runs the check with credentials this repo's
-    timer would never see. `None` is a caller with no machine, and the config
-    alone decides.
+    **The manifest first, then the config, then off.** `[schedule] enabled` is the
+    trust domain's answer, and both deployed configs state it. A manifest's
+    `check_schedule` answers for one machine inside that domain. It exists for a
+    box whose check runs under another scheduler, with credentials this repo's
+    timer never sees. `None` is a caller with no machine, and the config alone
+    decides.
 
     **Off unless something says otherwise**, which is the direction
     `remote.publish_reports_after_apply` already fails in and for the same reason.
@@ -91,8 +92,8 @@ def answer(machine: Machine | None, config: settings.Config | None = None) -> An
     exists to surface. Something with that reach is opted into, never defaulted
     into.
 
-    A declared key rather than a coordinate the code works out for itself, so the
-    answer on whichever box is being read is a line someone can find.
+    Both are keys someone writes, rather than a coordinate the code works out for
+    itself, so the answer on any box is a line someone can find.
     """
     if machine is not None and machine.check_schedule is not None:
         return Answer(machine.check_schedule, MANIFEST_KEY, paths.under_home(machine.source))

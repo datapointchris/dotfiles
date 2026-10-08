@@ -1121,8 +1121,8 @@ def test_the_settings_document_carries_the_file_and_every_rung_s_answer(sandbox:
 
 
 def test_the_settings_document_names_a_manifest_that_declines_the_schedule(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The config turns the timer on and the manifest turns it off, and `show` has
-    to say which one this machine follows rather than print the config's answer."""
+    """The config turns the timer on, so a `show` printing the config's answer would
+    report a timer this machine declines."""
     sandbox.declare(manifest={**MINIMAL_MANIFEST, 'check_schedule': False})
     write_config(sandbox, '[schedule]\nenabled = true\n')
 
@@ -1137,8 +1137,6 @@ def test_the_settings_document_names_a_manifest_that_declines_the_schedule(sandb
 def test_the_settings_document_names_the_config_where_no_manifest_answers(
     sandbox: Sandbox, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch, machine_named: bool
 ) -> None:
-    """A manifest that says nothing, and a box where nothing names a machine, both
-    leave the schedule to the deployed config, and `show` names that file."""
     config = write_config(sandbox, '[schedule]\nenabled = true\n')
     if not machine_named:
         monkeypatch.delenv('MACHINE')

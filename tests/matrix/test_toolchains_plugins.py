@@ -338,8 +338,8 @@ def test_a_runtime_is_measured_against_the_floor_its_catalog_row_declares(
 def test_a_runtime_in_place_that_will_not_answer_counts_as_absent(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
-    """A half-extracted install leaves the binary where the row looks, which is not
-    what an installed runtime looks like."""
+    """A half-extracted install leaves a `rustc` where the row looks that exits 1 on
+    `--version`."""
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})
     rustup_placed(sandbox, REFUSED)

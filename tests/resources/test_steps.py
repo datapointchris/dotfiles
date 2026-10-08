@@ -26,7 +26,7 @@ from dotfiles.resources import Verdict
 from dotfiles.session import Session
 
 ANY_RUN = Session(machine_name='archlinux-personal-workstation')
-"""A run these rows ignore. None of the rows tested here reads it."""
+"""None of the rows tested here reads the run."""
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:

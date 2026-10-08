@@ -942,12 +942,10 @@ SCHEDULE_STEP = {'steps': [{'name': 'check-schedule', 'description': 'The period
 def test_a_timer_the_manifest_declines_is_reported_as_left_behind(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
-    """The config turns the timer on and this machine's manifest turns it off.
-
-    Through the verb rather than the step, because the step learns the manifest
-    only from the session that planned it, and that hand-off is what a declining
-    box depends on: read without it, the config's answer stands and the timer is
-    called correct.
+    """Through the verb rather than the step, because the manifest reaches the row
+    only through the run `system check` builds. Without it, the config's
+    `enabled = true` stands, and the row reads the timer as differing from what
+    this repo declares rather than as declined.
     """
     monkeypatch.setattr(schedule, '_is_darwin', lambda: False)
     sandbox.declare(manifest={**LINUX, 'check_schedule': False})

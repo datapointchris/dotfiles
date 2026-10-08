@@ -314,13 +314,9 @@ class Machine:
     """
 
     check_schedule: bool | None = None
-    """Whether this machine installs the periodic `dotfiles check`, where it says.
-
-    None leaves the answer to `[schedule] enabled` in the deployed config, which is
-    the trust domain's default. A value here wins over it, because one machine in a
-    domain can have the check run by something else: a box whose credentials reach
-    only the jobs another scheduler starts would read them missing from this
-    repo's own timer.
+    """Whether this machine installs the periodic `dotfiles check`. None leaves it to
+    `[schedule] enabled` in the deployed config, and `schedule.answer` says why a
+    manifest can override that.
 
     `false` still plans the `check-schedule` row, so `apply` removes a timer
     installed before the machine declined, and `check` reports one left behind.
@@ -477,7 +473,8 @@ def _auth(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]
 
 
 def _check_schedule(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> bool | None:
-    """`true` or `false` where the manifest says, None where it leaves it to config."""
+    """`check_schedule: "no"` is truthy, so read as a bool it would install the timer
+    it declines."""
     value = declared.get('check_schedule')
     if value is None or isinstance(value, bool):
         return value
