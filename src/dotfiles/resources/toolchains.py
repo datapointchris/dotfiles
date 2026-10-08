@@ -114,10 +114,10 @@ class ToolchainsResource:
             # Arch's `go` package arrived transitively in a container, `which go`
             # found /usr/sbin/go, and this reported the toolchain present while
             # /usr/local/go did not exist — so every Go tool built against a
-            # runtime this repo had not installed. `registry.evidence_for` already
-            # knew; only this second measurement did not ask it.
-            found = registry.evidence_for(item, session.inventories)
-            probe = item.evidence_path or item.executable
+            # runtime this repo had not installed. The provider already knew; only
+            # this second measurement did not ask it.
+            found = registry.toolchain_evidence(item, session)
+            probe = str(found.binary) if found.binary else item.evidence_path or item.executable
             if found.verdict is not Verdict.MATCHED:
                 absent[item.name] = found.detail
             elif (version := ev.reported_version(probe)) is None:

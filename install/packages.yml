@@ -70,8 +70,10 @@ system_packages:
 
   # Node.js — the system package is the floor, not the version projects build
   # against. fnm (cargo_packages) supplies the per-project version from .nvmrc
-  # and owns what bare `node` resolves to; this package only guarantees an npm
-  # exists to bootstrap npm_globals before fnm has installed anything.
+  # and owns what bare `node` resolves to; this package guarantees an npm
+  # exists to bootstrap npm_globals before fnm has installed anything. A machine
+  # that applies offline never gets fnm's Node, because fnm downloads it from
+  # nodejs.org and no bundle stages it, so there this package is the Node it runs.
   #
   # Per-project switching is emphatically used: ichrisbirch, nomad and timeline
   # pin 24 and meso pins 26, and running the wrong one is not a subtle failure —

@@ -26,6 +26,7 @@ import pytest
 import yaml
 
 from dotfiles import registry
+from dotfiles.coordinates import PackageManager
 from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
@@ -65,6 +66,25 @@ def _relocated(provider: registry.Provider, directory: Path) -> registry.Provide
     return dc.replace(provider, installed_at=str(directory / provider.executable))
 
 
+def relocate_homes(monkeypatch: pytest.MonkeyPatch, directory: Path) -> tuple[registry.Provider, ...]:
+    """Every toolchain's fixed home moved into `directory`, through all three lookups.
+
+    The provider is swapped rather than mutated: it is a frozen slotted dataclass,
+    and the three lookups are rebuilt together because `resolve` walks `PROVIDERS`
+    while the resources reach through `BY_NAME`.
+    """
+    swapped = tuple(_relocated(provider, directory) for provider in registry.PROVIDERS)
+    monkeypatch.setattr(registry, 'PROVIDERS', swapped)
+    monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
+    monkeypatch.setattr(registry, 'BY_SECTION', {provider.section: provider for provider in swapped if provider.section})
+    return swapped
+
+
+def packaged_node_at(monkeypatch: pytest.MonkeyPatch, node: Path) -> None:
+    """The system package's `node`, at `node` whatever the package manager."""
+    monkeypatch.setattr(registry, 'PACKAGED_NODE', {manager: (node,) for manager in PackageManager})
+
+
 @pytest.fixture(autouse=True)
 def fixed_homes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point every toolchain's fixed home somewhere this test controls.
@@ -79,14 +99,17 @@ def fixed_homes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     to disagree — a packaged copy on PATH beside the unpacked one — points it
     elsewhere itself.
 
-    The provider is swapped rather than mutated: it is a frozen slotted dataclass,
-    and the three lookups are rebuilt together because `resolve` walks `PROVIDERS`
-    while the resources reach through `BY_NAME`.
+    The system package's `node` is pointed at a path nothing creates, since
+    `/usr/bin/node` exists on any desk with Node installed.
     """
-    swapped = tuple(_relocated(provider, tmp_path / 'bin') for provider in registry.PROVIDERS)
-    monkeypatch.setattr(registry, 'PROVIDERS', swapped)
-    monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
-    monkeypatch.setattr(registry, 'BY_SECTION', {provider.section: provider for provider in swapped if provider.section})
+    original = registry.PROVIDERS
+    swapped = relocate_homes(monkeypatch, tmp_path / 'bin')
+    assert {provider.name for provider in swapped if provider not in original} >= {
+        'go-toolchain',
+        'rust-toolchain',
+        'node-toolchain',
+    }
+    packaged_node_at(monkeypatch, tmp_path / 'packaged' / 'node')
 
 
 def stub(directory: Path, name: str, prints: str | None = None, *, go_env: str = installers.GONOSUMDB) -> Path:
@@ -111,7 +134,7 @@ PACKAGES: dict[str, Any] = {
 }
 
 
-def session(tmp_path: Path, manifest: dict[str, Any], packages: dict[str, Any] | None = None) -> Session:
+def session(tmp_path: Path, manifest: dict[str, Any], packages: dict[str, Any] | None = None, *, offline: bool = False) -> Session:
     repo = tmp_path / 'repo'
     (repo / 'install' / 'manifests').mkdir(parents=True, exist_ok=True)
     (repo / 'install' / 'packages.yml').write_text(yaml.safe_dump(packages or PACKAGES, sort_keys=False))
@@ -119,7 +142,7 @@ def session(tmp_path: Path, manifest: dict[str, Any], packages: dict[str, Any] |
     (repo / 'install' / 'manifests' / 'box.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
     home = tmp_path / 'home'
     home.mkdir(exist_ok=True)
-    return Session(machine_name='box', repo=repo, home=home)
+    return Session(machine_name='box', repo=repo, home=home, offline=offline)
 
 
 def changes(live: Session) -> tuple:
@@ -198,14 +221,45 @@ def test_a_runtime_answered_by_path_is_probed_at_that_path(tmp_path: Path, bin_d
     unpacked.write_text('#!/bin/sh\necho "go version go9.9.9 linux/amd64"\n')
     unpacked.chmod(0o755)
     stub(bin_dir, 'go', 'go version go1.0.0 linux/amd64')
-    swapped = tuple(_relocated(provider, unpacked.parent) for provider in registry.PROVIDERS)
-    monkeypatch.setattr(registry, 'PROVIDERS', swapped)
-    monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
+    relocate_homes(monkeypatch, unpacked.parent)
 
     live = session(tmp_path, {**BARE, 'go_tools': ['task']})
     observed = toolchains.RESOURCE.observe(live, live.plan)
 
     assert 'go9.9.9' in observed.reported['go'], 'the version came from PATH, not from where the toolchain lives'
+
+
+@pytest.mark.parametrize(
+    ('alias', 'offline', 'reported'),
+    [
+        (True, False, 'v24.19.0'),
+        (True, True, 'v24.19.0'),
+        (False, True, 'v26.9.0'),
+        (False, False, None),
+    ],
+    ids=['alias-online', 'alias-offline', 'packaged-offline', 'packaged-online'],
+)
+def test_node_is_fnms_alias_and_only_an_offline_run_accepts_the_system_package(
+    tmp_path: Path, bin_dir: Path, monkeypatch: pytest.MonkeyPatch, alias: bool, offline: bool, reported: str | None
+) -> None:
+    """The system package's `node` is on PATH and fnm's alias is not, which is
+    what a service unit's PATH looks like. An offline run cannot install fnm's
+    Node, so the system package's is the one it accepts. An online run can."""
+    stub(bin_dir, 'uv')
+    packaged = stub(bin_dir, 'node', 'v26.9.0')
+    packaged_node_at(monkeypatch, packaged)
+    fnm_alias = tmp_path / 'fnm'
+    fnm_alias.mkdir()
+    relocate_homes(monkeypatch, fnm_alias)
+    if alias:
+        stub(fnm_alias, 'node', 'v24.19.0')
+
+    live = session(tmp_path, {**BARE, 'npm_globals': ['bash-language-server']}, offline=offline)
+    observed = toolchains.RESOURCE.observe(live, live.plan)
+
+    assert observed.reported.get('node') == reported
+    if reported is None:
+        assert str(packaged) in observed.absent['node']
 
 
 def test_a_toolchain_meeting_its_floor_reports_nothing(tmp_path: Path, bin_dir: Path) -> None:

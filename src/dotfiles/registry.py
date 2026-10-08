@@ -1045,6 +1045,15 @@ class ToolchainProvider(Provider):
             ),
         )
 
+    def located(self, item: DesiredItem, session: MachineContext) -> ev.Evidence:
+        """Where this run finds the runtime.
+
+        Takes the run, as `converge` does, because what a run may accept can
+        depend on what that run could install. `NodeToolchain` is the one whose
+        answer differs offline.
+        """
+        return self.evidence(item, session.inventories)
+
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
         result = self.converge(session, privilege)
         return Outcome.from_result(change, result)
@@ -1092,9 +1101,46 @@ class GoToolchain(ToolchainProvider):
         return True
 
 
+PACKAGED_NODE: dict[coordinates.PackageManager, tuple[Path, ...]] = {
+    coordinates.PackageManager.PACMAN: (Path('/usr/bin/node'),),
+    coordinates.PackageManager.APT: (Path('/usr/bin/node'),),
+    coordinates.PackageManager.BREW: tuple(prefix / 'node' for prefix in bootstrap.BREW_PREFIXES),
+}
+"""Where the `nodejs` system package puts `node`, by package manager.
+
+winget has no row, so a machine on it with no fnm alias reads node missing.
+"""
+
+
 @dc.dataclass(frozen=True, slots=True)
 class NodeToolchain(ToolchainProvider):
-    """fnm's default alias, which is what a bare `node` resolves to."""
+    """fnm's default alias, which is what a bare `node` resolves to.
+
+    An offline run also accepts the system package's `node` where fnm has linked
+    no default. fnm downloads Node from nodejs.org and no bundle stages it, so the
+    system package's is the only Node such a machine can run.
+
+    An online run accepts the alias alone. A machine with the system package and
+    no alias has never had fnm's Node, and an online apply installs it. Accepting
+    the system copy there would leave every non-interactive shell on whatever
+    Node the package manager last upgraded to, with this row reading clean.
+    """
+
+    def located(self, item: DesiredItem, session: MachineContext) -> ev.Evidence:
+        # Named explicitly: `slots=True` rebuilds the class, so a bare `super()` raises.
+        found = ToolchainProvider.located(self, item, session)
+        if found.verdict is Verdict.MATCHED:
+            return found
+        homes = PACKAGED_NODE.get(session.machine.coordinates.package_manager, ())
+        packaged = next((home for home in homes if home.is_file()), None)
+        if packaged is None:
+            return found
+        if session.offline:
+            return ev.Evidence(Verdict.MATCHED, str(packaged), binary=packaged)
+        return ev.Evidence(
+            Verdict.MISSING,
+            f"{item.evidence_path} does not exist; {packaged} is the system package's, which only an offline run accepts",
+        )
 
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
         return toolchain.install_node(session.home, offline=session.offline)
@@ -1268,7 +1314,15 @@ PROVIDERS: tuple[Provider, ...] = (
         needed_by='cargo_packages',
         installed_at=str(Path('~') / toolchain.CARGO_BIN / 'rustc'),
     ),
-    NodeToolchain('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
+    NodeToolchain(
+        'node-toolchain',
+        'toolchains',
+        Stage.NODE,
+        runtime='node',
+        executable='node',
+        needed_by='npm_globals',
+        installed_at=str(Path('~') / toolchain.FNM_HOME / toolchain.FNM_ALIAS_BIN / 'node'),
+    ),
     SystemConfigProvider('group', 'system', Stage.SYSTEM_CONFIG, 'group_memberships'),
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),
     SystemConfigProvider('file', 'system', Stage.SYSTEM_CONFIG, 'managed_files'),
@@ -1384,6 +1438,14 @@ def evidence_for(item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
     if provider is None:
         return ev.Evidence(Verdict.UNKNOWN, f'nothing in this checkout provides {item.provider}')
     return provider.evidence(item, installed)
+
+
+def toolchain_evidence(item: DesiredItem, session: MachineContext) -> ev.Evidence:
+    """`evidence_for` for a runtime, asked with the run it is measured for."""
+    provider = named(item.provider)
+    if isinstance(provider, ToolchainProvider):
+        return provider.located(item, session)
+    return evidence_for(item, session.inventories)
 
 
 def needs_root(item: DesiredItem) -> bool:

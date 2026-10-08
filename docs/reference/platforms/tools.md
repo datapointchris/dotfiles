@@ -44,8 +44,12 @@ non-interactive shell. fnm is a binary, so the default alias and `fnm exec` work
 anywhere. Dropping nvm on the grounds that per-project switching was unused was
 the wrong diagnosis of a real problem.
 
-The brew/pacman `node` package stays declared, but only as the bootstrap npm the
-installer needs before fnm has fetched anything.
+The brew/pacman `node` package stays declared as the bootstrap npm the installer
+needs before fnm has fetched anything. It is also the only Node a machine that
+applies offline ever runs, because fnm downloads Node from nodejs.org and no
+bundle stages it. So the node toolchain accepts the system package's `node` on an
+offline run. Online it accepts fnm's default alias alone, so a machine missing
+that alias gets it on the next apply.
 
 ## npm's prefix is set twice, because the two stages run in the wrong order
 

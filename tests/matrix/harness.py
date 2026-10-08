@@ -41,7 +41,9 @@ import yaml
 from typer.testing import CliRunner
 
 from dotfiles import paths
+from dotfiles import registry
 from dotfiles import releases
+from dotfiles.coordinates import PackageManager
 from dotfiles.providers import bundle
 from dotfiles.session import Session
 
@@ -576,6 +578,8 @@ def build(root: Path, monkeypatch: pytest.MonkeyPatch) -> Sandbox:
     _silence_the_ambient_environment(monkeypatch)
     write_declaration(box.repo, machine=box.machine)
     rebind(box, monkeypatch)
+    # An absolute path, so an offline run would otherwise accept this desk's `/usr/bin/node`.
+    monkeypatch.setattr(registry, 'PACKAGED_NODE', {manager: (root / 'packaged' / 'node',) for manager in PackageManager})
 
     for refused in ('gh', 'curl', *PACKAGE_MANAGERS):
         box.shadow(refused, REFUSED)
