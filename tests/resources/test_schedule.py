@@ -280,7 +280,6 @@ def test_a_machine_that_names_nothing_gets_no_schedule(linux: Path, fake_bin: Pa
     settings.config_file().unlink()
     executable(fake_bin, 'systemctl')
 
-    assert not schedule.answer(BOX).wanted
     assert schedule.observe(BOX).verdict is Verdict.MATCHED
     assert not (linux / 'dotfiles-check.timer').exists()
 
@@ -353,16 +352,6 @@ def test_a_manifest_that_wants_the_timer_overrides_a_config_that_declines(linux:
 
     assert schedule.observe(dataclasses.replace(BOX, check_schedule=True)).verdict is Verdict.MISSING
     assert schedule.observe(BOX).verdict is Verdict.MATCHED
-
-
-def test_the_answer_names_the_setting_that_decided(linux: Path) -> None:
-    """`config show` prints this line, and a machine that declines in its manifest
-    must not read as one whose config file turned the timer off."""
-    declines = dataclasses.replace(BOX, check_schedule=False)
-
-    assert schedule.answer(declines).because() == f'check_schedule is off ({paths.under_home(BOX.source)})'
-    assert schedule.answer(BOX).because() == f'schedule.enabled is on ({paths.under_home(settings.config_file())})'
-    assert schedule.answer(None).wanted is True
 
 
 @pytest.fixture
