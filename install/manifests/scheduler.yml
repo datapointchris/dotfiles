@@ -44,6 +44,8 @@ github_releases:
   - atuin       # shell history (zsh init expects it)
   - shellcheck  # debug shell scripts on the box
   - syncthing   # replicates the shared directories this box serves
+  - icb         # reads project items as this box's icb-svc- client, from service.env
+  - ypl         # `ypl server status` as this box's ypl-svc- client, from service.env
 
 cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta]
 
