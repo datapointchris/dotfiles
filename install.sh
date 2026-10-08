@@ -258,6 +258,22 @@ else
   set --
 fi
 
+# `uv tool install` never reads uv.lock, so the lock CI tests is handed over as
+# constraints. A pinned URL goes in as an override instead, because uv refuses a
+# constraint whose URL differs from the one the package declares. The flags are
+# `uv_lock.EXPORT`'s, carried here because this runs before that module exists.
+LOCKED=$(mktemp -d)
+trap 'rm -rf "$LOCKED"' EXIT
+uv export "$@" --frozen --no-default-groups --no-emit-workspace --no-hashes --no-header --no-annotate --directory "$DOTFILES_DIR" >"$LOCKED/exported.txt"
+grep -v ' @ ' "$LOCKED/exported.txt" | grep '==' >"$LOCKED/constraints.txt" || true
+grep ' @ ' "$LOCKED/exported.txt" >"$LOCKED/overrides.txt" || true
+# An empty file is left out because uv warns about one.
+for held in constraints overrides; do
+  if [ -s "$LOCKED/$held.txt" ]; then
+    set -- "$@" "--$held" "$LOCKED/$held.txt"
+  fi
+done
+
 uv tool install "$@" --force --editable "$DOTFILES_DIR"
 
 # uv reports success having written the entry point somewhere this shell cannot

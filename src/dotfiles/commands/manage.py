@@ -15,12 +15,15 @@ from __future__ import annotations
 import datetime as dt
 import os
 import sys
+import tempfile
+from pathlib import Path
 
 import typer
 
 from dotfiles import bridge
 from dotfiles import checkout
 from dotfiles import paths
+from dotfiles import uv_lock
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.output import console
@@ -144,7 +147,15 @@ def update(
         return
 
     hint(f'{", ".join(dependencies)} changed — rebuilding the tool venv')
-    rebuilt = run(['uv', 'tool', 'install', '--reinstall', '--editable', str(paths.REPO_ROOT)], output=Output.STREAM)
+    try:
+        pins = uv_lock.read(paths.REPO_ROOT)
+    except uv_lock.Unexportable as unexportable:
+        raise Refusal(
+            f'uv export would not read {paths.REPO_ROOT / uv_lock.LOCK_FILE}, so the tool venv was not rebuilt: {unexportable}'
+        ) from unexportable
+    with tempfile.TemporaryDirectory(prefix='dotfiles-update-') as scratch:
+        held = pins.arguments(Path(scratch)) if pins is not None else []
+        rebuilt = run(['uv', 'tool', 'install', '--reinstall', *held, '--editable', str(paths.REPO_ROOT)], output=Output.STREAM)
 
     # `os._exit`, not a return: `--reinstall` has just deleted and recreated the
     # virtualenv this interpreter lives in, so any import from here on — including
