@@ -180,3 +180,4 @@ nav:
       - Go Was on No PATH, and Nothing Said So: learnings/go-was-on-no-path-and-nothing-said-so.md
       - A Unix Socket Path Is Shorter Than tmp_path: learnings/unix-socket-path-is-shorter-than-tmp-path.md
       - A Cache Outlives the File You Restored: learnings/a-cache-outlives-the-file-you-restored.md
+      - Hyprland Keeps the Config Format It Started With: learnings/hyprland-keeps-the-config-format-it-started-with.md

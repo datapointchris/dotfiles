@@ -14,15 +14,15 @@ Bound to ++super+ctrl+w++. Workspace 9 is reachable with ++super+9++, and ++supe
 
 A second desk out of reading range of the first means both screens cannot be read at once. Debugging a problem on the machine at one desk from the other therefore means memorizing error output and carrying it across. Running a cable from the Arch box to the second desk's spare monitor input removes that, and it does so over a pure video path — nothing crosses either machine's network.
 
-The obstacle is what happens the rest of the time. Hyprland's catch-all `monitor = , preferred, auto, 1` rule adopts any output that appears, so a permanently connected second monitor means workspaces spread across both displays and windows open on a panel that is usually showing the other machine instead.
+The obstacle is what happens the rest of the time. Hyprland's catch-all monitor rule, `hl.monitor({ output = '', mode = 'preferred', ... })`, adopts any output that appears, so a permanently connected second monitor means workspaces spread across both displays and windows open on a panel that is usually showing the other machine instead.
 
 Leaving the cable plugged in and letting the output come and go on its own does not help either. When that monitor switches to another input it de-asserts hotplug detect, so the source sees a genuine disconnect: Hyprland tears the layout down, migrates workspaces, and rebuilds on reconnect. That reshuffling is the actual complaint, and no display setting prevents it, because from the compositor's point of view the monitor really did disappear.
 
 ## How It Works
 
-The output is declared disabled in `conf/monitors.conf`, after the catch-all so it overrides it. A disabled output is not a monitor at all — Hyprland assigns it no workspaces and nothing can open on it, so the default state is a clean single-monitor setup regardless of what the cable is doing.
+The output is declared disabled in `conf/monitors.lua`, after the catch-all so it overrides it. A disabled output is not a monitor at all — Hyprland assigns it no workspaces and nothing can open on it, so the default state is a clean single-monitor setup regardless of what the cable is doing.
 
-`work-monitor on` applies a live `monitor` rule with `hyprctl keyword`, which enables the output for that session only. Workspace 9 is bound to the connector in `conf/workspaces.conf`, so it lands there and nothing else moves. `work-monitor off` re-disables it, and any windows still on 9 migrate back to the primary display.
+`work-monitor on` applies a live monitor rule with `hyprctl eval "hl.monitor({ ... })"`, which enables the output for that session only. Hyprland's Lua config refuses `hyprctl keyword`, so `eval` is the only runtime path. The call passes `disabled = false` explicitly, because `hl.monitor` starts from the rule already declared for that output, and the declared rule is the disabled one. Workspace 9 is bound to the connector in `conf/workspaces.lua`, so it lands there and nothing else moves. `work-monitor off` re-disables it, and any windows still on 9 migrate back to the primary display.
 
 Because the rule is applied at runtime and the config default is `disable`, a Hyprland reload always returns to the single-monitor state.
 
@@ -47,7 +47,7 @@ Confirm the connector name once, with the cable plugged in and the monitor switc
 hyprctl monitors all -j | jq -r '.[].name'
 ```
 
-If it reports `HDMI-A-2`, change the name in `conf/monitors.conf`, `conf/workspaces.conf`, and the script default together.
+If it reports `HDMI-A-2`, change the name in `conf/monitors.lua`, `conf/workspaces.lua`, and the script default together.
 
 A cheap cable at that length may negotiate 4K60 and then fail to sync. Drop the mode rather than replacing hardware — `WORK_MONITOR_MODE=3840x2160@30` first, then `1920x1080@60`. Either is fine for glancing at error output.
 

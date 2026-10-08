@@ -297,15 +297,15 @@ def test_a_deployed_config_is_never_touched_by_a_later_run(session: Session, rep
     deployed link produces no change at all, so nothing unlinks it, and the prune
     set is only ever links whose source is gone.
     """
-    declare(repo, 'configs/common/.config/hypr/hyprland.conf', 'source = conf/keybindings.conf\n')
+    declare(repo, 'configs/common/.config/hypr/hyprland.lua', "require('conf.keybindings')\n")
     apply(session)
-    deployed = home / '.config' / 'hypr' / 'hyprland.conf'
+    deployed = home / '.config' / 'hypr' / 'hyprland.lua'
 
     observed = symlinks.RESOURCE.observe(session, session.plan)
 
     assert deployed not in observed.orphans
     assert symlinks.RESOURCE.diff(session.plan, observed) == ()
-    assert deployed.read_text() == 'source = conf/keybindings.conf\n'
+    assert deployed.read_text() == "require('conf.keybindings')\n"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

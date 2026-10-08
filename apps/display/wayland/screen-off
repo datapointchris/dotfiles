@@ -4,4 +4,4 @@
 
 set -euo pipefail
 
-hyprctl dispatch dpms off
+hyprctl dispatch 'hl.dsp.dpms({ action = "off" })'

@@ -1,29 +1,22 @@
 #!/usr/bin/env bash
 # rofi-keybinds - Display Hyprland keybindings in rofi
-# Uses hyprctl binds to extract documented keybinds (bindd entries)
+# Lists every bind registered with a description, as `hyprctl binds` reports them
 
 set -euo pipefail
 
-format_modifiers() {
-  local mods="$1"
-  mods="${mods//SUPER/Super}"
-  mods="${mods//SHIFT/Shift}"
-  mods="${mods//CTRL/Ctrl}"
-  mods="${mods//ALT/Alt}"
-  echo "$mods"
-}
-
+# modmask is the xkb modifier bitfield: SHIFT 1, CTRL 4, ALT 8, SUPER 64.
 get_keybinds() {
   hyprctl binds -j | jq -r '
-        .[] |
-        select(.description != null and .description != "") |
-        "\(.modmask_str) + \(.key) → \(.description)"
-    ' | while read -r line; do
-    mods="${line%% + *}"
-    rest="${line#* + }"
-    formatted_mods=$(format_modifiers "$mods")
-    echo "$formatted_mods + $rest"
-  done | sort
+    def has_mod($bit): (. / $bit | floor) % 2 == 1;
+    .[]
+    | select(.has_description)
+    | ([ (.modmask | if has_mod(64) then "Super" else empty end),
+         (.modmask | if has_mod(4) then "Ctrl" else empty end),
+         (.modmask | if has_mod(8) then "Alt" else empty end),
+         (.modmask | if has_mod(1) then "Shift" else empty end),
+         .key ] | join(" + ")) as $keys
+    | (if .submap == "" then "" else "[\(.submap)] " end) + "\($keys) → \(.description)"
+  ' | sort
 }
 
 main() {

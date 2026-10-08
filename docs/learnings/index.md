@@ -73,3 +73,6 @@ General technical notes that name nothing in this repo live on the hub at
 - [A Cache Outlives the File You Restored](a-cache-outlives-the-file-you-restored.md) — a test
   fails on a mutation the file no longer contains, and two identical mypy runs disagree by hundreds
   of errors
+- [Hyprland Keeps the Config Format It Started With](hyprland-keeps-the-config-format-it-started-with.md)
+  — "You are using the .conf config format" survives a deployed `hyprland.lua` and a reload, then
+  `keyword can't work with non-legacy parsers. Use eval.` from every script

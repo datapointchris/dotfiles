@@ -241,7 +241,7 @@ if [[ -f "$HOME/.config/waybar/config.jsonc" ]]; then
   echo ""
   echo "Wayland:"
   test_cmd "rofi-power available" "command -v rofi-power"
-  test_file "hyprland config exists" "$HOME/.config/hypr/hyprland.conf"
+  test_file "hyprland config exists" "$HOME/.config/hypr/hyprland.lua"
 fi
 
 # ================================================================

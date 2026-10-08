@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # work-monitor - Route this machine's spare HDMI output to a second desk's monitor
 #
-# The output stays disabled in hyprland.conf so Hyprland never treats it as a
-# second monitor. This enables it on demand, parks workspace 9 on it, and
+# The output stays disabled in the Hyprland config so Hyprland never treats it as
+# a second monitor. This enables it on demand, parks workspace 9 on it, and
 # disables it again afterwards.
 #
 # Usage:
@@ -46,9 +46,21 @@ is_enabled() {
   [[ -f "$STATE_FILE" ]]
 }
 
+# hyprctl exits 0 for any reply it receives, so the reply text is the result.
+hyprctl_ok() {
+  local reply
+  reply=$(hyprctl "$@")
+  if [[ "$reply" != "ok" ]]; then
+    print_error "hyprctl $1 failed: $reply"
+    exit 1
+  fi
+}
+
 enable_output() {
-  hyprctl keyword monitor "$OUTPUT, $MODE, $POSITION, $SCALE" >/dev/null
-  hyprctl dispatch workspace "$WORKSPACE" >/dev/null
+  # disabled = false is required: hl.monitor starts from the existing rule for
+  # this output, which the config declares disabled.
+  hyprctl_ok eval "hl.monitor({ output = '$OUTPUT', mode = '$MODE', position = '$POSITION', scale = '$SCALE', disabled = false })"
+  hyprctl_ok dispatch "hl.dsp.focus({ workspace = '$WORKSPACE' })"
   mkdir -p "$(dirname "$STATE_FILE")"
   touch "$STATE_FILE"
   print_success "$OUTPUT enabled — workspace $WORKSPACE is on the second desk's monitor"
@@ -61,7 +73,7 @@ enable_output() {
 }
 
 disable_output() {
-  hyprctl keyword monitor "$OUTPUT, disable" >/dev/null
+  hyprctl_ok eval "hl.monitor({ output = '$OUTPUT', disabled = true })"
   rm -f "$STATE_FILE"
   print_success "$OUTPUT disabled — back to a single monitor"
 }
