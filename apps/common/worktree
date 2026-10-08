@@ -343,7 +343,7 @@ class Arrival:
     verb already means pushing a branch onto the default branch.
 
     `status` and `output` are only ever set on PANE_DIED, and either can still be absent
-    there — a pane destroyed before `remain-on-exit` took hold leaves neither.
+    there — a pane closed from outside, gone rather than dead, leaves neither.
     """
 
     registration: Registration

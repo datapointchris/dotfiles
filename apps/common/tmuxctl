@@ -113,6 +113,9 @@ A machine without it promotes the coordinator anyway and says so. Losing a
 dashboard is not a reason to leave five agents in one column.
 """
 
+PLACEHOLDER_COMMAND = 'tail -f /dev/null'
+"""What a pane runs until it holds `remain-on-exit`. It cannot exit on its own."""
+
 WINDOW_NAME = 'agents'
 """The default name for a window this has to open, spelled once.
 
@@ -792,10 +795,9 @@ class PaneState(StrEnum):
 
     They are the same event seen with and without a corpse. A pane this tool
     opened carries `remain-on-exit`, so a command that failed to start leaves its
-    exit status to be read. A pane destroyed before that option landed has
-    nothing left to say, and neither has one somebody closed by hand -- and a
-    caller waiting on a launch needs to tell "it failed, here is why" from "it is
-    not there".
+    exit status to be read. One somebody closed by hand has nothing left to
+    say, and a caller waiting on a launch needs to tell "it failed, here is
+    why" from "it is not there".
     """
 
     RUNNING = 'running'
@@ -1122,27 +1124,33 @@ def execute(placement: Placement, command: Sequence[str], cwd: str, window_name:
         perform_promotion(placement.promote)
 
     run = ['-c', cwd] if cwd else []
-    payload = [shlex.join(command)] if command else []
+    # A command opens on the placeholder and is respawned into once `remain-on-exit`
+    # holds, so a command that dies at once still leaves its corpse and exit status.
+    opening = [PLACEHOLDER_COMMAND] if command else []
 
     if placement.opens_window:
         after = ['-a', '-t', placement.near] if placement.near else []
-        made = tmux('new-window', '-d', *after, '-n', window_name, '-P', '-F', '#{pane_id}', *run, *payload).strip()
+        made = tmux('new-window', '-d', *after, '-n', window_name, '-P', '-F', '#{pane_id}', *run, *opening).strip()
     else:
         axis = ['-h', '-f'] if placement.direction is Direction.BESIDE else ['-v']
         # A size is given for a stacked split, where nothing reflows afterwards, and
         # withheld for a new column, where balancing sets every width at once. Asking
         # tmux for a column wider than the pane being split is refused outright.
         size = ['-l', str(placement.size)] if placement.direction is Direction.BELOW and placement.size else []
-        made = tmux('split-window', '-d', *axis, *size, '-P', '-F', '#{pane_id}', '-t', placement.target, *run, *payload).strip()
+        made = tmux('split-window', '-d', *axis, *size, '-P', '-F', '#{pane_id}', '-t', placement.target, *run, *opening).strip()
 
     mark(made, placement.role, placement.pair, handle)
 
     # What makes a failed launch diagnosable. Without it a command that cannot
     # start destroys its pane in milliseconds, leaving no error text, no exit
-    # status and no pane -- so `pane status` can only ever answer GONE, and the
-    # caller waiting on the launch is told nothing about why. Setting it can
-    # itself lose that race, which is why GONE remains a state.
-    tmux_soft('set-option', '-p', '-t', made, 'remain-on-exit', 'on')
+    # status and no pane, so the caller waiting on the launch is told nothing.
+    try:
+        tmux('set-option', '-p', '-t', made, 'remain-on-exit', 'on')
+        if command:
+            tmux('respawn-pane', '-k', '-t', made, *run, shlex.join(command))
+    except TmuxFailed:
+        tmux_soft('kill-pane', '-t', made)
+        raise
 
     if placement.balance and placement.size is not None:
         balance_columns(placement.window, placement.size)

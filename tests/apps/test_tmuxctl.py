@@ -854,9 +854,20 @@ def test_the_command_reaches_the_pane_as_one_quoted_argument(tmuxctl, build, wor
     window = build('@1', [[('%1', 'coordinator')]])
     calls = recorded(tmuxctl.place([window], worker_request()), command=('claude', 'read the brief'))
 
+    respawn = next(call for call in calls if 'respawn-pane' in call)
+    assert respawn[-1] == "claude 'read the brief'"
+    assert respawn[respawn.index('-c') + 1] == '/tmp/work'
+
+
+def test_the_command_starts_only_once_the_pane_keeps_its_corpse(tmuxctl, build, worker_request, recorded):
+    window = build('@1', [[('%1', 'coordinator')]])
+    calls = recorded(tmuxctl.place([window], worker_request()), command=('claude', 'read the brief'))
+
     split = next(call for call in calls if 'split-window' in call)
-    assert split[-1] == "claude 'read the brief'"
-    assert split[split.index('-c') + 1] == '/tmp/work'
+    keep = next(call for call in calls if 'remain-on-exit' in call)
+    respawn = next(call for call in calls if 'respawn-pane' in call)
+    assert split[-1] == tmuxctl.PLACEHOLDER_COMMAND
+    assert calls.index(keep) < calls.index(respawn)
 
 
 def test_the_pane_is_read_back_and_compared_against_what_was_announced(tmuxctl, build, worker_request, monkeypatch):
@@ -1507,7 +1518,7 @@ def test_status_tells_running_from_dead_from_gone(tmuxctl, server):
     assert tmuxctl.pane_process(alive.pane) is not None
 
     dying = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
-    doomed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), dying), ('bash', '-c', 'sleep 0.4; exit 3'), '', 'agents')
+    doomed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), dying), ('bash', '-c', 'exit 3'), '', 'agents')
     for _ in range(60):
         state, code = tmuxctl.pane_state(doomed.pane)
         if state is tmuxctl.PaneState.DEAD:

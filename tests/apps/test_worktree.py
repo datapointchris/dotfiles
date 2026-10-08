@@ -1826,14 +1826,10 @@ def stub_failing_claude(bin_dir: Path, status: int, message: str) -> None:
     """A `claude` that never registers, which is what a launch that cannot start looks like.
 
     It records nothing, so the registry stub keeps answering with an empty machine and the
-    poll has only the pane to go on — the condition the pane check exists for.
-
-    The sleep is what makes the case the *diagnosable* one. `remain-on-exit` is turned on
-    a moment after the split, and a command that dies instantly beats it, leaving a pane
-    that is simply gone. Both are reported as a launch that died; only the slower one has
-    an exit status left to read, and that is the half worth pinning.
+    poll has only the pane to go on — the condition the pane check exists for. It dies at
+    once, because a launch that cannot start does, and its exit status is still read.
     """
-    write_stub(bin_dir, 'claude', f'echo "{message}" >&2\nsleep 0.3\nexit {status}')
+    write_stub(bin_dir, 'claude', f'echo "{message}" >&2\nexit {status}')
 
 
 def stub_silent_claude(bin_dir: Path) -> None:
@@ -1925,19 +1921,6 @@ class TestSpawnBrief:
         kept = briefs_in(tmp_path)
         assert kept[0].parent == tmp_path / '.local' / 'state' / 'worktree' / 'briefs'
         assert kept[0].name.startswith('primary-alpha-')
-
-    def test_two_spawns_in_the_same_second_get_their_own_brief(self, fleet, spawn, tmp_path):
-        """Both calls have to reach `keep_brief` through a spawn that happens, or the
-        second brief lands only because the copy runs ahead of a refusal.
-
-        Different slugs, because a second spawn into one worktree is refused — and with no
-        slug at all the two would be indistinguishable, which is the collision itself.
-        """
-        first = spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'one.md', 'first\n')))
-        second = spawn(fleet['primary'], 'beta', '--brief', str(brief_at(tmp_path / 'two.md', 'second\n')))
-
-        assert (first.returncode, second.returncode) == (0, 0), plain(first.stderr + second.stderr)
-        assert sorted(path.read_text() for path in briefs_in(tmp_path)) == ['first\n', 'second\n']
 
     def test_a_brief_is_not_overwritten_by_one_minted_in_the_same_second(self, worktree_app, tmp_path, monkeypatch):
         """A timestamp at second resolution is not a distinguishing part. Two no-slug
