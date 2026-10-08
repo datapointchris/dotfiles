@@ -758,6 +758,24 @@ def test_a_cargo_package_behind_its_release_is_stale(tmp_path: Path, fake_bin: P
     assert [(change.item, change.verdict) for change in changes(live)] == [('cargo/fd-find', Verdict.STALE)]
 
 
+@pytest.mark.parametrize('elsewhere', [None, 'fd 10.4.2'], ids=['absent-from-path', 'another-copy-first'])
+def test_a_cargo_package_reports_the_version_of_the_binary_it_measured(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch: pytest.MonkeyPatch, elsewhere: str | None
+) -> None:
+    """A systemd unit's PATH has no `~/.cargo/bin`, so every Rust CLI there read
+    "would not report a version" and was never upgraded. A second copy ahead on
+    PATH answered for a binary the declaration does not own."""
+    cargo_installed('fd', 'fd 10.2.0')
+    cached(release_cache, {'sharkdp/fd': 'v10.4.2'})
+    kept = [entry for entry in os.environ['PATH'].split(os.pathsep) if entry != str(cargo.cargo_bin())]
+    monkeypatch.setenv('PATH', os.pathsep.join(kept))
+    if elsewhere:
+        reporting(fake_bin, 'fd', elsewhere)
+    live = session(tmp_path, CARGO_CURRENCY, DECLARES_FD)
+
+    assert [(change.item, change.verdict) for change in changes(live)] == [('cargo/fd-find', Verdict.STALE)]
+
+
 def test_an_entry_that_reports_no_version_is_never_run(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """The probe is not a read for every binary. `webviewrs` opens its first
     positional argument as a URL, so asking it for a version opened a window
@@ -1578,7 +1596,7 @@ def test_a_probe_that_raises_is_recorded_rather_than_dropped(
     Dropped is still the right outcome: one unaskable binary must not take the
     whole resource down. What this pins is that it leaves a trace."""
 
-    def raises(item: object) -> str:
+    def raises(item: object, found: object) -> str:
         raise RuntimeError('the binary is a directory')
 
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
@@ -1586,7 +1604,7 @@ def test_a_probe_that_raises_is_recorded_rather_than_dropped(
     monkeypatch.setattr(packages, '_installed_version', raises)
 
     with caplog.at_level('DEBUG'):
-        assert packages._reported_versions((item,)) == {}
+        assert packages._reported_versions((item,), {item.address: ev.Evidence(Verdict.MATCHED)}) == {}
 
     assert any('probe failed' in record.getMessage() for record in caplog.records)
 
@@ -1606,6 +1624,6 @@ def test_a_reported_version_keeps_only_the_version_it_carries(
     into the row. Text with no version in it stays whole for the row to name."""
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
     (item,) = live.plan.for_resource('packages')
-    monkeypatch.setattr(packages, '_installed_version', lambda _: printed)
+    monkeypatch.setattr(packages, '_installed_version', lambda *_: printed)
 
-    assert packages._reported_versions((item,)) == {item.address: kept}
+    assert packages._reported_versions((item,), {item.address: ev.Evidence(Verdict.MATCHED)}) == {item.address: kept}

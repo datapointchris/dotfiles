@@ -14,6 +14,7 @@ the *declaration* gives it, which is the half a manifest cannot state.
 
 from __future__ import annotations
 
+import os
 import tarfile
 from pathlib import Path
 
@@ -465,6 +466,26 @@ def test_a_present_cargo_binstall_is_not_installed_again(home, staged, ready, cr
 
     assert cargo.binstall(LINUX, offline=False).ok
     assert reached.calls == []
+
+
+def test_a_cargo_binstall_off_path_is_found_where_it_was_placed(home, staged, crates, monkeypatch) -> None:
+    """A systemd unit's PATH has no `~/.cargo/bin`. Asked of PATH alone, every
+    upgrade downloaded an unverified cargo-binstall over the one already there."""
+    monkeypatch.setattr(cargo.shutil, 'which', lambda _name: None)
+    fetched: list[str] = []
+
+    def fetch(url: str, *_args: object, **_kwargs: object) -> github_release.Fetched:
+        fetched.append(url)
+        return github_release.Fetched(False, REFUSED)
+
+    monkeypatch.setattr(effects, 'fetch', fetch)
+    monkeypatch.setenv('PATH', '/usr/bin:/bin')
+    (home / '.cargo' / 'bin' / 'cargo-binstall').write_bytes(b'#!/bin/sh\n')
+    crates()
+
+    assert cargo.binstall(LINUX, offline=False).ok
+    assert fetched == []
+    assert str(home / '.cargo' / 'bin') in os.environ['PATH'].split(os.pathsep), '`cargo binstall` finds cargo through PATH'
 
 
 def test_offline_cannot_install_the_precondition_and_says_which_repo(home, staged, crates, monkeypatch) -> None:

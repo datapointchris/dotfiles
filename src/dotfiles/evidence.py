@@ -67,6 +67,13 @@ class Evidence:
     apart without matching it. A test is the caller that matters today.
     """
 
+    binary: Path | None = None
+    """The file a MATCHED row found, where what was found is a binary.
+
+    The version probe asks this file. Asking PATH for the name instead answers
+    for whichever copy comes first, or for none at all under a unit's PATH.
+    """
+
 
 def uv_tool_pin(name: str) -> str | None:
     """The revision `uv tool install` recorded for a tool, or None if unpinned.
@@ -212,7 +219,9 @@ def by_command(item: DesiredItem) -> Evidence:
     if not item.executable:
         return Evidence(Verdict.UNKNOWN, 'installs no binary and declares no path, so nothing here can measure it')
     found = shutil.which(item.executable)
-    return Evidence(Verdict.MATCHED, found) if found else Evidence(Verdict.MISSING, f'{item.executable} is not on PATH')
+    if not found:
+        return Evidence(Verdict.MISSING, f'{item.executable} is not on PATH')
+    return Evidence(Verdict.MATCHED, found, binary=Path(found))
 
 
 def in_provider_dir(item: DesiredItem, directory: Path) -> Evidence:
@@ -238,7 +247,7 @@ def in_provider_dir(item: DesiredItem, directory: Path) -> Evidence:
         return Evidence(Verdict.UNKNOWN, 'installs no binary and declares no path, so nothing here can measure it')
     placed = directory / item.executable
     if placed.exists():
-        return Evidence(Verdict.MATCHED, str(placed))
+        return Evidence(Verdict.MATCHED, str(placed), binary=placed)
     elsewhere = shutil.which(item.executable)
     if elsewhere:
         return Evidence(Verdict.MISSING, f'{placed} does not exist; the {item.executable} on PATH is {elsewhere}')
@@ -638,6 +647,8 @@ on its event loop until a person closes a window, and the scheduled
 
 def reported_version(executable: str) -> str | None:
     """What a binary says its version is, or None when it will not say.
+
+    `executable` is a name looked up on PATH, or a path asked directly.
 
     **A non-zero exit is None, never "whatever it printed".** A tool that does not
     recognize the probe prints usage, which is full of numbers `versions.parse`

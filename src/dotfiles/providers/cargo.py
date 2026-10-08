@@ -332,7 +332,14 @@ def binstall(target: Target, *, offline: bool) -> Result:
     The source build is the fallback rather than a relaxed verification — it is
     also the only path that works on a restricted box, where release asset
     downloads are blocked but crates.io is reachable.
+
+    The copy this provider placed is looked for in `cargo_bin()` before PATH,
+    because a systemd unit's PATH does not carry that directory. Finding it puts
+    the directory on PATH, which is where `cargo binstall` finds `cargo`.
     """
+    if (cargo_bin() / 'cargo-binstall').exists():
+        toolchain.put_on_path(cargo_bin())
+        return Result(True, '', kind=Kind.UNCHANGED)
     if shutil.which('cargo-binstall'):
         return Result(True, '', kind=Kind.UNCHANGED)
     if offline:

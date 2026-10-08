@@ -21,6 +21,7 @@ from __future__ import annotations
 import dataclasses as dc
 import datetime as dt
 from collections.abc import Iterable
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from pathlib import Path
@@ -205,7 +206,7 @@ class PackagesResource:
         return Observed(
             evidence=evidence,
             met=session.preconditions,
-            reported=_reported_versions(present),
+            reported=_reported_versions(present, evidence),
             shadowed=_shadowing(mine, evidence, plan, session.repo),
             undeclared=_undeclared_own_tools(session, plan),
             latest=latest,
@@ -427,7 +428,7 @@ the wait, so the work being overlapped is exactly the part Python is not doing.
 """
 
 
-def _reported_versions(present: tuple[DesiredItem, ...]) -> dict[str, str]:
+def _reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, ev.Evidence]) -> dict[str, str]:
     """What every installed tool says it is, asked concurrently.
 
     The dominant cost of measuring this resource, and the one that made a `check`
@@ -458,7 +459,7 @@ def _reported_versions(present: tuple[DesiredItem, ...]) -> dict[str, str]:
 
     found: dict[str, str] = {}
     with ThreadPoolExecutor(max_workers=min(PROBE_WORKERS, len(present))) as pool:
-        probes = {pool.submit(_installed_version, item): item for item in present}
+        probes = {pool.submit(_installed_version, item, evidence[item.address]): item for item in present}
         for probe in as_completed(probes):
             item = probes[probe]
             try:
@@ -471,7 +472,7 @@ def _reported_versions(present: tuple[DesiredItem, ...]) -> dict[str, str]:
     return found
 
 
-def _installed_version(item: DesiredItem) -> str | None:
+def _installed_version(item: DesiredItem, found: ev.Evidence) -> str | None:
     """What is actually installed, from whichever source can say it exactly.
 
     A git uv tool is asked through uv's receipt rather than by running it, and that
@@ -485,7 +486,7 @@ def _installed_version(item: DesiredItem) -> str | None:
     """
     if isinstance(item.entry, catalog.GitUvTool):
         return ev.uv_tool_pin(item.name)
-    return ev.reported_version(item.executable)
+    return ev.reported_version(str(found.binary or item.executable))
 
 
 def _wanted(item: DesiredItem) -> releases.Wanted:
