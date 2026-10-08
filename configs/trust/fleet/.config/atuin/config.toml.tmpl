@@ -9,16 +9,27 @@
 # fallback for anything reading history — `doit kit usage` and `doit review`
 # both prefer atuin and drop back to it on a box where atuin cannot be asked.
 
-# History stays on this machine and no `sync_address` names anywhere to send it.
-# This box reaches the other machines by git alone, and what is typed here is not
-# meant to leave it. So the shared server is not merely unreachable from here —
-# it is the wrong destination, and would still be if the network allowed it.
+# Fleet-wide history through a self-hosted server on the machine's own network,
+# never api.atuin.sh. The account is a row in that server's Postgres and no
+# address is ever verified or mailed. History is encrypted client-side, so the
+# server holds ciphertext and ~/.local/share/atuin/key never leaves the machine —
+# a box without that key syncs records it cannot read. The key belongs in
+# Vaultwarden; losing it loses the history.
 #
-# Local capture is unaffected: Ctrl-R, exit codes, cwd and `atuin stats` all work
-# without an account. `dotfiles auth check` follows this flag and asks for no
-# login. `doit review` and `doit kit` answer about this box, which is the whole
-# truth available here anyway.
-auto_sync = false
+# `dotfiles auth check` follows this flag: it asks for a login only where sync is
+# on, so the nonfleet copy of this file reports nothing to do.
+auto_sync = true
+
+# The server's address is the machine's to supply, and this repo is public, so
+# dotfiles renders this file with ATUIN_SYNC_ADDRESS from ~/.env. atuin reads that
+# variable itself only while this file names no address, and only in a process
+# that sourced ~/.env — so a timer or `ssh host atuin sync` would fall back to
+# api.atuin.sh. Written into the file, every process reads it.
+sync_address = "${ATUIN_SYNC_ADDRESS}"
+
+# Only triggered when a command runs, so a quiet shell syncs no more often than
+# it has anything to say.
+sync_frequency = "5m"
 
 # dotfiles installs and upgrades atuin from install/packages.yml, so its own
 # startup update check is just noise + a network round-trip.
