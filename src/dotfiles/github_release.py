@@ -349,7 +349,8 @@ def _headers(url: str, accept: str | None = None, etag: str = '') -> dict[str, s
 NOT_MODIFIED = 304
 
 NOT_FOUND = 404
-"""How `releases/latest` says a repo has published nothing — that endpoint alone.
+"""How `releases/latest` says a repo has published nothing — that endpoint alone,
+and how `contents` says a file is absent at a ref, which `carries` reads.
 
 `aws/aws-cli` answers 404 there while `tags` lists `2.36.19`, so on that endpoint
 a 404 is an answer rather than an API that could not be reached. `releases?per_page=100`
@@ -402,6 +403,24 @@ def revalidate(url: str, etag: str = '') -> Conditional:
         return Conditional(payload=None, etag=etag)
     response.raise_for_status()
     return Conditional(payload=response.content, etag=response.headers.get('etag', ''))
+
+
+def carries(repo: str, ref: str, path: str) -> bool | None:
+    """Whether `path` exists in `repo` at `ref`, or None where GitHub could not say.
+
+    Asked with `HEAD`, so a lock file of a megabyte costs a status line. A 404 on
+    the contents endpoint is the file being absent at that ref. It would also be a
+    repo the credential cannot see, which is why the one caller asks only about a
+    tag the releases endpoint has just named for the same credential.
+    """
+    url = f'https://api.github.com/repos/{repo}/contents/{urllib.parse.quote(path)}?ref={urllib.parse.quote(ref, safe="")}'
+    try:
+        response = httpx2.head(url, headers=_headers(url), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+    except httpx2.HTTPError:
+        return None
+    if response.status_code == NOT_FOUND:
+        return False
+    return True if response.is_success else None
 
 
 def release_assets(repo: str, tag: str) -> dict[str, int] | None:

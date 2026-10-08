@@ -159,6 +159,7 @@ nav:
       - Overview: learnings/index.md
       - App Installation Patterns: learnings/app-installation-patterns.md
       - uv Tool Git Pins and Self-Update: learnings/uv-tool-git-pins.md
+      - uv tool install Ignores the Lock: learnings/uv-tool-install-ignores-the-lock.md
       - Minimal Manifest for Servers: learnings/minimal-manifest-for-servers.md
       - Undeclared Transitive Dependency: learnings/undeclared-transitive-dependency.md
       - Symlinks Path Gotchas: learnings/symlinks-path-gotchas.md

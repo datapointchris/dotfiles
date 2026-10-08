@@ -339,3 +339,93 @@ def test_an_entry_with_no_etag_is_written_without_the_key(tmp_path: Path) -> Non
 
     assert written['version'] == 'v1.2.3'
     assert 'etag' not in written
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Whether the tag carries a uv.lock
+# ─────────────────────────────────────────────────────────────────────────────
+
+LOCKING = releases.Wanted('owner/tool', asks_lock=True)
+
+
+@pytest.fixture
+def lock_files(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
+    """Every tag carries a lock unless the test says otherwise, and every ask is recorded."""
+    asked: list[tuple[str, str, str]] = []
+
+    def carries(repo: str, ref: str, path: str) -> bool | None:
+        asked.append((repo, ref, path))
+        return True
+
+    monkeypatch.setattr(releases.github_release, 'carries', carries)
+    return asked
+
+
+def test_a_new_release_records_whether_its_tag_carries_a_lock(answers: dict, lock_files: list) -> None:
+    answers[('owner/tool', '')] = 'v2.0.0'
+
+    entries = releases.refresh((LOCKING,), {}, NOW)
+
+    assert entries['owner/tool'].locked is True
+    assert lock_files == [('owner/tool', 'v2.0.0', 'uv.lock')]
+
+
+def test_an_unchanged_release_keeps_its_answer_without_asking_again(answers: dict, lock_files: list) -> None:
+    """A tag's tree does not change, so asking on every refresh would spend the rate
+    limit on an answer already held. One read per release."""
+    answers[('owner/tool', '')] = ('v2.0.0', 'W/"same"')
+    existing = {'owner/tool': releases.Cached('v2.0.0', NOW - dt.timedelta(days=1), etag='W/"same"', locked=False)}
+
+    entries = releases.refresh((LOCKING,), existing, NOW)
+
+    assert entries['owner/tool'].locked is False
+    assert lock_files == []
+
+
+def test_the_same_version_without_an_etag_keeps_its_answer_too(answers: dict, lock_files: list) -> None:
+    """A repo offering no `ETag` answers 200 every time. The version is what the
+    answer is for, so the same version keeps it."""
+    answers[('owner/tool', '')] = 'v2.0.0'
+    existing = {'owner/tool': releases.Cached('v2.0.0', NOW - dt.timedelta(days=1), locked=False)}
+
+    entries = releases.refresh((LOCKING,), existing, NOW)
+
+    assert entries['owner/tool'].locked is False
+    assert lock_files == []
+
+
+def test_a_newer_release_asks_again(answers: dict, lock_files: list) -> None:
+    answers[('owner/tool', '')] = 'v3.0.0'
+    existing = {'owner/tool': releases.Cached('v2.0.0', NOW - dt.timedelta(days=1), locked=False)}
+
+    entries = releases.refresh((LOCKING,), existing, NOW)
+
+    assert entries['owner/tool'] == releases.Cached('v3.0.0', NOW, locked=True)
+
+
+def test_an_entry_from_before_the_field_is_asked_on_its_next_refresh(answers: dict, lock_files: list) -> None:
+    """Every git tool's entry predates `locked`, and its version will not change until
+    a release. Asking only on a new version would leave each unasked until then."""
+    answers[('owner/tool', '')] = ('v2.0.0', 'W/"same"')
+    existing = {'owner/tool': releases.Cached('v2.0.0', NOW, etag='W/"same"')}
+
+    entries = releases.refresh((LOCKING,), existing, NOW)
+
+    assert entries['owner/tool'].locked is True
+
+
+def test_a_repo_that_does_not_ask_is_never_asked(answers: dict, lock_files: list) -> None:
+    answers[('owner/repo', '')] = 'v2.0.0'
+
+    entries = releases.refresh((releases.Wanted('owner/repo'),), {}, NOW)
+
+    assert entries['owner/repo'].locked is None
+    assert lock_files == []
+
+
+def test_a_lock_answer_survives_a_save_and_load_and_an_unasked_one_writes_no_key(tmp_path: Path) -> None:
+    path = cache(tmp_path)
+    releases.save({'owner/a': releases.Cached('v1', NOW, locked=False), 'owner/b': releases.Cached('v1', NOW)}, path)
+
+    assert releases.load(path) == {'owner/a': releases.Cached('v1', NOW, locked=False), 'owner/b': releases.Cached('v1', NOW)}
+    assert 'locked' not in json.loads(path.read_text())['owner/b']

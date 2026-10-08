@@ -27,6 +27,9 @@ General technical notes that name nothing in this repo live on the hub at
   for it; the four categories, and what picks between them
 - [uv Tool Git Pins and Self-Update](uv-tool-git-pins.md) — the updater reports a tool already at
   the latest version, and the tool itself announces one eight releases newer
+- [uv tool install Ignores the Lock](uv-tool-install-ignores-the-lock.md) — a git tool exits 3 on
+  every clean run as installed while its CI passes, because the install resolved dependencies
+  newer than its `uv.lock`
 - [Minimal Manifest for Servers](minimal-manifest-for-servers.md) — a headless LXC box pointed at
   the only available manifest installs docker, ffmpeg and every desktop package
 - [Undeclared Transitive Dependency](undeclared-transitive-dependency.md) — `ModuleNotFoundError:
