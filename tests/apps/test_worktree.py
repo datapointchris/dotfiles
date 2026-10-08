@@ -492,6 +492,10 @@ def rig(tmp_path: Path, tmux_socket: Path, bin_dir: Path, spawn_state: Path):
         (bin_dir / app).symlink_to(REPO / 'apps' / 'common' / app)
     stub_claude(bin_dir, spawn_state)
     stub_registry(bin_dir, spawn_state)
+    # The monitor pane a spawn opens beside a moved coordinator. The real abtop runs
+    # `claude` itself, which here is the stub above, and that run overwrites the pane
+    # the spawned session recorded.
+    write_stub(bin_dir, 'abtop', 'exec sleep 300')
 
     caller = subprocess.run(
         [str(TMUX), '-S', str(socket), 'display-message', '-p', '-t', 'rig', '#{pane_id}'],
