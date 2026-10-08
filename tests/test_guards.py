@@ -26,6 +26,7 @@ fails without planting anything.
 from __future__ import annotations
 
 import os
+import subprocess
 from pathlib import Path
 
 import guards
@@ -199,6 +200,44 @@ def test_disabling_a_unit_on_this_machine_is_refused() -> None:
 
     with pytest.raises(WouldInstall):
         systemd.disable('dotfiles-no-such-unit-guard-probe.service')
+
+
+def scratch_uv(tmp_path: Path) -> dict[str, str]:
+    """An environment the guard lets `uv tool install` through under. `UV_NO_INDEX`
+    as well, so a narrowed guard's probe finds no package rather than reaching PyPI."""
+    return {
+        **os.environ,
+        'UV_TOOL_DIR': str(tmp_path / 'tools'),
+        'UV_TOOL_BIN_DIR': str(tmp_path / 'bin'),
+        'UV_CACHE_DIR': str(tmp_path / 'cache'),
+        'UV_OFFLINE': '1',
+        'UV_NO_INDEX': '1',
+    }
+
+
+@pytest.mark.parametrize('loosened', ['UV_TOOL_DIR', 'UV_OFFLINE'])
+def test_a_uv_tool_install_reaching_past_tmp_is_refused(tmp_path: Path, loosened: str) -> None:
+    """`test_uvtool.py` drives one real `uv tool install`, let through because every
+    place it writes is under tmp and offline keeps it from fetching a Python. Each
+    case here removes one of those. The package does not exist and no index is
+    reachable, so a narrowed guard's probe fails without installing anything."""
+    environment = scratch_uv(tmp_path)
+    if loosened == 'UV_TOOL_DIR':
+        environment['UV_TOOL_DIR'] = str(Path.home() / '.local' / 'share' / 'uv' / 'tools')
+    else:
+        del environment['UV_OFFLINE']
+
+    with pytest.raises(WouldInstall):
+        subprocess.run(['uv', 'tool', 'install', 'dotfiles-no-such-tool-guard-probe'], env=environment, capture_output=True, check=False)
+
+
+def test_uv_tool_update_shell_is_refused_wherever_the_tool_directories_point(tmp_path: Path) -> None:
+    """It edits the shell's startup files, which none of the three variables moves.
+    `HOME` and `ZDOTDIR` are scratch here, so a narrowed guard writes only under tmp."""
+    environment = {**scratch_uv(tmp_path), 'HOME': str(tmp_path), 'ZDOTDIR': str(tmp_path), 'XDG_CONFIG_HOME': str(tmp_path)}
+
+    with pytest.raises(WouldInstall):
+        subprocess.run(['uv', 'tool', 'update-shell'], env=environment, capture_output=True, check=False)
 
 
 def _is_refused(target: Path, verb: str) -> bool:

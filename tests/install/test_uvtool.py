@@ -1,19 +1,31 @@
-"""Installing a Python tool with uv, and the pin that keeps its updater alive.
+"""Installing a Python tool with uv, the pin that keeps its updater alive, and
+the lock that holds its dependencies.
 
-The PyPI half has one decision in it and the git half has all of them, so most of
-this is about `requirement`: what gets handed to uv, and what happens when the
-repo it names publishes nothing to pin to.
+The PyPI half has one decision in it and the git half has all of them: what gets
+handed to uv, what happens when the repo publishes nothing to pin to, and what
+its lock at that revision holds the install to.
 
-The seam for the network is `github_release.latest_version`, because resolving a
-tag is the only thing here that leaves the machine.
+Two things leave the machine. Resolving a tag goes through
+`github_release.latest_version`, and cloning the revision to read its lock goes
+through `effects.run`. The last section drives real git and real uv against a
+repo and an index this file builds, because the stubs above prove the argv and
+only uv can say what that argv installs.
 """
 
 from __future__ import annotations
+
+import base64
+import hashlib
+import os
+import subprocess
+import zipfile
+from pathlib import Path
 
 import pytest
 
 from dotfiles import catalog
 from dotfiles import github_release
+from dotfiles import uv_lock
 from dotfiles.providers import Kind
 from dotfiles.providers import uvtool
 
@@ -45,6 +57,33 @@ def released(monkeypatch):
         return asked
 
     return publish
+
+
+@pytest.fixture
+def locked(monkeypatch):
+    """What the lock at the cloned revision pins, without a clone to read it from.
+
+    Without this the recorder's clone succeeds and writes nothing, so the
+    revision reads as carrying no lock at all.
+    """
+
+    def pin(pins: uv_lock.Pins | Exception) -> None:
+        def read(project: Path) -> uv_lock.Pins:
+            if isinstance(pins, Exception):
+                raise pins
+            return pins
+
+        monkeypatch.setattr(uv_lock, 'read', read)
+
+    return pin
+
+
+def installs(reached) -> list[tuple[str, ...]]:
+    return [call for call in reached.calls if call[:3] == ('uv', 'tool', 'install')]
+
+
+def clones(reached) -> list[tuple[str, ...]]:
+    return [call for call in reached.calls if call[:2] == ('git', 'clone')]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -90,7 +129,9 @@ def test_a_git_tool_repaired_again_is_forced_at_its_pin(uv, released) -> None:
 
     uvtool.install_git(SYNCER, offline=False, again=True)
 
-    assert reached.calls == [('uv', 'tool', 'install', '--reinstall', 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0')]
+    assert installs(reached) == [
+        ('uv', 'tool', 'install', '--reinstall', 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0')
+    ]
 
 
 def test_a_failure_reports_what_uv_said(uv) -> None:
@@ -131,15 +172,13 @@ def test_a_git_tool_is_pinned_to_its_newest_release(uv, released) -> None:
 
     uvtool.install_git(SYNCER, offline=False)
 
-    assert reached.calls == [('uv', 'tool', 'install', 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0')]
+    assert installs(reached) == [('uv', 'tool', 'install', 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0')]
 
 
-def test_the_tool_name_leads_the_requirement(uv, released) -> None:
+def test_the_tool_name_leads_the_requirement() -> None:
     """uv records the requirement under whatever name leads it, and that is what
     makes the receipt readable by everything that reads it afterwards."""
-    released('v6.0.0')
-
-    assert uvtool.requirement(SYNCER).startswith('syncer @ git+')
+    assert uvtool.requirement(SYNCER, 'v6.0.0').startswith('syncer @ git+')
 
 
 def test_a_repo_declaring_tracks_branch_is_never_pinned(uv, released) -> None:
@@ -147,7 +186,8 @@ def test_a_repo_declaring_tracks_branch_is_never_pinned(uv, released) -> None:
     rather than something to discover per run."""
     asked = released('v1.0.0')
 
-    assert uvtool.requirement(KEYMAP) == 'https://github.com/datapointchris/keymap-align.git'
+    assert uvtool.release_tag(KEYMAP) is None
+    assert uvtool.requirement(KEYMAP, None) == 'https://github.com/datapointchris/keymap-align.git'
     assert asked == []
 
 
@@ -159,7 +199,7 @@ def test_a_repo_with_no_release_installs_from_the_branch_with_a_warning(uv, rele
 
     uvtool.install_git(SYNCER, offline=False)
 
-    assert reached.calls == [('uv', 'tool', 'install', 'https://github.com/datapointchris/syncer.git')]
+    assert installs(reached) == [('uv', 'tool', 'install', 'https://github.com/datapointchris/syncer.git')]
     assert 'refuse to run' in capsys.readouterr().err
 
 
@@ -261,3 +301,206 @@ def test_a_repo_with_no_releases_api_answers_nothing_rather_than_guessing(releas
 
     assert uvtool.latest_release(repo) is None
     assert asked == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Held to the lock at the revision it installs
+# ─────────────────────────────────────────────────────────────────────────────
+
+PINS = uv_lock.Pins(('typer==0.20.0',), ('toon-format @ git+https://github.com/toon-format/toon-python@8dfb593',))
+
+
+def test_the_lock_is_read_at_the_tag_being_installed(uv, released, locked) -> None:
+    """A lock read from the branch head would hold a tagged install to versions its tag never tested."""
+    released('v6.0.0')
+    locked(PINS)
+    reached = uv()
+
+    uvtool.install_git(SYNCER, offline=False)
+
+    [clone] = clones(reached)
+    assert clone[:-1] == ('git', 'clone', '--quiet', '--depth', '1', '--branch', 'v6.0.0', 'https://github.com/datapointchris/syncer.git')
+
+
+def test_a_branch_tracking_tool_reads_the_lock_at_the_head(uv, locked) -> None:
+    locked(PINS)
+    reached = uv()
+
+    uvtool.install_git(KEYMAP, offline=False)
+
+    [clone] = clones(reached)
+    assert '--branch' not in clone
+    assert installs(reached)[0][-1] == 'https://github.com/datapointchris/keymap-align.git'
+
+
+def test_a_locked_revision_hands_uv_its_constraints_and_overrides(uv, released, locked) -> None:
+    released('v6.0.0')
+    locked(PINS)
+    reached = uv()
+
+    result = uvtool.install_git(SYNCER, offline=False, again=True)
+
+    [install] = installs(reached)
+    assert install[:4] == ('uv', 'tool', 'install', '--reinstall')
+    assert (install[4], install[6]) == ('--constraints', '--overrides')
+    assert install[-1] == 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0'
+    assert result.ok
+    assert 'held to its uv.lock' in result.detail
+
+
+def test_a_revision_with_no_lock_installs_unconstrained_and_names_the_revision(uv, released, capsys) -> None:
+    """Nothing to hold it to. The warning is the only place the difference from
+    every other tool shows."""
+    released('v6.0.0')
+    reached = uv()
+
+    result = uvtool.install_git(SYNCER, offline=False)
+
+    assert result.ok
+    assert installs(reached) == [('uv', 'tool', 'install', 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0')]
+    assert 'syncer: v6.0.0 has no uv.lock' in capsys.readouterr().err
+
+
+def test_a_clone_that_fails_refuses_rather_than_installing_unlocked(uv) -> None:
+    """Offline, on a branch-tracking tool, because that is the one install that
+    reaches the clone with no network: a pinned one has already refused on its tag."""
+    reached = uv(reachable=False, said='fatal: unable to access the repository')
+
+    result = uvtool.install_git(KEYMAP, offline=True)
+
+    assert not result.ok
+    assert result.kind is Kind.DOWNLOAD_FAILED
+    assert 'could not clone' in result.detail
+    assert 'the offline bundle stages no Python tools to fall back on' in result.detail
+    assert installs(reached) == []
+
+
+def test_a_lock_uv_will_not_export_refuses_rather_than_installing_unlocked(uv, released, locked) -> None:
+    released('v6.0.0')
+    locked(uv_lock.Unexportable('error: unsupported lock version'))
+    reached = uv()
+
+    result = uvtool.install_git(SYNCER, offline=False)
+
+    assert not result.ok
+    assert result.kind is Kind.COMMAND_FAILED
+    assert 'uv.lock at v6.0.0' in result.detail
+    assert 'unsupported lock version' in result.detail
+    assert installs(reached) == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Against real git and real uv
+#
+# Offline, against a find-links directory this file writes, so nothing reaches
+# an index and nothing lands in the machine's own tool directory.
+# `UV_TOOL_SCRATCH` in tests/conftest.py is the guard that lets this one
+# `uv tool install` through, and only because all three directories are tmp.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def git(repo: Path, *args: str) -> None:
+    identity = {'GIT_AUTHOR_NAME': 'T', 'GIT_AUTHOR_EMAIL': 't@t', 'GIT_COMMITTER_NAME': 'T', 'GIT_COMMITTER_EMAIL': 't@t'}
+    subprocess.run(['git', '-C', str(repo), *args], check=True, capture_output=True, env={**os.environ, **identity})
+
+
+def wheel(index: Path, name: str, version: str) -> None:
+    """A pure-Python wheel written by hand, so the index needs no build backend."""
+    info = f'{name}-{version}.dist-info'
+    files = {
+        f'{name}/__init__.py': '',
+        f'{info}/METADATA': f'Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n',
+        f'{info}/WHEEL': 'Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n',
+    }
+    record = [f'{path},sha256={digest(body)},{len(body.encode())}' for path, body in files.items()]
+    files[f'{info}/RECORD'] = '\n'.join([*record, f'{info}/RECORD,,', ''])
+    with zipfile.ZipFile(index / f'{name}-{version}-py3-none-any.whl', 'w') as packed:
+        for path, body in files.items():
+            packed.writestr(path, body)
+
+
+def digest(body: str) -> str:
+    return base64.urlsafe_b64encode(hashlib.sha256(body.encode()).digest()).rstrip(b'=').decode()
+
+
+def project(repo: Path, name: str, version: str, dependencies: tuple[str, ...] = (), script: bool = False) -> None:
+    """A uv_build project in its own git repo, which uv builds with no backend to fetch."""
+    (repo / 'src' / name).mkdir(parents=True)
+    (repo / 'src' / name / '__init__.py').write_text('def main():\n    pass\n')
+    scripts = f'\n[project.scripts]\n{name} = "{name}:main"\n' if script else ''
+    (repo / 'pyproject.toml').write_text(
+        f'[project]\nname = "{name}"\nversion = "{version}"\nrequires-python = ">=3.11"\n'
+        f'dependencies = {list(dependencies)!r}\n{scripts}\n'
+        '[build-system]\nrequires = ["uv_build"]\nbuild-backend = "uv_build"\n'
+    )
+    git(repo, 'init', '--quiet', '--initial-branch=main')
+    git(repo, 'add', '-A')
+    git(repo, 'commit', '--quiet', '-m', version)
+
+
+def installed(tools: Path, tool: str, package: str) -> str:
+    probe = 'import importlib.metadata, sys; print(importlib.metadata.version(sys.argv[1]))'
+    return subprocess.run(
+        [str(tools / tool / 'bin' / 'python'), '-c', probe, package], check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
+@pytest.fixture
+def offline_index(tmp_path: Path, monkeypatch):
+    """uv pointed at a directory of wheels and nothing else, writing only under tmp."""
+    index = tmp_path / 'index'
+    index.mkdir()
+    for name, value in {
+        'UV_TOOL_DIR': tmp_path / 'tools',
+        'UV_TOOL_BIN_DIR': tmp_path / 'bin',
+        'UV_CACHE_DIR': tmp_path / 'cache',
+        'UV_FIND_LINKS': index,
+        'UV_NO_INDEX': '1',
+        'UV_OFFLINE': '1',
+        'UV_PYTHON_DOWNLOADS': 'never',
+    }.items():
+        monkeypatch.setenv(name, str(value))
+    return index
+
+
+def test_an_installed_git_tool_runs_on_its_locks_versions_not_the_newest(tmp_path: Path, offline_index: Path, monkeypatch) -> None:
+    """The tool's tag locks 1.0.0 of a registry package and of a git one, and 2.0.0
+    of each exists by the time it is installed.
+
+    Both kinds, because they reach uv differently: the registry pin as a
+    constraint, the git pin as an override. A lock exported whole as constraints
+    fails on the git one, because uv refuses a constraint whose URL differs from
+    the one the tool declares.
+
+    The second install is the control. The same tag handed to uv with no lock
+    takes 2.0.0 of both, so 1.0.0 above is the lock's doing rather than the only
+    version on offer.
+    """
+    wheel(offline_index, 'pindemo', '1.0.0')
+    gitdep = tmp_path / 'gitdep'
+    project(gitdep, 'gitdep', '1.0.0')
+
+    tool = tmp_path / 'locktool'
+    project(tool, 'locktool', '1.0.0', dependencies=('pindemo>=1', f'gitdep @ git+file://{gitdep}'), script=True)
+    subprocess.run(['uv', 'lock', '--quiet'], cwd=tool, check=True, capture_output=True)
+    git(tool, 'add', 'uv.lock')
+    git(tool, 'commit', '--quiet', '-m', 'lock')
+    git(tool, 'tag', 'v1.0.0')
+
+    wheel(offline_index, 'pindemo', '2.0.0')
+    (gitdep / 'pyproject.toml').write_text((gitdep / 'pyproject.toml').read_text().replace('1.0.0', '2.0.0'))
+    git(gitdep, 'commit', '--quiet', '-am', '2.0.0')
+
+    monkeypatch.setattr(uvtool, 'latest_release', lambda repo: 'v1.0.0')
+    entry = catalog.GitUvTool.from_mapping({'name': 'locktool', 'repo': f'file://{tool}'})
+    tools = tmp_path / 'tools'
+
+    result = uvtool.install_git(entry, offline=False)
+
+    assert result.ok, result.detail
+    assert (installed(tools, 'locktool', 'pindemo'), installed(tools, 'locktool', 'gitdep')) == ('1.0.0', '1.0.0')
+
+    subprocess.run(
+        ['uv', 'tool', 'install', '--quiet', '--reinstall', uvtool.requirement(entry, 'v1.0.0')], check=True, capture_output=True
+    )
+    assert (installed(tools, 'locktool', 'pindemo'), installed(tools, 'locktool', 'gitdep')) == ('2.0.0', '2.0.0')

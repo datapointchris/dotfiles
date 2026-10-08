@@ -57,9 +57,9 @@ GitHub. Run `theme update` or `font update` to pull updates to the installed ver
 **Examples**: `digest`, `logsift`, `indy`, `refcheck`, `syncer`, `safekeep`
 
 **Installation**: declared in `install/packages.yml` under `git_uv_tools` and installed
-with `uv tool install`, pinned to the repo's newest release tag. Why the pin is not
-optional, and what `tracks_branch` declares, are the module docstring in
-`src/dotfiles/providers/uvtool.py`.
+with `uv tool install`, pinned to the repo's newest release tag and held to that tag's
+`uv.lock`. Why the pin is not optional, why the lock is cloned and handed over, and what
+`tracks_branch` declares, are the module docstring in `src/dotfiles/providers/uvtool.py`.
 
 **Development**: Source code lives in `~/tools/{app}/`. Changes are tested locally, then
 pushed to GitHub — and a release must be cut for the fleet to pick them up, since the
