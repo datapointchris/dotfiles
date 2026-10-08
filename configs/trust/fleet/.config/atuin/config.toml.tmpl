@@ -1,0 +1,45 @@
+# Atuin — SQLite-backed shell history. Managed by dotfiles.
+#
+# Atuin owns Ctrl-R (its DB-backed search — time, cwd, exit), while up-arrow stays
+# zsh's prefix-search; see the atuin block in .zshrc for the keybinding rationale.
+# Beyond search, atuin records each command's exit code, working directory and
+# session in ~/.local/share/atuin/history.db, for the audit-flow analysis.
+#
+# The flat ~/.local/state/zsh/history keeps being written too, so it stays the
+# fallback for anything reading history — `doit kit usage` and `doit review`
+# both prefer atuin and drop back to it on a box where atuin cannot be asked.
+
+# Fleet-wide history through a self-hosted server on the machine's own network,
+# never api.atuin.sh. The account is a row in that server's Postgres, and no
+# email is ever verified or sent. History is encrypted client-side, so the
+# server holds ciphertext and ~/.local/share/atuin/key never leaves the machine —
+# a box without that key syncs records it cannot read. The key belongs in
+# Vaultwarden; losing it loses the history.
+#
+# `dotfiles auth check` follows this flag: it asks for a login only where sync is
+# on, so the nonfleet copy of this file reports nothing to do.
+auto_sync = true
+
+# The server's address is the machine's to supply, and this repo is public. So
+# dotfiles renders this file with ATUIN_SYNC_ADDRESS from ~/.env. atuin reads that
+# variable itself only while this file names no address, and only in a process
+# that sourced ~/.env. .zshrc sources it, and an `ssh host atuin ...` command never
+# does, so that command would reach api.atuin.sh. Written into the file, every
+# process reads it.
+sync_address = "${ATUIN_SYNC_ADDRESS}"
+
+# Only triggered when a command runs, so a quiet shell syncs no more often than
+# it has anything to say.
+sync_frequency = "5m"
+
+# dotfiles installs and upgrades atuin from install/packages.yml, so its own
+# startup update check is just noise + a network round-trip.
+update_check = false
+
+# Atuin's natural-language mode binds `?` at the start of a line, where it opens an
+# "Atuin AI is not yet configured" menu instead of inserting a question mark.
+# Configuring it means either an Atuin Hub account or self-hosting
+# atuin-ai-server; the Ctrl-X Ctrl-A / Ctrl-X Ctrl-E widgets in .zshrc cover the
+# same ground through the Claude subscription already in use.
+[ai]
+enabled = false

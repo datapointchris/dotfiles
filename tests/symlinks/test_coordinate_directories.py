@@ -29,6 +29,7 @@ from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles.resources import symlinks
 from dotfiles.symlinks import core
+from dotfiles.symlinks import template
 
 TREES = tuple(name for name, _, _ in symlinks.TREES)
 
@@ -89,7 +90,9 @@ def deployed_paths(source: Path) -> tuple[Path, ...]:
     if not source.is_dir():
         return ()
     return tuple(
-        item.relative_to(source) for item in source.rglob('*') if item.is_file() and not core.should_exclude(item.relative_to(source))
+        template.deployed_as(item.relative_to(source))
+        for item in source.rglob('*')
+        if item.is_file() and not core.should_exclude(item.relative_to(source))
     )
 
 

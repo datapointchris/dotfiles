@@ -4,8 +4,7 @@ Every test builds a whole synthetic world — a repo tree and a home — and poi
 a Session at both. `home` and `repo` are real fields on Session rather than
 patched globals, so these exercise the same code a machine runs.
 
-The capability being pinned is the one the previous pass could not have: a
-declared link that was never deployed is *reported*, without running the write
+A declared link that was never deployed is *reported*, without running the write
 that would create it.
 """
 
@@ -17,6 +16,7 @@ import pytest
 
 from dotfiles import deploy
 from dotfiles.privilege import Privilege
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import symlinks
@@ -172,9 +172,8 @@ def test_a_reserved_name_outside_the_apps_tree_is_linked_anyway(session: Session
 
 
 def test_a_declared_link_that_was_never_deployed_is_missing(session: Session, repo: Path) -> None:
-    """The whole point of the conversion. The previous pass answered only "is
-    anything broken", so a file added to configs/ and never deployed read as
-    converged."""
+    """A pass asking only "is anything broken" reads a file added to configs/ and
+    never deployed as converged."""
     declare(repo, 'configs/common/.config/tmux/tmux.conf')
 
     found = changes(session)
@@ -587,3 +586,170 @@ def test_the_source_trees_are_walked_once_however_many_links_are_missing(
 
     assert walks == 2, 'one walk for observe, one for the index every perform shares'
     symlinks._index.cache_clear()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Templates: rendered with this machine's values, on every machine
+# ─────────────────────────────────────────────────────────────────────────────
+
+APP_TEMPLATE = 'configs/trust/fleet/.config/app/app.toml.tmpl'
+"""Under `trust/fleet`, which `box` selects: `platform: linux` is a fleet machine."""
+
+TEMPLATE_TEXT = 'server = "${APP_SERVER}"\n'
+
+
+def answer(session: Session, value: str) -> None:
+    """Write the value into `~/.env`, the way a person answers a required one."""
+    session.env_file.write_text(f'export APP_SERVER="{value}"\n')
+
+
+def rendered_target(home: Path) -> Path:
+    return home / '.config' / 'app' / 'app.toml'
+
+
+def test_a_template_lands_without_its_suffix_holding_this_machine_s_value(session: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://inside:8888')
+
+    apply(session)
+
+    target = rendered_target(home)
+    assert not target.is_symlink()
+    assert target.read_text() == 'server = "http://inside:8888"\n'
+    assert target.stat().st_mode & 0o777 == 0o600
+    assert changes(session) == ()
+
+
+def test_an_unset_value_is_named_and_nothing_is_written(session: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+
+    found = changes(session)
+    apply(session)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.MISSING, Repair.BY_HAND)]
+    assert 'APP_SERVER' in found[0].detail
+    assert 'APP_SERVER' in found[0].advice
+    assert not rendered_target(home).exists()
+
+
+def test_a_value_only_in_this_process_s_environment_does_not_render(
+    session: Session, repo: Path, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A variable exported in the shell running `apply` is gone in the next
+    process, and `~/.env` still says nothing."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    monkeypatch.setenv('APP_SERVER', 'http://ambient:1')
+
+    found = changes(session)
+    outcomes = apply(session)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.MISSING, Repair.BY_HAND)]
+    assert 'nothing sets APP_SERVER' in found[0].detail
+    assert outcomes == []
+    assert not rendered_target(home).exists()
+
+
+def test_a_hand_written_file_at_the_target_is_refused_until_forced(session: Session, repo: Path, home: Path) -> None:
+    """The link branch's refusal, applied to a file that is written rather than
+    linked. A machine's first render is where a hand-written file most likely sits
+    at the target."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://inside:8888')
+    target = rendered_target(home)
+    target.parent.mkdir(parents=True)
+    target.write_text('enter_accept = true\n')
+
+    found = changes(session)
+    apply(session)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.STALE, Repair.BY_HAND)]
+    assert found[0].advice == symlinks.FOREIGN_ADVICE
+    assert target.read_text() == 'enter_accept = true\n'
+
+    forced = Session(machine_name='box', repo=repo, home=home, force=True)
+    outcomes = apply(forced)
+
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.DONE]
+    assert target.read_text() == 'server = "http://inside:8888"\n'
+
+
+def test_a_hand_written_file_on_a_copy_machine_is_refused_with_advice_it_can_follow(copying: Session, repo: Path, home: Path) -> None:
+    """`--force` is refused at a copy machine's door, so the advice cannot name it."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(copying, 'http://inside:8888')
+    target = rendered_target(home)
+    target.parent.mkdir(parents=True)
+    target.write_text('enter_accept = true\n')
+
+    found = changes(copying)
+    apply(copying)
+
+    assert [(change.verdict, change.repair, change.advice) for change in found] == [
+        (Verdict.STALE, Repair.BY_HAND, symlinks.MOVE_ASIDE_ADVICE)
+    ]
+    assert target.read_text() == 'enter_accept = true\n'
+
+
+def test_a_changed_value_renders_again(session: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://old:1')
+    apply(session)
+    answer(session, 'http://new:2')
+
+    apply(session)
+
+    assert rendered_target(home).read_text() == 'server = "http://new:2"\n'
+
+
+def test_a_link_at_the_target_is_replaced_rather_than_written_through(session: Session, repo: Path, home: Path) -> None:
+    """A link into the repo is what deploying the file by link left behind, and
+    writing through it would fill in the template itself."""
+    source = declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://inside:8888')
+    target = rendered_target(home)
+    target.parent.mkdir(parents=True)
+    target.symlink_to(source)
+
+    apply(session)
+
+    assert not target.is_symlink()
+    assert target.read_text() == 'server = "http://inside:8888"\n'
+    assert source.read_text() == TEMPLATE_TEXT
+
+
+def test_a_copy_machine_renders_a_template_rather_than_copying_it(copying: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(copying, 'http://inside:8888')
+
+    apply(copying)
+
+    assert rendered_target(home).read_text() == 'server = "http://inside:8888"\n'
+
+
+def test_unlinking_takes_back_a_rendering_and_leaves_an_edited_one(session: Session, repo: Path, home: Path) -> None:
+    """A line added to a rendering stops it matching the template, so the file is
+    somebody's and stays."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    declare(repo, 'configs/trust/fleet/.config/other/other.toml.tmpl', TEMPLATE_TEXT)
+    answer(session, 'http://inside:8888')
+    apply(session)
+    edited = home / '.config' / 'other' / 'other.toml'
+    edited.write_text(edited.read_text() + 'kept = true\n')
+
+    removed, kept = symlinks.remove_rendered(session)
+
+    assert removed == 1
+    assert not rendered_target(home).exists()
+    assert [target for target, _ in kept] == [edited]
+
+
+def test_unlinking_takes_back_a_rendering_made_with_an_earlier_value(session: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://old:1')
+    apply(session)
+    answer(session, 'http://new:2')
+
+    removed, kept = symlinks.remove_rendered(session)
+
+    assert (removed, kept) == (1, ())
+    assert not rendered_target(home).exists()

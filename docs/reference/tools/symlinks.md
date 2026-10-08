@@ -72,6 +72,42 @@ what copy retires and why each was given up in the open.
 `install/manifests/windows-work-workstation.yml` says why the boolean is
 declared rather than derived from `os_family`.
 
+## A template carries a per-machine value into a file that cannot read one
+
+A file ending in `.tmpl` deploys without the suffix, as a regular file with its
+`${NAME}` placeholders filled from `~/.env`. It is for a program that reads its
+one config file in every process, such as atuin. A value the program takes from
+its environment reaches only processes that sourced `~/.env`, and an
+`ssh host cmd` never does. `src/dotfiles/symlinks/template.py` holds the syntax
+and the write.
+
+Every placeholder is a `required:` entry in `install/flags.yml`.
+`dotfiles machines check` fails a template whose placeholder some machine
+selecting it is never asked for. On that machine only the template's own row
+would name the value. The env check and the generated block in `~/.env` list
+only the machine's `required:` entries. An unset value is named twice by
+`dotfiles check`: on the env row and on the template's. `apply` leaves the
+target as it found it.
+
+A rendered file is a regular file, so the template stands in for the provenance
+a link carries. A target matching the template is this manager's earlier
+rendering, whatever stands where a placeholder sits. `apply` renders over it and
+`dotfiles symlinks unlink` removes it. Anything else is somebody's file, and
+`apply` refuses it like a foreign link unless given `--force`. A copy machine
+refuses it too, because the template can tell the two apart where a copy
+cannot.
+
+*Rejected:* a `templates/` tree with a resource of its own. It is a second walk
+with a second collision domain and a new CLI noun, and one file's variants would
+sit in two trees: the atuin config's nonfleet variant is a plain file under
+`configs/`. *Rejected:* `managed_files` in `install/system.yml`, which writes
+root-owned files with escalation and fills only `{user}`. *Rejected:* keeping the
+file hand-written and checking only that it names an address, which lets every
+other setting in it drift between machines. *Rejected:* a linked config naming no
+address, leaving atuin to read `ATUIN_SYNC_ADDRESS` itself. An interactive shell
+then syncs to the right server, while `ssh host atuin doctor` on the same machine
+reports atuin's hosted service.
+
 ## Prune broken links with `apply`, never with `find -delete`
 
 `plan` finds them and `apply` repairs them by pruning, and both touch only links

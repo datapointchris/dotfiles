@@ -43,10 +43,10 @@ GIT_CONFIG_STUB = """\
 # This machine's git entry point, and the only file in this directory the repo
 # does not own. Both of its jobs need it to be a real file rather than a symlink.
 #
-# It includes the shared config, which git no longer reads by itself now that the
-# repo's copy is named common.gitconfig. And it is where `git config --global`
-# writes, which is the reason it must not be a link: git follows one when writing,
-# so an entry point linked into the checkout takes an identity with it.
+# It includes the shared config, which git does not find by itself under the name
+# common.gitconfig. And it is where `git config --global` writes, which is the
+# reason it must not be a link: git follows one when writing, so an entry point
+# linked into the checkout takes an identity with it.
 #
 # It carries no [user] of its own. Identity arrives through the trust include, and
 # useConfigOnly refuses a commit while nothing has set one.
@@ -72,8 +72,7 @@ def _ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
 
     A link here is unlinked rather than adopted. The symlink stage prunes an
     orphaned entry point first, but a machine reaching this out of order would
-    otherwise write through it into the repo, which is the one outcome this exists
-    to prevent.
+    otherwise write through it into the repo.
     """
     if GIT_CONFIG_ENTRY.is_symlink():
         GIT_CONFIG_ENTRY.unlink()
@@ -96,8 +95,8 @@ def _retire_home_gitconfig(coordinates: axes.Coordinates) -> Path | None:
     deliberately does not hold, so it moves to the machine-local identity file.
     On a fleet machine the repo already ships that address in
     personal.gitconfig, so there is nothing to preserve and the file is simply
-    in the way — advising a rescue file there sent one Mac looking for a
-    destination its trust variant never includes.
+    in the way. A rescue file advised there names a destination the fleet trust
+    variant never includes.
 
     **The destination is returned, and the hint is derived from it.** The two
     branches otherwise differ in nothing but the sentence they print, so the one
@@ -139,17 +138,17 @@ def epilogue(session: Session) -> None:
 def unlink(session: Session) -> bool:
     """Remove what this repo deployed, coordinate directories first.
 
-    Two passes, because one machine can be holding the output of both mechanisms.
-    The link sweep runs everywhere: a machine whose manifest has since declared
-    `deploy_by_copy` still holds whatever it deployed before that, and those links
-    are this repo's to remove. The copy pass runs only where the manifest asks for
-    it, and it is what makes this verb's promise true there — a pass that can see
-    only symlinks removes nothing on a machine whose every target is a regular
-    file, and then reports a machine it has left fully deployed as unconfigured.
+    One pass per deploy mechanism, because one machine can be holding the output
+    of each. The link and rendered passes run everywhere: a machine whose manifest
+    has since declared `deploy_by_copy` still holds the links it deployed before
+    that. The copy pass runs only where the manifest declares `deploy_by_copy`,
+    and it is what makes this verb's promise true there — a pass that can see only
+    symlinks removes nothing on a machine whose every target is a regular file,
+    and then reports a machine it has left fully deployed as unconfigured.
 
-    Both are driven by the same declaration the deployment is, so a tree gaining a
-    coordinate directory cannot leave deployed paths that only one half knows
-    about.
+    Every pass is driven by the same declaration the deployment is, so a tree
+    gaining a coordinate directory cannot leave a deployed path that one pass
+    misses.
 
     A declared path still holding a file the repo does not declare is left alone
     and named, and the run is an issue rather than converged. The exit code is the
@@ -163,11 +162,15 @@ def unlink(session: Session) -> bool:
         if source.is_dir():
             core.remove_symlinks(source, origin, target_dir=home)
 
-    if not session.machine.wants(symlinks.DEPLOY_BY_COPY):
-        return True
+    rendered, kept = symlinks.remove_rendered(session)
+    if rendered or kept:
+        err_console.print(f'[green]Removed {rendered} rendered files[/]')
 
-    removed, kept = symlinks.remove_copies(session)
-    err_console.print(f'[green]Removed {removed} copies[/]')
+    if session.machine.wants(symlinks.DEPLOY_BY_COPY):
+        removed, kept_copies = symlinks.remove_copies(session)
+        err_console.print(f'[green]Removed {removed} copies[/]')
+        kept += kept_copies
+
     for target, because in kept:
         err_console.print(f'  [yellow]✗[/] {target} ({because})')
     if kept:
@@ -179,8 +182,7 @@ def show(session: Session) -> None:
     """Every declared link and where it currently stands.
 
     Declared rather than discovered, so a link that was never deployed appears
-    here too — the previous version walked `$HOME` and could only list what
-    already existed.
+    here too. A walk of `$HOME` could list only what already exists.
     """
     observed = symlinks.RESOURCE.observe(session, session.plan)
     verdicts = {change.item: change for change in symlinks.RESOURCE.diff(session.plan, observed)}
@@ -196,8 +198,8 @@ def show(session: Session) -> None:
 
     # Only the declared links that drifted. `verdicts` also holds a row per orphan,
     # and an orphan is by definition not declared — that is why it is pruned rather
-    # than repaired — so counting it here reported a healthy machine as having a
-    # declared link that did not land, and sent a reader looking for it.
+    # than repaired — so counting it here would report a healthy machine as having
+    # a declared link that did not land.
     undeployed = sum(1 for link in observed.links if link.address in verdicts)
     err_console.print(f'\n{len(observed.links)} declared, {undeployed} not deployed as declared')
 

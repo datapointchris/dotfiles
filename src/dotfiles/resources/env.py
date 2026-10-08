@@ -435,14 +435,7 @@ def _requirements(machine, observed: Observed) -> list[Change]:
     """
     changes = []
     for entry in machine.required_values:
-        # The file first, and for a name outside `SHARED_PATHS` it is the only
-        # place asked. Its sole rung is an ambient variable, which is a shell this
-        # run happens to have started in rather than an answer the machine keeps —
-        # accepting it reports converged on a box whose `~/.env` says nothing, and
-        # the next shell finds nothing.
-        answer = observed.values.get(entry.name) or ''
-        if not answer and entry.name in settings.SHARED_PATHS and (found := observed.resolved.of(entry.name)):
-            answer = found.value
+        answer = settings.answer(entry.name, observed.values, observed.resolved)
         if not answer:
             changes.append(
                 Change(
@@ -529,7 +522,7 @@ def _unready(entry, machine, observed: Observed) -> list[Change]:
     one laptop, and only the WSL half declares `WINDOWS_USER`.
     """
     declared = {value.name for value in machine.required_values}
-    unmet = [name for name in entry.requires_values if name in declared and not (observed.values.get(name) or observed.resolved.of(name))]
+    unmet = [name for name in entry.requires_values if name in declared and not settings.answer(name, observed.values, observed.resolved)]
     if not unmet:
         return []
     return [

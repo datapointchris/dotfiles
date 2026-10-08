@@ -659,3 +659,77 @@ program  = "ifiles"
     root = configs_tree(tmp_path, configs={f'trust/fleet/{DOTFILES_CONFIG}': REMOTE, f'trust/nonfleet/{DOTFILES_CONFIG}': retyped})
 
     assert validate.declaration(root) == ()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Templates: rendered on every machine that selects one, with values it is asked for
+# ─────────────────────────────────────────────────────────────────────────────
+
+TEMPLATE = 'trust/fleet/.config/app/app.toml.tmpl'
+
+
+def template_tree(root: Path, *, required: list[dict[str, str]], text: str = 'server = "${APP_SERVER}"\n') -> Path:
+    """A fleet machine, a template its trust directory selects, and the register."""
+    tree(root, manifests={'test-machine': LINUX})
+    (root / 'install' / 'flags.yml').write_text(yaml.safe_dump({'required': required}, sort_keys=False))
+    source = root / 'configs' / TEMPLATE
+    source.parent.mkdir(parents=True)
+    source.write_text(text)
+    return root
+
+
+def test_a_template_filling_a_value_its_machine_is_asked_for_is_sound(tmp_path: Path) -> None:
+    root = template_tree(tmp_path, required=[{'name': 'APP_SERVER', 'network_trust': 'fleet'}])
+
+    assert validate.declaration(root) == ()
+
+
+def test_a_template_filling_a_value_its_machine_is_never_asked_for_is_an_error(tmp_path: Path) -> None:
+    """Narrowed to nonfleet, so the fleet machine selecting the template is never asked.
+    Its env check and its generated `~/.env` block would carry no line for the value."""
+    root = template_tree(tmp_path, required=[{'name': 'APP_SERVER', 'network_trust': 'nonfleet'}])
+
+    found = messages(validate.declaration(root), Severity.ERROR)
+
+    assert len(found) == 1
+    assert '${APP_SERVER}' in found[0]
+    assert 'test-machine' in found[0]
+
+
+def test_a_dollar_that_is_neither_a_placeholder_nor_escaped_is_an_error(tmp_path: Path) -> None:
+    root = template_tree(tmp_path, required=[{'name': 'APP_SERVER', 'network_trust': 'fleet'}], text='price = "$5"\n')
+
+    found = messages(validate.declaration(root), Severity.ERROR)
+
+    assert len(found) == 1
+    assert f'configs/{TEMPLATE}' in found[0]
+
+
+def test_a_template_and_a_plain_file_landing_on_one_path_collide(tmp_path: Path) -> None:
+    """A template deploys without its suffix, so it claims the same target as a plain
+    file of that name in a directory the same machine selects."""
+    root = template_tree(tmp_path, required=[{'name': 'APP_SERVER', 'network_trust': 'fleet'}])
+    plain = root / 'configs' / 'common' / '.config' / 'app' / 'app.toml'
+    plain.parent.mkdir(parents=True)
+    plain.write_text('server = "elsewhere"\n')
+
+    found = messages(validate.declaration(root), Severity.ERROR)
+
+    assert len(found) == 1
+    assert '.config/app/app.toml' in found[0]
+    assert 'common' in found[0] and 'trust/fleet' in found[0]
+
+
+def test_a_plain_file_beside_its_own_template_collides(tmp_path: Path) -> None:
+    """What converting a config with `cp` rather than `git mv` leaves behind.
+    `declared()` would return two links for one target, and the pairing across
+    directories never compares a directory with itself."""
+    root = template_tree(tmp_path, required=[{'name': 'APP_SERVER', 'network_trust': 'fleet'}])
+    beside = root / 'configs' / TEMPLATE.removesuffix('.tmpl')
+    beside.write_text('server = "elsewhere"\n')
+
+    found = messages(validate.declaration(root), Severity.ERROR)
+
+    assert len(found) == 1
+    assert f'configs/{TEMPLATE}' in found[0]
+    assert f'configs/{TEMPLATE.removesuffix(".tmpl")}' in found[0]

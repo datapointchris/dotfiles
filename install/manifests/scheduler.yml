@@ -66,6 +66,8 @@ configure_zsh: true
 # all, measured 2026-08-16 on this box. Nobody types here, so there is no history
 # worth syncing to the server, and declaring it produces a red line on every
 # check that nobody will ever act on. The binary stays in `github_releases`.
+# ATUIN_SYNC_ADDRESS still has to be set here: it is required of every fleet
+# machine, and this one shares every coordinate with linux-lxc-server.
 auth:
   - gh
   - claude

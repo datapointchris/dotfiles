@@ -38,6 +38,7 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles.resources import symlinks
 from dotfiles.symlinks import core
+from dotfiles.symlinks import template
 
 
 class Severity(enum.StrEnum):
@@ -91,6 +92,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(_unreferenced(declared, manifests))
     findings.extend(_git_variants(root))
     findings.extend(_colliding_variants(root))
+    findings.extend(_templates(root, manifests))
     findings.extend(_registry_paths(root))
     findings.extend(_remote_tables(root))
     findings.extend(_schedule_declared(root))
@@ -285,10 +287,15 @@ def _colliding_variants(root: Path) -> list[Finding]:
     Pairwise on directories rather than by enumerating every expressible machine.
     The question is only whether two directories can co-occur, which is a fact
     about the axes and needs no coordinates resolved.
+
+    One directory can collide with itself, which only a template makes possible:
+    `app.toml.tmpl` and `app.toml` beside it both deploy as `app.toml`. The
+    pairing below never compares a directory with itself, so that case is checked
+    first.
     """
-    findings = []
+    findings: list[Finding] = []
     for tree in FLATTENING_TREES:
-        declaring: dict[str, list[str]] = {}
+        declaring: dict[str, dict[str, list[str]]] = {}
         base = root / tree
         for directory in sorted(base.glob('*/')) + sorted(base.glob('*/*/')):
             relative = str(directory.relative_to(base))
@@ -296,9 +303,20 @@ def _colliding_variants(root: Path) -> list[Finding]:
                 continue
             for item in sorted(directory.rglob('*')):
                 if item.is_file() and not core.should_exclude(item.relative_to(directory)):
-                    declaring.setdefault(str(item.relative_to(directory)), []).append(relative)
+                    deployed = str(template.deployed_as(item.relative_to(directory)))
+                    declaring.setdefault(deployed, {}).setdefault(relative, []).append(str(item.relative_to(root)))
 
-        for deployed, sources in sorted(declaring.items()):
+        for deployed, files_by_directory in sorted(declaring.items()):
+            findings.extend(
+                Finding(
+                    'symlinks',
+                    Severity.ERROR,
+                    f'{" and ".join(files)} both deploy {tree}/{deployed} from {directory} — keep one of them',
+                )
+                for directory, files in sorted(files_by_directory.items())
+                if len(files) > 1
+            )
+            sources = sorted(files_by_directory)
             clash = sorted({(a, b) for a in sources for b in sources if a < b and _coselectable(a, b)})
             for first, second in clash:
                 findings.append(
@@ -308,6 +326,43 @@ def _colliding_variants(root: Path) -> list[Finding]:
                         f'{tree}/{deployed} is declared in both {first} and {second}, which one machine selects together — '
                         f'move it out of whichever should not carry it',
                     )
+                )
+    return findings
+
+
+def _templates(root: Path, manifests: dict[str, machines.Machine]) -> list[Finding]:
+    """A template no machine can render, or one a machine renders with a value it is never asked for.
+
+    On the machine, the second is named by the template's own row alone. The env
+    check and the generated block in `~/.env` list only the machine's `required:`
+    entries, so neither asks for the value.
+
+    Each declared machine is walked the way the deployment walks it, so a template
+    is held to the machines that select it and no others.
+    """
+    findings: list[Finding] = []
+    malformed: set[Path] = set()
+    for name, machine in sorted(manifests.items()):
+        required = {entry.name for entry in machine.required_values}
+        for source_dir, _, origin in symlinks.sources(root, machine.coordinates, Path('/')):
+            if not source_dir.is_dir():
+                continue
+            for item in sorted(source_dir.rglob(f'*{template.SUFFIX}')):
+                if not item.is_file() or core.should_exclude(item.relative_to(source_dir)):
+                    continue
+                shown = item.relative_to(root)
+                if (problem := template.malformed(item)) and item not in malformed:
+                    malformed.add(item)
+                    findings.append(Finding('symlinks', Severity.ERROR, f'{shown} cannot be rendered: {problem}'))
+                findings.extend(
+                    Finding(
+                        'symlinks',
+                        Severity.ERROR,
+                        f'{shown} fills ${{{placeholder}}}, which install/flags.yml does not require of {name} — '
+                        f'declare it under required: for every machine that selects {origin}',
+                    )
+                    for placeholder in template.placeholders(item)
+                    if placeholder not in required
                 )
     return findings
 

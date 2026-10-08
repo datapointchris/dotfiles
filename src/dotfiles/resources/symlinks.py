@@ -44,14 +44,18 @@ import dataclasses as dc
 import enum
 import functools
 import shutil
+from collections.abc import Callable
+from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Mapping
 from pathlib import Path
 from typing import assert_never
 
 from dotfiles import coordinates as axes
+from dotfiles import envfile
 from dotfiles import paths
 from dotfiles import refusal
+from dotfiles import settings
 from dotfiles.plan import Plan
 from dotfiles.plan import Stage
 from dotfiles.privilege import Escalates
@@ -63,6 +67,7 @@ from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.session import Session
 from dotfiles.symlinks import core
+from dotfiles.symlinks import template
 from dotfiles.vocabulary import ExitCode
 
 NAME = 'symlinks'
@@ -109,6 +114,35 @@ class Link:
     @property
     def address(self) -> str:
         return f'{self.origin}/{self.source.relative_to(self.root)}'
+
+    @property
+    def rendered(self) -> bool:
+        """Whether this file is filled in and written, on every machine, rather than
+        linked or copied. `template.py` says why a file is one."""
+        return template.is_template(self.source)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Rendered:
+    """What is at a template's target, measured against this machine's rendering of it."""
+
+    content: Content | None
+    """`SAME` and `DIFFERS` compare the target with the rendered text. None where
+    nothing rendered, because there is no text to compare against."""
+
+    unset: tuple[str, ...] = ()
+    """Placeholders this machine supplies no value for, which is why nothing rendered."""
+
+    problem: str = ''
+    """Why the template could not be read or filled whatever the values."""
+
+    foreign: bool = False
+    """The target is neither a rendering of this template nor a link into the repo,
+    so `apply` replaces it only where `adoptable`."""
+
+    adoptable: bool = False
+    """A foreign target this run may replace anyway: `--force` was given, or it is
+    an untouched skeleton file. `Observed.adoptable` holds the same answer for links."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -179,6 +213,14 @@ class Observed:
     deploys by copy that is the machine most likely to be holding one.
     """
 
+    rendered: dict[Path, Rendered]
+    """What is at each template's target, on a link machine and a copy machine
+    alike. `ownership`, `pointing_at`, `adoptable` and `content` leave templates
+    out, because a rendered file is neither a link nor a copy of its source."""
+
+    env_file: Path
+    """Where this machine's values are set, for the advice on an unset one."""
+
     unreadable: tuple[core.Unreadable, ...] = ()
     """Directories the orphan scan could not read, so `orphans` is a floor rather
     than the whole set.
@@ -212,9 +254,20 @@ class Observed:
         Counted through `_verdict`, which is what decides the same question for
         every row below. A second predicate here would be free to disagree with the
         rows it is summarizing.
+
+        Rendered files get their own count. The first count's noun is `symlinks` or
+        `copies`, and a rendered file is neither.
         """
-        in_place = sum(1 for link in self.links if _verdict(link, self) is None)
-        return f'{in_place} of {len(self.links)} declared {"copies" if self.copying else "symlinks"} in place'
+        deployed = [link for link in self.links if not link.rendered]
+        rendered = [link for link in self.links if link.rendered]
+
+        def in_place(links: list[Link]) -> int:
+            return sum(1 for link in links if _verdict(link, self) is None)
+
+        said = f'{in_place(deployed)} of {len(deployed)} declared {"copies" if self.copying else "symlinks"} in place'
+        if rendered:
+            said += f', and {in_place(rendered)} of {len(rendered)} rendered files'
+        return said
 
     @property
     def inventory(self) -> tuple[Examined, ...]:
@@ -293,6 +346,17 @@ that would change nothing.
 FORCE_ADVICE = 'run it without the flag: a copy overwrites whatever is at the target, so no target is ever refused for you to force'
 """What a person who typed `--force` on a copy machine needs to hear instead."""
 
+MOVE_ASIDE_ADVICE = 'move it aside, then run: dotfiles symlinks apply'
+"""What to do about somebody's file at a template's target on a copy machine.
+
+Somebody's file at a template's target is refused there as on a link machine,
+because the template tells this manager's output apart where a copy cannot.
+`--force` is refused at that machine's door, so moving the file is the way past."""
+
+
+def _foreign_advice(copying: bool) -> str:
+    return MOVE_ASIDE_ADVICE if copying else FOREIGN_ADVICE
+
 
 class ForceUnavailable(refusal.Refusal):
     """`--force` at a machine that deploys by copy, where the flag decides nothing.
@@ -355,9 +419,10 @@ def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...
             relative = item.relative_to(source_dir)
             if core.should_exclude(relative):
                 continue
-            if destination == claimable and relative.name in reserved:
+            lands = template.deployed_as(relative)
+            if destination == claimable and lands.name in reserved:
                 continue
-            links.append(Link(source=item, target=destination / relative, origin=origin, root=source_dir))
+            links.append(Link(source=item, target=destination / lands, origin=origin, root=source_dir))
     return tuple(links)
 
 
@@ -367,14 +432,15 @@ class SymlinksResource:
 
     def observe(self, session: Session, plan: Plan) -> Observed:
         # `_index` is keyed on the Session, and two Sessions in one process compare
-        # equal by value — so a second run in the same interpreter got the first
-        # run's declaration index. A file added to the repo between them was
-        # planned correctly by this walk and then refused by `perform` as an orphan
-        # "nothing in the repo declares any more", which is the opposite of true.
+        # equal by value. Uncleared, a second run in the same interpreter reads the
+        # first run's declaration index, and `perform` refuses a file added to the
+        # repo between them as "nothing in the repo declares this link any more".
         # Cleared here because this is the one place that re-reads the repo, so it
         # is where a run's idea of what is declared begins.
         _index.cache_clear()
         links = declared(session, plan.machine.coordinates)
+        deployed = [link for link in links if not link.rendered]
+        rendered = measure_rendered(session, [link for link in links if link.rendered])
         if session.machine.wants(DEPLOY_BY_COPY):
             return Observed(
                 links=links,
@@ -382,8 +448,10 @@ class SymlinksResource:
                 ownership={},
                 pointing_at={},
                 adoptable=frozenset(),
-                content={link.target: _compare(link) for link in links},
+                content={link.target: _compare(link) for link in deployed},
                 orphans=(),
+                rendered=rendered,
+                env_file=session.env_file,
                 home=session.home.resolve(),
             )
 
@@ -391,7 +459,7 @@ class SymlinksResource:
         pointing_at: dict[Path, Path | None] = {}
         adoptable: set[Path] = set()
 
-        for link in links:
+        for link in deployed:
             ownership[link.target] = core.link_ownership(link.target, link.root)
             pointing_at[link.target] = _destination(link.target)
             if ownership[link.target] is core.Ownership.FOREIGN and (session.force or core.is_untouched_skeleton(link.target)):
@@ -408,6 +476,8 @@ class SymlinksResource:
             adoptable=frozenset(adoptable),
             content={},
             orphans=orphans,
+            rendered=rendered,
+            env_file=session.env_file,
             unreadable=scanned.skipped,
             home=session.home.resolve(),
         )
@@ -462,6 +532,9 @@ class SymlinksResource:
                 return Outcome(change, OutcomeStatus.REFUSED, 'nothing in the repo declares this link any more')
             return _prune(change, target)
 
+        if link.rendered:
+            return _render(session, change, link)
+
         if session.machine.wants(DEPLOY_BY_COPY):
             return _copy(change, link)
 
@@ -502,14 +575,110 @@ def _compare(link: Link) -> Content:
     guard: a source that is itself a broken symlink fails the same way and means
     the same thing.
     """
-    if link.target.is_symlink():
+    return _measure(link.target, link.source.read_bytes)
+
+
+def _measure(target: Path, expected: Callable[[], bytes]) -> Content:
+    """What is at one target against the bytes it should hold, in `_compare`'s order."""
+    if target.is_symlink():
         return Content.LINKED
-    if not link.target.exists():
+    if not target.exists():
         return Content.ABSENT
     try:
-        return Content.SAME if link.target.read_bytes() == link.source.read_bytes() else Content.DIFFERS
+        return Content.SAME if target.read_bytes() == expected() else Content.DIFFERS
     except OSError:
         return Content.UNREADABLE
+
+
+def machine_values(session: Session, names: Iterable[str]) -> dict[str, str]:
+    """This machine's answer to each name, from `~/.env` the way `env`'s check
+    reads it, and never from this process's environment."""
+    wanted = set(names)
+    on_file = envfile.read(session.env_file)
+    shared = [name for name in wanted if name in settings.SHARED_PATHS]
+    resolved = settings.resolve_all(shared, settings.read_config()) if shared else settings.Resolved({})
+    return {name: settings.answer(name, on_file, resolved) for name in wanted}
+
+
+def measure_rendered(session: Session, templates: list[Link]) -> dict[Path, Rendered]:
+    """Each template rendered with this machine's values, and its target measured against that."""
+    if not templates:
+        return {}
+    named: dict[Path, tuple[str, ...]] = {}
+    measured: dict[Path, Rendered] = {}
+    for link in templates:
+        try:
+            named[link.target] = template.placeholders(link.source)
+        except OSError as unreadable:
+            measured[link.target] = Rendered(None, problem=f'the template cannot be read: {unreadable.strerror}')
+    values = machine_values(session, (name for names in named.values() for name in names))
+
+    for link in templates:
+        if link.target in measured:
+            continue
+        if problem := template.malformed(link.source):
+            measured[link.target] = Rendered(None, problem=f'the template cannot be filled: {problem}')
+            continue
+        rendering = template.render(link.source, values)
+        if not rendering.complete:
+            measured[link.target] = Rendered(None, unset=rendering.unset)
+            continue
+        content = _measure(link.target, rendering.text.encode)
+        foreign = _foreign(link, content, copying=session.machine.wants(DEPLOY_BY_COPY))
+        measured[link.target] = Rendered(
+            content,
+            foreign=foreign,
+            adoptable=foreign and (session.force or core.is_untouched_skeleton(link.target)),
+        )
+    return measured
+
+
+def _foreign(link: Link, content: Content, *, copying: bool) -> bool:
+    """Whether a template's target holds something this manager did not write.
+
+    A regular file is this manager's where it is a rendering of the template with
+    any values. A link is this manager's where it resolves into the repo, which is
+    where deploying the file as a link points it. On a copy machine every link
+    counts as this manager's, as `_copy_verdict` treats one. A file that cannot be
+    read as text is nobody's rendering.
+    """
+    match content:
+        case Content.LINKED:
+            return not copying and core.link_ownership(link.target, link.root) is core.Ownership.FOREIGN
+        case Content.DIFFERS:
+            try:
+                return not template.is_rendering_of(link.source, link.target.read_text())
+            except (OSError, ValueError):
+                return True
+        case Content.ABSENT | Content.SAME | Content.UNREADABLE:
+            return False
+    assert_never(content)
+
+
+def _render(session: Session, change: Change, link: Link) -> Outcome:
+    """Write the template with this machine's values, rendered again live.
+
+    `perform` re-checks everything, and this re-renders for the same reason:
+    `~/.env` may have changed since `observe` read it, and the target may have
+    been edited. A value gone unset is refused, and so is a target that has become
+    somebody's file. Either way the target keeps what it held.
+    """
+    try:
+        values = machine_values(session, template.placeholders(link.source))
+        rendering = template.render(link.source, values)
+    except (OSError, ValueError) as problem:
+        return Outcome(change, OutcomeStatus.FAILED, str(problem))
+    if not rendering.complete:
+        return Outcome(change, OutcomeStatus.REFUSED, f'nothing sets {", ".join(rendering.unset)}, so {link.target} was left as it was')
+    copying = session.machine.wants(DEPLOY_BY_COPY)
+    content = _measure(link.target, rendering.text.encode)
+    if _foreign(link, content, copying=copying) and not (session.force or core.is_untouched_skeleton(link.target)):
+        return Outcome(change, OutcomeStatus.REFUSED, f'a target this manager did not create; {_foreign_advice(copying)}')
+    try:
+        template.write(link.target, rendering.text)
+    except OSError as problem:
+        return Outcome(change, OutcomeStatus.FAILED, str(problem))
+    return Outcome(change, OutcomeStatus.DONE, f'rendered {link.address} → {link.target}')
 
 
 def remove_copies(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
@@ -541,6 +710,8 @@ def remove_copies(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
     kept: list[tuple[Path, str]] = []
 
     for link in declared(session, session.machine.coordinates):
+        if link.rendered:
+            continue
         state = _compare(link)
         match state:
             case Content.ABSENT:
@@ -619,6 +790,9 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
     and `assert_never` closes the match. Adding an `Ownership` member is then a
     mypy error here rather than a target this resource stops reporting on.
     """
+    if link.rendered:
+        return _rendered_verdict(link, observed)
+
     if observed.copying:
         return _copy_verdict(link, observed)
 
@@ -736,6 +910,158 @@ def _copy_verdict(link: Link, observed: Observed) -> Change | None:
             return None
 
     assert_never(state)
+
+
+def _rendered_verdict(link: Link, observed: Observed) -> Change | None:
+    """The copy branch's answers, decided against this machine's rendering, with
+    the link branch's refusal of a target this manager did not write.
+
+    An unset value comes first and is `BY_HAND`, because `apply` cannot invent
+    one and must not write the file without it. The target is not judged at all
+    then: with no rendering there is nothing to compare it against.
+    """
+    rendered = observed.rendered.get(link.target, Rendered(None, problem='nothing measured it'))
+
+    if rendered.problem:
+        return Change(
+            NAME,
+            Stage.SYMLINKS,
+            link.address,
+            Verdict.UNKNOWN,
+            repair=Repair.NONE,
+            detail=f'{link.target} was not rendered: {rendered.problem}',
+        )
+
+    if rendered.unset:
+        names = ', '.join(rendered.unset)
+        return Change(
+            NAME,
+            Stage.SYMLINKS,
+            link.address,
+            Verdict.MISSING,
+            repair=Repair.BY_HAND,
+            detail=f'cannot be rendered while nothing sets {names}, so {link.target} is left as it is',
+            advice=settings.where_to_name(rendered.unset[0], observed.env_file),
+        )
+
+    if rendered.foreign:
+        if rendered.adoptable:
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.STALE,
+                repair=Repair.AUTOMATIC,
+                detail=f'{link.target} exists and will be adopted',
+            )
+        return Change(
+            NAME,
+            Stage.SYMLINKS,
+            link.address,
+            Verdict.STALE,
+            repair=Repair.BY_HAND,
+            detail=f'{paths.under_home(link.target, observed.home)} is not a rendering of {link.address}, so this manager did not write it',
+            advice=_foreign_advice(observed.copying),
+        )
+
+    match rendered.content:
+        case Content.ABSENT:
+            return Change(
+                NAME, Stage.SYMLINKS, link.address, Verdict.MISSING, repair=Repair.AUTOMATIC, detail=f'{link.target} does not exist'
+            )
+
+        case Content.LINKED:
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.STALE,
+                repair=Repair.AUTOMATIC,
+                detail=f'{link.target} is a symlink, and this file is rendered from a template',
+            )
+
+        case Content.DIFFERS:
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.STALE,
+                repair=Repair.AUTOMATIC,
+                detail=f"{link.target} holds a rendering with values other than this machine's",
+            )
+
+        case Content.UNREADABLE | None:
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.UNKNOWN,
+                repair=Repair.NONE,
+                detail=f'{link.target} could not be read, so nothing was established about it',
+            )
+
+        case Content.SAME:
+            return None
+
+    assert_never(rendered.content)
+
+
+def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
+    """Take back every rendered file, and name what stays.
+
+    A target that is a rendering of its template, with this machine's values or
+    earlier ones, is this manager's output and goes. Anything else is left with
+    its reason.
+    """
+    templates = [link for link in declared(session, session.machine.coordinates) if link.rendered]
+    measured = measure_rendered(session, templates)
+    removed = 0
+    kept: list[tuple[Path, str]] = []
+
+    for link in templates:
+        rendered = measured[link.target]
+        if rendered.problem:
+            if link.target.exists() or link.target.is_symlink():
+                kept.append((link.target, rendered.problem))
+            continue
+        if rendered.unset:
+            if link.target.exists() or link.target.is_symlink():
+                kept.append((link.target, f'nothing sets {", ".join(rendered.unset)}, so there is no rendering to compare it with'))
+            continue
+
+        match rendered.content:
+            case Content.ABSENT:
+                pass
+
+            case Content.SAME:
+                removed += _unlink_rendering(link.target, kept)
+
+            case Content.LINKED:
+                kept.append((link.target, 'a symlink rather than a rendered file'))
+
+            case Content.DIFFERS if rendered.foreign:
+                kept.append((link.target, f'is not a rendering of {link.address}'))
+
+            case Content.DIFFERS:
+                removed += _unlink_rendering(link.target, kept)
+
+            case Content.UNREADABLE | None:
+                kept.append((link.target, 'could not be read, so nothing was established about it'))
+
+            case _ as unmatched:
+                assert_never(unmatched)
+
+    return removed, tuple(kept)
+
+
+def _unlink_rendering(target: Path, kept: list[tuple[Path, str]]) -> int:
+    """Remove one rendering, counting it, or record why it stays."""
+    try:
+        target.unlink()
+    except OSError as problem:
+        kept.append((target, str(problem)))
+        return 0
+    return 1
 
 
 def _destination(target: Path) -> Path | None:

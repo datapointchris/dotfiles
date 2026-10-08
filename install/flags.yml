@@ -147,6 +147,23 @@ required:
     consumers:
       - configs/common/.config/newsboat/config
 
+  # The atuin server this machine syncs shell history to. It is an address on the
+  # machine's own network, which this public repo must not carry. dotfiles
+  # renders it into atuin's config from the template named below, so an unset
+  # value leaves that file unrendered and `dotfiles check` names this entry.
+  #
+  # The name is atuin's own environment variable. The template's comment on
+  # `sync_address` says why the file carries the value instead.
+  #
+  # Scoped by trust alone, because the scheduler and linux-lxc-server share every
+  # coordinate. The scheduler declines atuin sync and still has to set this value
+  # before its check is green.
+  - name: ATUIN_SYNC_ADDRESS
+    description: URL of the atuin server this machine syncs shell history to
+    network_trust: fleet
+    consumers:
+      - configs/trust/fleet/.config/atuin/config.toml.tmpl
+
   # Not a service this repo deploys — an audio host on somebody's own network,
   # reached by two aliases. Declared for the reason the block above gives: the
   # generated block in `~/.env` is the only thing that tells a rebuilt machine a
@@ -302,34 +319,6 @@ required_files:
     restore: "write it with `safekeep config init`, then `dotfiles machines requirements --safekeep`"
     consumers:
       - safekeep
-
-  # The whole file, which no other entry here asks for, and the reason is that
-  # atuin offers no seam at all. Measured on 18.21.0: ATUIN_CONFIG_DIR is the only
-  # environment variable it reads, per `atuin info`; a scratch config naming one
-  # address and ATUIN_SYNC_ADDRESS naming another resolved to the file both times;
-  # and TOML has no include.
-  #
-  # Dropping the address alone was the alternative and is worse than the
-  # disclosure it repairs. atuin's compiled default is https://api.atuin.sh, so a
-  # machine with auto_sync on and no address starts pushing shell history at a
-  # third party — silently, which is the failure a missing value is supposed to
-  # replace.
-  #
-  # What that costs: auto_sync, sync_frequency, update_check and ai.enabled stop
-  # being repo-managed on fleet machines and can drift between them. The header
-  # prose is not lost — the nonfleet copy carries the same block, and every
-  # setting is named in `restore:` below.
-  - name: atuin config.toml
-    path: ~/.config/atuin/config.toml
-    description: atuin's client config, including the history-sync server this machine reaches
-    network_trust: fleet
-    file_must_exist: true
-    restore: >-
-      write auto_sync = true, sync_frequency = "5m", update_check = false, [ai] enabled = false,
-      and sync_address naming this machine's own atuin server; keep the encryption key beside it,
-      because losing that loses the history
-    consumers:
-      - atuin
 
 flags:
   - name: ZSHRC_DEBUG

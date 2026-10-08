@@ -112,6 +112,10 @@ collision, never an override. `shell/` holds **layers**, and every one a machine
 `configs/` and `apps/` hold **variants**, and exactly one file arrives — so a config differing on one
 machine moves out of `common/` whole rather than being patched.
 
+**A config that has to name a per-machine value is a `.tmpl`.** It deploys without the suffix, rendered
+with `${NAME}` filled from a `required:` value in `install/flags.yml`, and it collides by that deployed
+name. `docs/reference/tools/symlinks.md` says when a file earns one.
+
 **Machine-local shell code goes in `~/.local/shell/local.sh`**, sourced last by `.zshrc` and never in
 this repo, because it holds internal hostnames. safekeep restores it, so it is legitimately absent
 between an apply and the restore step. A generic mechanism belongs in its coordinate layer; the values
