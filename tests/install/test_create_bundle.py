@@ -389,7 +389,7 @@ class TestInstallScriptVersions:
     measured, which is the one answer `currency_of` exists to refuse.
     """
 
-    def stage(self, tmp_path, monkeypatch, entries, latest=None, uv_version='0.9.7'):
+    def stage(self, tmp_path, monkeypatch, entries, latest=None):
         """Stage the script rows for some entries, and hand back the manifest."""
         staging = tmp_path / 'installers'
         bundle = create_bundle.Bundle(staging, 'linux', 'x86_64', 'a-machine', BUILT_AT)
@@ -398,7 +398,7 @@ class TestInstallScriptVersions:
         monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: (latest or {})[repo])
 
         items = tuple(planned(entry, 'custom_installers') for entry in entries)
-        create_bundle.add_install_scripts(bundle, items, uv_version)
+        create_bundle.add_install_scripts(bundle, items)
         bundle.write_metadata()
 
         monkeypatch.setenv('DOTFILES_BUNDLE', str(staging.parent))
@@ -451,17 +451,6 @@ class TestInstallScriptVersions:
         assert staged is not None
         assert staged.version == ''
         assert ghrelease.bundle_version('claude-code') is None
-
-    def test_the_uv_row_carries_the_uv_the_bundle_staged(self, tmp_path, monkeypatch):
-        """astral.sh serves one unversioned script that installs the newest uv, and
-        `add_uv` already resolved which one that is. Asking again would let the two
-        rows describing one uv disagree."""
-        self.stage(tmp_path, monkeypatch, [], uv_version='0.9.7')
-
-        staged = bundle_manifest.staged('uv', 'script')
-
-        assert staged is not None
-        assert staged.version == '0.9.7'
 
     def test_no_row_says_latest(self, tmp_path, monkeypatch):
         """The regression itself. `latest` parses as neither a version nor an absence,

@@ -26,15 +26,21 @@ run doing the installing.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
 
+import yaml
+
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles import versions
+from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
+from dotfiles.output import err_console
 from dotfiles.privilege import Escalates
 from dotfiles.privilege import PrivilegeUnavailable
 from dotfiles.privilege import refusal
@@ -42,43 +48,99 @@ from dotfiles.providers import BIN_DIR
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
+from dotfiles.providers import bundle
 from dotfiles.providers import npm
+from dotfiles.providers import place
 from dotfiles.providers import script
+from dotfiles.providers import staged_bundles
 
 # ─────────────────────────────────────────────────────────────────────────────
 # uv
 # ─────────────────────────────────────────────────────────────────────────────
 
-UV_INSTALL_URL = 'https://astral.sh/uv/install.sh'
-"""Also spelled in `install.sh`, and that duplicate is the bootstrap's defining
-property rather than an oversight: it runs before this package exists to be
-asked. The offline bundler reads it from here, which retired the third copy."""
+UV_INSTALL_URL = 'https://astral.sh/uv/{version}/install.sh'
+"""astral's install script for one release, which installs that release and no other.
+
+`install.sh` spells the unversioned script, which installs whatever is newest.
+That is all the bootstrap needs, since it runs before this package exists to read
+the pin, and the first apply converges what it installed."""
+
+UV_WINDOWS_INSTALL_URL = 'https://astral.sh/uv/{version}/install.ps1'
+"""The same release's PowerShell installer, which Windows runs for the reason `install.sh` gives."""
+
+UV_BUNDLED = 'uv'
+"""The category and the name of the bundle row for `bin/uv`, as `create_bundle.add_uv` records it."""
+
+BUNDLE_BIN = 'bin'
+"""The bundle directory holding uv, which `install.sh` also copies from."""
+
+UV_HOOK_REPO = 'https://github.com/astral-sh/uv-pre-commit'
+"""The hook whose rev names the uv release, tagged as the bare release number."""
+
+UV_PIN = re.compile(r'v?(\d+(?:\.\d+)*)')
 
 DEFAULT_PYTHON = '3.13'
 """The interpreter `uv run` resolves against when a project pins nothing."""
 
 
-def install_uv(*, offline: bool) -> Result:
-    """uv itself, then the interpreter everything else resolves against.
+class UnpinnedUv(Exception):
+    """.pre-commit-config.yaml names no single uv release, so there is nothing to converge to."""
 
-    The first half is nearly always a no-op: `install.sh` puts uv on the box
-    before this package exists to be run, so the CLI is already running on it.
-    The second half is the part with no other home — the bootstrap installs uv in
-    order to install this package, and which Python is *default* afterwards is a
+
+def pinned_uv(config: Path | None = None) -> str:
+    """The uv release the uv-pre-commit hook's rev names in `.pre-commit-config.yaml`.
+
+    The uv-lock hook and CI's lock check run that release. A `uv.lock` records the
+    format revision of whichever uv last changed it, so a machine at any other
+    release flips the revision against theirs.
+
+    Every scalar loads as a string, so a rev written `0.10` stays `0.10` rather
+    than becoming the float `0.1`.
+    """
+    path = config or paths.PRE_COMMIT_CONFIG
+    try:
+        declared = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+    except (OSError, yaml.YAMLError) as error:
+        raise UnpinnedUv(f'could not read the uv pin from {path}: {error}') from error
+    hooks = declared.get('repos', []) if isinstance(declared, dict) else []
+    revs = [hook.get('rev') for hook in hooks if isinstance(hook, dict) and hook.get('repo') == UV_HOOK_REPO]
+    if not revs:
+        raise UnpinnedUv(f'{path} carries no {UV_HOOK_REPO} hook, so no uv release is pinned')
+    exact = UV_PIN.fullmatch(revs[0] or '')
+    if exact is None:
+        raise UnpinnedUv(f'{path} pins the uv hook at {revs[0]!r}, which is not a release number')
+    return exact.group(1)
+
+
+def install_uv(config: Path, os_family: OSFamily, *, offline: bool) -> Result:
+    """The uv release `config` pins, then the interpreter everything else resolves against.
+
+    Never `uv self update`, which needs the receipt astral's installer writes, and
+    a uv copied out of a bundle has none.
+
+    A uv at the pin is left wherever it is, since it writes the pinned lock format.
+
+    Which Python is *default* is the second half, and it has no other home. The
+    bootstrap installs uv to install this package, so the default interpreter is a
     convergence question about the machine rather than a bootstrap one.
     """
-    if shutil.which('uv') is None:
-        placed = script.run(
-            'uv',
-            UV_INSTALL_URL,
-            offline=offline,
-            env={'XDG_BIN_HOME': str(bin_dir()), 'UV_NO_MODIFY_PATH': '1'},
-        )
+    try:
+        version = pinned_uv(config)
+    except UnpinnedUv as error:
+        return Result(False, str(error), kind=Kind.DECLARATION_INVALID)
+
+    found = shutil.which('uv')
+    if found is None or not versions.exactly(uv_version() or '', version):
+        if found is not None and (refusal := uv_installed_elsewhere(Path(found), version)):
+            return refusal
+        placed = _uv_from_bundle(version) or _uv_from_vendor(version, os_family, offline=offline)
         if not placed.ok:
             return placed
         put_on_path(bin_dir())
-        if shutil.which('uv') is None:
-            return Result(False, f'the uv install script ran but uv is not in {bin_dir()}', kind=Kind.VERIFY_FAILED)
+        reported = uv_version() if shutil.which('uv') else None
+        if not versions.exactly(reported or '', version):
+            held = f'uv {reported}' if reported else 'a uv that will not report a version'
+            return Result(False, f'{bin_dir()} holds {held} after installing uv {version}', kind=Kind.VERIFY_FAILED)
 
     chosen = effects.run(
         ['uv', 'python', 'install', '--preview-features', 'python-install-default', '--default', DEFAULT_PYTHON],
@@ -86,10 +148,85 @@ def install_uv(*, offline: bool) -> Result:
     if not chosen.ok:
         return Result(
             False,
-            f'uv is installed but making python {DEFAULT_PYTHON} the default exited {chosen.returncode}',
+            f'uv {version} is installed but making python {DEFAULT_PYTHON} the default exited {chosen.returncode}',
             kind=Kind.COMMAND_FAILED,
         )
-    return Result(True, f'uv, with python {DEFAULT_PYTHON} as the default', kind=Kind.APPLIED)
+    return Result(True, f'uv {version}, with python {DEFAULT_PYTHON} as the default', kind=Kind.APPLIED)
+
+
+def uv_installed_elsewhere(found: Path, pin: str) -> Result | None:
+    """The refusal for the uv at `found`, or None where `install_uv` wrote it.
+
+    A uv outside `bin_dir()` came from a package manager, pip or cargo. astral's
+    installer would write beside it, and PATH would still run the other one.
+    `resources/toolchains.py` reports this detail and advice as a by-hand repair,
+    so plan names the refusal apply would return.
+    """
+    if found.parent == bin_dir():
+        return None
+    return Result(
+        False,
+        f'uv resolves to {found}, which this repo did not install, so it cannot be held at {pin}',
+        advice=f'remove that uv and apply again; the one this repo installs goes in {bin_dir()}',
+        kind=Kind.TARGET_UNUSABLE,
+        refused=True,
+    )
+
+
+def uv_installer_url(version: str, os_family: OSFamily) -> str:
+    """astral's installer for `version` on `os_family`, which the network probe checks too."""
+    return (UV_WINDOWS_INSTALL_URL if os_family is OSFamily.WINDOWS else UV_INSTALL_URL).format(version=version)
+
+
+def _uv_from_bundle(version: str) -> Result | None:
+    """`bin/uv` out of the newest staged bundle whose own row names `version`, or None.
+
+    The row and the binary come out of one bundle, so a newer bundle's row cannot
+    vouch for an older bundle's binary. An online run takes it too, since the
+    bytes are the pinned release's and need no download.
+    """
+    for root in staged_bundles():
+        row = bundle.row_in(root, UV_BUNDLED, UV_BUNDLED)
+        if row is None or not versions.exactly(row.version, version):
+            continue
+        binary = root / BUNDLE_BIN / row.filename
+        if binary.is_file():
+            err_console.print(f'uv: {binary}', soft_wrap=True)
+            place(binary, bin_dir() / row.filename)
+            return Result(True, '', kind=Kind.APPLIED)
+    return None
+
+
+def _uv_from_vendor(version: str, os_family: OSFamily, *, offline: bool) -> Result:
+    """astral's installer for `version`, from the network and never from a bundle.
+
+    The script downloads the release it names, so a staged copy of it cannot
+    install anything offline.
+    """
+    if offline:
+        carried = bundle.staged(UV_BUNDLED, UV_BUNDLED)
+        newest = f'. The newest staged bundle carries uv {carried.version}' if carried else ''
+        return Result(
+            False,
+            f'no staged bundle holds uv {version}, the release the uv-pre-commit hook pins{newest}',
+            advice=bundle.REBUILD,
+            kind=Kind.NOT_IN_BUNDLE,
+            refused=True,
+        )
+    return script.run(
+        'uv',
+        uv_installer_url(version, os_family),
+        offline=False,
+        env={'XDG_BIN_HOME': str(bin_dir()), 'UV_NO_MODIFY_PATH': '1'},
+        interpreter=script.POWERSHELL if os_family is OSFamily.WINDOWS else script.BASH,
+        from_bundle=False,
+    )
+
+
+def uv_version() -> str | None:
+    """The release the uv on PATH reports, or None when it will not say."""
+    reported = effects.run(['uv', '--version'], output=Output.QUIET)
+    return versions.written_in(reported.transcript) if reported.ok else None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

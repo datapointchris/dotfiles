@@ -106,7 +106,7 @@ def bundlable(entry: object) -> typing.TypeGuard[Bundled]:
     it. Split, a tool could be outside one and a permanent fault in the other.
 
     A `CustomInstaller` answers both ways — staged only where the entry declares
-    `bundle_install_script`, so `awscli` is outside and `uv` is inside.
+    `bundle_install_script`, so `awscli` is outside and `claude-code` is inside.
     """
     if not isinstance(entry, BUNDLED_KINDS):
         return False

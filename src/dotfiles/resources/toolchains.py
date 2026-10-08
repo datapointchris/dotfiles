@@ -10,15 +10,19 @@ is the provider's answer and never a second `which` here: two independent probes
 let a packaged `go` satisfy a toolchain unpacked to a path nothing checked.
 
 uv is ungated and always planned, because everything installed later resolves
-through it — the symlink phase included, which shells out to `uv run`.
+through it — the symlink phase included, which shells out to `uv run`. It is also
+the one runtime held to a single release rather than a floor: the uv-pre-commit
+hook's rev in the repo's own `.pre-commit-config.yaml`.
 """
 
 from __future__ import annotations
 
 import dataclasses as dc
+from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
+from dotfiles import paths
 from dotfiles import registry
 from dotfiles import versions
 from dotfiles.plan import DesiredItem
@@ -36,6 +40,8 @@ from dotfiles.session import Session
 NAME = 'toolchains'
 
 GO_RUNTIME = 'go'
+
+UV_RUNTIME = 'uv'
 
 GONOSUMDB_VAR = 'GONOSUMDB'
 
@@ -61,6 +67,14 @@ class Observed:
     machine looks like. A half-extracted tarball leaves the binary in place and
     `which` satisfied by it.
     """
+
+    uv_pin: str = ''
+    """The uv release the repo's uv-pre-commit hook pins, or '' with `uv_unpinned` saying why."""
+
+    uv_unpinned: str = ''
+
+    uv_at: Path | None = None
+    """Where the uv that answered lives. One outside `~/.local/bin` is a by-hand repair, because `install_uv` refuses it."""
 
     module_env: str | None = None
     """What `go env GONOSUMDB` answers, or None where there is no Go to ask.
@@ -107,6 +121,7 @@ class ToolchainsResource:
         absent: dict[str, str] = {}
         examined: list[Examined] = []
         go_probe = ''
+        uv_at: Path | None = None
 
         for item in plan.for_resource(NAME):
             # Asked of the provider rather than of PATH. A runtime with a fixed
@@ -131,12 +146,27 @@ class ToolchainsResource:
                 examined.append(Examined(item.address, version))
                 if item.name == GO_RUNTIME:
                     go_probe = probe
+                if item.name == UV_RUNTIME:
+                    uv_at = found.binary
 
         # The same binary the version came from, so the settings measured belong
         # to the toolchain measured. Resolving a second one here is how the two
         # answers come from two different Go installs on a box carrying both.
         module_env = toolchain.go_env_setting(go_probe, GONOSUMDB_VAR) if go_probe else None
-        return Observed(reported=reported, absent=absent, module_env=module_env, examined=tuple(examined))
+
+        try:
+            uv_pin, uv_unpinned = toolchain.pinned_uv(session.repo / paths.PRE_COMMIT_CONFIG.name), ''
+        except toolchain.UnpinnedUv as error:
+            uv_pin, uv_unpinned = '', str(error)
+        return Observed(
+            reported=reported,
+            absent=absent,
+            uv_pin=uv_pin,
+            uv_unpinned=uv_unpinned,
+            uv_at=uv_at,
+            module_env=module_env,
+            examined=tuple(examined),
+        )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         changes = []
@@ -157,6 +187,10 @@ class ToolchainsResource:
                 continue
 
             reported = observed.reported[item.name]
+            if item.name == UV_RUNTIME:
+                changes.extend(_against_pin(item, reported, observed))
+                continue
+
             floor = _floor(item)
             if not floor:
                 continue
@@ -214,6 +248,53 @@ class ToolchainsResource:
         if change.item == GO_ENV_ITEM:
             return Outcome.from_result(change, toolchain.set_go_env())
         return registry.install(session, change, privilege)
+
+
+def _against_pin(item: DesiredItem, reported: str, observed: Observed) -> tuple[Change, ...]:
+    """uv against the one release the repo pins, where every other runtime meets a floor.
+
+    A uv above the pin is as wrong as one below, because either writes `uv.lock`
+    in its own format revision. uv itself runs at any release, so this STALE row
+    is the only report a machine has drifted.
+    """
+    if observed.uv_unpinned:
+        return (Change(NAME, item.stage, item.address, Verdict.UNKNOWN, repair=Repair.NONE, detail=observed.uv_unpinned, desired=item),)
+
+    matches = versions.exactly(reported, observed.uv_pin)
+    if matches is None:
+        detail = f'pinned to {observed.uv_pin} and reported {reported!r}, which has no version in it'
+        return (
+            Change(NAME, item.stage, item.address, Verdict.UNKNOWN, repair=Repair.NONE, detail=detail, desired=item, observed=reported),
+        )
+    if matches:
+        return ()
+    refusal = toolchain.uv_installed_elsewhere(observed.uv_at, observed.uv_pin) if observed.uv_at else None
+    if refusal is not None:
+        return (
+            Change(
+                NAME,
+                item.stage,
+                item.address,
+                Verdict.STALE,
+                repair=Repair.BY_HAND,
+                detail=refusal.detail,
+                advice=refusal.advice,
+                desired=item,
+                observed=reported,
+            ),
+        )
+    return (
+        Change(
+            NAME,
+            item.stage,
+            item.address,
+            Verdict.STALE,
+            repair=Repair.AUTOMATIC,
+            detail=f'pinned to {observed.uv_pin} by the uv-pre-commit hook, and any other release writes uv.lock in its own format',
+            desired=item,
+            observed=reported,
+        ),
+    )
 
 
 def _floor(item: DesiredItem) -> str:

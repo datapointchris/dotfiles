@@ -136,7 +136,8 @@ def test_the_runtime_urls_are_the_installers_own() -> None:
 
     targets = {probe.target for probe in probes_for(WSL) if probe.section == 'language_manager'}
 
-    assert targets == {toolchain.UV_INSTALL_URL, toolchain.GO_VERSION_URL, toolchain.RUSTUP_URL}
+    uv = toolchain.UV_INSTALL_URL.format(version=toolchain.pinned_uv())
+    assert targets == {uv, toolchain.GO_VERSION_URL, toolchain.RUSTUP_URL}
 
 
 def test_the_results_file_keeps_its_column_layout() -> None:
@@ -316,6 +317,20 @@ def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped(monkeyp
     assert derived.unprobed
     assert all('installs from nothing' in reason for reason in derived.unprobed)
     assert not any(probe.section == 'custom_installer' for probe in derived.probes)
+
+
+def test_a_repo_pinning_no_uv_names_the_uv_installer_as_unprobed(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dotfiles.providers import toolchain
+
+    def unpinned(*_config: object) -> str:
+        raise toolchain.UnpinnedUv('carries no uv-pre-commit hook')
+
+    monkeypatch.setattr(toolchain, 'pinned_uv', unpinned)
+
+    derived = network.derive(machines.load(WSL))
+
+    assert 'uv installer: carries no uv-pre-commit hook' in derived.unprobed
+    assert not any(probe.name == 'uv installer' for probe in derived.probes)
 
 
 def test_the_summary_counts_what_the_rows_say() -> None:

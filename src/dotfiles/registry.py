@@ -37,6 +37,7 @@ from dotfiles import catalog as catalogs
 from dotfiles import coordinates
 from dotfiles import evidence as ev
 from dotfiles import machine as machines
+from dotfiles import paths
 from dotfiles import plan as planning
 from dotfiles import providers
 from dotfiles.plan import DesiredItem
@@ -1070,10 +1071,14 @@ class ToolchainProvider(Provider):
 
 @dc.dataclass(frozen=True, slots=True)
 class UvToolchain(ToolchainProvider):
-    """astral's install script, then the default interpreter it manages."""
+    """uv at the release the session's uv-pre-commit hook pins, then the default interpreter it manages."""
 
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
-        return toolchain.install_uv(offline=session.offline)
+        return toolchain.install_uv(
+            session.repo / paths.PRE_COMMIT_CONFIG.name,
+            session.machine.coordinates.os_family,
+            offline=session.offline,
+        )
 
 
 @dc.dataclass(frozen=True, slots=True)

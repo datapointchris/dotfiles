@@ -207,15 +207,16 @@ def derive(machine: machines.Machine) -> Derived:
     """
     plan = resolve.resolve(catalog.load(), machine)
     installers, unprobed = _custom_installer_probes(plan, coordinates.target_for(machine.coordinates))
+    runtimes, runtimes_unprobed = _runtime_probes(machine.coordinates.os_family)
     return Derived(
         probes=(
             *_release_probes(plan),
             *_clone_probes(plan),
             *installers,
-            *_runtime_probes(),
+            *runtimes,
             *_registry_probes(plan),
         ),
-        unprobed=unprobed,
+        unprobed=(*unprobed, *runtimes_unprobed),
     )
 
 
@@ -302,17 +303,22 @@ def _custom_installer_probes(plan: planning.Plan, target: Target) -> tuple[tuple
     return tuple(found), tuple(unprobed)
 
 
-def _runtime_probes() -> tuple[Probe, ...]:
+def _runtime_probes(os_family: coordinates.OSFamily) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
     """Where the language runtimes come from, imported rather than retyped.
 
     The installer's own constant is the one that decides where a real install
-    goes, so a probe holding its own copy can measure a URL nothing uses.
+    goes, so a probe holding its own copy can measure a URL nothing uses. uv's
+    URL names the pinned release, so a repo pinning none leaves it unprobed.
     """
-    return (
-        Probe('language_manager', 'uv installer', toolchain.UV_INSTALL_URL),
+    found = [
         Probe('language_manager', 'go.dev', toolchain.GO_VERSION_URL),
         Probe('language_manager', 'rustup', toolchain.RUSTUP_URL),
-    )
+    ]
+    try:
+        uv = toolchain.uv_installer_url(toolchain.pinned_uv(), os_family)
+    except toolchain.UnpinnedUv as error:
+        return tuple(found), (f'uv installer: {error}',)
+    return (Probe('language_manager', 'uv installer', uv), *found), ()
 
 
 REGISTRY_PROBES: tuple[tuple[type[catalog.Entry], str, str], ...] = (
