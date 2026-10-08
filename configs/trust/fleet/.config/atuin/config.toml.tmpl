@@ -36,6 +36,11 @@ sync_frequency = "5m"
 # startup update check is just noise + a network round-trip.
 update_check = false
 
+# Enter in Ctrl-R search runs the selected command, and Tab puts it at the prompt
+# for editing. Without this key atuin keeps its older default, where Enter only
+# puts the command at the prompt.
+enter_accept = true
+
 # Atuin's natural-language mode binds `?` at the start of a line, where it opens an
 # "Atuin AI is not yet configured" menu instead of inserting a question mark.
 # Configuring it means either an Atuin Hub account or self-hosting
