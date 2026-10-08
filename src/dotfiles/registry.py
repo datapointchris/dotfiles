@@ -991,8 +991,11 @@ class ToolchainProvider(Provider):
     installed_at: str = ''
     """Where this runtime must live, for one that is installed to a fixed path.
 
-    Empty for the three that go wherever their own installer puts them, and read
-    from `toolchain.GO_ROOT` for Go, which is unpacked over `/usr/local/go`.
+    Empty for a runtime whose own installer chooses where it goes. A `~` is
+    expanded when the row is planned.
+
+    `which` answers for whatever PATH the caller runs under, and a service unit's
+    PATH need not name a fixed home.
 
     It exists because `which` answers a different question than the declaration
     asks. A container picked up Arch's `go` package transitively, `which go` found
@@ -1035,7 +1038,7 @@ class ToolchainProvider(Provider):
                 stage=self.stage,
                 name=self.runtime,
                 executable=self.executable,
-                evidence_path=self.installed_at,
+                evidence_path=str(Path(self.installed_at).expanduser()) if self.installed_at else '',
                 precondition=planning.Precondition.NONE,
                 entry=declared_runtime(declaration, self.runtime),
                 reason=Reason(self.browses(), f'section:{self.needed_by}' if self.needed_by else 'every machine'),
@@ -1147,24 +1150,29 @@ class SystemConfigProvider(Provider):
     def needs_root(self, item: DesiredItem) -> bool:
         return isinstance(item.entry, catalogs.SystemConfig) and item.entry.needs_root
 
-    def states(self, items: Sequence[DesiredItem]) -> dict[str, sysconfig.State]:
+    def states(self, items: Sequence[DesiredItem], session: MachineContext) -> dict[str, sysconfig.State]:
         """Every row's state, batching what this provider knows how to batch.
 
         A dict per provider rather than one function branching on the entry class:
         the batch hook below is the whole reason such a dispatch would exist, and it
         belongs to the one provider that needs it.
+
+        The run is handed to every row so a step can read its manifest while
+        measuring. The planned item carries the catalog row and not the manifest.
         """
         stores = self.stores([entry for item in items if isinstance(entry := item.entry, catalogs.SystemConfig)])
-        return {item.address: self.state(_configuration(item.entry), stores) for item in items}
+        return {item.address: self.state(_configuration(item.entry), stores, session) for item in items}
 
     def stores(self, entries: Sequence[catalogs.SystemConfig]) -> dict[macdefaults.Domain, dict[str, object] | None]:
         """A bulk read this provider can do once for all its rows. Usually none."""
         return {}
 
-    def state(self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
+    def state(
+        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], session: MachineContext
+    ) -> sysconfig.State:
         return sysconfig.observe(entry)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates) -> Result:
+    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, session: MachineContext) -> Result:
         return sysconfig.apply(entry, privilege)
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
@@ -1173,10 +1181,10 @@ class SystemConfigProvider(Provider):
         # Re-read rather than trusting the diff: `observe` ran before the report
         # was printed, and an earlier change in this same batch — the docker
         # package, zsh itself — may have made this one unnecessary or possible.
-        if self.state(entry, self.stores([entry])).verdict is Verdict.MATCHED:
+        if self.state(entry, self.stores([entry]), session).verdict is Verdict.MATCHED:
             return Outcome(change, OutcomeStatus.SKIPPED, 'already configured')
 
-        result = self.repair(entry, privilege)
+        result = self.repair(entry, privilege, session)
         if result.refused:
             return Outcome(change, OutcomeStatus.REFUSED, result.detail)
         return Outcome.from_result(change, result)
@@ -1193,11 +1201,13 @@ class MacDefaultProvider(SystemConfigProvider):
     def stores(self, entries: Sequence[catalogs.SystemConfig]) -> dict[macdefaults.Domain, dict[str, object] | None]:
         return macdefaults.domains([entry for entry in entries if isinstance(entry, catalogs.MacosDefault)])
 
-    def state(self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
+    def state(
+        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], session: MachineContext
+    ) -> sysconfig.State:
         assert isinstance(entry, catalogs.MacosDefault)
         return macdefaults.observe_default(entry, stores)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates) -> Result:
+    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, session: MachineContext) -> Result:
         assert isinstance(entry, catalogs.MacosDefault)
         return macdefaults.apply_default(entry)
 
@@ -1206,11 +1216,13 @@ class MacDefaultProvider(SystemConfigProvider):
 class StepProvider(SystemConfigProvider):
     """The rows with no shared mechanism, each a pair of functions in `steps.py`."""
 
-    def state(self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
-        return steps.observe(entry.name)
+    def state(
+        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], session: MachineContext
+    ) -> sysconfig.State:
+        return steps.observe(entry.name, session)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates) -> Result:
-        return steps.apply(entry.name, privilege)
+    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, session: MachineContext) -> Result:
+        return steps.apply(entry.name, privilege, session)
 
 
 def _configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
@@ -1247,7 +1259,15 @@ PROVIDERS: tuple[Provider, ...] = (
         needed_by='go_tools',
         installed_at=str(toolchain.GO_ROOT / 'bin' / 'go'),
     ),
-    RustToolchain('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
+    RustToolchain(
+        'rust-toolchain',
+        'toolchains',
+        Stage.TOOLCHAIN,
+        runtime='rust',
+        executable='rustc',
+        needed_by='cargo_packages',
+        installed_at=str(Path('~') / toolchain.CARGO_BIN / 'rustc'),
+    ),
     NodeToolchain('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
     SystemConfigProvider('group', 'system', Stage.SYSTEM_CONFIG, 'group_memberships'),
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),

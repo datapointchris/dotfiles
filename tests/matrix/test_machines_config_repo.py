@@ -29,9 +29,11 @@ from typing import Any
 import pytest
 import yaml
 
+from dotfiles import paths
 from dotfiles import remote as transport
 from dotfiles.output import EVIDENCE_INDENT
 from dotfiles.vocabulary import ExitCode
+from matrix.harness import MINIMAL_MANIFEST
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
 from matrix.harness import git_checkout
@@ -1050,7 +1052,7 @@ def test_a_json_leaf_puts_one_parseable_document_on_stdout_and_nothing_beside_it
     assert isinstance(ran.document, shape)
 
 
-PLAN_KEYS = {'machine', 'platform', 'coordinates', 'features', 'flags', 'auth', 'items'}
+PLAN_KEYS = {'machine', 'platform', 'coordinates', 'features', 'flags', 'auth', 'check_schedule', 'items'}
 ITEM_KEYS = {'section', 'provider', 'resource', 'stage', 'name', 'executable', 'evidence_path', 'precondition', 'selector'}
 REGISTER_KEYS = {'name', 'kind', 'path', 'description', 'restore', 'tags', 'consumers', 'narrowing', 'requires_values', 'file_must_exist'}
 FINDING_KEYS = {'section', 'severity', 'message'}
@@ -1110,4 +1112,36 @@ def test_the_settings_document_carries_the_file_and_every_rung_s_answer(sandbox:
     assert document['settings']
     assert all(set(entry) == SETTING_KEYS for entry in document['settings'])
     # A sandbox names no schedule, and off is what a machine that names none gets.
-    assert document['schedule'] == {'enabled': False}
+    assert document['schedule'] == {
+        'enabled': False,
+        'setting': 'schedule.enabled',
+        'source': 'this tool’s default',
+        'manifest_problem': '',
+    }
+
+
+def test_the_settings_document_names_a_manifest_that_declines_the_schedule(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """The config turns the timer on, so a `show` printing the config's answer would
+    report a timer this machine declines."""
+    sandbox.declare(manifest={**MINIMAL_MANIFEST, 'check_schedule': False})
+    write_config(sandbox, '[schedule]\nenabled = true\n')
+
+    schedule = cli('config', 'show', '--json').document['schedule']
+
+    assert schedule['enabled'] is False
+    assert schedule['setting'] == 'check_schedule'
+    assert schedule['source'].endswith(f'install/manifests/{sandbox.machine}.yml')
+
+
+@pytest.mark.parametrize('machine_named', [True, False], ids=['manifest-silent', 'no-machine-named'])
+def test_the_settings_document_names_the_config_where_no_manifest_answers(
+    sandbox: Sandbox, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch, machine_named: bool
+) -> None:
+    config = write_config(sandbox, '[schedule]\nenabled = true\n')
+    if not machine_named:
+        monkeypatch.delenv('MACHINE')
+        sandbox.env_file.unlink(missing_ok=True)
+
+    schedule = cli('config', 'show', '--json').document['schedule']
+
+    assert schedule == {'enabled': True, 'setting': 'schedule.enabled', 'source': paths.under_home(config), 'manifest_problem': ''}

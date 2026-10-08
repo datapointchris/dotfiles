@@ -313,6 +313,15 @@ class Machine:
     probes and a test asserts the two sets match in both directions.
     """
 
+    check_schedule: bool | None = None
+    """Whether this machine installs the periodic `dotfiles check`. None leaves it to
+    `[schedule] enabled` in the deployed config, and `schedule.answer` says why a
+    manifest can override that.
+
+    `false` still plans the `check-schedule` row, so `apply` removes a timer
+    installed before the machine declined, and `check` reports one left behind.
+    """
+
     @property
     def platform_label(self) -> str:
         """Which platform label this machine carries, derived from its coordinates.
@@ -359,6 +368,7 @@ class Machine:
             'features': sorted(self.features),
             'flags': dict(self.flags),
             'auth': list(self.auth),
+            'check_schedule': self.check_schedule,
         }
 
 
@@ -403,6 +413,7 @@ def load(name: str, root: Path | None = None) -> Machine:
     coordinates = _coordinates(name, declared, issues)
     flags = _flags(declared, flag_data or {}, issues)
     auth = _auth(name, declared, issues)
+    check_schedule = _check_schedule(name, declared, issues)
 
     if issues:
         raise MachineError(tuple(issues))
@@ -416,6 +427,7 @@ def load(name: str, root: Path | None = None) -> Machine:
         requirements=_requirements(flag_data or {}, declared.get('machine') or name, coordinates),
         source=source,
         auth=auth,
+        check_schedule=check_schedule,
     )
 
 
@@ -460,8 +472,27 @@ def _auth(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]
     return tuple(value)
 
 
+def _check_schedule(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> bool | None:
+    """`check_schedule: "no"` is truthy, so read as a bool it would install the timer
+    it declines."""
+    value = declared.get('check_schedule')
+    if value is None or isinstance(value, bool):
+        return value
+    issues.append(DeclarationIssue(name, f'declares check_schedule as a {type(value).__name__}, where true or false is expected'))
+    return None
+
+
 def _unknown_keys(name: str, declared: Mapping[str, Any]) -> list[DeclarationIssue]:
-    known = {'machine', 'platform', 'coordinates', 'flags', 'auth', *FEATURES, *(key for _, key in SUBSCRIPTIONS.values() if key)}
+    known = {
+        'machine',
+        'platform',
+        'coordinates',
+        'flags',
+        'auth',
+        'check_schedule',
+        *FEATURES,
+        *(key for _, key in SUBSCRIPTIONS.values() if key),
+    }
     return [
         DeclarationIssue(
             name, f'declares {key} — {RETIRED_KEYS[key]}' if key in RETIRED_KEYS else f'declares {key}, which no reader consumes'

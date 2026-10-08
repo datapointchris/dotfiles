@@ -53,44 +53,40 @@ def bin_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return directory
 
 
-def _relocated(provider: registry.Provider, path: Path) -> registry.Provider:
-    """The Go toolchain with its fixed home moved, and every other provider as it was.
+def _relocated(provider: registry.Provider, directory: Path) -> registry.Provider:
+    """A toolchain with a fixed home, moved into `directory` under its executable's
+    name, and every other provider as it was.
 
     `installed_at` belongs to `ToolchainProvider` rather than to `Provider`, so the
-    isinstance is what lets the replacement be written at all. It also says what a
-    bare name match cannot: a `go-toolchain` that stopped being a toolchain
-    provider would swap nothing, and every test resting on this would then measure
-    `/usr/local/go` on the developer's own machine.
+    isinstance is what lets the replacement be written at all.
     """
-    if provider.name != 'go-toolchain':
+    if not isinstance(provider, registry.ToolchainProvider) or not provider.installed_at:
         return provider
-    assert isinstance(provider, registry.ToolchainProvider), provider
-    return dc.replace(provider, installed_at=str(path))
+    return dc.replace(provider, installed_at=str(directory / provider.executable))
 
 
 @pytest.fixture(autouse=True)
-def go_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Point the Go toolchain's fixed home somewhere this test controls.
+def fixed_homes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point every toolchain's fixed home somewhere this test controls.
 
     Autouse because the alternative is a module whose answers depend on the
-    developer's machine: `/usr/local/go/bin/go` exists on any box that has run
-    `apply`, so every "go is absent" assertion would pass on CI and fail at a desk.
+    developer's machine. A fixed home exists on any box that has run `apply`, and
+    a CI runner ships rustup. An "absent" assertion would then fail there, and a
+    stub's version would be ignored for the real one.
 
-    Pointed at the same directory `bin_dir` puts on PATH, so a test that stubs `go`
-    the ordinary way satisfies both questions. The one test that needs them to
-    disagree — a packaged copy on PATH beside the unpacked one — points it
+    Pointed at the same directory `bin_dir` puts on PATH, so a test that stubs a
+    runtime the ordinary way satisfies both questions. The one test that needs them
+    to disagree — a packaged copy on PATH beside the unpacked one — points it
     elsewhere itself.
 
     The provider is swapped rather than mutated: it is a frozen slotted dataclass,
     and the three lookups are rebuilt together because `resolve` walks `PROVIDERS`
     while the resources reach through `BY_NAME`.
     """
-    path = tmp_path / 'bin' / 'go'
-    swapped = tuple(_relocated(provider, path) for provider in registry.PROVIDERS)
+    swapped = tuple(_relocated(provider, tmp_path / 'bin') for provider in registry.PROVIDERS)
     monkeypatch.setattr(registry, 'PROVIDERS', swapped)
     monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
     monkeypatch.setattr(registry, 'BY_SECTION', {provider.section: provider for provider in swapped if provider.section})
-    return path
 
 
 def stub(directory: Path, name: str, prints: str | None = None, *, go_env: str = installers.GONOSUMDB) -> Path:
@@ -202,7 +198,7 @@ def test_a_runtime_answered_by_path_is_probed_at_that_path(tmp_path: Path, bin_d
     unpacked.write_text('#!/bin/sh\necho "go version go9.9.9 linux/amd64"\n')
     unpacked.chmod(0o755)
     stub(bin_dir, 'go', 'go version go1.0.0 linux/amd64')
-    swapped = tuple(_relocated(provider, unpacked) for provider in registry.PROVIDERS)
+    swapped = tuple(_relocated(provider, unpacked.parent) for provider in registry.PROVIDERS)
     monkeypatch.setattr(registry, 'PROVIDERS', swapped)
     monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
 

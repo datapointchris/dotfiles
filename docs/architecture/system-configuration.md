@@ -57,6 +57,12 @@ them are worth knowing about from here.
 in rather than getting one by default. What each check leaves for a reader who
 is not watching is `src/dotfiles/status.py`.
 
+Its state depends on the manifest it is measured for. A manifest's
+`check_schedule` overrides the trust domain's `[schedule] enabled` for that
+machine. A machine that declines still plans the row, so a timer installed
+earlier is found and removed. `registry.SystemConfigProvider.states` is how the
+manifest reaches the row.
+
 **`install/wsl/docker-repo.sh` is deliberately not a row.** Nothing in the
 install path runs it. WSL borrows its engine from Docker Desktop, and
 `docs/configuration/docker.md` presents that script as the manual escape hatch

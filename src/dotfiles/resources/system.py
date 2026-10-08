@@ -193,7 +193,7 @@ class SystemResource:
         return Observed(
             evidence={item.address: registry.evidence_for(item, inventories) for item in payload},
             asked=inventories.asked,
-            config=_observe_config(_config_items(plan)),
+            config=_observe_config(_config_items(plan), session),
             described={item.address: getattr(item.entry, 'description', '') for item in _config_items(plan)},
             met=session.preconditions,
             packages=frozenset(item.address for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
@@ -417,7 +417,7 @@ def _config_items(plan: Plan) -> list[DesiredItem]:
     return [item for item in plan.for_resource(NAME) if item.stage is Stage.SYSTEM_CONFIG]
 
 
-def _observe_config(items: list[DesiredItem]) -> dict[str, sysconfig.State]:
+def _observe_config(items: list[DesiredItem], session: Session) -> dict[str, sysconfig.State]:
     """Every configuration row's state, each provider reading its own.
 
     Branching on the entry class and knowing a `defaults` read is cheaper in bulk
@@ -432,7 +432,7 @@ def _observe_config(items: list[DesiredItem]) -> dict[str, sysconfig.State]:
     for name, owned in grouped.items():
         provider = registry.named(name)
         assert isinstance(provider, registry.SystemConfigProvider), f'{name} plans a SYSTEM_CONFIG item but is not a config provider'
-        states |= provider.states(owned)
+        states |= provider.states(owned, session)
     return states
 
 

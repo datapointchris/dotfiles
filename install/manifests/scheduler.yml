@@ -73,3 +73,8 @@ configure_zsh: true
 auth:
   - gh
   - claude
+
+# The daily check runs here as one of fleet's scheduled jobs. Its unit loads the
+# service environment that carries this box's credentials. This repo's own timer
+# would run the same check without them, and report the logins above missing.
+check_schedule: false

@@ -10,8 +10,9 @@ unit and a LaunchDaemon: the check reads `$HOME`, `~/.env` and the user's
 release cache, so running it as root would measure a machine nobody uses. It also
 means nothing here escalates.
 
-**Off unless a machine declares `schedule.enabled`, and that is the whole of how
-this row decides who runs one.** A timer is periodic by construction, so what it
+**Off unless a machine declares it on**, in its manifest's `check_schedule` or
+its deployed config's `schedule.enabled`. `answer` reads both, and nothing else
+decides who runs one. A timer is periodic by construction, so what it
 sends becomes a beacon: this one runs `check --refresh`, which is a call per
 declared release through a thread pool, once a day, to one host. On a machine
 behind a monitored egress that is a workstation calling out on an exact
@@ -25,11 +26,14 @@ interactive check spends no API calls.
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotfiles import coordinates as axes
+from dotfiles import paths
 from dotfiles import providers
 from dotfiles import settings
 from dotfiles.providers import Kind
@@ -42,6 +46,9 @@ from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 
+if TYPE_CHECKING:
+    from dotfiles.machine import Machine
+
 LABEL = 'com.datapointchris.dotfiles-check'
 UNIT = 'dotfiles-check'
 
@@ -49,10 +56,34 @@ TABLE = 'schedule'
 """The config table saying whether this machine wants a periodic check."""
 
 
-def enabled(config: settings.Config | None = None) -> bool:
+MANIFEST_KEY = 'check_schedule'
+"""The manifest key that answers for one machine ahead of its trust domain's config."""
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class Answer:
+    """Whether this machine wants the timer, the setting that said so, and the file
+    that setting is in."""
+
+    wanted: bool
+    setting: str
+    where: str
+
+    def because(self) -> str:
+        return f'{self.setting} is {"on" if self.wanted else "off"} ({self.where})'
+
+
+def answer(machine: Machine | None, config: settings.Config | None = None) -> Answer:
     """Whether to install the timer at all, declared rather than inferred.
 
-    **Off unless a machine says otherwise**, which is the direction
+    **The manifest first, then the config, then off.** `[schedule] enabled` is the
+    trust domain's answer, and both deployed configs state it. A manifest's
+    `check_schedule` answers for one machine inside that domain. It exists for a
+    box whose check runs under another scheduler, with credentials this repo's
+    timer never sees. `None` is a caller with no machine, and the config alone
+    decides.
+
+    **Off unless something says otherwise**, which is the direction
     `remote.publish_reports_after_apply` already fails in and for the same reason.
     A timer is a standing background process that outlives the session installing
     it, and this one runs `check --refresh` — one request per declared release,
@@ -61,14 +92,16 @@ def enabled(config: settings.Config | None = None) -> bool:
     exists to surface. Something with that reach is opted into, never defaulted
     into.
 
-    A config key rather than a coordinate the code works out for itself. Both
-    deployed configs state it, including the one that matches this default, so the
-    key is visible on whichever box is being read and the answer needs no
-    knowledge of what happens when it is absent.
+    Both are keys someone writes, rather than a coordinate the code works out for
+    itself, so the answer on any box is a line someone can find.
     """
+    if machine is not None and machine.check_schedule is not None:
+        return Answer(machine.check_schedule, MANIFEST_KEY, paths.under_home(machine.source))
     found = config if config is not None else settings.read_config()
     table = found.values.get(TABLE)
-    return bool(table.get('enabled', False)) if isinstance(table, dict) else False
+    if isinstance(table, dict) and 'enabled' in table:
+        return Answer(bool(table['enabled']), f'{TABLE}.enabled', paths.under_home(settings.config_file()))
+    return Answer(False, f'{TABLE}.enabled', 'this tool’s default')
 
 
 INTERVAL_SECONDS = 60 * 60 * 24
@@ -326,7 +359,7 @@ def _installed() -> tuple[Path, ...]:
     return tuple(_systemd_files())
 
 
-def _observe_declined() -> State:
+def _observe_declined(declined: Answer) -> State:
     """A machine that turned the schedule off should have no schedule.
 
     Absent rather than merely unmanaged, because a timer installed before the
@@ -336,11 +369,11 @@ def _observe_declined() -> State:
     """
     found = [path for path in _installed() if path.exists()]
     if not found:
-        return State(Verdict.MATCHED, f'no periodic check, and {TABLE}.enabled is off')
-    return State(Verdict.STALE, f'{", ".join(path.name for path in found)} still installed while {TABLE}.enabled is off')
+        return State(Verdict.MATCHED, f'no periodic check, and {declined.because()}')
+    return State(Verdict.STALE, f'{", ".join(path.name for path in found)} still installed while {declined.because()}')
 
 
-def _remove() -> Result:
+def _remove(declined: Answer) -> Result:
     """Stop the schedule and take its files away.
 
     The manager is told first and the files go second. A file removed while the
@@ -358,18 +391,20 @@ def _remove() -> Result:
 
     for path in _installed():
         path.unlink(missing_ok=True)
-    return Result(True, f'periodic check removed, because {TABLE}.enabled is off', kind=Kind.APPLIED)
+    return Result(True, f'periodic check removed, because {declined.because()}', kind=Kind.APPLIED)
 
 
-def observe() -> State:
-    if not enabled():
-        return _observe_declined()
+def observe(machine: Machine) -> State:
+    decided = answer(machine)
+    if not decided.wanted:
+        return _observe_declined(decided)
     return _observe_launchd() if _is_darwin() else _observe_systemd()
 
 
-def apply() -> Result:
-    if not enabled():
-        return _remove()
+def apply(machine: Machine) -> Result:
+    decided = answer(machine)
+    if not decided.wanted:
+        return _remove(decided)
     return _apply_launchd() if _is_darwin() else _apply_systemd()
 
 

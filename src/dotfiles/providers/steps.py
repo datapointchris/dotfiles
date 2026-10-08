@@ -31,6 +31,7 @@ import shutil
 import stat
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotfiles.effects import Output
 from dotfiles.effects import run
@@ -43,6 +44,9 @@ from dotfiles.providers import schedule
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+
+if TYPE_CHECKING:
+    from dotfiles.context import MachineContext
 
 FINDER_INFO = 'com.apple.FinderInfo'
 ORBSTACK_PLUGINS = Path('/Applications/OrbStack.app/Contents/MacOS/xbin')
@@ -400,42 +404,61 @@ def _link_psql() -> Result:
 # The table
 # ─────────────────────────────────────────────────────────────────────────────
 
-Observer = Callable[[], State]
-Applier = Callable[[Escalates], Result]
+Observer = Callable[['MachineContext'], State]
+Applier = Callable[[Escalates, 'MachineContext'], Result]
+"""One signature for every row, so the resource never has to ask which kind a row
+is. The adapters below hand each row only what it reads."""
+
+
+def _anywhere(observe: Callable[[], State]) -> Observer:
+    """A row whose state reads the same whichever run asks."""
+
+    def observe_it(_session: MachineContext) -> State:
+        return observe()
+
+    return observe_it
 
 
 def _unprivileged(apply: Callable[[], Result]) -> Applier:
-    """Adapt a step that needs no root to the one signature the table carries.
+    """A row that needs neither root nor the run to converge."""
 
-    One signature rather than two, so the resource never has to ask which kind a
-    row is — the `Escalates` it hands down is simply ignored by four of the five.
-    """
-
-    def run_it(_privilege: Escalates) -> Result:
+    def run_it(_privilege: Escalates, _session: MachineContext) -> Result:
         return apply()
 
     return run_it
 
 
+def _escalating(apply: Callable[[Escalates], Result]) -> Applier:
+    """A row that needs root and not the run."""
+
+    def run_it(privilege: Escalates, _session: MachineContext) -> Result:
+        return apply(privilege)
+
+    return run_it
+
+
 STEPS: dict[str, tuple[Observer, Applier]] = {
-    'check-schedule': (schedule.observe, _unprivileged(schedule.apply)),
-    'library-visible': (_library_visible, _unprivileged(_show_library)),
-    'screenshot-directory': (_screenshots_exist, _unprivileged(_make_screenshots)),
-    'xcode-license': (_xcode_license, _accept_xcode_license),
-    'orbstack-docker-plugins': (_orbstack_plugins, _unprivileged(_add_orbstack_plugins)),
-    'windows-fonts': (_windows_fonts, _unprivileged(_write_fontconfig)),
-    'psql-linked': (_psql_linked, _unprivileged(_link_psql)),
+    'check-schedule': (
+        lambda session: schedule.observe(session.machine),
+        lambda _privilege, session: schedule.apply(session.machine),
+    ),
+    'library-visible': (_anywhere(_library_visible), _unprivileged(_show_library)),
+    'screenshot-directory': (_anywhere(_screenshots_exist), _unprivileged(_make_screenshots)),
+    'xcode-license': (_anywhere(_xcode_license), _escalating(_accept_xcode_license)),
+    'orbstack-docker-plugins': (_anywhere(_orbstack_plugins), _unprivileged(_add_orbstack_plugins)),
+    'windows-fonts': (_anywhere(_windows_fonts), _unprivileged(_write_fontconfig)),
+    'psql-linked': (_anywhere(_psql_linked), _unprivileged(_link_psql)),
 }
 """Every `steps` row, and the pair of functions that answers for it."""
 
 
-def observe(entry_name: str) -> State:
+def observe(entry_name: str, session: MachineContext) -> State:
     if entry_name not in STEPS:
         return State(Verdict.UNKNOWN, f'no function in providers/steps.py for {entry_name}', repair=Repair.NONE)
-    return STEPS[entry_name][0]()
+    return STEPS[entry_name][0](session)
 
 
-def apply(entry_name: str, privilege: Escalates) -> Result:
+def apply(entry_name: str, privilege: Escalates, session: MachineContext) -> Result:
     if entry_name not in STEPS:
         return Result(False, f'no function in providers/steps.py for {entry_name}', kind=Kind.DECLARATION_INVALID)
-    return STEPS[entry_name][1](privilege)
+    return STEPS[entry_name][1](privilege, session)

@@ -493,18 +493,28 @@ def test_the_registered_go_toolchain_names_the_path_everything_else_names() -> N
     assert str(toolchain.GO_ROOT / 'bin') in toolchain.TOOL_PATH_DIRS
 
 
-def test_a_runtime_with_no_fixed_home_is_answered_by_path(tmp_path, monkeypatch) -> None:
-    """The other three go wherever their own installer puts them, so `which` is the
-    right question for them and this must not have changed it."""
-    on_path(tmp_path, 'rustc')
-    monkeypatch.setenv('PATH', str(tmp_path))
+def test_rust_is_answered_by_the_cargo_bin_rustup_installs_into(tmp_path, monkeypatch) -> None:
+    """A `rustc` on PATH is not evidence, and one in `~/.cargo/bin` is wherever PATH
+    points."""
+    shadowing = tmp_path / 'bin'
+    shadowing.mkdir()
+    on_path(shadowing, 'rustc')
+    monkeypatch.setenv('PATH', str(shadowing))
+    monkeypatch.setenv('HOME', str(tmp_path / 'home'))
     provider = registry.named('rust-toolchain')
     assert provider is not None
 
     resolved = (item('cargo', 'ripgrep', catalog.CargoPackage.from_mapping({'name': 'ripgrep', 'command': 'rg'})),)
     planned = provider.plan(machines.load('archlinux-personal-workstation'), catalog.load(), resolved)
 
-    assert planned[0].evidence_path == ''
+    installed = tmp_path / 'home' / toolchain.CARGO_BIN
+    assert planned[0].evidence_path == str(installed / 'rustc')
+    assert registry.evidence_for(planned[0], {}).verdict is Verdict.MISSING, 'a rustc on PATH is not the rustc rustup installed'
+
+    installed.mkdir(parents=True)
+    on_path(installed, 'rustc')
+    monkeypatch.setenv('PATH', '/usr/bin:/bin')
+
     assert registry.evidence_for(planned[0], {}).verdict is Verdict.MATCHED
 
 

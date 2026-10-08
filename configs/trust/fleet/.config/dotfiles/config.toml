@@ -32,6 +32,8 @@ workstations_json = "~/.local/share/terminal-library-fleet/workstations.json"
 # nonfleet copy too even though it matches that default — a validator holds both
 # variants to naming the key, because a reader should not have to know what
 # happens when it is absent to know what this machine does.
+#
+# A manifest's `check_schedule` answers for its own machine ahead of this line.
 [schedule]
 enabled = true
 

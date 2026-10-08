@@ -10,7 +10,7 @@ manifest names a feature with no catalog section behind it.
 
 **PATH is narrowed to the sandbox wherever absence is the measurement.** The
 harness leaves `/usr/bin:/bin` behind its own bin so `git` and `sh` resolve, and a
-developer box with `rustc` or `node` there answers "the runtime is missing"
+developer box with `node` there answers "the runtime is missing"
 differently from a CI runner. `only_the_sandbox_on_path` is the seam that settles
 it, and it is the real one — `$PATH` is what `shutil.which` reads.
 
@@ -38,6 +38,7 @@ from matrix.harness import REFUSED
 from matrix.harness import Invocation
 from matrix.harness import ReachedTheNetwork
 from matrix.harness import Sandbox
+from matrix.harness import executable
 from matrix.harness import git_checkout
 from matrix.harness import resource
 from matrix.harness import unwrapped
@@ -61,10 +62,11 @@ RUNTIMES: dict[str, Any] = {
 honors — `catalog.Entry.problems` refuses a constraint nothing reads, and the
 resource takes `min_version or version` as the floor either way.
 
-Rust is the runtime the floor is declared for because `rustc` is answered by
-`PATH` and nothing else. Go declares `installed_at=/usr/local/go/bin/go`, an
-absolute path outside any sandbox, so a floor asserted against Go would be
-asserted against whatever the developer's `/usr/local` holds.
+Rust is the runtime the floor is declared for because its `installed_at` is
+`~/.cargo/bin/rustc`, inside the sandbox's home. Go declares
+`installed_at=/usr/local/go/bin/go`, an absolute path outside any sandbox, so a
+floor asserted against Go would be asserted against whatever the developer's
+`/usr/local` holds.
 """
 
 PLUGINS: dict[str, Any] = {
@@ -99,8 +101,8 @@ def only_the_sandbox_on_path(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) 
     """Drop `/usr/bin:/bin`, so a runtime is absent unless this test installed it.
 
     The harness keeps them for `git` and `sh`, which is right for its baseline and
-    wrong for every assertion that a runtime is missing: `rustc` and `node` are
-    ordinary system packages, so the same test answers one way at a desk and
+    wrong for every assertion that a runtime is missing: `node` is an ordinary
+    system package, so the same test answers one way at a desk and
     another on a runner. `/bin/sh` stays reachable regardless — the stubs name it
     absolutely in their shebang — and a `git` that is no longer findable exits 127,
     which `effects.run` already treats as an answer.
@@ -110,6 +112,13 @@ def only_the_sandbox_on_path(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) 
     to the run being measured.
     """
     monkeypatch.setenv('PATH', f'{sandbox.bin}{os.pathsep}{sandbox.user_bin}')
+
+
+def rustup_placed(sandbox: Sandbox, script: str) -> Path:
+    """A `rustc` where rustup puts one, which is the only place the rust row looks."""
+    cargo_bin = sandbox.home / '.cargo' / 'bin'
+    cargo_bin.mkdir(parents=True, exist_ok=True)
+    return executable(cargo_bin, 'rustc', script)
 
 
 def declares(sandbox: Sandbox, **gates: Any) -> None:
@@ -316,7 +325,7 @@ def test_a_runtime_is_measured_against_the_floor_its_catalog_row_declares(
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})
     if reports is not None:
-        sandbox.installed('rustc', reports)
+        rustup_placed(sandbox, f'#!/bin/sh\nprintf "%s\\n" "{reports}"\n')
 
     ran = cli('toolchains', 'plan', '--json')
     row = resource(ran, 'toolchains')
@@ -326,14 +335,14 @@ def test_a_runtime_is_measured_against_the_floor_its_catalog_row_declares(
     assert rust == ({'rust-toolchain/rust': verdict} if verdict else {})
 
 
-def test_a_runtime_on_path_that_will_not_answer_counts_as_absent(
+def test_a_runtime_in_place_that_will_not_answer_counts_as_absent(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
-    """A half-extracted tarball leaves the binary in place with `which` satisfied by
-    it, which is not what an installed runtime looks like."""
+    """A half-extracted install leaves a `rustc` where the row looks that exits 1 on
+    `--version`."""
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})
-    sandbox.shadow('rustc', REFUSED)
+    rustup_placed(sandbox, REFUSED)
 
     ran = cli('toolchains', 'plan')
 
