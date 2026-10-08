@@ -26,13 +26,17 @@ run doing the installing.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
 
+import yaml
+
 from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles import versions
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
 from dotfiles.privilege import Escalates
@@ -49,36 +53,100 @@ from dotfiles.providers import script
 # uv
 # ─────────────────────────────────────────────────────────────────────────────
 
-UV_INSTALL_URL = 'https://astral.sh/uv/install.sh'
-"""Also spelled in `install.sh`, and that duplicate is the bootstrap's defining
-property rather than an oversight: it runs before this package exists to be
-asked. The offline bundler reads it from here, which retired the third copy."""
+UV_INSTALL_URL = 'https://astral.sh/uv/{version}/install.sh'
+"""astral's install script for one release, which installs that release and no other.
+
+`install.sh` spells the unversioned script, which installs whatever is newest.
+That is all the bootstrap needs, since it runs before this package exists to read
+the pin, and the first apply converges what it installed. The offline bundler and
+the network probe read this one."""
+
+UV_HOOK_REPO = 'https://github.com/astral-sh/uv-pre-commit'
+"""The hook whose rev names the uv release, tagged as the bare release number."""
+
+UV_PIN = re.compile(r'v?(\d+(?:\.\d+)*)')
 
 DEFAULT_PYTHON = '3.13'
 """The interpreter `uv run` resolves against when a project pins nothing."""
 
 
-def install_uv(*, offline: bool) -> Result:
-    """uv itself, then the interpreter everything else resolves against.
+class UnpinnedUv(Exception):
+    """.pre-commit-config.yaml names no single uv release, so there is nothing to converge to."""
 
-    The first half is nearly always a no-op: `install.sh` puts uv on the box
-    before this package exists to be run, so the CLI is already running on it.
-    The second half is the part with no other home — the bootstrap installs uv in
-    order to install this package, and which Python is *default* afterwards is a
+
+def pinned_uv(config: Path | None = None) -> str:
+    """The uv release the uv-pre-commit hook's rev names in `.pre-commit-config.yaml`.
+
+    The uv-lock hook, CI's lock check and every Python release build run that
+    release. A `uv.lock` records the format revision of whichever uv last changed
+    it, so a machine at any other release flips the revision against theirs.
+
+    Every scalar loads as a string, so a rev written `0.10` stays `0.10` rather
+    than becoming the float `0.1`.
+    """
+    path = config or paths.PRE_COMMIT_CONFIG
+    try:
+        declared = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+    except (OSError, yaml.YAMLError) as error:
+        raise UnpinnedUv(f'could not read the uv pin from {path}: {error}') from error
+    hooks = declared.get('repos', []) if isinstance(declared, dict) else []
+    revs = [hook.get('rev') for hook in hooks if isinstance(hook, dict) and hook.get('repo') == UV_HOOK_REPO]
+    if not revs:
+        raise UnpinnedUv(f'{path} carries no {UV_HOOK_REPO} hook, so no uv release is pinned')
+    exact = UV_PIN.fullmatch(revs[0] or '')
+    if exact is None:
+        raise UnpinnedUv(f'{path} pins the uv hook at {revs[0]!r}, which is not a release number')
+    return exact.group(1)
+
+
+def install_uv(*, offline: bool) -> Result:
+    """The uv release `.pre-commit-config.yaml` pins, then the interpreter everything else resolves against.
+
+    Converged by running astral's script for that release, whether uv is absent or
+    at another release. `uv self update` would need the standalone installer's
+    receipt, and the script installs exactly what it names either way.
+
+    A uv that resolves outside `bin_dir()` came from something else: a package
+    manager, pip or cargo. The script would install beside it rather than over
+    it, and PATH would still choose the other one. So that is refused with the
+    path, and never reported converged.
+
+    Which Python is *default* is the second half, and it has no other home. The
+    bootstrap installs uv to install this package, so the default interpreter is a
     convergence question about the machine rather than a bootstrap one.
     """
-    if shutil.which('uv') is None:
+    try:
+        version = pinned_uv()
+    except UnpinnedUv as error:
+        return Result(False, str(error), kind=Kind.DECLARATION_INVALID)
+
+    found = shutil.which('uv')
+    if found is not None and Path(found).parent != bin_dir():
+        return Result(
+            False,
+            f'uv resolves to {found}, which this repo did not install, so it cannot be held at {version}. '
+            f'Remove that uv and apply again; the one this repo installs goes in {bin_dir()}',
+            kind=Kind.TARGET_UNUSABLE,
+            refused=True,
+        )
+
+    if found is None or not versions.exactly(uv_version() or '', version):
         placed = script.run(
             'uv',
-            UV_INSTALL_URL,
+            UV_INSTALL_URL.format(version=version),
             offline=offline,
             env={'XDG_BIN_HOME': str(bin_dir()), 'UV_NO_MODIFY_PATH': '1'},
         )
         if not placed.ok:
             return placed
         put_on_path(bin_dir())
-        if shutil.which('uv') is None:
-            return Result(False, f'the uv install script ran but uv is not in {bin_dir()}', kind=Kind.VERIFY_FAILED)
+        reported = uv_version() if shutil.which('uv') else None
+        if not versions.exactly(reported or '', version):
+            return Result(
+                False,
+                f'the uv {version} install script ran, and {bin_dir()} holds uv {reported or "that will not report a version"}',
+                kind=Kind.VERIFY_FAILED,
+            )
 
     chosen = effects.run(
         ['uv', 'python', 'install', '--preview-features', 'python-install-default', '--default', DEFAULT_PYTHON],
@@ -86,10 +154,16 @@ def install_uv(*, offline: bool) -> Result:
     if not chosen.ok:
         return Result(
             False,
-            f'uv is installed but making python {DEFAULT_PYTHON} the default exited {chosen.returncode}',
+            f'uv {version} is installed but making python {DEFAULT_PYTHON} the default exited {chosen.returncode}',
             kind=Kind.COMMAND_FAILED,
         )
-    return Result(True, f'uv, with python {DEFAULT_PYTHON} as the default', kind=Kind.APPLIED)
+    return Result(True, f'uv {version}, with python {DEFAULT_PYTHON} as the default', kind=Kind.APPLIED)
+
+
+def uv_version() -> str | None:
+    """The release the uv on PATH reports, or None when it will not say."""
+    reported = effects.run(['uv', '--version'], output=Output.QUIET)
+    return versions.written_in(reported.transcript) if reported.ok else None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

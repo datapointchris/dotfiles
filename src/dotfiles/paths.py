@@ -59,6 +59,7 @@ def under_home(path: Path, home: Path | None = None) -> str:
 REPO_ROOT = _repo_root()
 
 PYPROJECT_FILE = REPO_ROOT / 'pyproject.toml'
+PRE_COMMIT_CONFIG = REPO_ROOT / '.pre-commit-config.yaml'
 INSTALL_DIR = REPO_ROOT / 'install'
 PACKAGES_FILE = INSTALL_DIR / 'packages.yml'
 MANIFESTS_DIR = INSTALL_DIR / 'manifests'

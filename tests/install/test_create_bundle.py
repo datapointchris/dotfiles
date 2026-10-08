@@ -453,9 +453,8 @@ class TestInstallScriptVersions:
         assert ghrelease.bundle_version('claude-code') is None
 
     def test_the_uv_row_carries_the_uv_the_bundle_staged(self, tmp_path, monkeypatch):
-        """astral.sh serves one unversioned script that installs the newest uv, and
-        `add_uv` already resolved which one that is. Asking again would let the two
-        rows describing one uv disagree."""
+        """`add_uv` already resolved the release, and the script is astral's for it.
+        Resolving it again would let the two rows describing one uv disagree."""
         self.stage(tmp_path, monkeypatch, [], uv_version='0.9.7')
 
         staged = bundle_manifest.staged('uv', 'script')

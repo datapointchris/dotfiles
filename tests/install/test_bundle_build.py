@@ -408,7 +408,7 @@ def stock(upstream: Upstream) -> Upstream:
         upstream.serve(companion.url(FZF_TAG), b'#!/bin/sh\n# fzf-tmux\n')
     upstream.serve(THEME_SCRIPT, b'#!/bin/sh\n# theme\n')
     upstream.serve(VENDOR_SCRIPT, b'#!/bin/sh\n# vendor\n')
-    upstream.serve(toolchain.UV_INSTALL_URL, b'#!/bin/sh\n# uv\n')
+    upstream.serve(toolchain.UV_INSTALL_URL.format(version=UV_TAG), b'#!/bin/sh\n# uv\n')
     return upstream
 
 
@@ -480,6 +480,11 @@ def declaration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(paths, 'INSTALL_DIR', install)
     monkeypatch.setattr(paths, 'MANIFESTS_DIR', install / 'manifests')
     monkeypatch.setattr(paths, 'PACKAGES_FILE', install / 'packages.yml')
+
+    # uv's pin is read from the hook rev, so it must name the release `stock` publishes.
+    hooks = tmp_path / 'repo' / '.pre-commit-config.yaml'
+    hooks.write_text(f'repos:\n  - repo: {toolchain.UV_HOOK_REPO}\n    rev: "{UV_TAG}"\n')
+    monkeypatch.setattr(paths, 'PRE_COMMIT_CONFIG', hooks)
     return install
 
 

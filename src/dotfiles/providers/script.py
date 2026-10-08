@@ -1,14 +1,14 @@
 """Staging and running a vendor's own install script.
 
 Twelve things converge this way — nine custom installers and two of the four
-language runtimes — because the vendor publishes a shell script at an
-unversioned URL and running it is the supported path. Two implementations of that
-would be two answers to the question the offline bundle exists to settle: which
-script a machine restoring from a bundle runs.
+language runtimes — because the vendor publishes a shell script and running it
+is the supported path. Two implementations of that would be two answers to the
+question the offline bundle exists to settle: which script a machine restoring
+from a bundle runs.
 
-Unversioned is the whole difficulty. The URL names no release, so "the script"
-is whatever the vendor is serving at the moment it is asked — which is why a
-staged copy wins even on a machine with a working network.
+Unversioned is the whole difficulty. Every URL but uv's names no release, so "the
+script" is whatever the vendor is serving at the moment it is asked — which is
+why a staged copy wins even on a machine with a working network.
 """
 
 from __future__ import annotations
@@ -51,10 +51,10 @@ class Script:
 def staged(name: str, url: str, into: Path, *, offline: bool) -> Script:
     """The vendor's install script on disk, from the bundle or the network.
 
-    The bundle is preferred whenever it holds one, not only when offline: the
-    script is served from an unversioned URL, so a machine restoring from a bundle
-    must run the script that bundle was built against rather than whatever the
-    vendor is serving today.
+    The bundle is preferred whenever it holds one, not only when offline: most
+    scripts are served from an unversioned URL, so a machine restoring from a
+    bundle must run the script that bundle was built against rather than whatever
+    the vendor is serving today.
 
     **The reason is returned, because this was the one failure with no cause anywhere
     at all.** A script that fails to *run* streams its own error to the terminal and

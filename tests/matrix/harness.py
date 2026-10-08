@@ -45,6 +45,7 @@ from dotfiles import registry
 from dotfiles import releases
 from dotfiles.coordinates import PackageManager
 from dotfiles.providers import bundle
+from dotfiles.providers import toolchain
 from dotfiles.session import Session
 
 
@@ -87,6 +88,9 @@ MINIMAL_MANIFEST: dict[str, Any] = {'machine': MACHINE, 'platform': 'linux'}
 queries it; the sandbox shadows the binary, so the answer is the same on Arch, on
 macOS and in a container.
 """
+
+UV_RELEASE = '0.9.9'
+"""What the settled uv reports and the synthetic repo's uv hook pins, so uv starts converged."""
 
 LAZYGIT: dict[str, Any] = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit'}]}
 """One release binary, which is the smallest declaration with an upstream version.
@@ -256,7 +260,8 @@ def write_declaration(
     flags: dict[str, Any] | None = None,
     machine: str = MACHINE,
 ) -> Path:
-    """The three files every resolution reads, and the pyproject the symlink pass wants.
+    """The three files every resolution reads, the pyproject the symlink pass wants,
+    and the hook config uv's pin is read from.
 
     Whole files rather than a merge into what is already there: a declaration is
     the input under test, and a test that appended to one could not express "this
@@ -273,6 +278,9 @@ def write_declaration(
     pyproject = repo / 'pyproject.toml'
     if not pyproject.exists():
         pyproject.write_text('[project]\nname = "synthetic"\nversion = "0.0.0"\n')
+    hooks = repo / '.pre-commit-config.yaml'
+    if not hooks.exists():
+        hooks.write_text(f'repos:\n  - repo: {toolchain.UV_HOOK_REPO}\n    rev: "{UV_RELEASE}"\n')
     return repo
 
 
@@ -433,7 +441,7 @@ class Sandbox:
         from dotfiles import envfile
         from dotfiles import machine as machines
 
-        self.installed('uv', 'uv 0.9.9')
+        self.installed('uv', f'uv {UV_RELEASE}')
         entry = self.config / 'git' / 'config'
         entry.parent.mkdir(parents=True, exist_ok=True)
         entry.write_text('[user]\n\tname = Synthetic Box\n\temail = box@example.invalid\n')

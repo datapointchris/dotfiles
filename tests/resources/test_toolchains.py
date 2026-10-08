@@ -38,11 +38,13 @@ from dotfiles.resources import Verdict
 from dotfiles.resources import toolchains
 from dotfiles.session import Session
 
+UV_PIN = '0.12.2'
+
 VERSIONS = {
     'go': 'go version go1.26.5 linux/amd64',
     'rustc': 'rustc 1.97.1 (8bab26f4f 2026-07-14)',
     'node': 'v24.19.0',
-    'uv': 'uv 0.12.2 (x86_64-unknown-linux-gnu)',
+    'uv': f'uv {UV_PIN} (x86_64-unknown-linux-gnu)',
 }
 
 
@@ -134,9 +136,18 @@ PACKAGES: dict[str, Any] = {
 }
 
 
-def session(tmp_path: Path, manifest: dict[str, Any], packages: dict[str, Any] | None = None, *, offline: bool = False) -> Session:
+def session(
+    tmp_path: Path,
+    manifest: dict[str, Any],
+    packages: dict[str, Any] | None = None,
+    *,
+    offline: bool = False,
+    uv_rev: str | None = UV_PIN,
+) -> Session:
     repo = tmp_path / 'repo'
     (repo / 'install' / 'manifests').mkdir(parents=True, exist_ok=True)
+    if uv_rev is not None:
+        (repo / '.pre-commit-config.yaml').write_text(f'repos:\n  - repo: {installers.UV_HOOK_REPO}\n    rev: "{uv_rev}"\n')
     (repo / 'install' / 'packages.yml').write_text(yaml.safe_dump(packages or PACKAGES, sort_keys=False))
     (repo / 'install' / 'flags.yml').write_text('{}')
     (repo / 'install' / 'manifests' / 'box.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
@@ -306,6 +317,26 @@ def test_a_toolchain_below_its_floor_is_stale(tmp_path: Path, bin_dir: Path) -> 
     assert found[0].verdict is Verdict.STALE
     assert found[0].detail == 'below the declared floor of 1.23'
     assert found[0].observed == 'go version go1.21.0 linux/amd64'
+
+
+def test_a_uv_newer_than_the_hook_pins_is_stale(tmp_path: Path, bin_dir: Path) -> None:
+    stub(bin_dir, 'uv', 'uv 0.13.0 (x86_64-unknown-linux-gnu)')
+    live = session(tmp_path, BARE)
+
+    found = changes(live)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.STALE, Repair.AUTOMATIC)]
+    assert found[0].detail.startswith(f'pinned to {UV_PIN} by the uv-pre-commit hook')
+
+
+def test_a_repo_whose_hooks_pin_no_uv_reports_uv_unknown(tmp_path: Path, bin_dir: Path) -> None:
+    stub(bin_dir, 'uv')
+    live = session(tmp_path, BARE, uv_rev=None)
+
+    found = changes(live)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.UNKNOWN, Repair.NONE)]
+    assert 'could not read the uv pin' in found[0].detail
 
 
 def test_a_toolchain_with_no_declared_floor_is_only_checked_for_presence(tmp_path: Path, bin_dir: Path) -> None:

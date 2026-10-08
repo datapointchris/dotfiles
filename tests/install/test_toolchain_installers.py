@@ -343,30 +343,164 @@ def test_rust_offline_says_the_bundle_stages_no_rustup(home, bundle, effected) -
     assert result.kind is Kind.NOT_IN_BUNDLE
 
 
-def test_uv_already_present_is_not_reinstalled_but_still_sets_the_default(home, bundle, effected) -> None:
-    """`install.sh` puts uv on the box before this package exists to be run, so
-    the first half is nearly always a no-op. Which Python is *default* afterwards
-    is a machine question the bootstrap does not answer."""
-    (home / '.local' / 'bin' / 'uv').write_bytes(b'#!/bin/sh\n')
-    (home / '.local' / 'bin' / 'uv').chmod(0o755)
+PIN = '0.12.24'
+
+
+class Reports(Runs):
+    """`uv --version` answers `before` until astral's script runs, and `after` once it has.
+
+    `places` is where the script would have written the binary, for a machine that
+    had none: the recorded `bash` writes nothing, and `shutil.which` reads the disk.
+    """
+
+    def __init__(self, before: str | None, *, after: str = PIN, places: Path | None = None) -> None:
+        super().__init__()
+        self.before, self.after, self.places = before, after, places
+
+    def __call__(self, command, **kwargs) -> Completed:
+        answer = super().__call__(command, **kwargs)
+        argv = self.calls[-1]
+        if argv[0] == 'bash' and self.places is not None:
+            executable(self.places)
+        if argv[-1] == '--version':
+            reported = self.after if self.ran('bash') else self.before
+            return Completed(argv, 0, f'uv {reported} (x86_64-unknown-linux-gnu)') if reported else Completed(argv, 1, '')
+        return answer
+
+
+def executable(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b'#!/bin/sh\n')
+    path.chmod(0o755)
+    return path
+
+
+@pytest.fixture
+def pinned(monkeypatch) -> str:
+    monkeypatch.setattr(toolchain, 'pinned_uv', lambda *_source: PIN)
+    return PIN
+
+
+RUFF_HOOK = '  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.12.5\n'
+
+
+@pytest.mark.parametrize(
+    ('rev', 'release'),
+    [('"0.12.24"', '0.12.24'), ('0.12.24', '0.12.24'), ('v0.12.24', '0.12.24'), ('0.10', '0.10')],
+    ids=['quoted', 'bare', 'v-prefixed', 'a rev yaml would read as a float'],
+)
+def test_the_pin_is_the_uv_hook_rev(tmp_path, rev: str, release: str) -> None:
+    config = tmp_path / '.pre-commit-config.yaml'
+    config.write_text(f'repos:\n{RUFF_HOOK}  - repo: {toolchain.UV_HOOK_REPO}\n    rev: {rev}\n')
+
+    assert toolchain.pinned_uv(config) == release
+
+
+@pytest.mark.parametrize(
+    'hooks',
+    [f'repos:\n{RUFF_HOOK}', f'repos:\n  - repo: {toolchain.UV_HOOK_REPO}\n    rev: main\n', 'repos: [\n'],
+    ids=['no uv hook', 'a branch for a rev', 'not yaml'],
+)
+def test_a_config_naming_no_uv_release_is_unpinned(tmp_path, hooks: str) -> None:
+    config = tmp_path / '.pre-commit-config.yaml'
+    config.write_text(hooks)
+
+    with pytest.raises(toolchain.UnpinnedUv):
+        toolchain.pinned_uv(config)
+
+
+def test_uv_at_the_pin_is_not_reinstalled_but_still_sets_the_default(home, bundle, effected, pinned) -> None:
+    """Which Python is *default* is a machine question the bootstrap does not answer,
+    so it is asked even where uv needs nothing."""
+    executable(home / '.local' / 'bin' / 'uv')
+    runs, fetches = effected(Reports(PIN))
+
+    result = toolchain.install_uv(offline=False)
+
+    assert result.ok, result.detail
+    assert fetches.urls == []
+    assert not runs.ran('bash')
+    assert runs.ran('python', 'install', '--default', toolchain.DEFAULT_PYTHON)
+
+
+def test_uv_at_another_release_is_reinstalled_from_the_pinned_releases_script(home, bundle, effected, pinned) -> None:
+    """A uv above the pin is converged like one below it: either one writes uv.lock
+    in a format revision the pinned release does not."""
+    executable(home / '.local' / 'bin' / 'uv')
+    runs, fetches = effected(Reports('0.12.2'))
+
+    result = toolchain.install_uv(offline=False)
+
+    assert result.ok, result.detail
+    assert fetches.urls == [toolchain.UV_INSTALL_URL.format(version=PIN)]
+    assert PIN in result.detail
+
+
+def test_an_absent_uv_is_installed_at_the_pin(home, bundle, effected, pinned) -> None:
+    _, fetches = effected(Reports(None, places=home / '.local' / 'bin' / 'uv'))
+
+    result = toolchain.install_uv(offline=False)
+
+    assert result.ok, result.detail
+    assert fetches.urls == [toolchain.UV_INSTALL_URL.format(version=PIN)]
+
+
+def test_a_uv_installed_by_something_else_is_refused_rather_than_installed_beside(
+    home, bundle, effected, pinned, tmp_path, monkeypatch
+) -> None:
+    """astral's script writes to `~/.local/bin` and leaves a packaged uv where it is,
+    so PATH would still run the packaged one. Installing anyway would report the
+    machine converged while every `uv` it runs is the wrong release."""
+    packaged = executable(tmp_path / 'usr' / 'bin' / 'uv')
+    monkeypatch.setenv('PATH', f'{packaged.parent}:{home / ".local" / "bin"}')
+    runs, fetches = effected(Reports('0.12.2'))
+
+    result = toolchain.install_uv(offline=False)
+
+    assert result.refused
+    assert result.kind is Kind.TARGET_UNUSABLE
+    assert str(packaged) in result.detail
+    assert fetches.urls == []
+    assert not runs.ran('bash')
+
+
+def test_a_repo_pinning_no_uv_is_a_fault_in_the_repo(home, bundle, effected, monkeypatch) -> None:
+    def unpinned(*_source):
+        raise toolchain.UnpinnedUv('names no uv release')
+
+    monkeypatch.setattr(toolchain, 'pinned_uv', unpinned)
     runs, fetches = effected()
 
     result = toolchain.install_uv(offline=False)
 
-    assert result.ok
-    assert result.kind is Kind.APPLIED
+    assert not result.ok
+    assert result.kind is Kind.DECLARATION_INVALID
+    assert runs.calls == []
     assert fetches.urls == []
-    assert runs.ran('python', 'install', '--default', toolchain.DEFAULT_PYTHON)
 
 
-def test_uv_installs_offline_from_the_script_the_bundle_stages(home, bundle, effected) -> None:
+def test_a_script_that_installs_another_release_fails_verification(home, bundle, effected, pinned) -> None:
+    """The staged bundle's script wins even online, so a bundle built for an older
+    pin installs the older release and says nothing."""
+    executable(home / '.local' / 'bin' / 'uv')
+    effected(Reports('0.12.2', after='0.12.3'))
+
+    result = toolchain.install_uv(offline=False)
+
+    assert not result.ok
+    assert result.kind is Kind.VERIFY_FAILED
+    assert '0.12.3' in result.detail
+
+
+def test_uv_installs_offline_from_the_script_the_bundle_stages(home, bundle, effected, pinned) -> None:
     """The one runtime an offline machine can install, which is why the bundler
     stages this script and not the other three."""
     (bundle / 'scripts' / 'uv-install.sh').write_bytes(b'#!/bin/sh\necho installed\n')
-    runs, fetches = effected()
+    runs, fetches = effected(Reports(None, places=home / '.local' / 'bin' / 'uv'))
 
-    toolchain.install_uv(offline=True)
+    result = toolchain.install_uv(offline=True)
 
+    assert result.ok, result.detail
     assert fetches.urls == []
     assert runs.ran('bash', 'install.sh')
 

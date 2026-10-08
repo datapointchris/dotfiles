@@ -1070,7 +1070,7 @@ class ToolchainProvider(Provider):
 
 @dc.dataclass(frozen=True, slots=True)
 class UvToolchain(ToolchainProvider):
-    """astral's install script, then the default interpreter it manages."""
+    """astral's install script for the release the uv-pre-commit hook pins, then the default interpreter it manages."""
 
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
         return toolchain.install_uv(offline=session.offline)
