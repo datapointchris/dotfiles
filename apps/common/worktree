@@ -38,7 +38,9 @@ happen to be standing in: the worktrees exist because several sessions are runni
 at once, and the one you want is as often in another repo as in this one.
 $WORKTREE_ROOT is the whole index — a repo has a directory there exactly when it
 has a worktree — and each one's checkout is read back out of git. No registry of
-repos is consulted, because this app is deployed to machines that have none.
+repos is consulted, because this app is deployed to machines that have none. So a
+repo goes by its checkout's directory name, and `~/.claude` is `.claude`. A name
+with no worktree there is refused, naming the repos that have one.
 
 `spawn` is `new` with a session in it. The dozen steps between deciding a repo
 needs an agent and having one — cut the worktree, open a pane, launch `claude`
@@ -79,6 +81,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import difflib
 import json
 import os
 import shlex
@@ -240,9 +243,10 @@ class Fault(StrEnum):
     NOT_A_WORKTREE = 'not_a_worktree'
     PORT_REFUSED = 'port_refused'
     PORT_FAILED = 'port_failed'
+    UNKNOWN_REPO = 'unknown_repo'
 
 
-USAGE_FAULTS = frozenset({Fault.PORT_REFUSED})
+USAGE_FAULTS = frozenset({Fault.PORT_REFUSED, Fault.UNKNOWN_REPO})
 """Refusals a caller could have avoided, which exit 2 rather than 1.
 
 Only a different argument fixes one, and 1 says there is no argument to try."""
@@ -613,7 +617,7 @@ def sessions_at(sessions: Sequence[Session] | None, path: Path) -> tuple[Session
     return tuple(session for session in sessions if session.cwd == path or path in session.cwd.parents)
 
 
-def scan(root: Path, repo_filter: str | None) -> list[tuple[str, bool, Path]]:
+def scan(root: Path) -> list[tuple[str, bool, Path]]:
     """Every worktree on the machine, as (repo, is_checkout, path).
 
     Ordered by repo, with each checkout ahead of the worktrees cut from it. The
@@ -631,14 +635,31 @@ def scan(root: Path, repo_filter: str | None) -> list[tuple[str, bool, Path]]:
         if checkout is None:
             continue
         repo = checkout.name
-        if repo_filter and repo != repo_filter:
-            continue
         checkouts[checkout] = repo
         linked.append((repo, candidate))
 
     rows = [(repo, True, checkout) for checkout, repo in checkouts.items()]
     rows += [(repo, False, path) for repo, path in linked]
     return sorted(rows, key=lambda row: (row[0], not row[1], str(row[2])))
+
+
+def narrow(rows: Sequence[tuple[str, bool, Path]], repo: str | None) -> list[tuple[str, bool, Path]]:
+    """The scanned rows of the named repo, or every row when none is named.
+
+    A name that matches no row is refused. An empty answer cannot be told from a repo
+    with nothing to list or sweep, so a misspelling would read as a clean run.
+    """
+    if repo is None:
+        return list(rows)
+    chosen = [row for row in rows if row[0] == repo]
+    if chosen:
+        return chosen
+
+    known = sorted({name for name, _, _ in rows})
+    near = difflib.get_close_matches(repo, known, n=1)
+    hints = [f'Did you mean {near[0]}?'] if near else []
+    hints.append(f'Repos with a worktree there: {", ".join(known)}' if known else 'No repo has a worktree there')
+    raise Refused(f'No repo named {repo} has a worktree under {display_path(worktree_root())}', *hints, fault=Fault.UNKNOWN_REPO)
 
 
 def describe(repo: str, path: Path, checkout: bool, sessions: Sequence[Session] | None) -> Worktree:
@@ -679,7 +700,7 @@ def discover(repo_filter: str | None) -> list[Worktree]:
     rather than behind a flag here, because the failures of that fetch decide
     whether its verdicts mean anything.
     """
-    return describe_all(scan(worktree_root(), repo_filter), live_sessions())
+    return describe_all(narrow(scan(worktree_root()), repo_filter), live_sessions())
 
 
 def fetch_checkouts(rows: Sequence[tuple[str, bool, Path]]) -> set[Path]:
@@ -1675,7 +1696,7 @@ def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
     directories accumulate, and every tool that reports branch state reports each one
     forever.
     """
-    rows = scan(worktree_root(), repo_filter)
+    rows = narrow(scan(worktree_root()), repo_filter)
     unreached = fetch_checkouts(rows)
     worktrees = describe_all(rows, live_sessions())
 
@@ -1799,6 +1820,8 @@ def build_parser() -> argparse.ArgumentParser:
     quiet = argparse.ArgumentParser(add_help=False)
     quiet.add_argument('-q', '--quiet', action='store_true', help='hide the commands this runs')
 
+    repo_help = "narrow to one repo, by its checkout's directory name (~/.claude is .claude)"
+
     new = commands.add_parser(
         'new',
         parents=[quiet],
@@ -1865,11 +1888,11 @@ def build_parser() -> argparse.ArgumentParser:
             'unless --yes is passed.'
         ),
     )
-    sweep.add_argument('repo', nargs='?', help='narrow to one repo')
+    sweep.add_argument('repo', nargs='?', help=repo_help)
     sweep.add_argument('--yes', action='store_true', help='remove without asking; required when there is no terminal')
 
     listing = commands.add_parser('list', parents=[quiet], help="every worktree on this machine, or one repo's")
-    listing.add_argument('repo', nargs='?', help='narrow to one repo')
+    listing.add_argument('repo', nargs='?', help=repo_help)
     listing.add_argument('--json', action='store_true', dest='as_json', help='the same rows for a script to read')
     # Scope is structural here: `list` is the whole machine and `list <repo>` is
     # one repo. --all is caught rather than left to argparse's "unrecognized
@@ -1882,7 +1905,7 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument('path', nargs='?', help='defaults to the worktree you are standing in')
 
     choose = commands.add_parser('choose', parents=[quiet], help='pick one with fzf; prints the path it chose')
-    choose.add_argument('repo', nargs='?', help='narrow to one repo')
+    choose.add_argument('repo', nargs='?', help=repo_help)
 
     return parser
 

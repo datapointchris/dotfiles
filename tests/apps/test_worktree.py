@@ -1368,6 +1368,18 @@ class TestSweep:
         assert not alpha.exists()
         assert beta.exists()
 
+    def test_a_name_other_than_the_checkout_directory_is_refused_rather_than_swept_as_empty(self, tmp_path, fleet, run):
+        """A repo is named by its checkout's directory, so `~/.claude` is `.claude` and a
+        registry's `claude` matches nothing. Answered as an empty set, that reads as a
+        clean sweep while a finished worktree of the repo is still in the root."""
+        finished = merged_worktree(make_repo(tmp_path, '.claude'), fleet['roots'], run, 'alpha')
+
+        result = run(fleet['primary'], 'sweep', 'claude', '--yes')
+
+        assert result.returncode == 2
+        assert finished.exists()
+        assert 'Did you mean .claude?' in plain(result.stderr)
+
     def test_an_empty_sweep_names_what_it_checked(self, fleet, run):
         """An all-clear that names the whole machine, from a command that measured one
         worktree, is the shape that stops being believed."""
@@ -1576,6 +1588,23 @@ class TestListing:
         assert listed[0].split()[0] == '~/primary'
         assert 'alpha' in listed[1]
 
+    def test_a_repo_with_no_worktree_there_is_refused_and_the_ones_with_one_are_named(self, fleet, run):
+        """Under --json because an empty array is what a script reads as a repo with nothing in it."""
+        run(fleet['primary'], 'new', 'alpha')
+
+        result = run(fleet['primary'], 'list', 'nope', '--json')
+
+        assert result.returncode == 2
+        assert result.stdout == ''
+        assert 'Repos with a worktree there: primary' in plain(result.stderr)
+
+    def test_a_real_repo_with_no_worktrees_is_refused_like_a_misspelling(self, fleet, run):
+        """$WORKTREE_ROOT is the whole index, and `other` has no directory in it."""
+        result = run(fleet['primary'], 'list', 'other')
+
+        assert result.returncode == 2
+        assert 'No repo has a worktree there' in plain(result.stderr)
+
     def test_a_repo_with_no_worktree_is_not_in_the_listing(self, fleet, run):
         """$WORKTREE_ROOT is the whole index, so a repo joins the listing by having
         a worktree and leaves it by losing the last one."""
@@ -1776,6 +1805,13 @@ class TestChoose:
 
         assert str(populated) in offered, "the named repo's own worktree is still offered"
         assert 'beta' not in offered
+
+    def test_a_repo_with_no_worktree_there_is_refused_before_the_picker_opens(self, fleet, populated, picker):
+        result, fed, _ = picker(fleet['primary'], 'nope', behavior='exit 130')
+
+        assert result.returncode == 2
+        assert result.stdout == ''
+        assert not fed.exists()
 
     def test_nothing_to_choose_is_a_refusal_not_an_empty_picker(self, fleet, picker):
         result, fed, _ = picker(fleet['primary'], behavior='exit 130')
