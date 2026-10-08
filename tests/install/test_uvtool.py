@@ -175,22 +175,6 @@ def test_a_git_tool_is_pinned_to_its_newest_release(uv, released) -> None:
     assert installs(reached) == [('uv', 'tool', 'install', 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0')]
 
 
-def test_the_tool_name_leads_the_requirement() -> None:
-    """uv records the requirement under whatever name leads it, and that is what
-    makes the receipt readable by everything that reads it afterwards."""
-    assert uvtool.requirement(SYNCER, 'v6.0.0').startswith('syncer @ git+')
-
-
-def test_a_repo_declaring_tracks_branch_is_never_pinned(uv, released) -> None:
-    """A repo publishing no releases has no tag to pin to, which is a declaration
-    rather than something to discover per run."""
-    asked = released('v1.0.0')
-
-    assert uvtool.release_tag(KEYMAP) is None
-    assert uvtool.requirement(KEYMAP, None) == 'https://github.com/datapointchris/keymap-align.git'
-    assert asked == []
-
-
 def test_a_repo_with_no_release_installs_from_the_branch_with_a_warning(uv, released, capsys) -> None:
     """The install still works; it is the tool's own updater that will not, and
     install time is the only moment anyone would notice."""
@@ -322,7 +306,10 @@ def test_the_lock_is_read_at_the_tag_being_installed(uv, released, locked) -> No
     assert clone[:-1] == ('git', 'clone', '--quiet', '--depth', '1', '--branch', 'v6.0.0', 'https://github.com/datapointchris/syncer.git')
 
 
-def test_a_branch_tracking_tool_reads_the_lock_at_the_head(uv, locked) -> None:
+def test_a_branch_tracking_tool_reads_the_lock_at_the_head(uv, released, locked) -> None:
+    """A repo publishing no releases has no tag to pin to, which is a declaration
+    rather than something to discover per run."""
+    asked = released('v1.0.0')
     locked(PINS)
     reached = uv()
 
@@ -331,6 +318,7 @@ def test_a_branch_tracking_tool_reads_the_lock_at_the_head(uv, locked) -> None:
     [clone] = clones(reached)
     assert '--branch' not in clone
     assert installs(reached)[0][-1] == 'https://github.com/datapointchris/keymap-align.git'
+    assert asked == []
 
 
 def test_a_locked_revision_hands_uv_its_constraints_and_overrides(uv, released, locked) -> None:
