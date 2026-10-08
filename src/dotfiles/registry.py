@@ -991,8 +991,14 @@ class ToolchainProvider(Provider):
     installed_at: str = ''
     """Where this runtime must live, for one that is installed to a fixed path.
 
-    Empty for the three that go wherever their own installer puts them, and read
-    from `toolchain.GO_ROOT` for Go, which is unpacked over `/usr/local/go`.
+    Empty for uv and node, which go wherever their own installer puts them. Read
+    from `toolchain.GO_ROOT` for Go, which is unpacked over `/usr/local/go`. Rust
+    is `~/.cargo/bin/rustc`: rustup installs there with this repo's default
+    `CARGO_HOME`, and `cargo.cargo_bin()` already measures the cargo tools in the
+    same directory. A `~` is expanded when the row is planned.
+
+    A scheduler's unit need not put `~/.cargo/bin` on PATH, and a check run from
+    one would then read Rust missing beside the `rustc` rustup installed.
 
     It exists because `which` answers a different question than the declaration
     asks. A container picked up Arch's `go` package transitively, `which go` found
@@ -1035,7 +1041,7 @@ class ToolchainProvider(Provider):
                 stage=self.stage,
                 name=self.runtime,
                 executable=self.executable,
-                evidence_path=self.installed_at,
+                evidence_path=str(Path(self.installed_at).expanduser()) if self.installed_at else '',
                 precondition=planning.Precondition.NONE,
                 entry=declared_runtime(declaration, self.runtime),
                 reason=Reason(self.browses(), f'section:{self.needed_by}' if self.needed_by else 'every machine'),
@@ -1247,7 +1253,15 @@ PROVIDERS: tuple[Provider, ...] = (
         needed_by='go_tools',
         installed_at=str(toolchain.GO_ROOT / 'bin' / 'go'),
     ),
-    RustToolchain('rust-toolchain', 'toolchains', Stage.TOOLCHAIN, runtime='rust', executable='rustc', needed_by='cargo_packages'),
+    RustToolchain(
+        'rust-toolchain',
+        'toolchains',
+        Stage.TOOLCHAIN,
+        runtime='rust',
+        executable='rustc',
+        needed_by='cargo_packages',
+        installed_at=str(Path('~') / toolchain.CARGO_BIN / 'rustc'),
+    ),
     NodeToolchain('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
     SystemConfigProvider('group', 'system', Stage.SYSTEM_CONFIG, 'group_memberships'),
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),
