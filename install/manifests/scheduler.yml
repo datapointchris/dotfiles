@@ -74,6 +74,5 @@ auth:
 
 # The daily check runs as one of fleet's scheduled jobs here, whose unit loads
 # the service environment carrying this box's credentials. This repo's own timer
-# would run the same check without them, and report the logins above missing
-# once the interactive ones are gone.
+# would run the same check without them, and report the logins above missing.
 check_schedule: false
