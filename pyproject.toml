@@ -277,6 +277,9 @@ managed = [
     ["pytest", "ini_options", "minversion"],
     ["pytest", "ini_options", "testpaths"],
 ]
+# Dependencies held at the version the pre-commit hook runs, in every group
+# and extra that names them, so a local run and CI cannot disagree.
+pinned = ["ruff"]
 
 [dependency-groups]
 # The pre-commit hook runs `uv run mypy`, so mypy has to resolve from this
@@ -299,6 +302,7 @@ dev = [
     # is also what puts the console script beside `sys.executable`, which is how
     # tests/install/test_layering.py spawns it.
     "import-linter>=2.14",
+    "ruff==0.12.5",
 ]
 
 # mkdocs is a repo concern, not a runtime one: `uv tool install` deploys this
