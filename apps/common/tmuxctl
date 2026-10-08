@@ -814,17 +814,24 @@ def pane_state(pane_id: str) -> tuple[PaneState, int | None]:
 
     It answers for the whole window rather than for the pane, so the row is found
     by id -- the window's other panes say nothing about this one.
+
+    Dead means tmux has reaped the command, so it holds an exit status or the
+    signal that killed it. tmux before 3.7 sets `pane_dead` when the pane's
+    terminal closes and reaps the command afterwards. Read alone, that flag calls
+    a command still exiting dead with no status. 3.7 holds `pane_dead` back until
+    the reaping, and requiring one of the two here reads every version that way.
     """
-    listed = tmux_read('list-panes', '-t', pane_id, '-F', '#{pane_id}\t#{pane_dead}\t#{pane_dead_status}')
+    fields = '#{pane_id}\t#{pane_dead}\t#{pane_dead_status}\t#{pane_dead_signal}'
+    listed = tmux_read('list-panes', '-t', pane_id, '-F', fields)
     if listed is None:
         return PaneState.GONE, None
     for row in listed.splitlines():
-        found, dead, status = row.split('\t')
+        found, dead, status, signal = row.split('\t')
         if found != pane_id:
             continue
-        if dead != '1':
+        if dead != '1' or not (status or signal):
             return PaneState.RUNNING, None
-        return PaneState.DEAD, int(status) if status.strip().isdigit() else None
+        return PaneState.DEAD, int(status) if status.isdigit() else None
     return PaneState.GONE, None
 
 

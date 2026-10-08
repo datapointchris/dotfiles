@@ -1533,22 +1533,49 @@ def test_status_tells_running_from_dead_from_gone(tmuxctl, server):
     assert tmuxctl.pane_size('%9999') == (0, 0)
 
 
+@needs_tmux
+def test_a_pane_is_not_dead_until_its_exit_status_can_be_read(tmuxctl, server):
+    # tmux before 3.7 sets `pane_dead` when the pane's terminal closes, and records
+    # the status only when it reaps the command. A read between the two saw a dead
+    # pane with nothing to report. This command holds that gap open for a second by
+    # closing its terminal and then outliving it. It ignores SIGHUP because tmux
+    # hangs up a command once it has closed that terminal's other end.
+    request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
+    lingering = ('bash', '-c', 'trap "" HUP; exec </dev/null >/dev/null 2>&1; sleep 1; exit 3')
+    landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), lingering, '', 'agents')
+    for _ in range(60):
+        state, code = tmuxctl.pane_state(landed.pane)
+        if state is not tmuxctl.PaneState.RUNNING:
+            break
+        time.sleep(0.1)
+    assert (state, code) == (tmuxctl.PaneState.DEAD, 3)
+
+
 def test_a_live_sibling_is_not_read_in_place_of_the_pane_asked_about(tmuxctl, monkeypatch):
     # `list-panes` answers for a whole window, so the row has to be found by id. A
     # caller's own healthy pane sits in the same answer as the dead one being asked
     # about, and reading the first row would report whichever tmux listed first.
-    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%0\t0\t\n%1\t1\t127\n')
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%0\t0\t\t\n%1\t1\t127\t\n')
 
     assert tmuxctl.pane_state('%1') == (tmuxctl.PaneState.DEAD, 127)
     assert tmuxctl.pane_state('%0') == (tmuxctl.PaneState.RUNNING, None)
 
 
-def test_a_dead_pane_whose_status_cannot_be_read_is_still_dead(tmuxctl, monkeypatch):
-    # The status is what a caller reports, and not having one is not a reason to call
-    # a dead pane healthy -- which is what a parse failure defaulting to RUNNING does.
-    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\n')
+def test_a_pane_killed_by_a_signal_is_dead_with_no_exit_status(tmuxctl, monkeypatch):
+    # A signal leaves no exit status to report, and not having one is not a reason
+    # to call a dead pane healthy. tmux prints the signal by number on Linux.
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\t1\n')
 
     assert tmuxctl.pane_state('%1') == (tmuxctl.PaneState.DEAD, None)
+
+
+def test_a_pane_tmux_has_not_reaped_is_still_running(tmuxctl, monkeypatch):
+    # What tmux before 3.7 prints between closing a pane's terminal and reaping its
+    # command. The live test reproduces it only on such a tmux, so this pins the
+    # reading on every machine.
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\t\n')
+
+    assert tmuxctl.pane_state('%1') == (tmuxctl.PaneState.RUNNING, None)
 
 
 @needs_tmux
