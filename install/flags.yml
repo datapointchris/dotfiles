@@ -152,13 +152,12 @@ required:
   # renders it into atuin's config from the template below, so an unset value
   # leaves that file unrendered and `dotfiles check` names this entry.
   #
-  # atuin's own spelling. atuin reads the variable itself while its config names
-  # no address, but only in a process that sourced ~/.env, so a timer or an
-  # `ssh host atuin sync` would fall back to api.atuin.sh. The rendered file is
-  # what every process reads.
+  # atuin's own spelling. The template says why the file carries it rather than
+  # the environment.
   #
-  # Trust alone, matching the template's directory. Every fleet machine renders
-  # it, servers included: history sync is why linux-lxc-server installs atuin.
+  # Trust alone, because the scheduler and linux-lxc-server share every
+  # coordinate. The scheduler declines atuin sync and still has to set this value
+  # before its check is green.
   - name: ATUIN_SYNC_ADDRESS
     description: URL of the atuin server this machine syncs shell history to
     network_trust: fleet
