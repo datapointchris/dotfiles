@@ -8,6 +8,8 @@ answers cannot be given by three files that disagree.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from dotfiles import catalog
@@ -493,8 +495,8 @@ def test_the_registered_go_toolchain_names_the_path_everything_else_names() -> N
 
 
 def test_a_runtime_with_no_fixed_home_is_answered_by_path(tmp_path, monkeypatch) -> None:
-    """uv and node go wherever their own installer puts them, so `which` is the
-    right question for them and this must not have changed it."""
+    """uv goes wherever its own installer puts it, so `which` is the right question
+    for it and this must not have changed it."""
     on_path(tmp_path, 'uv')
     monkeypatch.setenv('PATH', str(tmp_path))
     provider = registry.named('uv-toolchain')
@@ -506,29 +508,47 @@ def test_a_runtime_with_no_fixed_home_is_answered_by_path(tmp_path, monkeypatch)
     assert registry.evidence_for(planned[0], {}).verdict is Verdict.MATCHED
 
 
-def test_rust_is_answered_by_the_cargo_bin_rustup_installs_into(tmp_path, monkeypatch) -> None:
-    """A `rustc` on PATH is not evidence, and one in `~/.cargo/bin` is wherever PATH
-    points.
+@pytest.mark.parametrize(
+    ('provider_name', 'home', 'needs'),
+    [
+        (
+            'rust-toolchain',
+            toolchain.CARGO_BIN,
+            item('cargo', 'ripgrep', catalog.CargoPackage.from_mapping({'name': 'ripgrep', 'command': 'rg'})),
+        ),
+        (
+            'node-toolchain',
+            toolchain.FNM_HOME / toolchain.FNM_ALIAS_BIN,
+            item('npm', 'bash-language-server', catalog.NpmGlobal.from_mapping({'name': 'bash-language-server'})),
+        ),
+    ],
+)
+def test_a_runtime_installed_under_home_is_answered_there_rather_than_by_path(
+    tmp_path, monkeypatch, provider_name: str, home: Path, needs: DesiredItem
+) -> None:
+    """A copy on PATH is not evidence, and the one where its installer put it is
+    wherever PATH points.
 
-    A scheduler's unit need not put `~/.cargo/bin` on PATH, and a check run from
-    one would then read Rust missing beside the `rustc` rustup installed.
+    A scheduler's unit need not put `~/.cargo/bin` or fnm's alias on PATH. A check
+    run from one would then read Rust missing beside the `rustc` rustup installed,
+    and read the system package manager's `node` as the fleet's.
     """
+    provider = registry.named(provider_name)
+    assert isinstance(provider, registry.ToolchainProvider)
     shadowing = tmp_path / 'bin'
     shadowing.mkdir()
-    on_path(shadowing, 'rustc')
+    on_path(shadowing, provider.executable)
     monkeypatch.setenv('PATH', str(shadowing))
     monkeypatch.setenv('HOME', str(tmp_path / 'home'))
-    provider = registry.named('rust-toolchain')
-    assert provider is not None
 
-    resolved = (item('cargo', 'ripgrep', catalog.CargoPackage.from_mapping({'name': 'ripgrep', 'command': 'rg'})),)
-    planned = provider.plan(machines.load('archlinux-personal-workstation'), catalog.load(), resolved)
+    planned = provider.plan(machines.load('archlinux-personal-workstation'), catalog.load(), (needs,))
 
-    assert planned[0].evidence_path == str(tmp_path / 'home' / '.cargo' / 'bin' / 'rustc')
-    assert registry.evidence_for(planned[0], {}).verdict is Verdict.MISSING, 'a rustc on PATH is not the rustc rustup installed'
+    installed = tmp_path / 'home' / home
+    assert planned[0].evidence_path == str(installed / provider.executable)
+    assert registry.evidence_for(planned[0], {}).verdict is Verdict.MISSING, 'a copy on PATH is not the one its installer put there'
 
-    (tmp_path / 'home' / '.cargo' / 'bin').mkdir(parents=True)
-    on_path(tmp_path / 'home' / '.cargo' / 'bin', 'rustc')
+    installed.mkdir(parents=True)
+    on_path(installed, provider.executable)
     monkeypatch.setenv('PATH', '/usr/bin:/bin')
 
     assert registry.evidence_for(planned[0], {}).verdict is Verdict.MATCHED
