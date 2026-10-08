@@ -17,6 +17,7 @@ import pytest
 
 from dotfiles import deploy
 from dotfiles.privilege import Privilege
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import symlinks
@@ -652,10 +653,10 @@ def test_a_value_only_in_this_process_s_environment_does_not_render(
     assert not rendered_target(home).exists()
 
 
-def test_a_file_already_at_the_target_is_replaced_with_the_rendering(session: Session, repo: Path, home: Path) -> None:
-    """The hand-written file this mechanism replaces. A rendered file carries no
-    provenance, so a stale rendering and somebody's file read the same, and `apply`
-    overwrites both."""
+def test_a_hand_written_file_at_the_target_is_refused_until_forced(session: Session, repo: Path, home: Path) -> None:
+    """The link branch's refusal, kept for a file that is written rather than linked.
+    A file that is not a rendering of the template is somebody's, and the first
+    apply on a machine is where one is most likely to be sitting."""
     declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
     answer(session, 'http://inside:8888')
     target = rendered_target(home)
@@ -665,8 +666,32 @@ def test_a_file_already_at_the_target_is_replaced_with_the_rendering(session: Se
     found = changes(session)
     apply(session)
 
-    assert [(change.verdict, change.repair) for change in found] == [(Verdict.STALE, Repair.AUTOMATIC)]
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.STALE, Repair.BY_HAND)]
+    assert found[0].advice == symlinks.FOREIGN_ADVICE
+    assert target.read_text() == 'enter_accept = true\n'
+
+    forced = Session(machine_name='box', repo=repo, home=home, force=True)
+    outcomes = apply(forced)
+
+    assert [outcome.status for outcome in outcomes] == [OutcomeStatus.DONE]
     assert target.read_text() == 'server = "http://inside:8888"\n'
+
+
+def test_a_hand_written_file_on_a_copy_machine_is_refused_with_advice_it_can_follow(copying: Session, repo: Path, home: Path) -> None:
+    """`--force` is refused at a copy machine's door, so the advice cannot name it."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(copying, 'http://inside:8888')
+    target = rendered_target(home)
+    target.parent.mkdir(parents=True)
+    target.write_text('enter_accept = true\n')
+
+    found = changes(copying)
+    apply(copying)
+
+    assert [(change.verdict, change.repair, change.advice) for change in found] == [
+        (Verdict.STALE, Repair.BY_HAND, symlinks.MOVE_ASIDE_ADVICE)
+    ]
+    assert target.read_text() == 'enter_accept = true\n'
 
 
 def test_a_changed_value_renders_again(session: Session, repo: Path, home: Path) -> None:
@@ -720,3 +745,17 @@ def test_unlinking_takes_back_a_rendering_and_leaves_an_edited_one(session: Sess
     assert removed == 1
     assert not rendered_target(home).exists()
     assert [target for target, _ in kept] == [edited]
+
+
+def test_unlinking_takes_back_a_rendering_made_with_an_earlier_value(session: Session, repo: Path, home: Path) -> None:
+    """The address changed in `~/.env` since the last apply. What is at the target
+    is still this manager's output, so it is not left behind as somebody's file."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://old:1')
+    apply(session)
+    answer(session, 'http://new:2')
+
+    removed, kept = symlinks.remove_rendered(session)
+
+    assert (removed, kept) == (1, ())
+    assert not rendered_target(home).exists()

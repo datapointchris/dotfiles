@@ -136,6 +136,14 @@ class Rendered:
     problem: str = ''
     """Why the template could not be read or filled whatever the values."""
 
+    foreign: bool = False
+    """The target is neither a rendering of this template nor a link into the repo,
+    so it is somebody's file and replacing it takes `--force`."""
+
+    adoptable: bool = False
+    """A foreign target this run may replace anyway: `--force` was given, or it is
+    an untouched skeleton file. The link branch's `adoptable`, per target."""
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Observed:
@@ -337,6 +345,17 @@ that would change nothing.
 
 FORCE_ADVICE = 'run it without the flag: a copy overwrites whatever is at the target, so no target is ever refused for you to force'
 """What a person who typed `--force` on a copy machine needs to hear instead."""
+
+MOVE_ASIDE_ADVICE = 'move it aside, then run: dotfiles symlinks apply'
+"""What to do about somebody's file at a template's target on a copy machine.
+
+A rendered file is refused there as on a link machine, because the template
+tells this manager's output apart where a copy cannot. `--force` is refused at
+that machine's door, so the way past is to take the file out of the way."""
+
+
+def _foreign_advice(copying: bool) -> str:
+    return MOVE_ASIDE_ADVICE if copying else FOREIGN_ADVICE
 
 
 class ForceUnavailable(refusal.Refusal):
@@ -573,11 +592,8 @@ def _measure(target: Path, expected: Callable[[], bytes]) -> Content:
 
 
 def machine_values(session: Session, names: Iterable[str]) -> dict[str, str]:
-    """This machine's answer to each name, read the way `env`'s check reads it.
-
-    From the `~/.env` file rather than the environment of this process, which may
-    be a timer that never sourced it.
-    """
+    """This machine's answer to each name, from `~/.env` the way `env`'s check
+    reads it, and never from this process's environment."""
     wanted = set(names)
     on_file = envfile.read(session.env_file)
     shared = [name for name in wanted if name in settings.SHARED_PATHS]
@@ -608,16 +624,44 @@ def measure_rendered(session: Session, templates: list[Link]) -> dict[Path, Rend
         if not rendering.complete:
             measured[link.target] = Rendered(None, unset=rendering.unset)
             continue
-        measured[link.target] = Rendered(_measure(link.target, rendering.text.encode))
+        content = _measure(link.target, rendering.text.encode)
+        foreign = _foreign(link, content, copying=session.machine.wants(DEPLOY_BY_COPY))
+        measured[link.target] = Rendered(
+            content,
+            foreign=foreign,
+            adoptable=foreign and (session.force or core.is_untouched_skeleton(link.target)),
+        )
     return measured
+
+
+def _foreign(link: Link, content: Content, *, copying: bool) -> bool:
+    """Whether a template's target holds something this manager did not write.
+
+    A regular file is this manager's where it is a rendering of the template with
+    any values. A link is where it resolves into the repo, which is what deploying
+    the file by link left behind, and on a copy machine every link is that. A file
+    that cannot be read as text is nobody's rendering.
+    """
+    match content:
+        case Content.LINKED:
+            return not copying and core.link_ownership(link.target, link.root) is core.Ownership.FOREIGN
+        case Content.DIFFERS:
+            try:
+                return not template.is_rendering_of(link.source, link.target.read_text())
+            except (OSError, ValueError):
+                return True
+        case Content.ABSENT | Content.SAME | Content.UNREADABLE:
+            return False
+    assert_never(content)
 
 
 def _render(session: Session, change: Change, link: Link) -> Outcome:
     """Write the template with this machine's values, rendered again live.
 
     Live for the reason `perform` re-checks everything: `~/.env` may have changed
-    since `observe` read it. A value that has gone unset since is a refusal, and
-    the target keeps whatever it held.
+    since `observe` read it, and the target may have been edited. A value that
+    has gone unset is a refusal, and so is a target that has become somebody's
+    file; either way it keeps whatever it held.
     """
     try:
         values = machine_values(session, template.placeholders(link.source))
@@ -626,6 +670,10 @@ def _render(session: Session, change: Change, link: Link) -> Outcome:
         return Outcome(change, OutcomeStatus.FAILED, str(problem))
     if not rendering.complete:
         return Outcome(change, OutcomeStatus.REFUSED, f'nothing sets {", ".join(rendering.unset)}, so {link.target} was left as it was')
+    copying = session.machine.wants(DEPLOY_BY_COPY)
+    content = _measure(link.target, rendering.text.encode)
+    if _foreign(link, content, copying=copying) and not (session.force or core.is_untouched_skeleton(link.target)):
+        return Outcome(change, OutcomeStatus.REFUSED, f'a target this manager did not create; {_foreign_advice(copying)}')
     try:
         template.write(link.target, rendering.text)
     except OSError as problem:
@@ -865,7 +913,8 @@ def _copy_verdict(link: Link, observed: Observed) -> Change | None:
 
 
 def _rendered_verdict(link: Link, observed: Observed) -> Change | None:
-    """The copy branch's answers, decided against this machine's rendering.
+    """The copy branch's answers, decided against this machine's rendering, with
+    the link branch's refusal of a target this manager did not write.
 
     An unset value comes first and is `BY_HAND`, because `apply` cannot invent
     one and must not write the file without it. The target is not judged at all
@@ -895,6 +944,26 @@ def _rendered_verdict(link: Link, observed: Observed) -> Change | None:
             advice=settings.where_to_name(rendered.unset[0], observed.env_file),
         )
 
+    if rendered.foreign:
+        if rendered.adoptable:
+            return Change(
+                NAME,
+                Stage.SYMLINKS,
+                link.address,
+                Verdict.STALE,
+                repair=Repair.AUTOMATIC,
+                detail=f'{link.target} exists and will be adopted',
+            )
+        return Change(
+            NAME,
+            Stage.SYMLINKS,
+            link.address,
+            Verdict.STALE,
+            repair=Repair.BY_HAND,
+            detail=f'{paths.under_home(link.target, observed.home)} is not a rendering of {link.address}, so this manager did not write it',
+            advice=_foreign_advice(observed.copying),
+        )
+
     match rendered.content:
         case Content.ABSENT:
             return Change(
@@ -918,7 +987,7 @@ def _rendered_verdict(link: Link, observed: Observed) -> Change | None:
                 link.address,
                 Verdict.STALE,
                 repair=Repair.AUTOMATIC,
-                detail=f"{link.target} differs from this machine's rendering of the template",
+                detail=f"{link.target} holds a rendering with values other than this machine's",
             )
 
         case Content.UNREADABLE | None:
@@ -938,12 +1007,11 @@ def _rendered_verdict(link: Link, observed: Observed) -> Change | None:
 
 
 def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
-    """Take back every rendered file still holding this machine's rendering, and name what stays.
+    """Take back every rendered file, and name what stays.
 
-    `remove_copies`' rule, against the rendering rather than the source: a target
-    holding exactly what this machine renders is this manager's output, and
-    anything else is left with its reason. Every machine runs it, because link
-    machines render templates too.
+    A target that is a rendering of its template, with this machine's values or
+    earlier ones, is this manager's output and goes. Anything else is left with
+    its reason.
     """
     templates = [link for link in declared(session, session.machine.coordinates) if link.rendered]
     measured = measure_rendered(session, templates)
@@ -966,18 +1034,16 @@ def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]
                 pass
 
             case Content.SAME:
-                try:
-                    link.target.unlink()
-                except OSError as problem:
-                    kept.append((link.target, str(problem)))
-                else:
-                    removed += 1
+                removed += _unlink_rendering(link.target, kept)
 
             case Content.LINKED:
                 kept.append((link.target, 'a symlink rather than a rendered file, so this pass does not speak for it'))
 
+            case Content.DIFFERS if rendered.foreign:
+                kept.append((link.target, f'is not a rendering of {link.address}'))
+
             case Content.DIFFERS:
-                kept.append((link.target, "holds something other than this machine's rendering"))
+                removed += _unlink_rendering(link.target, kept)
 
             case Content.UNREADABLE | None:
                 kept.append((link.target, 'could not be read, so nothing was established about it'))
@@ -986,6 +1052,16 @@ def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]
                 assert_never(unmatched)
 
     return removed, tuple(kept)
+
+
+def _unlink_rendering(target: Path, kept: list[tuple[Path, str]]) -> int:
+    """Remove one rendering, counting it, or record why it stays."""
+    try:
+        target.unlink()
+    except OSError as problem:
+        kept.append((target, str(problem)))
+        return 0
+    return 1
 
 
 def _destination(target: Path) -> Path | None:

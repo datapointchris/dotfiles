@@ -76,11 +76,9 @@ declared rather than derived from `os_family`.
 
 A file ending in `.tmpl` deploys without the suffix, as a regular file with its
 `${NAME}` placeholders filled from `~/.env`. It is for a program that reads one
-file and nothing beside it in every process that starts it. A value the program
-takes from its environment reaches only processes that sourced `~/.env`, and a
-timer or an `ssh host cmd` never did. atuin is the case that brought it in: it
-reads `ATUIN_SYNC_ADDRESS` only while its config names no address, so without
-the address in the file a timer's sync goes to api.atuin.sh.
+file and nothing beside it in every process that starts it, such as atuin. A
+value the program takes from its environment reaches only processes that sourced
+`~/.env`, and an `ssh host cmd` never did.
 `src/dotfiles/symlinks/template.py` holds the syntax and the write.
 
 Every placeholder is a `required:` entry in `install/flags.yml`.
@@ -90,9 +88,12 @@ nothing to set while the file stayed unrendered. An unset value is named twice b
 `dotfiles check`, on the env row and on the template's, and `apply` leaves the
 target as it found it.
 
-A rendered file has the copy mode's missing provenance. `apply` overwrites
-whatever is at the target, and `dotfiles symlinks unlink` removes only a file
-still holding exactly this machine's rendering.
+A rendered file is a regular file, so the template stands in for the provenance
+a link carries. A target matching the template, with anything on the line where
+a placeholder sits, is this manager's earlier rendering: `apply` renders over it
+and `dotfiles symlinks unlink` removes it. Anything else is somebody's file and
+is refused like a foreign link, on a copy machine too, because the template can
+tell the two apart where a copy cannot.
 
 *Rejected:* a `templates/` tree with a resource of its own. It is a second walk
 with a second collision domain and a new CLI noun, and one file's variants would
@@ -100,7 +101,10 @@ sit in two trees — the atuin config's nonfleet variant is a plain file under
 `configs/`. *Rejected:* `managed_files` in `install/system.yml`, which writes
 root-owned files with escalation and fills only `{user}`. *Rejected:* keeping the
 file hand-written and checking only that it names an address, which lets every
-other setting in it drift between machines.
+other setting in it drift between machines. *Rejected:* a linked config naming no
+address, leaving atuin to read `ATUIN_SYNC_ADDRESS` itself. An interactive shell
+then syncs to the right server, while `ssh host atuin doctor` on the same machine
+reports atuin's hosted service.
 
 ## Prune broken links with `apply`, never with `find -delete`
 

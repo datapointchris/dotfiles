@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import os
+import re
 import string
 import tempfile
 from collections.abc import Mapping
@@ -83,6 +84,30 @@ def render(source: Path, values: Mapping[str, str]) -> Rendering:
     if unset:
         return Rendering('', unset)
     return Rendering(template.substitute({name: values[name] for name in template.get_identifiers()}))
+
+
+def is_rendering_of(source: Path, text: str) -> bool:
+    """Whether the text is this template filled in with any values at all.
+
+    A rendered file is a regular file, so this is what tells this manager's output
+    from somebody's file: the template's literal text, with each placeholder
+    matching anything on one line. A rendering made with an earlier value matches,
+    and a file anyone wrote or edited does not.
+    """
+    pieces: list[str] = []
+    end = 0
+    template_text = source.read_text()
+    for found in string.Template.pattern.finditer(template_text):
+        pieces.append(re.escape(template_text[end : found.start()]))
+        if found.group('escaped') is not None:
+            pieces.append(re.escape('$'))
+        elif found.group('invalid') is not None:
+            raise ValueError(malformed(source))
+        else:
+            pieces.append(r'[^\n]*')
+        end = found.end()
+    pieces.append(re.escape(template_text[end:]))
+    return re.fullmatch(''.join(pieces), text) is not None
 
 
 def write(target: Path, text: str) -> None:
