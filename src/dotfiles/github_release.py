@@ -349,8 +349,8 @@ def _headers(url: str, accept: str | None = None, etag: str = '') -> dict[str, s
 NOT_MODIFIED = 304
 
 NOT_FOUND = 404
-"""How `releases/latest` says a repo has published nothing — that endpoint alone,
-and how `contents` says a file is absent at a ref, which `carries` reads.
+"""How `releases/latest` says a repo has published nothing, and how `contents`
+says a file is absent at a ref — on those two endpoints alone.
 
 `aws/aws-cli` answers 404 there while `tags` lists `2.36.19`, so on that endpoint
 a 404 is an answer rather than an API that could not be reached. `releases?per_page=100`

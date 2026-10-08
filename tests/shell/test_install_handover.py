@@ -217,10 +217,8 @@ The files are read while uv runs, because the bootstrap deletes them on exit.
 
 
 def test_the_bootstrap_installs_the_cli_held_to_its_lock(tmp_path: Path) -> None:
-    """The bootstrap runs before `uv_lock` exists, so it carries `uv_lock.EXPORT`'s
-    flags and the constraint-or-override split itself. Run rather than read: the
-    split is two greps, and a test of the text would pass a pair that sends the git
-    pin to the constraints file."""
+    """Run rather than read: the split is two greps, and a test of the text would
+    pass a pair that sends the git pin to the constraints file."""
     ran, _, argv_log = run_bootstrap(
         tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64', uv=LOCKING_UV.format(python=sys.executable)
     )

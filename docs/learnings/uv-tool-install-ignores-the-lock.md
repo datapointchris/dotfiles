@@ -40,10 +40,10 @@ carries one, read once per release with a `HEAD` on the contents endpoint.
   verification nothing performs.
 - **The receipt keeps both lists, and only `uv tool upgrade` honors them.**
   `uv tool install --force <requirement>` with no flags resolves afresh and writes a
-  receipt without them. A tool's own self-updater running that undoes a locked install.
+  receipt without them. A tool's own self-updater that runs it undoes a locked install.
 - **An empty requirements file warns on every install**:
   `warning: Requirements file ... does not contain any dependencies`. Name a file only
   when it has lines.
-- **A lock pinning nothing records nothing.** A tool with no dependencies installs with
-  no constraints whatever its lock says, so the check reads the environment as well:
-  one holding only the tool had nothing to hold.
+- **A tool with no dependencies records no lists.** Its lock pins nothing, so its receipt
+  holds no constraints. The check reads the environment as well, and one holding only
+  the tool had nothing to hold.

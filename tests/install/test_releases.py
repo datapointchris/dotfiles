@@ -372,7 +372,7 @@ def test_a_new_release_records_whether_its_tag_carries_a_lock(answers: dict, loc
 
 def test_an_unchanged_release_keeps_its_answer_without_asking_again(answers: dict, lock_files: list) -> None:
     """A tag's tree does not change, so asking on every refresh would spend the rate
-    limit on an answer already held. One read per release."""
+    limit on an answer already held."""
     answers[('owner/tool', '')] = ('v2.0.0', 'W/"same"')
     existing = {'owner/tool': releases.Cached('v2.0.0', NOW - dt.timedelta(days=1), etag='W/"same"', locked=False)}
 
@@ -404,8 +404,8 @@ def test_a_newer_release_asks_again(answers: dict, lock_files: list) -> None:
 
 
 def test_an_entry_from_before_the_field_is_asked_on_its_next_refresh(answers: dict, lock_files: list) -> None:
-    """Every git tool's entry predates `locked`, and its version will not change until
-    a release. Asking only on a new version would leave each unasked until then."""
+    """An entry with no `locked` keeps its version until the tool's next release.
+    Asking only on a new version would leave it unasked until then."""
     answers[('owner/tool', '')] = ('v2.0.0', 'W/"same"')
     existing = {'owner/tool': releases.Cached('v2.0.0', NOW, etag='W/"same"')}
 

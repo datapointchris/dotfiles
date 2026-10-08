@@ -415,9 +415,8 @@ def locked_cache(path: Path, version: str, *, locked: bool) -> None:
 def test_a_git_uv_tool_at_its_tag_installed_without_its_lock_is_stale(
     tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path
 ) -> None:
-    """Current by version, and running dependencies its CI never tested. Every git
-    tool installed before installs read the lock is in this state, and a version
-    comparison alone calls each one converged."""
+    """Current by version, and running dependencies its CI never tested. A version
+    comparison alone calls it converged."""
     receipt(uv_tools, 'doit', PINNED.format(tag='v1.1.0'))
     holding(uv_tools, 'doit', 'doit-1.1.0', 'typer-0.27.3')
     locked_cache(release_cache, 'v1.1.0', locked=True)

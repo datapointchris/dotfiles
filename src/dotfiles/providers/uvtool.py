@@ -20,11 +20,10 @@ tag to pin to.
 **A git install is held to the lock at that revision.** CI tests the lock, and
 `uv tool install` ignores it, so the revision is cloned first and its lock
 handed over as `uv_lock` describes. A revision with no `uv.lock` installs
-unconstrained, with a warning naming it, because there is nothing to hold it to. A lock
-that will not clone or export refuses the install instead: installing past it
-is the untested environment this exists to prevent. A `tracks_branch` install
-reads the branch head a moment before uv clones it again, so a commit landing
-in between installs against the previous lock.
+unconstrained, with a warning naming it. A clone or an export that fails
+refuses the install rather than installing unconstrained. A `tracks_branch`
+install reads the branch head a moment before uv clones it again, so a commit
+landing in between installs against the previous lock.
 
 **A repair that does not move the requirement needs `--reinstall`.** `uv tool
 install` is a no-op against an unchanged requirement, which is every PyPI entry
@@ -132,7 +131,7 @@ def requirement(entry: catalog.GitUvTool, tag: str | None) -> str:
 
 
 class LockUnreadable(Exception):
-    """The revision's lock could not be read, as the `Kind` that says which step failed."""
+    """The revision's lock could not be read. `kind` is `DOWNLOAD_FAILED` for the clone and `COMMAND_FAILED` for the export."""
 
     def __init__(self, detail: str, kind: Kind) -> None:
         super().__init__(detail)

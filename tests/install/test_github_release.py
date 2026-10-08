@@ -547,8 +547,6 @@ class TestRevalidate:
 
 
 class TestCarries:
-    """Whether a file exists at a ref, which is how the release cache learns a tag carries a `uv.lock`."""
-
     @staticmethod
     def answering(monkeypatch, outcome: int | Exception) -> list[tuple[str, str]]:
         monkeypatch.setattr(github_release, 'github_token', lambda: None)
@@ -564,7 +562,6 @@ class TestCarries:
         return asked
 
     def test_a_present_file_answers_true_without_its_body(self, monkeypatch):
-        """`HEAD`, because a lock runs to a megabyte and the question is only whether it is there."""
         asked = self.answering(monkeypatch, 200)
 
         assert github_release.carries('owner/repo', 'v1.2.0', 'uv.lock') is True

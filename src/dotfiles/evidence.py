@@ -105,10 +105,10 @@ def uv_tool_held(name: str) -> bool:
     """Whether a uv tool's install held its dependencies to a lock, or had none to hold.
 
     `uv_lock` hands a lock to uv as constraints and overrides, and uv records both
-    lists in the receipt. A receipt with neither was resolved fresh. The exception
-    is an environment holding no distribution but the tool's own: its lock pinned
-    nothing, so there was nothing for the install to resolve, and calling it
-    unlocked would reinstall it on every apply.
+    lists in the receipt. A receipt with neither was resolved fresh. An
+    environment holding no distribution but the tool's own counts as held: its
+    lock pinned nothing, so its receipt records no lists, and reporting it would
+    reinstall it on every apply.
 
     True where the receipt cannot be read, because a tool with no readable receipt
     is `uv_tool_pin`'s finding and not this one's.

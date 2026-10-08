@@ -10,15 +10,15 @@ version without adding it. A URL pin has to be an override: uv refuses a
 constraint whose URL differs from the one the package itself declares, and a
 lock records `git+<repo>@<commit>` where the package declared `git+<repo>`.
 
-An override replaces the requirement it matches whole, extras included, and
-the export names a URL-pinned package bare. A tool declaring `gitdep[x] @
-git+<repo>` would install gitdep without whatever `x` brings. The extras
-survive only on the lock's edges, so `requested_extras` walks them and each
-override line carries what the walk reached.
+The export names a URL-pinned package bare, and an override replaces the
+requirement it matches whole. A tool declaring `gitdep[x] @ git+<repo>` would
+install gitdep without what `x` brings. Only the lock's edges record the
+extras, so `requested_extras` walks them and each override line carries what
+the walk reached.
 
 uv writes both lists into the tool's receipt, so `uv tool upgrade` keeps them.
-It does not check the hashes a constraints file carries, so the export drops
-them rather than imply a verification nothing performs.
+uv does not check the hashes in a constraints file, so the export drops them
+rather than imply a verification nothing performs.
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ def read(project: Path) -> Pins | None:
 
 
 def parse(exported: str, extras: Mapping[str, Collection[str]]) -> Pins:
-    """A path requirement is neither, and is dropped: it is inside the commit being installed.
+    """A path requirement is neither a constraint nor an override. It is inside the commit being installed, so it is dropped.
 
     `extras` is keyed by normalized name, as `requested_extras` returns it.
     """

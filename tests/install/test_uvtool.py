@@ -5,9 +5,8 @@ The PyPI half has one decision in it and the git half has all of them: what gets
 handed to uv, what happens when the repo publishes nothing to pin to, and what
 its lock at that revision holds the install to.
 
-Two things leave the machine. Resolving a tag goes through
-`github_release.latest_version`, and cloning the revision to read its lock goes
-through `effects.run`. The last section drives real git and real uv against a
+Resolving a tag through `github_release.latest_version` and cloning the
+revision through `effects.run` both leave the machine. The last section drives real git and real uv against a
 repo and an index this file builds, because the stubs above prove the argv and
 only uv can say what that argv installs.
 """
@@ -307,8 +306,7 @@ def test_the_lock_is_read_at_the_tag_being_installed(uv, released, locked) -> No
 
 
 def test_a_branch_tracking_tool_reads_the_lock_at_the_head(uv, released, locked) -> None:
-    """A repo publishing no releases has no tag to pin to, which is a declaration
-    rather than something to discover per run."""
+    """`tracks_branch` is declared rather than discovered, so the releases API is never asked."""
     asked = released('v1.0.0')
     locked(PINS)
     reached = uv()
@@ -337,8 +335,6 @@ def test_a_locked_revision_hands_uv_its_constraints_and_overrides(uv, released, 
 
 
 def test_a_revision_with_no_lock_installs_unconstrained_and_names_the_revision(uv, released, capsys) -> None:
-    """Nothing to hold it to. The warning is the only place the difference from
-    every other tool shows."""
     released('v6.0.0')
     reached = uv()
 
@@ -382,8 +378,9 @@ def test_a_lock_uv_will_not_export_refuses_rather_than_installing_unlocked(uv, r
 #
 # Offline, against a find-links directory this file writes, so nothing reaches
 # an index and nothing lands in the machine's own tool directory.
-# `UV_TOOL_SCRATCH` in tests/conftest.py is the guard that lets this one
-# `uv tool install` through, and only because all three directories are tmp.
+# `would_change_this_machine` in tests/conftest.py lets this one `uv tool
+# install` through, and only while the three `UV_TOOL_SCRATCH` directories are
+# under tmp and `UV_OFFLINE` is 1.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -464,10 +461,9 @@ def test_an_installed_git_tool_runs_on_its_locks_versions_not_the_newest(tmp_pat
     """The tool's tag locks 1.0.0 of a registry package and of a git one, and 2.0.0
     of each exists by the time it is installed.
 
-    Both kinds, because they reach uv differently: the registry pin as a
-    constraint, the git pin as an override. A lock exported whole as constraints
-    fails on the git one, because uv refuses a constraint whose URL differs from
-    the one the tool declares.
+    Both kinds, because a registry pin reaches uv as a constraint and a git pin
+    as an override. Exported whole as constraints, the lock fails on the git pin
+    with `Requirements contain conflicting URLs`.
 
     The second install is the control. The same tag handed to uv with no lock
     takes 2.0.0 of both, so 1.0.0 above is the lock's doing rather than the only
@@ -510,12 +506,8 @@ def distributions(tools: Path, tool: str) -> dict[str, str]:
 
 
 def test_a_git_dependency_keeps_the_extras_the_tool_asked_for(tmp_path: Path, offline_index: Path, monkeypatch) -> None:
-    """The tool declares `gitdep[x]`, and `x` brings extrademo.
-
-    The export names gitdep bare, and the override replaces the declared
-    requirement whole. Without the extra on the override line, gitdep installs
-    and extrademo never does.
-    """
+    """The tool declares `gitdep[x]`, and `x` brings extrademo. Without the extra
+    on the override line, gitdep installs and extrademo never does."""
     wheel(offline_index, 'pindemo', '1.0.0')
     wheel(offline_index, 'extrademo', '1.0.0')
     gitdep = tmp_path / 'gitdep'

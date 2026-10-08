@@ -255,8 +255,7 @@ UV_TOOL_SCRATCH = ('UV_TOOL_DIR', 'UV_TOOL_BIN_DIR', 'UV_CACHE_DIR')
 """Every place `uv tool install` writes, when offline keeps it from fetching a Python.
 
 All three under the temp directory make the install a write there and nowhere
-else, which is how `test_uvtool.py` drives real uv against an index it built.
-`uv tool install` alone, because `uv tool update-shell` edits the shell's own
+else. `uv tool install` alone, because `uv tool update-shell` edits the shell's own
 startup files wherever these point.
 """
 
@@ -466,7 +465,7 @@ def no_writing_into_this_machines_own_directories(request, monkeypatch):
             for owned in guards.OWNED:
                 if self == owned or owned in self.parents:
                     raise WroteOntoThisMachine(
-                        f'{verb} on {self} would write into this machine’s own {owned} — '
+                        f"{verb} on {self} would write into this machine's own {owned} — "
                         f'redirect $XDG_STATE_HOME or $XDG_CONFIG_HOME, or mark the test e2e'
                     )
             return original(self, *args, **kwargs)

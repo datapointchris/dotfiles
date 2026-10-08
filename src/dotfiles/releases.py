@@ -89,10 +89,10 @@ class Cached:
     locked: bool | None = None
     """Whether `version`'s tag carries a `uv.lock`, for a repo whose `Wanted` asks.
 
-    None is not asked, or not answered, and either is asked again on the next
-    refresh. An answer is kept until the version changes, because a tag's tree does
-    not. It tells a git tool installed without its lock from one whose tag has
-    none to hold it to.
+    None means not asked or not answered, and either is asked again on the next
+    refresh. An answer is kept until the version changes, because a tag's tree
+    does not. It tells a git tool installed without its lock from one whose tag
+    has none to hold it to.
     """
 
     def fresh(self, now: dt.datetime, ttl: dt.timedelta = TTL) -> bool:
@@ -173,7 +173,6 @@ def save(entries: dict[str, Cached], path: Path | None = None) -> bool:
     """
     # The etag is omitted where there is none rather than written empty, so a repo
     # that offers no `ETag` reads the same on disk as one nobody has asked yet.
-    # `locked` likewise, where nobody asked.
     payload = {
         key: {'version': entry.version, 'checked': entry.checked.isoformat()}
         | ({'etag': entry.etag} if entry.etag else {})

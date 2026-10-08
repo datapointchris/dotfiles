@@ -1,8 +1,8 @@
 """Turning a `uv.lock` into what `uv tool install` takes.
 
 `tests/install/test_uvtool.py` drives real uv over a real lock. These hold the
-decisions under it: which line is a constraint, which an override, and which
-neither.
+decisions under it: which line is a constraint, which an override, which
+neither, and which extras an override carries.
 """
 
 from __future__ import annotations
@@ -29,8 +29,6 @@ def test_a_registry_pin_is_a_constraint_and_keeps_its_marker() -> None:
 
 
 def test_an_override_carries_the_extras_asked_of_it_and_keeps_its_marker() -> None:
-    """The override replaces the requirement that asked for the extras, so a
-    bare one installs the package without what they bring."""
     exported = "gitdep @ git+https://example.test/gitdep@abc123 ; sys_platform == 'linux'\n"
 
     assert uv_lock.parse(exported, {'gitdep': frozenset({'yaml', 'cli'})}).overrides == (

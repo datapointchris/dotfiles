@@ -267,6 +267,8 @@ trap 'rm -rf "$LOCKED"' EXIT
 uv export "$@" --frozen --no-default-groups --no-emit-workspace --no-hashes --no-header --no-annotate --directory "$DOTFILES_DIR" >"$LOCKED/exported.txt"
 grep -v ' @ ' "$LOCKED/exported.txt" | grep '==' >"$LOCKED/constraints.txt" || true
 grep ' @ ' "$LOCKED/exported.txt" >"$LOCKED/overrides.txt" || true
+# An override here carries no extras, where `uv_lock.parse` adds them. A git
+# dependency declared with extras would install without what they bring.
 # An empty file is left out because uv warns about one.
 for held in constraints overrides; do
   if [ -s "$LOCKED/$held.txt" ]; then

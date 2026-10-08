@@ -33,8 +33,8 @@ reinstalling the requirement; `uv tool upgrade` cannot do it.
 has no tag to pin, so it follows its default branch, held to the lock at the head it
 installed. It moves forward with `dotfiles packages apply --package <name> --reinstall`,
 which reads the new head's lock. `uv tool upgrade` resolves the new head against the
-constraints the receipt kept from the old one, so once the head raises a dependency floor
-above one of them it fails with `error: Failed to upgrade <name>` and
+constraints the receipt kept from the old one. Once the head raises a dependency floor
+above one of them, the upgrade fails with `error: Failed to upgrade <name>` and
 `... your requirements are unsatisfiable`.
 
 Measuring the pin is the other half of the problem. A checker that asks only whether a

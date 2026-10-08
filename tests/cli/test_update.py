@@ -365,8 +365,6 @@ def locking_uv(fake_bin: Path, record: Path, exported: str, *, export_exits: int
 
 
 def test_a_rebuilt_venv_is_held_to_the_lock_the_pull_brought(clone: Path, remote: Path, fake_bin: Path, tmp_path: Path) -> None:
-    """`uv tool install --editable` resolves every dependency afresh and never reads
-    uv.lock, so a rebuild without these files runs on versions CI never tested."""
     record = tmp_path / 'locked.jsonl'
     locking_uv(fake_bin, record, 'typer==0.20.0\nhelper @ git+https://example.invalid/helper@abc123\n')
     commit(remote, 'uv.lock', 'version = 1\n')
@@ -382,8 +380,7 @@ def test_a_rebuilt_venv_is_held_to_the_lock_the_pull_brought(clone: Path, remote
 
 
 def test_a_lock_uv_will_not_export_leaves_the_venv_alone(clone: Path, remote: Path, fake_bin: Path, tmp_path: Path) -> None:
-    """Rebuilding past it would be the unlocked install this exists to prevent, and
-    the venv already there is the one the previous lock built."""
+    """The venv already there is the one the previous lock built."""
     record = tmp_path / 'refused.jsonl'
     locking_uv(fake_bin, record, '', export_exits=2)
     commit(remote, 'uv.lock', 'version = 99\n')
