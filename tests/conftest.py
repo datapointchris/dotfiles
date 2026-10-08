@@ -251,12 +251,29 @@ plus that option, and nothing else.
 """
 
 
-def would_change_this_machine(argv: tuple[str, ...]) -> bool:
+UV_TOOL_SCRATCH = ('UV_TOOL_DIR', 'UV_TOOL_BIN_DIR', 'UV_CACHE_DIR')
+"""Every place `uv tool install` writes, when offline keeps it from fetching a Python.
+
+All three under the temp directory make the install a write there and nowhere
+else. `uv tool install` alone, because `uv tool update-shell` edits the shell's own
+startup files wherever these point.
+"""
+
+
+def would_change_this_machine(argv: tuple[str, ...], env: dict[str, str] | None = None) -> bool:
     """Whether a denylisted pair is really the form that writes to the machine."""
     if argv[:2] not in INSTALLING:
         return False
+    if argv[:3] == ('uv', 'tool', 'install') and _uv_writes_only_under_tmp(dict(os.environ) if env is None else env):
+        return False
     redirected = any(part.startswith(REDIRECTED_STATE) for part in argv)
     return not (redirected and argv[:2] in REDIRECTABLE)
+
+
+def _uv_writes_only_under_tmp(env: dict[str, str]) -> bool:
+    scratch = Path(tempfile.gettempdir()).resolve()
+    redirected = all(env.get(name) and Path(env[name]).resolve().is_relative_to(scratch) for name in UV_TOOL_SCRATCH)
+    return redirected and env.get('UV_OFFLINE') == '1'
 
 
 @pytest.fixture(autouse=True)
@@ -371,7 +388,7 @@ def no_installing_on_this_machine(request, monkeypatch):
     def refuse_installs(original):
         def guarded(command, *args, **kwargs):
             argv = tuple(str(part) for part in command) if isinstance(command, list | tuple) else ()
-            if would_change_this_machine(argv):
+            if would_change_this_machine(argv, kwargs.get('env')):
                 raise WouldInstall(f'{" ".join(argv)} would install on this machine — stub the provider, or mark the test e2e')
             return original(command, *args, **kwargs)
 
@@ -448,7 +465,7 @@ def no_writing_into_this_machines_own_directories(request, monkeypatch):
             for owned in guards.OWNED:
                 if self == owned or owned in self.parents:
                     raise WroteOntoThisMachine(
-                        f'{verb} on {self} would write into this machine’s own {owned} — '
+                        f"{verb} on {self} would write into this machine's own {owned} — "
                         f'redirect $XDG_STATE_HOME or $XDG_CONFIG_HOME, or mark the test e2e'
                     )
             return original(self, *args, **kwargs)

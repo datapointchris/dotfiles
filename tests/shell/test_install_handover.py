@@ -18,6 +18,7 @@ import os
 import re
 import stat
 import subprocess
+import sys
 import tarfile
 from fnmatch import fnmatch
 from pathlib import Path
@@ -26,6 +27,7 @@ import pytest
 from shells import REPO
 
 from dotfiles import coordinates
+from dotfiles import uv_lock
 from dotfiles.create_bundle import ARCHIVE_MEMBER
 
 BOOTSTRAP = REPO / 'install.sh'
@@ -131,7 +133,7 @@ def bootstrap_bundle(at: Path, name: str) -> Path:
     return tarball
 
 
-def run_bootstrap(tmp_path: Path, *archives: str) -> tuple[subprocess.CompletedProcess[str], Path, Path]:
+def run_bootstrap(tmp_path: Path, *archives: str, uv: str = FAKE_UV) -> tuple[subprocess.CompletedProcess[str], Path, Path]:
     """`install.sh --offline` with uv shadowed, so nothing is really installed."""
     home = tmp_path / 'home'
     staging = tmp_path / 'staged'
@@ -141,7 +143,7 @@ def run_bootstrap(tmp_path: Path, *archives: str) -> tuple[subprocess.CompletedP
     argv_log = tmp_path / 'uv-argv'
 
     shadow = fake_bin / 'uv'
-    shadow.write_text(FAKE_UV)
+    shadow.write_text(uv)
     shadow.chmod(shadow.stat().st_mode | stat.S_IEXEC)
 
     # What a real `uv tool install` would have left behind. The script's closing
@@ -195,6 +197,39 @@ def test_the_bootstrap_installs_the_cli_from_the_bundle_it_staged(tmp_path: Path
 
     assert ran.returncode == 0, ran.stderr
     assert f'--find-links {staged / "wheels"}' in argv_log.read_text()
+
+
+LOCKING_UV = """#!{python}
+import os, pathlib, sys
+argv = sys.argv[1:]
+lines = [' '.join(argv)]
+for at, flag in enumerate(argv[:-1]):
+    if flag in ('--constraints', '--overrides'):
+        lines.append(f'{{flag}}=' + pathlib.Path(argv[at + 1]).read_text().replace('\\n', '|'))
+pathlib.Path(os.environ['UV_ARGV']).open('a').write('\\n'.join(lines) + '\\n')
+if argv[:1] == ['export']:
+    sys.stdout.write('typer==0.20.0\\nhelper @ git+https://example.invalid/helper@abc123\\n')
+"""
+"""uv, answering `export` with two lock lines and logging what each install's files held.
+
+The files are read while uv runs, because the bootstrap deletes them on exit.
+"""
+
+
+def test_the_bootstrap_installs_the_cli_held_to_its_lock(tmp_path: Path) -> None:
+    """Run rather than read: the split is two greps, and a test of the text would
+    pass a pair that sends the git pin to the constraints file."""
+    ran, _, argv_log = run_bootstrap(
+        tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64', uv=LOCKING_UV.format(python=sys.executable)
+    )
+    logged = argv_log.read_text().splitlines()
+    exports = [line.split() for line in logged if line.startswith('export ')]
+
+    assert ran.returncode == 0, ran.stderr
+    assert len(exports) == 1
+    assert set(uv_lock.EXPORT[2:]) <= set(exports[0])
+    assert '--constraints=typer==0.20.0|' in logged
+    assert '--overrides=helper @ git+https://example.invalid/helper@abc123|' in logged
 
 
 def test_the_bootstrap_takes_the_newest_archive_across_the_directories_it_searches(tmp_path: Path) -> None:

@@ -824,7 +824,7 @@ identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identi
 def identity_plan(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
-    """Show whether `apply` would set this machine’s git identity."""
+    """Show whether `apply` would set this machine's git identity."""
     verbosity(verbose, quiet)
     _survey('identity', machine, Lens.PLAN, as_json, refresh=False)
 

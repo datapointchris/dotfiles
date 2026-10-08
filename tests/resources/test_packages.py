@@ -402,6 +402,83 @@ def test_a_branch_tracking_tool_is_never_asked_about_currency(tmp_path: Path, fa
     assert changes(live) == ()
 
 
+def holding(uv_tools: Path, tool: str, *distributions: str) -> None:
+    """The tool's environment, holding these distributions the way uv lays one out."""
+    for distribution in distributions:
+        (uv_tools / tool / 'lib' / 'python3.13' / 'site-packages' / f'{distribution}.dist-info').mkdir(parents=True)
+
+
+def locked_cache(path: Path, version: str, *, locked: bool) -> None:
+    releases.save({'datapointchris/doit': releases.Cached(version, dt.datetime.now(dt.UTC), locked=locked)}, path)
+
+
+def test_a_git_uv_tool_at_its_tag_installed_without_its_lock_is_stale(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path
+) -> None:
+    """Current by version, and running dependencies its CI never tested. A version
+    comparison alone calls it converged."""
+    receipt(uv_tools, 'doit', PINNED.format(tag='v1.1.0'))
+    holding(uv_tools, 'doit', 'doit-1.1.0', 'typer-0.27.3')
+    locked_cache(release_cache, 'v1.1.0', locked=True)
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict, change.repair) for change in found] == [('uv-git/doit', Verdict.STALE, Repair.AUTOMATIC)]
+    assert 'without its uv.lock' in found[0].detail
+
+
+def test_a_git_uv_tool_held_to_its_lock_reports_nothing(tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path) -> None:
+    (uv_tools / 'doit').mkdir()
+    (uv_tools / 'doit' / 'uv-receipt.toml').write_text(
+        f'[tool]\nrequirements = [{PINNED.format(tag="v1.1.0")}]\nconstraints = [{{ name = "typer", specifier = "==0.20.0" }}]\n'
+    )
+    holding(uv_tools, 'doit', 'doit-1.1.0', 'typer-0.20.0')
+    locked_cache(release_cache, 'v1.1.0', locked=True)
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    assert changes(live) == ()
+
+
+def test_a_tag_with_no_lock_is_not_reported_unlocked(tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path) -> None:
+    """There is nothing to install it against, so reporting it would reinstall it on every apply."""
+    receipt(uv_tools, 'doit', PINNED.format(tag='v1.1.0'))
+    holding(uv_tools, 'doit', 'doit-1.1.0', 'typer-0.27.3')
+    locked_cache(release_cache, 'v1.1.0', locked=False)
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    assert changes(live) == ()
+
+
+def test_a_tool_whose_lock_pins_nothing_is_not_reported_unlocked(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path
+) -> None:
+    """A lock with no dependencies exports nothing, so uv records no constraints for
+    it however it was installed. The environment holding only the tool is what says
+    there was nothing to hold."""
+    receipt(uv_tools, 'doit', PINNED.format(tag='v1.1.0'))
+    holding(uv_tools, 'doit', 'doit-1.1.0')
+    locked_cache(release_cache, 'v1.1.0', locked=True)
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    assert changes(live) == ()
+
+
+def test_a_git_uv_tool_behind_its_release_is_reported_behind_rather_than_unlocked(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path
+) -> None:
+    """`locked` answers for the cached tag, not the installed one, and the upgrade installs against the new tag's lock anyway."""
+    receipt(uv_tools, 'doit', PINNED.format(tag='v1.0.0'))
+    holding(uv_tools, 'doit', 'doit-1.0.0', 'typer-0.27.3')
+    locked_cache(release_cache, 'v1.1.0', locked=True)
+    live = session(tmp_path, GIT_UV, DECLARES_GIT_UV)
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict) for change in found] == [('uv-git/doit', Verdict.STALE)]
+    assert 'latest release' in found[0].detail
+
+
 def test_a_uv_tool_on_path_without_its_directory_still_counts(tmp_path: Path, fake_bin: Path, uv_tools: Path) -> None:
     """A tool installed some other way is still installed. The check reports the
     machine, not the mechanism."""

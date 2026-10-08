@@ -43,7 +43,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 **External tools** (installed from GitHub, not in this repo):
 
-- `doit`: Python app via `uv tool install git+https://github.com/datapointchris/doit`
+- `doit` and the rest of `git_uv_tools`: Python apps installed with `uv tool install` at their newest release tag, held to that tag's `uv.lock`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
 The core rule: a deployed path lives in exactly one directory. `declared()` in `src/dotfiles/resources/symlinks.py` walks each coordinate directory and appends without deduplicating, so the same relative path in `common/` and a coordinate directory is a collision producing two links at one target — never an override. There is no merge step, which is why a config that differs on one coordinate moves out of `common/` whole rather than being patched on top of it.

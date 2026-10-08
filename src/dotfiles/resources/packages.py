@@ -505,7 +505,7 @@ def _wanted(item: DesiredItem) -> releases.Wanted:
         # Through `repo_slug_of` because this section carries a clone URL where
         # every other one carries a bare `owner/name` — uv is handed the URL
         # verbatim at install time — and the cache keys on what the API path wants.
-        return releases.Wanted(repo='' if entry.tracks_branch else catalog.repo_slug_of(entry.repo))
+        return releases.Wanted(repo='' if entry.tracks_branch else catalog.repo_slug_of(entry.repo), asks_lock=True)
     return releases.Wanted(repo='')
 
 
@@ -646,7 +646,37 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
         )
 
     current = versions.at_least(reported, cached.version)
+    if current and _installed_without_its_lock(item, reported, cached):
+        repair = repair_for(item, Verdict.STALE, observed.met)
+        return (
+            Change(
+                NAME,
+                item.stage,
+                item.address,
+                Verdict.STALE,
+                repair=repair,
+                detail=f'{cached.version} was installed without its uv.lock, so its dependencies are not the versions its CI tested',
+                advice=advice_for(item, repair),
+                desired=item,
+                observed=reported,
+            ),
+        )
     return _compared(item, reported, cached.version, current, _behind(cached.version, observed), observed.met)
+
+
+def _installed_without_its_lock(item: DesiredItem, reported: str, cached: releases.Cached) -> bool:
+    """A git tool at the tag the cache measured, whose tag has a lock its receipt does not hold.
+
+    `uvtool.install_git` holds every install to its tag's lock, so this is an
+    install it did not make, such as one a tool's own updater replaced. Only the
+    exact tag, because `locked` answers for `cached.version` and nothing else.
+    """
+    return (
+        isinstance(item.entry, catalog.GitUvTool)
+        and cached.locked is True
+        and versions.exactly(reported, cached.version) is True
+        and not ev.uv_tool_held(item.name)
+    )
 
 
 def _ahead_of(version: str, observed: Observed) -> str:

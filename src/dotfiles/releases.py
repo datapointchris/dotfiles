@@ -32,6 +32,7 @@ from pathlib import Path
 
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles import uv_lock
 from dotfiles.output import hint
 from dotfiles.output import warn
 
@@ -85,6 +86,15 @@ class Cached:
     question is asked, never what the answer means.
     """
 
+    locked: bool | None = None
+    """Whether `version`'s tag carries a `uv.lock`, for a repo whose `Wanted` asks.
+
+    None means not asked or not answered, and either is asked again on the next
+    refresh. An answer is kept until the version changes, because a tag's tree
+    does not. It tells a git tool installed without its lock from one whose tag
+    has none to hold it to.
+    """
+
     def fresh(self, now: dt.datetime, ttl: dt.timedelta = TTL) -> bool:
         return now - self.checked < ttl
 
@@ -106,6 +116,9 @@ class Wanted:
     repo disagreeing about which is a declaration bug rather than two cache
     entries.
     """
+
+    asks_lock: bool = False
+    """Whether to record `Cached.locked` for this repo's newest tag. Only git uv tools install from a lock."""
 
     @property
     def key(self) -> str:
@@ -134,10 +147,12 @@ def load(path: Path | None = None) -> dict[str, Cached]:
     entries = {}
     for key, record in payload.items():
         try:
+            locked = record.get('locked')
             entries[key] = Cached(
                 version=record['version'],
                 checked=dt.datetime.fromisoformat(record['checked']),
                 etag=record.get('etag') or '',
+                locked=locked if isinstance(locked, bool) else None,
             )
         except (TypeError, KeyError, ValueError):
             continue
@@ -159,7 +174,9 @@ def save(entries: dict[str, Cached], path: Path | None = None) -> bool:
     # The etag is omitted where there is none rather than written empty, so a repo
     # that offers no `ETag` reads the same on disk as one nobody has asked yet.
     payload = {
-        key: {'version': entry.version, 'checked': entry.checked.isoformat()} | ({'etag': entry.etag} if entry.etag else {})
+        key: {'version': entry.version, 'checked': entry.checked.isoformat()}
+        | ({'etag': entry.etag} if entry.etag else {})
+        | ({'locked': entry.locked} if entry.locked is not None else {})
         for key, entry in entries.items()
     }
     target = path or cache_file()
@@ -201,16 +218,32 @@ def refresh(wanted: tuple[Wanted, ...], existing: dict[str, Cached], now: dt.dat
     github_release.github_token()
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        fetched = list(pool.map(lambda item: (item, _newest(item, existing.get(item.key))), wanted))
+        fetched = list(pool.map(lambda item: (item, _answered(item, existing.get(item.key), now)), wanted))
 
     entries = dict(existing)
-    for item, answer in fetched:
-        previous = entries.get(item.key)
-        if answer.unchanged and previous is not None:
-            entries[item.key] = dc.replace(previous, checked=now)
-        elif answer.version:
-            entries[item.key] = Cached(version=answer.version, checked=now, etag=answer.etag)
+    for item, entry in fetched:
+        if entry is not None:
+            entries[item.key] = entry
     return entries
+
+
+def _answered(wanted: Wanted, previous: Cached | None, now: dt.datetime) -> Cached | None:
+    """The entry one repo's answer leaves, or None to keep whatever was there.
+
+    `locked` is asked only where the entry has no answer for its version, so a
+    release costs one contents read and a 304 costs none.
+    """
+    answer = _newest(wanted, previous)
+    if answer.unchanged and previous is not None:
+        entry = dc.replace(previous, checked=now)
+    elif answer.version:
+        kept = previous.locked if previous is not None and previous.version == answer.version else None
+        entry = Cached(version=answer.version, checked=now, etag=answer.etag, locked=kept)
+    else:
+        return None
+    if wanted.asks_lock and entry.locked is None:
+        entry = dc.replace(entry, locked=github_release.carries(wanted.repo, entry.version, uv_lock.LOCK_FILE))
+    return entry
 
 
 def _newest(wanted: Wanted, previous: Cached | None = None) -> github_release.Newest:

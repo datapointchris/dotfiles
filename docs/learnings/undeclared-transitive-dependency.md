@@ -47,9 +47,11 @@ not name. Re-adding `import click` fails it with
 - **A transitive dependency is one resolution, not a promise.** A library is free
   to vendor or drop a dependency in a minor release, and a range like
   `>=0.12.0` spans both sides of that.
-- **`uv run` and `uv tool install` resolve separately.** The dev venv is not a
-  preview of the installed tool, so a green suite says nothing about whether the
-  shipped binary imports.
+- **`uv run` and a bare `uv tool install` resolve separately.** `uv run` reads
+  `uv.lock` and `uv tool install` never does, so the dev venv is not a preview of a
+  tool installed that way. `install.sh` and `dotfiles update` hand the lock over as
+  constraints, which [uv tool install Ignores the Lock](uv-tool-install-ignores-the-lock.md)
+  covers. A range like `>=0.12.0` still lets a lock refresh move across the vendoring.
 - **The cheapest real check is the shipped interpreter.** Running
   `PYTHONPATH=src <tool-venv>/bin/python -c 'from dotfiles.main import app'`
   reproduced it in one command, after the CI matrix had missed it entirely.

@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from relay import executable
 from relay import install_spy
 from relay import recorded
 
@@ -328,7 +329,7 @@ def test_both_repairs_run_in_the_order_the_venv_rebuild_demands(clone: Path, rem
     result = run_update(clone)
 
     assert result.returncode == ExitCode.CONVERGED, result.stderr
-    assert [call[0] for call in recorded(repairs)] == ['symlinks', 'tool']
+    assert [call[0] for call in recorded(repairs)] == ['symlinks', 'export', 'tool']
 
 
 def test_a_failed_venv_rebuild_exits_issue_rather_than_reporting_success(clone: Path, remote: Path, fake_bin: Path, tmp_path: Path) -> None:
@@ -336,12 +337,59 @@ def test_a_failed_venv_rebuild_exits_issue_rather_than_reporting_success(clone: 
     caller gets — and it is chosen from the reinstall rather than from the pull."""
     record = tmp_path / 'failed.jsonl'
     install_spy(fake_bin, record, name='uv', code=1)
-    commit(remote, 'uv.lock', 'version = 1\n')
+    commit(remote, 'pyproject.toml', '[project]\nname = "x"\n')
 
     result = run_update(clone)
 
     assert result.returncode == ExitCode.ISSUE
     assert recorded(record) == [['tool', 'install', '--reinstall', '--editable', str(clone)]]
+
+
+LOCKING_UV = """#!{python}
+import json, pathlib, sys
+argv = sys.argv[1:]
+held = {{argv[at]: pathlib.Path(argv[at + 1]).read_text() for at in range(len(argv) - 1) if argv[at] in ('--constraints', '--overrides')}}
+pathlib.Path({record!r}).open("a").write(json.dumps({{'argv': argv, 'held': held}}) + "\\n")
+if argv[:1] == ['export']:
+    sys.stdout.write({exported!r})
+sys.exit({code} if argv[:1] == ['export'] else 0)
+"""
+"""uv, answering `export` with a lock's lines and recording what each install's files held.
+
+The files are read while uv runs, because `update` deletes them once it returns.
+"""
+
+
+def locking_uv(fake_bin: Path, record: Path, exported: str, *, export_exits: int = 0) -> None:
+    executable(fake_bin, 'uv', LOCKING_UV.format(python=sys.executable, record=str(record), exported=exported, code=export_exits))
+
+
+def test_a_rebuilt_venv_is_held_to_the_lock_the_pull_brought(clone: Path, remote: Path, fake_bin: Path, tmp_path: Path) -> None:
+    record = tmp_path / 'locked.jsonl'
+    locking_uv(fake_bin, record, 'typer==0.20.0\nhelper @ git+https://example.invalid/helper@abc123\n')
+    commit(remote, 'uv.lock', 'version = 1\n')
+
+    result = run_update(clone)
+    export, install = recorded(record)
+
+    assert result.returncode == ExitCode.CONVERGED, result.stderr
+    assert export['argv'][0] == 'export'
+    assert install['argv'][:3] == ['tool', 'install', '--reinstall']
+    assert install['argv'][-2:] == ['--editable', str(clone)]
+    assert install['held'] == {'--constraints': 'typer==0.20.0\n', '--overrides': 'helper @ git+https://example.invalid/helper@abc123\n'}
+
+
+def test_a_lock_uv_will_not_export_leaves_the_venv_alone(clone: Path, remote: Path, fake_bin: Path, tmp_path: Path) -> None:
+    """The venv already there is the one the previous lock built."""
+    record = tmp_path / 'refused.jsonl'
+    locking_uv(fake_bin, record, '', export_exits=2)
+    commit(remote, 'uv.lock', 'version = 99\n')
+
+    result = run_update(clone)
+
+    assert result.returncode == ExitCode.ISSUE
+    assert [call['argv'][0] for call in recorded(record)] == ['export']
+    assert 'was not rebuilt' in result.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────

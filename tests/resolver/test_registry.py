@@ -260,7 +260,8 @@ class TestUvToolRepair:
         outcome = found.install(Session(machine_name='box'), change, planned, Privilege(offer=False))
 
         assert outcome.status is OutcomeStatus.DONE
-        return calls[0]
+        # A git tool clones its tag to read the lock before uv installs it.
+        return next(call for call in calls if call[:3] == ('uv', 'tool', 'install'))
 
     def test_a_stale_pypi_tool_is_installed_again_rather_than_no_opped(self, monkeypatch) -> None:
         argv = self.repair(monkeypatch, 'uv', 'ruff', self.RUFF, Verdict.STALE)

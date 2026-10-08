@@ -546,6 +546,48 @@ class TestRevalidate:
             github_release.revalidate('https://api.github.com/repos/owner/repo/releases/latest')
 
 
+class TestCarries:
+    @staticmethod
+    def answering(monkeypatch, outcome: int | Exception) -> list[tuple[str, str]]:
+        monkeypatch.setattr(github_release, 'github_token', lambda: None)
+        asked: list[tuple[str, str]] = []
+
+        def fake(url, headers=None, **_kwargs):
+            asked.append(('HEAD', url))
+            if isinstance(outcome, Exception):
+                raise outcome
+            return httpx2.Response(outcome, request=httpx2.Request('HEAD', url))
+
+        monkeypatch.setattr(httpx2, 'head', fake)
+        return asked
+
+    def test_a_present_file_answers_true_without_its_body(self, monkeypatch):
+        asked = self.answering(monkeypatch, 200)
+
+        assert github_release.carries('owner/repo', 'v1.2.0', 'uv.lock') is True
+        assert asked == [('HEAD', 'https://api.github.com/repos/owner/repo/contents/uv.lock?ref=v1.2.0')]
+
+    def test_a_404_is_the_file_absent_at_that_ref(self, monkeypatch):
+        self.answering(monkeypatch, 404)
+
+        assert github_release.carries('owner/repo', 'v1.2.0', 'uv.lock') is False
+
+    @pytest.mark.parametrize('outcome', [403, 500, httpx2.ConnectError('refused')])
+    def test_anything_else_is_no_answer_rather_than_absent(self, monkeypatch, outcome):
+        """A rate limit read as "no lock" would stop the check flagging an unlocked
+        install until the tool's next release, because an answer is kept per tag."""
+        self.answering(monkeypatch, outcome)
+
+        assert github_release.carries('owner/repo', 'v1.2.0', 'uv.lock') is None
+
+    def test_a_ref_with_a_slash_is_escaped(self, monkeypatch):
+        asked = self.answering(monkeypatch, 200)
+
+        github_release.carries('owner/repo', 'cli/v1.0.0', 'uv.lock')
+
+        assert asked[0][1].endswith('?ref=cli%2Fv1.0.0')
+
+
 class TestNewestVersion:
     """The revalidating pair beside `latest_version` and `latest_tag`.
 

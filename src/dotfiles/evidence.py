@@ -24,6 +24,7 @@ from __future__ import annotations
 import dataclasses as dc
 import enum
 import os
+import re
 import shutil
 import tomllib
 from collections.abc import Sequence
@@ -98,6 +99,30 @@ def uv_tool_pin(name: str) -> str | None:
         if pinned and requirement.get('name') == name:
             return revision
     return None
+
+
+def uv_tool_held(name: str) -> bool:
+    """Whether a uv tool's install held its dependencies to a lock, or had none to hold.
+
+    `uv_lock` hands a lock to uv as constraints and overrides, and uv records both
+    lists in the receipt. A receipt with neither was resolved fresh. An
+    environment holding no distribution but the tool's own counts as held: its
+    lock pinned nothing, so its receipt records no lists, and reporting it would
+    reinstall it on every apply.
+
+    True where the receipt cannot be read, because a tool with no readable receipt
+    is `uv_tool_pin`'s finding and not this one's.
+    """
+    tool = paths.uv_tool_dir() / name
+    try:
+        recorded = tomllib.loads((tool / 'uv-receipt.toml').read_text()).get('tool', {})
+    except (OSError, tomllib.TOMLDecodeError):
+        return True
+    if recorded.get('constraints') or recorded.get('overrides'):
+        return True
+    own = re.sub(r'[-_.]+', '_', name).lower()
+    installed = [*tool.glob('lib/python*/site-packages/*.dist-info'), *tool.glob('Lib/site-packages/*.dist-info')]
+    return all(re.sub(r'[-_.]+', '_', found.name.split('-')[0]).lower() == own for found in installed)
 
 
 def macos_app(name: str) -> Path | None:
