@@ -668,7 +668,7 @@ def _installed_without_its_lock(item: DesiredItem, reported: str, cached: releas
     """A git tool at the tag the cache measured, whose tag has a lock its receipt does not hold.
 
     `uvtool.install_git` holds every install to its tag's lock, so this is an
-    install from before it did, or one a tool's own updater replaced. Only the
+    install it did not make, such as one a tool's own updater replaced. Only the
     exact tag, because `locked` answers for `cached.version` and nothing else.
     """
     return (

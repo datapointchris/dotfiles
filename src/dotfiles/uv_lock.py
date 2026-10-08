@@ -2,8 +2,7 @@
 
 `uv tool install` never reads a lock. Handed `<name> @ git+<repo>@<tag>` or an
 editable path, it resolves every dependency afresh, so a tool runs on whatever
-was newest that day while its CI tested the lock. claude-code-metrics installed
-typer 0.27.3 against a locked 0.20.0, and every clean run exited 3.
+was newest that day while its CI tested the lock.
 
 `uv export` turns the lock into requirements, and they reach the install in two
 files. A registry pin is a constraint, which holds a package to the locked

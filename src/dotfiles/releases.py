@@ -91,8 +91,8 @@ class Cached:
 
     None is not asked, or not answered, and either is asked again on the next
     refresh. An answer is kept until the version changes, because a tag's tree does
-    not. `resources/packages.py` reads it to tell a git tool installed without its
-    lock from one whose tag has none to hold it to.
+    not. It tells a git tool installed without its lock from one whose tag has
+    none to hold it to.
     """
 
     def fresh(self, now: dt.datetime, ttl: dt.timedelta = TTL) -> bool:

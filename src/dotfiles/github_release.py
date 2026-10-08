@@ -410,8 +410,8 @@ def carries(repo: str, ref: str, path: str) -> bool | None:
 
     Asked with `HEAD`, so a lock file of a megabyte costs a status line. A 404 on
     the contents endpoint is the file being absent at that ref. It would also be a
-    repo the credential cannot see, which is why the one caller asks only about a
-    tag the releases endpoint has just named for the same credential.
+    repo the credential cannot see, so ask only about a ref the releases endpoint
+    has just named for the same credential.
     """
     url = f'https://api.github.com/repos/{repo}/contents/{urllib.parse.quote(path)}?ref={urllib.parse.quote(ref, safe="")}'
     try:
