@@ -28,6 +28,7 @@ go_tools:
   - gdu       # the clones fill a disk, and this is how that gets diagnosed
 
 git_uv_tools:
+  - doit      # the usage-digest job runs `doit kit digest run` on this box
   - syncer    # `fleet audit run` fast-forwards every checkout through it
   - homelab   # the homelab control CLI; its hourly snapshot timer runs on this box
 
