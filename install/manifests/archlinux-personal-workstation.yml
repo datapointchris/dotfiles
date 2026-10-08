@@ -112,6 +112,7 @@ git_uv_tools:
   - safekeep
   - typos
   - homelab
+  - claude-code-metrics
 
 shell_plugins: true
 tmux_plugins: true

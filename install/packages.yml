@@ -1609,6 +1609,12 @@ git_uv_tools:
     repo: https://github.com/datapointchris/typos.git
     description: Passive typing analyzer over captured Neovim keystrokes
 
+  # Installs the `ccm` command.
+  - name: claude-code-metrics
+    repo: https://github.com/datapointchris/claude-code-metrics.git
+    requires_github_auth: true
+    description: Analytics over Claude Code sessions — DuckDB, Parquet and automated insights
+
 # ================================================================
 # GO TOOLS
 # ================================================================

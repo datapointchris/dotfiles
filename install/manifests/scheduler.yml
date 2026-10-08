@@ -30,6 +30,7 @@ go_tools:
 git_uv_tools:
   - doit      # the usage-digest job runs `doit kit digest run` on this box
   - syncer    # `fleet audit run` fast-forwards every checkout through it
+  - claude-code-metrics  # `ccm`, for the weekly scan and friction-check jobs on this box
 
 custom_installers:
   - claude-code   # the grader
