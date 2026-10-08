@@ -4,8 +4,7 @@ Every test builds a whole synthetic world — a repo tree and a home — and poi
 a Session at both. `home` and `repo` are real fields on Session rather than
 patched globals, so these exercise the same code a machine runs.
 
-The capability being pinned is the one the previous pass could not have: a
-declared link that was never deployed is *reported*, without running the write
+A declared link that was never deployed is *reported*, without running the write
 that would create it.
 """
 
@@ -173,9 +172,8 @@ def test_a_reserved_name_outside_the_apps_tree_is_linked_anyway(session: Session
 
 
 def test_a_declared_link_that_was_never_deployed_is_missing(session: Session, repo: Path) -> None:
-    """The whole point of the conversion. The previous pass answered only "is
-    anything broken", so a file added to configs/ and never deployed read as
-    converged."""
+    """A pass asking only "is anything broken" reads a file added to configs/ and
+    never deployed as converged."""
     declare(repo, 'configs/common/.config/tmux/tmux.conf')
 
     found = changes(session)
@@ -601,7 +599,7 @@ TEMPLATE_TEXT = 'server = "${APP_SERVER}"\n'
 
 
 def answer(session: Session, value: str) -> None:
-    """Set the value below the marker, the way a person answers a required one."""
+    """Write the value into `~/.env`, the way a person answers a required one."""
     session.env_file.write_text(f'export APP_SERVER="{value}"\n')
 
 
@@ -623,8 +621,6 @@ def test_a_template_lands_without_its_suffix_holding_this_machine_s_value(sessio
 
 
 def test_an_unset_value_is_named_and_nothing_is_written(session: Session, repo: Path, home: Path) -> None:
-    """`apply` cannot invent the value, and a config written without it is the
-    silent failure the register exists to make loud."""
     declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
 
     found = changes(session)
@@ -639,8 +635,8 @@ def test_an_unset_value_is_named_and_nothing_is_written(session: Session, repo: 
 def test_a_value_only_in_this_process_s_environment_does_not_render(
     session: Session, repo: Path, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A timer has never sourced a shell profile, so an answer that exists only in
-    the shell running this would be gone for the next process to render."""
+    """A variable exported in the shell running `apply` is gone in the next
+    process, and `~/.env` still says nothing."""
     declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
     monkeypatch.setenv('APP_SERVER', 'http://ambient:1')
 
@@ -654,9 +650,9 @@ def test_a_value_only_in_this_process_s_environment_does_not_render(
 
 
 def test_a_hand_written_file_at_the_target_is_refused_until_forced(session: Session, repo: Path, home: Path) -> None:
-    """The link branch's refusal, kept for a file that is written rather than linked.
-    A file that is not a rendering of the template is somebody's, and the first
-    apply on a machine is where one is most likely to be sitting."""
+    """The link branch's refusal, applied to a file that is written rather than
+    linked. A machine's first render is where a hand-written file most likely sits
+    at the target."""
     declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
     answer(session, 'http://inside:8888')
     target = rendered_target(home)
@@ -731,8 +727,8 @@ def test_a_copy_machine_renders_a_template_rather_than_copying_it(copying: Sessi
 
 
 def test_unlinking_takes_back_a_rendering_and_leaves_an_edited_one(session: Session, repo: Path, home: Path) -> None:
-    """The copy pass's rule against the rendering: a target holding exactly what this
-    machine renders is this manager's output, and anything else is somebody's."""
+    """A line added to a rendering stops it matching the template, so the file is
+    somebody's and stays."""
     declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
     declare(repo, 'configs/trust/fleet/.config/other/other.toml.tmpl', TEMPLATE_TEXT)
     answer(session, 'http://inside:8888')
@@ -748,8 +744,6 @@ def test_unlinking_takes_back_a_rendering_and_leaves_an_edited_one(session: Sess
 
 
 def test_unlinking_takes_back_a_rendering_made_with_an_earlier_value(session: Session, repo: Path, home: Path) -> None:
-    """The address changed in `~/.env` since the last apply. What is at the target
-    is still this manager's output, so it is not left behind as somebody's file."""
     declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
     answer(session, 'http://old:1')
     apply(session)

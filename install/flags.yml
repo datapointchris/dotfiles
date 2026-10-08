@@ -147,15 +147,15 @@ required:
     consumers:
       - configs/common/.config/newsboat/config
 
-  # The atuin server this machine syncs shell history to: an address on the
-  # machine's own network, which this repo is public and must not carry. dotfiles
-  # renders it into atuin's config from the template below, so an unset value
-  # leaves that file unrendered and `dotfiles check` names this entry.
+  # The atuin server this machine syncs shell history to. It is an address on the
+  # machine's own network, which this public repo must not carry. dotfiles
+  # renders it into atuin's config from the template named below, so an unset
+  # value leaves that file unrendered and `dotfiles check` names this entry.
   #
-  # atuin's own spelling. The template says why the file carries it rather than
-  # the environment.
+  # The name is atuin's own environment variable. The template's comment on
+  # `sync_address` says why the file carries the value instead.
   #
-  # Trust alone, because the scheduler and linux-lxc-server share every
+  # Scoped by trust alone, because the scheduler and linux-lxc-server share every
   # coordinate. The scheduler declines atuin sync and still has to set this value
   # before its check is green.
   - name: ATUIN_SYNC_ADDRESS

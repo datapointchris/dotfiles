@@ -2,16 +2,16 @@
 #
 # Atuin owns Ctrl-R (its DB-backed search — time, cwd, exit), while up-arrow stays
 # zsh's prefix-search; see the atuin block in .zshrc for the keybinding rationale.
-# Beyond search, atuin records the per-command metadata the audit-flow analysis
-# needs — exit code, working directory, and session — in ~/.local/share/atuin/history.db.
+# Beyond search, atuin records each command's exit code, working directory and
+# session in ~/.local/share/atuin/history.db, for the audit-flow analysis.
 #
 # The flat ~/.local/state/zsh/history keeps being written too, so it stays the
 # fallback for anything reading history — `doit kit usage` and `doit review`
 # both prefer atuin and drop back to it on a box where atuin cannot be asked.
 
 # Fleet-wide history through a self-hosted server on the machine's own network,
-# never api.atuin.sh. The account is a row in that server's Postgres and no
-# address is ever verified or mailed. History is encrypted client-side, so the
+# never api.atuin.sh. The account is a row in that server's Postgres, and no
+# email is ever verified or sent. History is encrypted client-side, so the
 # server holds ciphertext and ~/.local/share/atuin/key never leaves the machine —
 # a box without that key syncs records it cannot read. The key belongs in
 # Vaultwarden; losing it loses the history.
@@ -20,7 +20,7 @@
 # on, so the nonfleet copy of this file reports nothing to do.
 auto_sync = true
 
-# The server's address is the machine's to supply, and this repo is public, so
+# The server's address is the machine's to supply, and this repo is public. So
 # dotfiles renders this file with ATUIN_SYNC_ADDRESS from ~/.env. atuin reads that
 # variable itself only while this file names no address, and only in a process
 # that sourced ~/.env. .zshrc sources it, and an `ssh host atuin ...` command never

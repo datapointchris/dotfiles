@@ -288,10 +288,10 @@ def _colliding_variants(root: Path) -> list[Finding]:
     The question is only whether two directories can co-occur, which is a fact
     about the axes and needs no coordinates resolved.
 
-    One directory can collide with itself: a template and a plain file of the
-    same name both deploy without the template's suffix. The filesystem keeps two
-    files of one name apart and cannot keep these apart, so that case is checked
-    first, ahead of a pairing that never pairs a directory with itself.
+    One directory can collide with itself, which only a template makes possible:
+    `app.toml.tmpl` and `app.toml` beside it both deploy as `app.toml`. The
+    pairing below never compares a directory with itself, so that case is checked
+    first.
     """
     findings: list[Finding] = []
     for tree in FLATTENING_TREES:
@@ -333,12 +333,12 @@ def _colliding_variants(root: Path) -> list[Finding]:
 def _templates(root: Path, manifests: dict[str, machines.Machine]) -> list[Finding]:
     """A template no machine can render, or one a machine renders with a value it is never asked for.
 
-    The second is silent on the machine. `check` names a missing value only when
-    the machine's `required:` entries include it, so a placeholder outside them
-    leaves the file unrendered while the env check reports nothing to set.
+    On the machine, the second is named by the template's own row alone. The env
+    check and the generated block in `~/.env` list only the machine's `required:`
+    entries, so neither asks for the value.
 
-    Asked of each declared machine through the same walk the deployment takes, so
-    a template is held to the machines that select it and no others.
+    Each declared machine is walked the way the deployment walks it, so a template
+    is held to the machines that select it and no others.
     """
     findings: list[Finding] = []
     malformed: set[Path] = set()

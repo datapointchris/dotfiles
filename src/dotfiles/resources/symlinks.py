@@ -138,11 +138,11 @@ class Rendered:
 
     foreign: bool = False
     """The target is neither a rendering of this template nor a link into the repo,
-    so it is somebody's file and replacing it takes `--force`."""
+    so `apply` replaces it only where `adoptable`."""
 
     adoptable: bool = False
     """A foreign target this run may replace anyway: `--force` was given, or it is
-    an untouched skeleton file. The link branch's `adoptable`, per target."""
+    an untouched skeleton file. `Observed.adoptable` holds the same answer for links."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -215,8 +215,8 @@ class Observed:
 
     rendered: dict[Path, Rendered]
     """What is at each template's target, on a link machine and a copy machine
-    alike. The other fields above leave templates out, because a rendered file is
-    neither a link nor a copy of its source."""
+    alike. `ownership`, `pointing_at`, `adoptable` and `content` leave templates
+    out, because a rendered file is neither a link nor a copy of its source."""
 
     env_file: Path
     """Where this machine's values are set, for the advice on an unset one."""
@@ -255,8 +255,8 @@ class Observed:
         every row below. A second predicate here would be free to disagree with the
         rows it is summarizing.
 
-        Rendered files get their own count, for the reason the mechanism word is
-        chosen: a rendered file is neither a symlink nor a copy.
+        Rendered files get their own count. The first count's noun is `symlinks` or
+        `copies`, and a rendered file is neither.
         """
         deployed = [link for link in self.links if not link.rendered]
         rendered = [link for link in self.links if link.rendered]
@@ -349,9 +349,9 @@ FORCE_ADVICE = 'run it without the flag: a copy overwrites whatever is at the ta
 MOVE_ASIDE_ADVICE = 'move it aside, then run: dotfiles symlinks apply'
 """What to do about somebody's file at a template's target on a copy machine.
 
-A rendered file is refused there as on a link machine, because the template
-tells this manager's output apart where a copy cannot. `--force` is refused at
-that machine's door, so the way past is to take the file out of the way."""
+Somebody's file at a template's target is refused there as on a link machine,
+because the template tells this manager's output apart where a copy cannot.
+`--force` is refused at that machine's door, so moving the file is the way past."""
 
 
 def _foreign_advice(copying: bool) -> str:
@@ -432,10 +432,9 @@ class SymlinksResource:
 
     def observe(self, session: Session, plan: Plan) -> Observed:
         # `_index` is keyed on the Session, and two Sessions in one process compare
-        # equal by value — so a second run in the same interpreter got the first
-        # run's declaration index. A file added to the repo between them was
-        # planned correctly by this walk and then refused by `perform` as an orphan
-        # "nothing in the repo declares any more", which is the opposite of true.
+        # equal by value. Uncleared, a second run in the same interpreter reads the
+        # first run's declaration index, and `perform` refuses a file added to the
+        # repo between them as "nothing in the repo declares this link any more".
         # Cleared here because this is the one place that re-reads the repo, so it
         # is where a run's idea of what is declared begins.
         _index.cache_clear()
@@ -638,9 +637,10 @@ def _foreign(link: Link, content: Content, *, copying: bool) -> bool:
     """Whether a template's target holds something this manager did not write.
 
     A regular file is this manager's where it is a rendering of the template with
-    any values. A link is where it resolves into the repo, which is what deploying
-    the file by link left behind, and on a copy machine every link is that. A file
-    that cannot be read as text is nobody's rendering.
+    any values. A link is this manager's where it resolves into the repo, which is
+    where deploying the file as a link points it. On a copy machine every link
+    counts as this manager's, as `_copy_verdict` treats one. A file that cannot be
+    read as text is nobody's rendering.
     """
     match content:
         case Content.LINKED:
@@ -658,10 +658,10 @@ def _foreign(link: Link, content: Content, *, copying: bool) -> bool:
 def _render(session: Session, change: Change, link: Link) -> Outcome:
     """Write the template with this machine's values, rendered again live.
 
-    Live for the reason `perform` re-checks everything: `~/.env` may have changed
-    since `observe` read it, and the target may have been edited. A value that
-    has gone unset is a refusal, and so is a target that has become somebody's
-    file; either way it keeps whatever it held.
+    `perform` re-checks everything, and this re-renders for the same reason:
+    `~/.env` may have changed since `observe` read it, and the target may have
+    been edited. A value gone unset is refused, and so is a target that has become
+    somebody's file. Either way the target keeps what it held.
     """
     try:
         values = machine_values(session, template.placeholders(link.source))
@@ -1037,7 +1037,7 @@ def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]
                 removed += _unlink_rendering(link.target, kept)
 
             case Content.LINKED:
-                kept.append((link.target, 'a symlink rather than a rendered file, so this pass does not speak for it'))
+                kept.append((link.target, 'a symlink rather than a rendered file'))
 
             case Content.DIFFERS if rendered.foreign:
                 kept.append((link.target, f'is not a rendering of {link.address}'))

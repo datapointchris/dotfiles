@@ -161,9 +161,9 @@ credential comes from Vaultwarden rather than from a backup of the machine that
 lost it.
 
 A required value can reach a config file as well as a shell. A `.tmpl` under
-`configs/` is rendered with it, for a program that reads neither the environment
-nor an include in every process —
-[Symlinks Manager](../reference/tools/symlinks.md) says when one earns it.
+`configs/` is rendered with it, for a program that has to find the value in
+every process, including one that never sourced `~/.env`.
+[Symlinks Manager](../reference/tools/symlinks.md) says when a file earns one.
 
 `--safekeep` emits the files as the `[[back_up_paths]]` blocks safekeep's config
 wants. Blocks to paste rather than a generated config, and `_safekeep_block` in

@@ -1,13 +1,13 @@
 """A deployed file whose source ends in `.tmpl`, written with this machine's values in it.
 
 Everything else this repo deploys is the same bytes on every machine that
-selects it, so a link carries it. A file naming something only the machine
-knows — a server on its own network — cannot be a link without the repo
-carrying the value, and the repo is public. Where the program reading the file
-takes the value from its environment or from an included file, the value goes
-there and the file stays a link. A template is for a program that reads one file
-in every process that starts it, including the ones that never sourced a shell
-profile.
+selects it, so a link carries it. A server on the machine's own network is
+something only the machine knows. A file naming it cannot be a link without
+the repo carrying the value, and the repo is public. Where the program reading
+the file takes the value from its environment or from an included file, the
+value goes there and the file stays a link. A template is for a program that
+reads one file in every process that starts it, including the ones that never
+sourced a shell profile.
 
 A placeholder's value is a `required:` entry in `install/flags.yml`, answered
 below the OVERRIDES marker in `~/.env`. That entry is what makes `dotfiles check`
@@ -75,9 +75,7 @@ def malformed(source: Path) -> str:
 def render(source: Path, values: Mapping[str, str]) -> Rendering:
     """The file this machine should hold, or every placeholder nothing answered.
 
-    An empty value counts as unset. An empty address renders a config that parses
-    and points nowhere, which is the silent failure the register exists to make
-    loud.
+    An empty value counts as unset, as it does on the env row, so both rows name it.
     """
     template = string.Template(source.read_text())
     unset = tuple(name for name in template.get_identifiers() if not values.get(name))
@@ -91,8 +89,9 @@ def is_rendering_of(source: Path, text: str) -> bool:
 
     A rendered file is a regular file, so this is what tells this manager's output
     from somebody's file: the template's literal text, with each placeholder
-    matching anything on one line. A rendering made with an earlier value matches,
-    and a file anyone wrote or edited does not.
+    matching anything on one line. A rendering made with an earlier value matches.
+    So does a hand edit that changes only the text where a placeholder stands, and
+    the next `apply` overwrites it. Any other edit does not match.
     """
     pieces: list[str] = []
     end = 0
@@ -115,7 +114,7 @@ def write(target: Path, text: str) -> None:
 
     The rename replaces a symlink at the target rather than writing through it.
     A link left from deploying the file by link points into the repo, and
-    writing through it would overwrite the template.
+    writing through it would put this machine's values into the checkout.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
     handle, staged = tempfile.mkstemp(dir=str(target.parent), prefix=f'.{target.name}.')

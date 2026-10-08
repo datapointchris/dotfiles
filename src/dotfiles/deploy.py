@@ -43,10 +43,10 @@ GIT_CONFIG_STUB = """\
 # This machine's git entry point, and the only file in this directory the repo
 # does not own. Both of its jobs need it to be a real file rather than a symlink.
 #
-# It includes the shared config, which git no longer reads by itself now that the
-# repo's copy is named common.gitconfig. And it is where `git config --global`
-# writes, which is the reason it must not be a link: git follows one when writing,
-# so an entry point linked into the checkout takes an identity with it.
+# It includes the shared config, which git does not find by itself under the name
+# common.gitconfig. And it is where `git config --global` writes, which is the
+# reason it must not be a link: git follows one when writing, so an entry point
+# linked into the checkout takes an identity with it.
 #
 # It carries no [user] of its own. Identity arrives through the trust include, and
 # useConfigOnly refuses a commit while nothing has set one.
@@ -72,8 +72,7 @@ def _ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
 
     A link here is unlinked rather than adopted. The symlink stage prunes an
     orphaned entry point first, but a machine reaching this out of order would
-    otherwise write through it into the repo, which is the one outcome this exists
-    to prevent.
+    otherwise write through it into the repo.
     """
     if GIT_CONFIG_ENTRY.is_symlink():
         GIT_CONFIG_ENTRY.unlink()
@@ -96,8 +95,8 @@ def _retire_home_gitconfig(coordinates: axes.Coordinates) -> Path | None:
     deliberately does not hold, so it moves to the machine-local identity file.
     On a fleet machine the repo already ships that address in
     personal.gitconfig, so there is nothing to preserve and the file is simply
-    in the way — advising a rescue file there sent one Mac looking for a
-    destination its trust variant never includes.
+    in the way. A rescue file advised there names a destination the fleet trust
+    variant never includes.
 
     **The destination is returned, and the hint is derived from it.** The two
     branches otherwise differ in nothing but the sentence they print, so the one
@@ -183,8 +182,7 @@ def show(session: Session) -> None:
     """Every declared link and where it currently stands.
 
     Declared rather than discovered, so a link that was never deployed appears
-    here too — the previous version walked `$HOME` and could only list what
-    already existed.
+    here too. A walk of `$HOME` could list only what already exists.
     """
     observed = symlinks.RESOURCE.observe(session, session.plan)
     verdicts = {change.item: change for change in symlinks.RESOURCE.diff(session.plan, observed)}
@@ -200,8 +198,8 @@ def show(session: Session) -> None:
 
     # Only the declared links that drifted. `verdicts` also holds a row per orphan,
     # and an orphan is by definition not declared — that is why it is pruned rather
-    # than repaired — so counting it here reported a healthy machine as having a
-    # declared link that did not land, and sent a reader looking for it.
+    # than repaired — so counting it here would report a healthy machine as having
+    # a declared link that did not land.
     undeployed = sum(1 for link in observed.links if link.address in verdicts)
     err_console.print(f'\n{len(observed.links)} declared, {undeployed} not deployed as declared')
 

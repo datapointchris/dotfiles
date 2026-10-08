@@ -686,7 +686,7 @@ def test_a_template_filling_a_value_its_machine_is_asked_for_is_sound(tmp_path: 
 
 def test_a_template_filling_a_value_its_machine_is_never_asked_for_is_an_error(tmp_path: Path) -> None:
     """Narrowed to nonfleet, so the fleet machine selecting the template is never asked.
-    The env check would report nothing to set, and the file would stay unrendered."""
+    Its env check and its generated `~/.env` block would carry no line for the value."""
     root = template_tree(tmp_path, required=[{'name': 'APP_SERVER', 'network_trust': 'nonfleet'}])
 
     found = messages(validate.declaration(root), Severity.ERROR)
@@ -721,9 +721,9 @@ def test_a_template_and_a_plain_file_landing_on_one_path_collide(tmp_path: Path)
 
 
 def test_a_plain_file_beside_its_own_template_collides(tmp_path: Path) -> None:
-    """What converting a config with `cp` rather than `git mv` leaves behind. Both
-    files deploy to one target from one directory, so the pairing across
-    directories never sees them, and apply would alternate between the two."""
+    """What converting a config with `cp` rather than `git mv` leaves behind.
+    `declared()` would return two links for one target, and the pairing across
+    directories never compares a directory with itself."""
     root = template_tree(tmp_path, required=[{'name': 'APP_SERVER', 'network_trust': 'fleet'}])
     beside = root / 'configs' / TEMPLATE.removesuffix('.tmpl')
     beside.write_text('server = "elsewhere"\n')

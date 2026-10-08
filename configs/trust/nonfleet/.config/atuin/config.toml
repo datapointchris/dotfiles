@@ -2,8 +2,8 @@
 #
 # Atuin owns Ctrl-R (its DB-backed search — time, cwd, exit), while up-arrow stays
 # zsh's prefix-search; see the atuin block in .zshrc for the keybinding rationale.
-# Beyond search, atuin records the per-command metadata the audit-flow analysis
-# needs — exit code, working directory, and session — in ~/.local/share/atuin/history.db.
+# Beyond search, atuin records each command's exit code, working directory and
+# session in ~/.local/share/atuin/history.db, for the audit-flow analysis.
 #
 # The flat ~/.local/state/zsh/history keeps being written too, so it stays the
 # fallback for anything reading history — `doit kit usage` and `doit review`
@@ -16,17 +16,17 @@
 #
 # Local capture is unaffected: Ctrl-R, exit codes, cwd and `atuin stats` all work
 # without an account. `dotfiles auth check` follows this flag and asks for no
-# login. `doit review` and `doit kit` answer about this box, which is the whole
-# truth available here anyway.
+# login. `doit review` and `doit kit` answer about this box alone, since no other
+# box's history reaches it.
 auto_sync = false
 
 # dotfiles installs and upgrades atuin from install/packages.yml, so its own
 # startup update check is just noise + a network round-trip.
 update_check = false
 
-# Atuin's own natural-language mode binds `?`, so typing it as the first character
-# of a line opened an "Atuin AI is not yet configured" menu instead of inserting a
-# question mark. Configuring it means either an Atuin Hub account or self-hosting
+# Atuin's natural-language mode binds `?` at the start of a line, where it opens an
+# "Atuin AI is not yet configured" menu instead of inserting a question mark.
+# Configuring it means either an Atuin Hub account or self-hosting
 # atuin-ai-server; the Ctrl-X Ctrl-A / Ctrl-X Ctrl-E widgets in .zshrc cover the
 # same ground through the Claude subscription already in use.
 [ai]

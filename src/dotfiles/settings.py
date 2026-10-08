@@ -251,9 +251,9 @@ def answer(declared: str, on_file: Mapping[str, str], resolved: Resolved) -> str
     a box converged while its `~/.env` says nothing, and the next process finds
     nothing either.
 
-    One function for the check and the template renderer. Split, a value
-    answered in config.toml would satisfy `check` and still leave a template
-    unrendered.
+    The env check and the template renderer both call this. With two copies, a
+    value answered in `~/.config/dotfiles/config.toml` could satisfy `check` and
+    still leave a template unrendered.
     """
     if value := on_file.get(declared):
         return value
