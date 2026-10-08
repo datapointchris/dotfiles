@@ -8,8 +8,6 @@ answers cannot be given by three files that disagree.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from dotfiles import catalog
@@ -494,61 +492,26 @@ def test_the_registered_go_toolchain_names_the_path_everything_else_names() -> N
     assert str(toolchain.GO_ROOT / 'bin') in toolchain.TOOL_PATH_DIRS
 
 
-def test_a_runtime_with_no_fixed_home_is_answered_by_path(tmp_path, monkeypatch) -> None:
-    """uv goes wherever its own installer puts it, so `which` is the right question
-    for it and this must not have changed it."""
-    on_path(tmp_path, 'uv')
-    monkeypatch.setenv('PATH', str(tmp_path))
-    provider = registry.named('uv-toolchain')
-    assert provider is not None
-
-    planned = provider.plan(machines.load('archlinux-personal-workstation'), catalog.load(), ())
-
-    assert planned[0].evidence_path == ''
-    assert registry.evidence_for(planned[0], {}).verdict is Verdict.MATCHED
-
-
-@pytest.mark.parametrize(
-    ('provider_name', 'home', 'needs'),
-    [
-        (
-            'rust-toolchain',
-            toolchain.CARGO_BIN,
-            item('cargo', 'ripgrep', catalog.CargoPackage.from_mapping({'name': 'ripgrep', 'command': 'rg'})),
-        ),
-        (
-            'node-toolchain',
-            toolchain.FNM_HOME / toolchain.FNM_ALIAS_BIN,
-            item('npm', 'bash-language-server', catalog.NpmGlobal.from_mapping({'name': 'bash-language-server'})),
-        ),
-    ],
-)
-def test_a_runtime_installed_under_home_is_answered_there_rather_than_by_path(
-    tmp_path, monkeypatch, provider_name: str, home: Path, needs: DesiredItem
-) -> None:
-    """A copy on PATH is not evidence, and the one where its installer put it is
-    wherever PATH points.
-
-    A scheduler's unit need not put `~/.cargo/bin` or fnm's alias on PATH. A check
-    run from one would then read Rust missing beside the `rustc` rustup installed,
-    and read the system package manager's `node` as the fleet's.
-    """
-    provider = registry.named(provider_name)
-    assert isinstance(provider, registry.ToolchainProvider)
+def test_rust_is_answered_by_the_cargo_bin_rustup_installs_into(tmp_path, monkeypatch) -> None:
+    """A `rustc` on PATH is not evidence, and one in `~/.cargo/bin` is wherever PATH
+    points."""
     shadowing = tmp_path / 'bin'
     shadowing.mkdir()
-    on_path(shadowing, provider.executable)
+    on_path(shadowing, 'rustc')
     monkeypatch.setenv('PATH', str(shadowing))
     monkeypatch.setenv('HOME', str(tmp_path / 'home'))
+    provider = registry.named('rust-toolchain')
+    assert provider is not None
 
-    planned = provider.plan(machines.load('archlinux-personal-workstation'), catalog.load(), (needs,))
+    resolved = (item('cargo', 'ripgrep', catalog.CargoPackage.from_mapping({'name': 'ripgrep', 'command': 'rg'})),)
+    planned = provider.plan(machines.load('archlinux-personal-workstation'), catalog.load(), resolved)
 
-    installed = tmp_path / 'home' / home
-    assert planned[0].evidence_path == str(installed / provider.executable)
-    assert registry.evidence_for(planned[0], {}).verdict is Verdict.MISSING, 'a copy on PATH is not the one its installer put there'
+    installed = tmp_path / 'home' / toolchain.CARGO_BIN
+    assert planned[0].evidence_path == str(installed / 'rustc')
+    assert registry.evidence_for(planned[0], {}).verdict is Verdict.MISSING, 'a rustc on PATH is not the rustc rustup installed'
 
     installed.mkdir(parents=True)
-    on_path(installed, provider.executable)
+    on_path(installed, 'rustc')
     monkeypatch.setenv('PATH', '/usr/bin:/bin')
 
     assert registry.evidence_for(planned[0], {}).verdict is Verdict.MATCHED

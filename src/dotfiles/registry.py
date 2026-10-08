@@ -991,17 +991,11 @@ class ToolchainProvider(Provider):
     installed_at: str = ''
     """Where this runtime must live, for one that is installed to a fixed path.
 
-    Empty for uv, which goes wherever its own installer puts it. Read from
-    `toolchain.GO_ROOT` for Go, which is unpacked over `/usr/local/go`. Rust is
-    `~/.cargo/bin/rustc`: rustup installs there with this repo's default
-    `CARGO_HOME`, and `cargo.cargo_bin()` already measures the cargo tools in the
-    same directory. Node is fnm's default alias under `toolchain.FNM_HOME`, the
-    directory `TOOL_PATH_DIRS` puts first. A `~` is expanded when the row is
-    planned.
+    Empty for a runtime whose own installer chooses where it goes. A `~` is
+    expanded when the row is planned.
 
-    A scheduler's unit need not put either home on PATH. A check run from one
-    would then read Rust missing beside the `rustc` rustup installed, and read the
-    system package manager's `node` as the fleet's.
+    `which` answers for whatever PATH the caller runs under, and a service unit's
+    PATH need not name a fixed home.
 
     It exists because `which` answers a different question than the declaration
     asks. A container picked up Arch's `go` package transitively, `which go` found
@@ -1274,15 +1268,7 @@ PROVIDERS: tuple[Provider, ...] = (
         needed_by='cargo_packages',
         installed_at=str(Path('~') / toolchain.CARGO_BIN / 'rustc'),
     ),
-    NodeToolchain(
-        'node-toolchain',
-        'toolchains',
-        Stage.NODE,
-        runtime='node',
-        executable='node',
-        needed_by='npm_globals',
-        installed_at=str(Path('~') / toolchain.FNM_HOME / toolchain.FNM_ALIAS_BIN / 'node'),
-    ),
+    NodeToolchain('node-toolchain', 'toolchains', Stage.NODE, runtime='node', executable='node', needed_by='npm_globals'),
     SystemConfigProvider('group', 'system', Stage.SYSTEM_CONFIG, 'group_memberships'),
     SystemConfigProvider('systemd', 'system', Stage.SYSTEM_CONFIG, 'systemd_units'),
     SystemConfigProvider('file', 'system', Stage.SYSTEM_CONFIG, 'managed_files'),

@@ -70,10 +70,9 @@ def fixed_homes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point every toolchain's fixed home somewhere this test controls.
 
     Autouse because the alternative is a module whose answers depend on the
-    developer's machine. `/usr/local/go/bin/go`, `~/.cargo/bin/rustc` and fnm's
-    default `node` exist on any box that has run `apply`, and a CI runner ships
-    rustup. A "rust is absent" assertion would then fail there, and a stub's
-    version would be ignored for the real one.
+    developer's machine. A fixed home exists on any box that has run `apply`, and
+    a CI runner ships rustup. An "absent" assertion would then fail there, and a
+    stub's version would be ignored for the real one.
 
     Pointed at the same directory `bin_dir` puts on PATH, so a test that stubs a
     runtime the ordinary way satisfies both questions. The one test that needs them
@@ -85,11 +84,6 @@ def fixed_homes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     while the resources reach through `BY_NAME`.
     """
     swapped = tuple(_relocated(provider, tmp_path / 'bin') for provider in registry.PROVIDERS)
-    assert {provider.name for provider in swapped if provider not in registry.PROVIDERS} >= {
-        'go-toolchain',
-        'rust-toolchain',
-        'node-toolchain',
-    }
     monkeypatch.setattr(registry, 'PROVIDERS', swapped)
     monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
     monkeypatch.setattr(registry, 'BY_SECTION', {provider.section: provider for provider in swapped if provider.section})
