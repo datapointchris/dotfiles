@@ -25,25 +25,72 @@ typer==0.20.0
 
 def test_a_registry_pin_is_a_constraint_and_keeps_its_marker() -> None:
     """The marker is what keeps a win32-only pin from constraining anything on linux."""
-    assert uv_lock.parse(EXPORTED).constraints == ('click==8.3.1', "colorama==0.4.6 ; sys_platform == 'win32'", 'typer==0.20.0')
+    assert uv_lock.parse(EXPORTED, {}).constraints == ('click==8.3.1', "colorama==0.4.6 ; sys_platform == 'win32'", 'typer==0.20.0')
 
 
 def test_a_url_pin_is_an_override() -> None:
     """uv refuses it as a constraint: the package declares the bare URL, the lock
     records it at a commit, and uv calls the two conflicting URLs."""
-    assert uv_lock.parse(EXPORTED).overrides == (
+    assert uv_lock.parse(EXPORTED, {}).overrides == (
         'toon-format @ git+https://github.com/toon-format/toon-python@8dfb593ed1c2b1442f1dd161406e1f7b8ae16573',
     )
 
 
+def test_an_override_carries_the_extras_asked_of_it_and_keeps_its_marker() -> None:
+    """The override replaces the requirement that asked for the extras, so a
+    bare one installs the package without what they bring."""
+    exported = "gitdep @ git+https://example.test/gitdep@abc123 ; sys_platform == 'linux'\n"
+
+    assert uv_lock.parse(exported, {'gitdep': frozenset({'yaml', 'cli'})}).overrides == (
+        "gitdep[cli,yaml] @ git+https://example.test/gitdep@abc123 ; sys_platform == 'linux'",
+    )
+
+
 def test_a_path_requirement_is_neither() -> None:
-    pins = uv_lock.parse(EXPORTED)
+    pins = uv_lock.parse(EXPORTED, {})
 
     assert not any('helper' in line for line in (*pins.constraints, *pins.overrides))
 
 
+def test_extras_are_gathered_from_every_edge_the_walk_reaches() -> None:
+    """`helper[fast]` activates helper's own optional edge, which asks gitdep for
+    `yaml`; the project asks it for `cli` directly. gitdep is installed with both."""
+    lock = {
+        'package': [
+            {
+                'name': 'tool',
+                'source': {'editable': '.'},
+                'dependencies': [{'name': 'helper', 'extra': ['fast']}, {'name': 'gitdep', 'extra': ['cli']}],
+            },
+            {'name': 'helper', 'optional-dependencies': {'fast': [{'name': 'gitdep', 'extra': ['yaml']}]}},
+            {'name': 'gitdep', 'source': {'git': 'https://example.test/gitdep#abc123'}},
+        ]
+    }
+
+    assert uv_lock.requested_extras(lock) == {'helper': {'fast'}, 'gitdep': {'cli', 'yaml'}}
+
+
+def test_dev_groups_and_the_projects_own_extras_are_not_walked() -> None:
+    """The export runs with `--no-default-groups` and no `--extra`, so neither
+    edge is in the runtime closure the lock is held to."""
+    lock = {
+        'package': [
+            {
+                'name': 'tool',
+                'source': {'editable': '.'},
+                'dependencies': [{'name': 'gitdep'}],
+                'optional-dependencies': {'all': [{'name': 'gitdep', 'extra': ['cli']}]},
+                'dev-dependencies': {'dev': [{'name': 'gitdep', 'extra': ['test']}]},
+            },
+            {'name': 'gitdep', 'source': {'git': 'https://example.test/gitdep#abc123'}},
+        ]
+    }
+
+    assert uv_lock.requested_extras(lock) == {}
+
+
 def test_each_list_is_written_to_a_file_named_by_its_flag(tmp_path: Path) -> None:
-    pins = uv_lock.parse(EXPORTED)
+    pins = uv_lock.parse(EXPORTED, {})
 
     flags = pins.arguments(tmp_path)
 

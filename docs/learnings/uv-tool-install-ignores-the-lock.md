@@ -31,6 +31,10 @@ carries one, read once per release with a `HEAD` on the contents endpoint.
   the lock records it at a commit, so uv fails with
   ``Requirements contain conflicting URLs for package `toon-format` ``. As an override
   it installs the locked commit.
+- **An override drops the extras the tool asked for.** The export names a git package
+  bare, and an override replaces the declared `gitdep[x] @ git+...` whole, so `x`'s
+  dependencies never install. Only the lock's edges carry `extra = ["x"]`, so the
+  override line is rebuilt from a walk of them.
 - **uv does not check the hashes in a constraints file.** An install with every hash
   zeroed succeeded under `--no-cache`, so the export drops them rather than imply a
   verification nothing performs.

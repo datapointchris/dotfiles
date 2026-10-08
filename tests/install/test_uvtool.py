@@ -423,14 +423,23 @@ def digest(body: str) -> str:
     return base64.urlsafe_b64encode(hashlib.sha256(body.encode()).digest()).rstrip(b'=').decode()
 
 
-def project(repo: Path, name: str, version: str, dependencies: tuple[str, ...] = (), script: bool = False) -> None:
+def project(
+    repo: Path,
+    name: str,
+    version: str,
+    dependencies: tuple[str, ...] = (),
+    script: bool = False,
+    optional: dict[str, list[str]] | None = None,
+) -> None:
     """A uv_build project in its own git repo, which uv builds with no backend to fetch."""
     (repo / 'src' / name).mkdir(parents=True)
     (repo / 'src' / name / '__init__.py').write_text('def main():\n    pass\n')
     scripts = f'\n[project.scripts]\n{name} = "{name}:main"\n' if script else ''
+    extras = ''.join(f'{extra} = {wanted!r}\n' for extra, wanted in (optional or {}).items())
+    table = f'[project.optional-dependencies]\n{extras}\n' if extras else ''
     (repo / 'pyproject.toml').write_text(
         f'[project]\nname = "{name}"\nversion = "{version}"\nrequires-python = ">=3.11"\n'
-        f'dependencies = {list(dependencies)!r}\n{scripts}\n'
+        f'dependencies = {list(dependencies)!r}\n{scripts}\n{table}'
         '[build-system]\nrequires = ["uv_build"]\nbuild-backend = "uv_build"\n'
     )
     git(repo, 'init', '--quiet', '--initial-branch=main')
@@ -504,3 +513,43 @@ def test_an_installed_git_tool_runs_on_its_locks_versions_not_the_newest(tmp_pat
         ['uv', 'tool', 'install', '--quiet', '--reinstall', uvtool.requirement(entry, 'v1.0.0')], check=True, capture_output=True
     )
     assert (installed(tools, 'locktool', 'pindemo'), installed(tools, 'locktool', 'gitdep')) == ('2.0.0', '2.0.0')
+
+
+def distributions(tools: Path, tool: str) -> dict[str, str]:
+    probe = 'import importlib.metadata as m; print("\\n".join(f"{d.name}={d.version}" for d in m.distributions()))'
+    listed = subprocess.run([str(tools / tool / 'bin' / 'python'), '-c', probe], check=True, capture_output=True, text=True)
+    return dict(line.split('=', 1) for line in listed.stdout.split())
+
+
+def test_a_git_dependency_keeps_the_extras_the_tool_asked_for(tmp_path: Path, offline_index: Path, monkeypatch) -> None:
+    """The tool declares `gitdep[x]`, and `x` brings extrademo.
+
+    The export names gitdep bare, and the override replaces the declared
+    requirement whole. Without the extra on the override line, gitdep installs
+    and extrademo never does.
+    """
+    wheel(offline_index, 'pindemo', '1.0.0')
+    wheel(offline_index, 'extrademo', '1.0.0')
+    gitdep = tmp_path / 'gitdep'
+    project(gitdep, 'gitdep', '1.0.0', optional={'x': ['extrademo']})
+
+    tool = tmp_path / 'locktool'
+    project(tool, 'locktool', '1.0.0', dependencies=('pindemo>=1', f'gitdep[x] @ git+file://{gitdep}'), script=True)
+    subprocess.run(['uv', 'lock', '--quiet'], cwd=tool, check=True, capture_output=True)
+    git(tool, 'add', 'uv.lock')
+    git(tool, 'commit', '--quiet', '-m', 'lock')
+    git(tool, 'tag', 'v1.0.0')
+    wheel(offline_index, 'extrademo', '2.0.0')
+
+    monkeypatch.setattr(uvtool, 'latest_release', lambda repo: 'v1.0.0')
+    entry = catalog.GitUvTool.from_mapping({'name': 'locktool', 'repo': f'file://{tool}'})
+
+    result = uvtool.install_git(entry, offline=False)
+
+    assert result.ok, result.detail
+    assert distributions(tmp_path / 'tools', 'locktool') == {
+        'locktool': '1.0.0',
+        'pindemo': '1.0.0',
+        'gitdep': '1.0.0',
+        'extrademo': '1.0.0',
+    }

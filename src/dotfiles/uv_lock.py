@@ -11,6 +11,12 @@ version without adding it. A URL pin has to be an override: uv refuses a
 constraint whose URL differs from the one the package itself declares, and a
 lock records `git+<repo>@<commit>` where the package declared `git+<repo>`.
 
+An override replaces the requirement it matches whole, extras included, and
+the export names a URL-pinned package bare. A tool declaring `gitdep[x] @
+git+<repo>` would install gitdep without whatever `x` brings. The extras
+survive only on the lock's edges, so `requested_extras` walks them and each
+override line carries what the walk reached.
+
 uv writes both lists into the tool's receipt, so `uv tool upgrade` keeps them.
 It does not check the hashes a constraints file carries, so the export drops
 them rather than imply a verification nothing performs.
@@ -19,7 +25,12 @@ them rather than imply a verification nothing performs.
 from __future__ import annotations
 
 import dataclasses as dc
+import re
+import tomllib
+from collections.abc import Collection
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 from dotfiles import effects
 from dotfiles.effects import Output
@@ -60,23 +71,64 @@ class Pins:
 
 def read(project: Path) -> Pins | None:
     """None where the project has no `uv.lock`. Raises `Unexportable` where it has one uv will not read."""
-    if not (project / LOCK_FILE).is_file():
+    lock = project / LOCK_FILE
+    if not lock.is_file():
         return None
     exported = effects.run(EXPORT, cwd=project, output=Output.QUIET)
     if not exported.ok:
         raise Unexportable(exported.transcript.strip())
-    return parse(exported.stdout)
+    return parse(exported.stdout, requested_extras(tomllib.loads(lock.read_text())))
 
 
-def parse(exported: str) -> Pins:
-    """A path requirement is neither, and is dropped: it is inside the commit being installed."""
+def parse(exported: str, extras: Mapping[str, Collection[str]]) -> Pins:
+    """A path requirement is neither, and is dropped: it is inside the commit being installed.
+
+    `extras` is keyed by normalized name, as `requested_extras` returns it.
+    """
     constraints: list[str] = []
     overrides: list[str] = []
     for line in exported.splitlines():
         line = line.strip()
         requirement = line.split(';', 1)[0]
         if ' @ ' in requirement:
-            overrides.append(line)
+            name, pinned = line.split(' @ ', 1)
+            wanted = extras.get(_normalized(name))
+            overrides.append(f'{name}[{",".join(sorted(wanted))}] @ {pinned}' if wanted else line)
         elif '==' in requirement:
             constraints.append(line)
     return Pins(tuple(constraints), tuple(overrides))
+
+
+def requested_extras(lock: Mapping[str, Any]) -> dict[str, frozenset[str]]:
+    """The extras each package is installed with, walked from the project along its runtime edges.
+
+    The walk starts at the project the lock sits in and follows `dependencies`,
+    plus `optional-dependencies` for each extra an edge into the package asked
+    for. Dev groups are left alone, as the export's `--no-default-groups`
+    leaves them. Markers are not evaluated, so an extra one platform's edge asks
+    for is asked for everywhere.
+    """
+    packages: dict[str, list[Mapping[str, Any]]] = {}
+    for package in lock.get('package', ()):
+        packages.setdefault(_normalized(package['name']), []).append(package)
+    reached: dict[str, set[str]] = {
+        name: set() for name, found in packages.items() if any(p.get('source') in ({'editable': '.'}, {'virtual': '.'}) for p in found)
+    }
+    pending = list(reached)
+    while pending:
+        name = pending.pop()
+        for package in packages.get(name, ()):
+            edges = [*package.get('dependencies', ())]
+            for extra in reached[name]:
+                edges += package.get('optional-dependencies', {}).get(extra, ())
+            for edge in edges:
+                target = _normalized(edge['name'])
+                asked = set(edge.get('extra', ()))
+                if target not in reached or not asked <= reached[target]:
+                    reached.setdefault(target, set()).update(asked)
+                    pending.append(target)
+    return {name: frozenset(extras) for name, extras in reached.items() if extras}
+
+
+def _normalized(name: str) -> str:
+    return re.sub(r'[-_.]+', '-', name).lower()
