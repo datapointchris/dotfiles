@@ -9,7 +9,6 @@ command and the exact file they write, and both are what is asserted.
 
 from __future__ import annotations
 
-import dataclasses
 import json
 import os
 import stat
@@ -18,16 +17,16 @@ from pathlib import Path
 import pytest
 
 from dotfiles import catalog
-from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles.privilege import Privilege
 from dotfiles.providers import Kind
 from dotfiles.providers import steps
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
+from dotfiles.session import Session
 
-BOX = dataclasses.replace(machines.load('archlinux-personal-workstation'), check_schedule=None)
-"""A manifest these rows ignore, which every one but the schedule does."""
+ANY_RUN = Session(machine_name='archlinux-personal-workstation')
+"""A run these rows ignore. None of the rows tested here reads it."""
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
@@ -54,7 +53,7 @@ def test_a_visible_library_folder_reports_nothing(home: Path) -> None:
     `chflags nohidden` plus `xattr -d` leaves behind."""
     (home / 'Library').mkdir()
 
-    assert steps.observe('library-visible', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('library-visible', ANY_RUN).verdict is Verdict.MATCHED
 
 
 def test_a_library_hidden_only_by_the_finder_attribute_is_drift(home: Path, fake_bin: Path) -> None:
@@ -68,14 +67,14 @@ def test_a_library_hidden_only_by_the_finder_attribute_is_drift(home: Path, fake
     (home / 'Library').mkdir()
     executable(fake_bin, 'xattr', f'#!/bin/sh\nprintf "{steps.FINDER_INFO}\\n"\n')
 
-    state = steps.observe('library-visible', BOX)
+    state = steps.observe('library-visible', ANY_RUN)
 
     assert state.verdict is Verdict.STALE
     assert steps.FINDER_INFO in state.detail
 
 
 def test_no_library_folder_is_unknown_rather_than_drifted(home: Path) -> None:
-    state = steps.observe('library-visible', BOX)
+    state = steps.observe('library-visible', ANY_RUN)
 
     assert state.verdict is Verdict.UNKNOWN
     assert state.repair is Repair.NONE
@@ -85,9 +84,9 @@ def test_the_screenshot_directory_is_its_own_row(home: Path) -> None:
     """Not a side effect of the location key: a location pointing at a directory
     that does not exist is a screenshot that silently fails to save, and the two
     drift apart independently."""
-    assert steps.observe('screenshot-directory', BOX).verdict is Verdict.MISSING
-    assert steps.apply('screenshot-directory', Privilege(), BOX).ok
-    assert steps.observe('screenshot-directory', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('screenshot-directory', ANY_RUN).verdict is Verdict.MISSING
+    assert steps.apply('screenshot-directory', Privilege(), ANY_RUN).ok
+    assert steps.observe('screenshot-directory', ANY_RUN).verdict is Verdict.MATCHED
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -100,7 +99,7 @@ def test_no_xcodebuild_means_there_is_no_license_to_accept(fake_bin: Path, monke
     report an unanswerable row for something it does not have."""
     monkeypatch.setenv('PATH', str(fake_bin))
 
-    assert steps.observe('xcode-license', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('xcode-license', ANY_RUN).verdict is Verdict.MATCHED
 
 
 def test_command_line_tools_alone_need_no_license(fake_bin: Path) -> None:
@@ -109,7 +108,7 @@ def test_command_line_tools_alone_need_no_license(fake_bin: Path) -> None:
     executable(fake_bin, 'xcodebuild')
     executable(fake_bin, 'xcode-select', f'#!/bin/sh\nprintf "%s\\n" "{steps.COMMAND_LINE_TOOLS}"\n')
 
-    assert steps.observe('xcode-license', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('xcode-license', ANY_RUN).verdict is Verdict.MATCHED
 
 
 def test_a_full_xcode_is_unknown_because_the_read_needs_root(fake_bin: Path) -> None:
@@ -118,7 +117,7 @@ def test_a_full_xcode_is_unknown_because_the_read_needs_root(fake_bin: Path) -> 
     `Verdict.UNKNOWN`."""
     executable(fake_bin, 'xcodebuild')
     executable(fake_bin, 'xcode-select', '#!/bin/sh\nprintf "/Applications/Xcode.app/Contents/Developer\\n"\n')
-    state = steps.observe('xcode-license', BOX)
+    state = steps.observe('xcode-license', ANY_RUN)
 
     assert state.verdict is Verdict.UNKNOWN
     assert state.repair is Repair.NONE
@@ -129,7 +128,7 @@ def test_accepting_the_license_escalates_and_then_runs_first_launch(fake_bin: Pa
     log = tmp_path / 'calls'
     executable(fake_bin, 'xcodebuild', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit 0\n')
 
-    assert steps.apply('xcode-license', granted, BOX).ok
+    assert steps.apply('xcode-license', granted, ANY_RUN).ok
     assert log.read_text().splitlines() == ['-license accept', '-runFirstLaunch']
 
 
@@ -139,7 +138,7 @@ def test_a_declined_password_leaves_the_license_alone(fake_bin: Path, tmp_path: 
     executable(fake_bin, 'xcodebuild', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit 0\n')
     privilege = Privilege()
 
-    result = steps.apply('xcode-license', privilege, BOX)
+    result = steps.apply('xcode-license', privilege, ANY_RUN)
 
     assert not result.ok
     assert result.kind is Kind.PRIVILEGE_UNAVAILABLE
@@ -174,13 +173,13 @@ def test_an_orbstack_that_has_not_been_installed_yet_is_still_planned(tmp_path: 
     monkeypatch.setattr(steps, 'ORBSTACK_PLUGINS', tmp_path / 'absent')
     monkeypatch.setenv('DOCKER_CONFIG', str(tmp_path / 'docker'))
 
-    assert steps.observe('orbstack-docker-plugins', BOX).verdict is Verdict.MISSING
+    assert steps.observe('orbstack-docker-plugins', ANY_RUN).verdict is Verdict.MISSING
 
 
 def test_a_fresh_machine_has_no_docker_config_and_gets_one(orbstack: Path) -> None:
-    assert steps.observe('orbstack-docker-plugins', BOX).verdict is Verdict.MISSING
-    assert steps.apply('orbstack-docker-plugins', Privilege(), BOX).ok
-    assert steps.observe('orbstack-docker-plugins', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('orbstack-docker-plugins', ANY_RUN).verdict is Verdict.MISSING
+    assert steps.apply('orbstack-docker-plugins', Privilege(), ANY_RUN).ok
+    assert steps.observe('orbstack-docker-plugins', ANY_RUN).verdict is Verdict.MATCHED
 
 
 def test_merging_keeps_whatever_else_docker_had(orbstack: Path, tmp_path: Path) -> None:
@@ -190,7 +189,7 @@ def test_merging_keeps_whatever_else_docker_had(orbstack: Path, tmp_path: Path) 
     config.parent.mkdir()
     config.write_text(json.dumps({'credsStore': 'osxkeychain', 'cliPluginsExtraDirs': ['/opt/other']}))
 
-    assert steps.apply('orbstack-docker-plugins', Privilege(), BOX).ok
+    assert steps.apply('orbstack-docker-plugins', Privilege(), ANY_RUN).ok
     written = json.loads(config.read_text())
     assert written['credsStore'] == 'osxkeychain'
     assert written['cliPluginsExtraDirs'] == ['/opt/other', str(orbstack)]
@@ -203,12 +202,12 @@ def test_a_config_that_is_not_json_is_refused_rather_than_replaced(orbstack: Pat
     config.parent.mkdir()
     config.write_text('not json at all')
 
-    state = steps.observe('orbstack-docker-plugins', BOX)
+    state = steps.observe('orbstack-docker-plugins', ANY_RUN)
 
     assert state.verdict is Verdict.UNKNOWN
     assert state.repair is Repair.NONE
 
-    refused = steps.apply('orbstack-docker-plugins', Privilege(), BOX)
+    refused = steps.apply('orbstack-docker-plugins', Privilege(), ANY_RUN)
     assert not refused.ok
     assert refused.kind is Kind.TARGET_UNUSABLE
     assert config.read_text() == 'not json at all'
@@ -235,16 +234,16 @@ def test_no_windows_filesystem_is_nothing_to_do_rather_than_an_error(home: Path,
     be scrolled past."""
     monkeypatch.setattr(steps, 'WINDOWS_MOUNT', tmp_path / 'absent')
 
-    assert steps.observe('windows-fonts', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.MATCHED
 
 
 def test_the_font_directory_is_written_and_then_matches(windows: Path, home: Path) -> None:
-    assert steps.observe('windows-fonts', BOX).verdict is Verdict.MISSING
-    assert steps.apply('windows-fonts', Privilege(), BOX).ok
+    assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.MISSING
+    assert steps.apply('windows-fonts', Privilege(), ANY_RUN).ok
 
     written = (home / steps.FONTCONFIG).read_text()
     assert f'<dir>{windows}</dir>' in written
-    assert steps.observe('windows-fonts', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.MATCHED
 
 
 def test_a_converged_machine_never_asks_windows_for_the_account(windows: Path, home: Path, fake_bin: Path, tmp_path: Path) -> None:
@@ -255,12 +254,12 @@ def test_a_converged_machine_never_asks_windows_for_the_account(windows: Path, h
     pattern. The account cannot change without the directory it names changing
     too, so a file still pointing at a real directory is the whole answer.
     """
-    assert steps.apply('windows-fonts', Privilege(), BOX).ok
+    assert steps.apply('windows-fonts', Privilege(), ANY_RUN).ok
 
     asked = tmp_path / 'cmd-was-called'
     executable(fake_bin, 'cmd.exe', f'#!/bin/sh\ntouch {asked}\nprintf "chris.birch\\r\\n"\n')
 
-    assert steps.observe('windows-fonts', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.MATCHED
     assert not asked.exists(), 'a converged machine forked cmd.exe to re-learn an account that had not changed'
 
 
@@ -271,7 +270,7 @@ def test_a_fonts_conf_pointing_somewhere_else_is_stale(windows: Path, home: Path
     target.parent.mkdir(parents=True)
     target.write_text('<fontconfig><dir>/mnt/c/Users/someone-else/Fonts</dir></fontconfig>\n')
 
-    assert steps.observe('windows-fonts', BOX).verdict is Verdict.STALE
+    assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.STALE
 
 
 def test_a_windows_that_will_not_name_its_user_is_nothing_to_do(windows: Path, fake_bin: Path) -> None:
@@ -280,7 +279,7 @@ def test_a_windows_that_will_not_name_its_user_is_nothing_to_do(windows: Path, f
     config pointing at a path that cannot exist."""
     executable(fake_bin, 'cmd.exe', '#!/bin/sh\nprintf "%%USERNAME%%\\r\\n"\n')
 
-    assert steps.observe('windows-fonts', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.MATCHED
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -298,7 +297,7 @@ def test_no_libpq_is_nothing_to_link_rather_than_drift(fake_bin: Path) -> None:
     formula that is not installed is not a machine with something wrong with it."""
     brew(fake_bin, has_libpq=False)
 
-    assert steps.observe('psql-linked', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('psql-linked', ANY_RUN).verdict is Verdict.MATCHED
 
 
 def test_an_installed_but_unlinked_libpq_is_the_drift_this_row_exists_for(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -307,7 +306,7 @@ def test_an_installed_but_unlinked_libpq_is_the_drift_this_row_exists_for(fake_b
     brew(fake_bin, has_libpq=True)
     monkeypatch.setattr(steps.shutil, 'which', lambda name: None if name == 'psql' else f'/usr/bin/{name}')
 
-    state = steps.observe('psql-linked', BOX)
+    state = steps.observe('psql-linked', ANY_RUN)
 
     assert state.verdict is Verdict.MISSING
     assert 'keg-only' in state.detail
@@ -317,7 +316,7 @@ def test_a_resolvable_psql_is_converged(fake_bin: Path) -> None:
     brew(fake_bin, has_libpq=True)
     executable(fake_bin, 'psql')
 
-    assert steps.observe('psql-linked', BOX).verdict is Verdict.MATCHED
+    assert steps.observe('psql-linked', ANY_RUN).verdict is Verdict.MATCHED
 
 
 def test_no_brew_yet_is_repairable_and_the_repair_is_what_refuses(fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -331,11 +330,11 @@ def test_no_brew_yet_is_repairable_and_the_repair_is_what_refuses(fake_bin: Path
     """
     monkeypatch.setattr(steps.shutil, 'which', lambda name: None)
 
-    state = steps.observe('psql-linked', BOX)
+    state = steps.observe('psql-linked', ANY_RUN)
     assert state.verdict is Verdict.MISSING
     assert state.repair is Repair.AUTOMATIC
 
-    refused = steps.apply('psql-linked', Privilege(offer=False), BOX)
+    refused = steps.apply('psql-linked', Privilege(offer=False), ANY_RUN)
     assert not refused.ok
     assert refused.refused, 'a stage that has not run is not this run failing'
     assert refused.kind is Kind.PREREQUISITE_MISSING
@@ -347,7 +346,7 @@ def test_linking_forces_because_keg_only_is_what_declines_without_it(fake_bin: P
     log = tmp_path / 'brew.log'
     executable(fake_bin, 'brew', f'#!/bin/sh\necho "$@" >> {log}\nexit 0\n')
 
-    assert steps.apply('psql-linked', Privilege(offer=False), BOX).ok
+    assert steps.apply('psql-linked', Privilege(offer=False), ANY_RUN).ok
     assert log.read_text().splitlines()[-1] == 'link --force libpq'
 
 
@@ -377,7 +376,7 @@ def test_every_function_is_a_declared_step() -> None:
 
 
 def test_a_step_with_no_function_says_so_rather_than_passing() -> None:
-    state = steps.observe('invented', BOX)
+    state = steps.observe('invented', ANY_RUN)
 
     assert state.verdict is Verdict.UNKNOWN
     assert state.repair is Repair.NONE

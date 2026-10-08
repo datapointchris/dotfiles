@@ -1156,30 +1156,29 @@ class SystemConfigProvider(Provider):
     def needs_root(self, item: DesiredItem) -> bool:
         return isinstance(item.entry, catalogs.SystemConfig) and item.entry.needs_root
 
-    def states(self, items: Sequence[DesiredItem], machine: machines.Machine) -> dict[str, sysconfig.State]:
+    def states(self, items: Sequence[DesiredItem], session: MachineContext) -> dict[str, sysconfig.State]:
         """Every row's state, batching what this provider knows how to batch.
 
         A dict per provider rather than one function branching on the entry class:
         the batch hook below is the whole reason such a dispatch would exist, and it
         belongs to the one provider that needs it.
 
-        The machine is handed to every row because one step reads its manifest at
-        measuring time: a declined schedule stays in the plan so its leftover timer
-        can be removed, so the plan alone cannot carry the manifest's answer.
+        The run is handed to every row so a step can read its manifest while
+        measuring. The planned item carries the catalog row and not the manifest.
         """
         stores = self.stores([entry for item in items if isinstance(entry := item.entry, catalogs.SystemConfig)])
-        return {item.address: self.state(_configuration(item.entry), stores, machine) for item in items}
+        return {item.address: self.state(_configuration(item.entry), stores, session) for item in items}
 
     def stores(self, entries: Sequence[catalogs.SystemConfig]) -> dict[macdefaults.Domain, dict[str, object] | None]:
         """A bulk read this provider can do once for all its rows. Usually none."""
         return {}
 
     def state(
-        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], machine: machines.Machine
+        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], session: MachineContext
     ) -> sysconfig.State:
         return sysconfig.observe(entry)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, machine: machines.Machine) -> Result:
+    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, session: MachineContext) -> Result:
         return sysconfig.apply(entry, privilege)
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
@@ -1188,10 +1187,10 @@ class SystemConfigProvider(Provider):
         # Re-read rather than trusting the diff: `observe` ran before the report
         # was printed, and an earlier change in this same batch — the docker
         # package, zsh itself — may have made this one unnecessary or possible.
-        if self.state(entry, self.stores([entry]), session.machine).verdict is Verdict.MATCHED:
+        if self.state(entry, self.stores([entry]), session).verdict is Verdict.MATCHED:
             return Outcome(change, OutcomeStatus.SKIPPED, 'already configured')
 
-        result = self.repair(entry, privilege, session.machine)
+        result = self.repair(entry, privilege, session)
         if result.refused:
             return Outcome(change, OutcomeStatus.REFUSED, result.detail)
         return Outcome.from_result(change, result)
@@ -1209,12 +1208,12 @@ class MacDefaultProvider(SystemConfigProvider):
         return macdefaults.domains([entry for entry in entries if isinstance(entry, catalogs.MacosDefault)])
 
     def state(
-        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], machine: machines.Machine
+        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], session: MachineContext
     ) -> sysconfig.State:
         assert isinstance(entry, catalogs.MacosDefault)
         return macdefaults.observe_default(entry, stores)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, machine: machines.Machine) -> Result:
+    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, session: MachineContext) -> Result:
         assert isinstance(entry, catalogs.MacosDefault)
         return macdefaults.apply_default(entry)
 
@@ -1224,12 +1223,12 @@ class StepProvider(SystemConfigProvider):
     """The rows with no shared mechanism, each a pair of functions in `steps.py`."""
 
     def state(
-        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], machine: machines.Machine
+        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], session: MachineContext
     ) -> sysconfig.State:
-        return steps.observe(entry.name, machine)
+        return steps.observe(entry.name, session)
 
-    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, machine: machines.Machine) -> Result:
-        return steps.apply(entry.name, privilege, machine)
+    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, session: MachineContext) -> Result:
+        return steps.apply(entry.name, privilege, session)
 
 
 def _configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
