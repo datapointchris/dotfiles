@@ -9,7 +9,7 @@
 # abtop rewrites this file itself: `t` cycles the theme and calls save_theme(),
 # which writes through the symlink into the repo. A theme tried at the keyboard
 # shows up as a dirty working tree here, so either commit it or `git restore`.
-theme = "tokyo-night"
+theme = "protanopia"
 
 # Not a display filter — MultiCollector::with_hidden never constructs a hidden
 # agent's collector, so this also drops their process scan and JSONL parse.
