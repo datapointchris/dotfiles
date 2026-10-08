@@ -12,7 +12,6 @@ where everything resolved had no way to ask which rung it resolved through.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import typer
@@ -124,16 +123,18 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
 
 
 def _this_machine() -> tuple[machines.Machine | None, str]:
-    """The manifest `~/.env` names, and why it could not be read where it could not.
+    """The manifest this machine resolves to, and why it could not be read where it
+    could not.
 
-    Resolved in the same order a Session resolves it, without the refusal a
-    Session raises: the state `show` is most worth running in is one where nothing
-    names a machine. `check_schedule` lives in the manifest, so without it the
-    schedule's answer is the config's alone, and a manifest that will not load is
-    said rather than read as one that declines nothing.
+    `session.resolve_machine` answers, so this names the machine every other verb
+    names. Its refusal is caught because the state `show` is most worth running in
+    is one where nothing names a machine. `check_schedule` lives in the manifest,
+    so without it the schedule's answer is the config's alone. A manifest that will
+    not load is said rather than read as one that declines nothing.
     """
-    name = os.environ.get('MACHINE') or session.declared_machine()
-    if not name:
+    try:
+        name = session.resolve_machine()
+    except session.NoMachine:
         return None, ''
     try:
         return machines.load(name), ''

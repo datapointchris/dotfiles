@@ -79,8 +79,8 @@ def answer(machine: Machine | None, config: settings.Config | None = None) -> An
     `[schedule] enabled` is the trust domain's answer and both deployed variants
     state it. A manifest's `check_schedule` answers for one machine inside that
     domain, where another scheduler runs the check with credentials this repo's
-    timer would never see. `None` for the machine is a caller that has none, which
-    `config show` is when `~/.env` names nothing.
+    timer would never see. `None` is a caller with no machine, and the config
+    alone decides.
 
     **Off unless something says otherwise**, which is the direction
     `remote.publish_reports_after_apply` already fails in and for the same reason.
