@@ -124,6 +124,7 @@ configure_zsh: true
 # how each is asked, and never repairs one — a login is interactive and personal.
 auth:
   - gh
+  - homelab
   - icb
   - learning
   - meso

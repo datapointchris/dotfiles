@@ -1,0 +1,15 @@
+# homelab's machine config: where the homelab API is, and which identity provider
+# signs the tokens it takes.
+#
+# Fleet-scoped because both name this fleet's own installation, and homelab
+# compiles neither in. A nonfleet manifest does not install homelab, so
+# configs/trust/nonfleet/ carries no counterpart.
+#
+# client_id is left to homelab's default, homelab-cli-<first hostname label>,
+# which is the device client each machine has at the identity provider.
+
+# HOMELAB_API_BASE overrides this.
+api_base = "https://homelab.ichrisbirch.com"
+
+# HOMELAB_OIDC_ISSUER overrides this.
+issuer = "https://auth.ichrisbirch.com"

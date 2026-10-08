@@ -285,7 +285,7 @@ def _keychain_cli(tool: str) -> Probe:
     so it is 4-5ms whichever state the machine is in. `auth token` refreshes, which
     costs 215ms on exactly the machine where the answer is yes.
 
-    One closure for the four of them rather than four near-identical functions:
+    One closure for all of them rather than near-identical functions per tool:
     they share a command set and an issuer, and a difference between them would be
     a difference worth seeing here rather than buried in a copy.
     """
@@ -499,6 +499,7 @@ def _jira(session: Session) -> Credential:
 
 PROBES: dict[str, Probe] = {
     'gh': _github,
+    'homelab': _keychain_cli('homelab'),
     'icb': _keychain_cli('icb'),
     'learning': _keychain_cli('learning'),
     'meso': _keychain_cli('meso'),

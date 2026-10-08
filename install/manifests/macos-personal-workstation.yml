@@ -124,6 +124,7 @@ configure_zsh: true
 # platform that takes it from brew instead, which packages.yml records.
 auth:
   - gh
+  - homelab
   - icb
   - learning
   - meso
