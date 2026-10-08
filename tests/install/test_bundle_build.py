@@ -408,7 +408,6 @@ def stock(upstream: Upstream) -> Upstream:
         upstream.serve(companion.url(FZF_TAG), b'#!/bin/sh\n# fzf-tmux\n')
     upstream.serve(THEME_SCRIPT, b'#!/bin/sh\n# theme\n')
     upstream.serve(VENDOR_SCRIPT, b'#!/bin/sh\n# vendor\n')
-    upstream.serve(toolchain.UV_INSTALL_URL.format(version=UV_TAG), b'#!/bin/sh\n# uv\n')
     return upstream
 
 
@@ -699,7 +698,6 @@ def test_every_declared_section_is_staged_into_one_archive(upstream: Upstream, c
     assert staged['go-binary', 'go-task'] == (TASK_TAG, 'task')
     assert staged['cargo', 'ripgrep'] == (RIPGREP_TAG, 'ripgrep.tar.gz')
     assert staged['script', 'theme'] == (THEME_TAG, 'theme-install.sh')
-    assert staged['script', 'uv'] == (UV_TAG, 'uv-install.sh')
     assert [name for category, name, *_ in built.rows if category == 'wheel'], 'the wheelhouse is what the bootstrap installs from'
 
 

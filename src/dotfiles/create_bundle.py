@@ -291,10 +291,9 @@ def download(url: str, destination: Path) -> None:
     raise BundleError(f'Failed to download: {url}\n  error: {last_error}')
 
 
-# Install scripts never go through this cache. Most are served from an
-# unversioned URL, such as a raw.githubusercontent main branch, so a URL-keyed
-# hit would pin whatever was current the first time and never update. Each is a
-# few KB, so caching uv's versioned one would win nothing either.
+# Install scripts never go through this cache. They are served from unversioned
+# URLs, such as a raw.githubusercontent main branch, so a URL-keyed hit would pin
+# whatever was current the first time and never update.
 
 
 class DownloadCache:
@@ -1226,17 +1225,13 @@ def declared_closure() -> list[tuple[str, str]]:
     return closure
 
 
-def add_uv(bundle: Bundle, cache: DownloadCache) -> str:
-    """The uv binary, which install.sh copies onto PATH before anything else.
+def add_uv(bundle: Bundle, cache: DownloadCache) -> None:
+    """The uv binary at the release the uv-pre-commit hook pins.
 
-    The bundle carries the binary rather than the installer script every other
-    bootstrap uses: astral.sh is unreachable from the network this exists for,
-    and a script that downloads uv is no more use there than no script at all.
-
-    Returns the version staged, which is the release the uv-pre-commit hook pins. The
-    install script beside it is astral's script for that same release, and it is
-    handed on rather than read twice, so the two rows describing one uv cannot
-    disagree about which one this bundle is.
+    `install.sh` copies it onto PATH before anything else, and `install_uv` places
+    it wherever this bundle's row names the pin. The bundle carries the binary
+    rather than astral's installer script: the script downloads the release it
+    names, so it is no use on the network this exists for.
 
     Windows takes the other archive format astral publishes and keeps the `.exe`
     suffix, because both are facts about the asset rather than decoration: the
@@ -1275,8 +1270,7 @@ def add_uv(bundle: Bundle, cache: DownloadCache) -> str:
         archive.unlink()
 
     (bundle.bin / binary).chmod(0o755)
-    bundle.record('uv', 'uv', version, binary)
-    return version
+    bundle.record(toolchain.UV_BUNDLED, toolchain.UV_BUNDLED, version, binary)
 
 
 def add_wheels(bundle: Bundle, cache: DownloadCache) -> None:
@@ -1339,22 +1333,16 @@ def version_the_script_installs(entry: catalog.CustomInstaller) -> str:
     return fetch_latest_version(entry.repo).removeprefix(entry.release_tag_prefix)
 
 
-def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...], uv_version: str) -> None:
-    """Install scripts, from two sources.
+def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...]) -> None:
+    """The install scripts of the custom installers declaring bundle_install_script: true.
 
-    uv is named here rather than declared, because it is bootstrap infrastructure
-    and outside the custom_installers model in packages.yml. Custom installers opt
-    in with bundle_install_script: true, and their URL is read from the
-    declaration.
-
-    Neither is asked of an external script over a `name|version|url` pipe. Such a
-    pipe is a second place for the bundler and the installer to disagree about
-    which file to stage.
+    Their URLs are read from the declaration rather than asked of an external
+    script over a `name|version|url` pipe. Such a pipe is a second place for the
+    bundler and the installer to disagree about which file to stage.
 
     These are never cached. A custom installer's script is served from an
     unversioned URL, so a URL-keyed hit would pin whatever was current the first
-    time, and the version on its row cannot come from the URL. uv's script is
-    astral's for the release `add_uv` staged, which arrives as `uv_version`.
+    time, and the version on its row cannot come from the URL.
     """
     log.info('Downloading install scripts...')
 
@@ -1368,10 +1356,6 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...], uv_versi
         log.info(f'  {entry.name}...')
         download(entry.install_url, bundle.scripts / f'{entry.name}-install.sh')
         bundle.record('script', entry.name, version_the_script_installs(entry), f'{entry.name}-install.sh')
-
-    log.info('  uv...')
-    download(toolchain.UV_INSTALL_URL.format(version=uv_version), bundle.scripts / 'uv-install.sh')
-    bundle.record('script', 'uv', uv_version, 'uv-install.sh')
 
 
 def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | None = None, against: Path | None = None) -> Path:
@@ -1441,13 +1425,13 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
             bundle.plan_against(against, reported)
             log.info(f'Sparse: against {against.name}, which reports {len(bundle.installed)} installed tool(s)')
 
-        uv_version = add_uv(bundle, cache)
+        add_uv(bundle, cache)
         add_wheels(bundle, cache)
         add_github_releases(bundle, cache, plan.for_section('github_releases'))
         add_go_binaries(bundle, cache, plan.for_section('go_tools'))
         add_cargo_binaries(bundle, cache, plan.for_section('cargo_packages'))
         add_winget_binaries(bundle, cache, plan.for_section('winget_packages'))
-        add_install_scripts(bundle, plan.for_section('custom_installers'), uv_version)
+        add_install_scripts(bundle, plan.for_section('custom_installers'))
         bundle.write_metadata()
 
         log.info('Creating tarball...')

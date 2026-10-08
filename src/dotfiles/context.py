@@ -1,8 +1,8 @@
 """What a provider is allowed to know about the run it is installing into.
 
-`registry.py` is handed the run and reads eight things off it: `offline`, `home`,
-`machine`, `reinstall`, `plan`, `inventories`, `force` and `catalog`. Naming those
-eight as a structural type is what lets the providers stay below `session` in the
+`registry.py` is handed the run and reads these off it: `offline`, `home`, `repo`,
+`machine`, `reinstall`, `plan`, `inventories`, `force` and `catalog`. Naming them
+as a structural type is what lets the providers stay below `session` in the
 layer order, because `Session.plan` calls `resolve()` and `resolve()` walks
 `registry.PROVIDERS` — a three-edge cycle no ordering of layers can express.
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 class MachineContext(Protocol):
     """The run, as much of it as a provider may see.
 
-    Narrower than a `Session` on purpose: a provider that wants a ninth thing has
+    Narrower than a `Session` on purpose: a provider that wants one more thing has
     to declare it here, where the widening is visible, rather than reaching for
     whatever a Session happens to carry.
     """
@@ -44,6 +44,11 @@ class MachineContext(Protocol):
     @property
     def home(self) -> Path:
         """The home directory this run converges, which tests point elsewhere."""
+        ...
+
+    @property
+    def repo(self) -> Path:
+        """The checkout this run reads its declarations from, uv's pin among them."""
         ...
 
     @property

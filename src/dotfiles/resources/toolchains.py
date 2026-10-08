@@ -18,6 +18,7 @@ hook's rev in the repo's own `.pre-commit-config.yaml`.
 from __future__ import annotations
 
 import dataclasses as dc
+from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
@@ -72,6 +73,9 @@ class Observed:
 
     uv_unpinned: str = ''
 
+    uv_at: Path | None = None
+    """Where the uv that answered lives. One outside `~/.local/bin` is a by-hand repair, because `install_uv` refuses it."""
+
     module_env: str | None = None
     """What `go env GONOSUMDB` answers, or None where there is no Go to ask.
 
@@ -117,6 +121,7 @@ class ToolchainsResource:
         absent: dict[str, str] = {}
         examined: list[Examined] = []
         go_probe = ''
+        uv_at: Path | None = None
 
         for item in plan.for_resource(NAME):
             # Asked of the provider rather than of PATH. A runtime with a fixed
@@ -141,14 +146,14 @@ class ToolchainsResource:
                 examined.append(Examined(item.address, version))
                 if item.name == GO_RUNTIME:
                     go_probe = probe
+                if item.name == UV_RUNTIME:
+                    uv_at = found.binary
 
         # The same binary the version came from, so the settings measured belong
         # to the toolchain measured. Resolving a second one here is how the two
         # answers come from two different Go installs on a box carrying both.
         module_env = toolchain.go_env_setting(go_probe, GONOSUMDB_VAR) if go_probe else None
 
-        # The session's checkout, which outside a test is `paths.REPO_ROOT`, so
-        # this reads the same file `install_uv` converges to.
         try:
             uv_pin, uv_unpinned = toolchain.pinned_uv(session.repo / paths.PRE_COMMIT_CONFIG.name), ''
         except toolchain.UnpinnedUv as error:
@@ -158,6 +163,7 @@ class ToolchainsResource:
             absent=absent,
             uv_pin=uv_pin,
             uv_unpinned=uv_unpinned,
+            uv_at=uv_at,
             module_env=module_env,
             examined=tuple(examined),
         )
@@ -262,6 +268,21 @@ def _against_pin(item: DesiredItem, reported: str, observed: Observed) -> tuple[
         )
     if matches:
         return ()
+    refusal = toolchain.uv_installed_elsewhere(observed.uv_at, observed.uv_pin) if observed.uv_at else None
+    if refusal is not None:
+        return (
+            Change(
+                NAME,
+                item.stage,
+                item.address,
+                Verdict.STALE,
+                repair=Repair.BY_HAND,
+                detail=refusal.detail,
+                advice=refusal.advice,
+                desired=item,
+                observed=reported,
+            ),
+        )
     return (
         Change(
             NAME,

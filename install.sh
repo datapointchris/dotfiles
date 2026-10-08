@@ -237,9 +237,9 @@ if ! command -v uv >/dev/null; then
     cp "$BUNDLE/bin/$UV" "$HOME/.local/bin/$UV"
   elif [ "$UV" = uv.exe ]; then
     # astral publishes a PowerShell installer for Windows and a sh one for
-    # everything else. The sh one is not a fallback: it fetches a Linux binary
-    # that Git Bash will copy into place and then fail to run, which is a worse
-    # outcome than not installing at all.
+    # everything else. Under Git Bash the sh one fetches the Windows zip and
+    # extracts it with `unzip`, which packages.yml declares for apt, pacman and
+    # brew and not for winget.
     require powershell
     powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
   else

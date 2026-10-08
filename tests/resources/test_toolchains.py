@@ -319,14 +319,35 @@ def test_a_toolchain_below_its_floor_is_stale(tmp_path: Path, bin_dir: Path) -> 
     assert found[0].observed == 'go version go1.21.0 linux/amd64'
 
 
-def test_a_uv_newer_than_the_hook_pins_is_stale(tmp_path: Path, bin_dir: Path) -> None:
-    stub(bin_dir, 'uv', 'uv 0.13.0 (x86_64-unknown-linux-gnu)')
+@pytest.fixture
+def local_bin(tmp_path: Path, bin_dir: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`~/.local/bin` under the session's home and first on PATH, where `install_uv` writes uv."""
+    directory = tmp_path / 'home' / '.local' / 'bin'
+    directory.mkdir(parents=True)
+    monkeypatch.setenv('HOME', str(tmp_path / 'home'))
+    monkeypatch.setenv('PATH', f'{directory}:{bin_dir}')
+    return directory
+
+
+def test_a_uv_newer_than_the_hook_pins_is_stale(tmp_path: Path, local_bin: Path) -> None:
+    stub(local_bin, 'uv', 'uv 0.13.0 (x86_64-unknown-linux-gnu)')
     live = session(tmp_path, BARE)
 
     found = changes(live)
 
     assert [(change.verdict, change.repair) for change in found] == [(Verdict.STALE, Repair.AUTOMATIC)]
     assert found[0].detail.startswith(f'pinned to {UV_PIN} by the uv-pre-commit hook')
+
+
+def test_a_stale_uv_this_repo_did_not_install_is_repaired_by_hand(tmp_path: Path, bin_dir: Path, local_bin: Path) -> None:
+    """`install_uv` refuses this uv, so an automatic repair here is one apply would refuse."""
+    packaged = stub(bin_dir, 'uv', 'uv 0.13.0 (x86_64-unknown-linux-gnu)')
+    live = session(tmp_path, BARE)
+
+    found = changes(live)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.STALE, Repair.BY_HAND)]
+    assert str(packaged) in found[0].detail
 
 
 def test_a_repo_whose_hooks_pin_no_uv_reports_uv_unknown(tmp_path: Path, bin_dir: Path) -> None:
@@ -420,7 +441,7 @@ def test_repairing_a_runtime_goes_through_the_provider_that_planned_it(
     """Not a table here saying which runtimes this resource can install. That table
     is what `packages.PERFORMED` was, and it decided the same question the registry
     already answers — so the route asserted is resource → registry → provider."""
-    monkeypatch.setattr(installers, 'install_uv', lambda *, offline: Result(True, 'uv, from the provider', kind=Kind.APPLIED))
+    monkeypatch.setattr(installers, 'install_uv', lambda *_args, offline: Result(True, 'uv, from the provider', kind=Kind.APPLIED))
     live = session(tmp_path, BARE)
     change = changes(live)[0]
 
@@ -442,7 +463,7 @@ def test_a_refused_runtime_survives_the_route_as_refused_rather_than_failed(
     does not stage, because the tools those runtimes build arrive prebuilt.
     """
     monkeypatch.setattr(
-        installers, 'install_uv', lambda *, offline: Result(False, 'nothing stages it', kind=Kind.NOT_IN_BUNDLE, refused=True)
+        installers, 'install_uv', lambda *_args, offline: Result(False, 'nothing stages it', kind=Kind.NOT_IN_BUNDLE, refused=True)
     )
     live = session(tmp_path, BARE)
     change = changes(live)[0]

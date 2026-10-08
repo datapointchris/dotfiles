@@ -1,14 +1,14 @@
 """Staging and running a vendor's own install script.
 
-Twelve things converge this way — nine custom installers and two of the four
-language runtimes — because the vendor publishes a shell script and running it
-is the supported path. Two implementations of that would be two answers to the
-question the offline bundle exists to settle: which script a machine restoring
-from a bundle runs.
+The custom installers, uv and rustup converge this way, because the vendor
+publishes a shell script and running it is the supported path. Two
+implementations of that would be two answers to the question the offline bundle
+exists to settle: which script a machine restoring from a bundle runs.
 
 Unversioned is the whole difficulty. Every URL but uv's names no release, so "the
 script" is whatever the vendor is serving at the moment it is asked — which is
-why a staged copy wins even on a machine with a working network.
+why a staged copy wins even on a machine with a working network. uv's names its
+release, so uv passes `from_bundle=False` and takes the script from the network.
 """
 
 from __future__ import annotations
@@ -33,6 +33,20 @@ BUNDLE_SCRIPTS = 'scripts'
 
 
 @dc.dataclass(frozen=True, slots=True)
+class Interpreter:
+    """What runs a vendor's script, and the suffix the file needs for it to run."""
+
+    command: tuple[str, ...]
+    suffix: str
+
+
+BASH = Interpreter(('bash',), '.sh')
+
+POWERSHELL = Interpreter(('powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File'), '.ps1')
+"""Windows PowerShell refuses `-File` on a path that does not end in `.ps1`."""
+
+
+@dc.dataclass(frozen=True, slots=True)
 class Script:
     """A vendor install script on disk, or why it is not.
 
@@ -48,13 +62,25 @@ class Script:
         return self.path is not None
 
 
-def staged(name: str, url: str, into: Path, *, offline: bool) -> Script:
+def staged(
+    name: str,
+    url: str,
+    into: Path,
+    *,
+    offline: bool,
+    interpreter: Interpreter = BASH,
+    from_bundle: bool = True,
+) -> Script:
     """The vendor's install script on disk, from the bundle or the network.
 
     The bundle is preferred whenever it holds one, not only when offline: most
     scripts are served from an unversioned URL, so a machine restoring from a
     bundle must run the script that bundle was built against rather than whatever
     the vendor is serving today.
+
+    `from_bundle=False` is for a URL that names its release. A staged copy there
+    can be another release's: a bundle built before the pin moved prints the
+    pinned URL and then runs its own release's script.
 
     **The reason is returned, because this was the one failure with no cause anywhere
     at all.** A script that fails to *run* streams its own error to the terminal and
@@ -64,9 +90,9 @@ def staged(name: str, url: str, into: Path, *, offline: bool) -> Script:
     of what a TLS-intercepted machine was ever told about the certificate that stopped
     it.
     """
-    script = into / 'install.sh'
-    cached = bundle_file(f'{BUNDLE_SCRIPTS}/{name}-install.sh')
-    if cached.is_file():
+    script = into / f'install{interpreter.suffix}'
+    cached = bundle_file(f'{BUNDLE_SCRIPTS}/{name}-install{interpreter.suffix}')
+    if from_bundle and cached.is_file():
         shutil.copy2(cached, script)
         return Script(script)
     if offline:
@@ -89,6 +115,8 @@ def run(
     offline: bool,
     args: Sequence[str] = (),
     env: Mapping[str, str] | None = None,
+    interpreter: Interpreter = BASH,
+    from_bundle: bool = True,
 ) -> Result:
     """Fetch and run one vendor install script.
 
@@ -100,7 +128,7 @@ def run(
     """
     with tempfile.TemporaryDirectory(prefix=f'dotfiles-{name}-') as scratch:
         err_console.print(f'{name}: {url}', soft_wrap=True)
-        script = staged(name, url, Path(scratch), offline=offline)
+        script = staged(name, url, Path(scratch), offline=offline, interpreter=interpreter, from_bundle=from_bundle)
         if not script:
             # Offline is a refusal and a failed download is not, which is the whole
             # difference between the two sentences `unstaged` writes: nothing stages
@@ -112,7 +140,11 @@ def run(
                 kind=Kind.NOT_IN_BUNDLE if offline else Kind.DOWNLOAD_FAILED,
                 refused=offline,
             )
-        completed = effects.run(['bash', str(script.path), *args], env=dict(env) if env else None, output=Output.STREAM)
+        completed = effects.run(
+            [*interpreter.command, str(script.path), *args],
+            env=dict(env) if env else None,
+            output=Output.STREAM,
+        )
 
     if completed.ok:
         return Result(True, '', kind=Kind.APPLIED)
