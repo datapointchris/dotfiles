@@ -587,3 +587,136 @@ def test_the_source_trees_are_walked_once_however_many_links_are_missing(
 
     assert walks == 2, 'one walk for observe, one for the index every perform shares'
     symlinks._index.cache_clear()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Templates: rendered with this machine's values, on every machine
+# ─────────────────────────────────────────────────────────────────────────────
+
+APP_TEMPLATE = 'configs/trust/fleet/.config/app/app.toml.tmpl'
+"""Under `trust/fleet`, which `box` selects: `platform: linux` is a fleet machine."""
+
+TEMPLATE_TEXT = 'server = "${APP_SERVER}"\n'
+
+
+def answer(session: Session, value: str) -> None:
+    """Set the value below the marker, the way a person answers a required one."""
+    session.env_file.write_text(f'export APP_SERVER="{value}"\n')
+
+
+def rendered_target(home: Path) -> Path:
+    return home / '.config' / 'app' / 'app.toml'
+
+
+def test_a_template_lands_without_its_suffix_holding_this_machine_s_value(session: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://inside:8888')
+
+    apply(session)
+
+    target = rendered_target(home)
+    assert not target.is_symlink()
+    assert target.read_text() == 'server = "http://inside:8888"\n'
+    assert target.stat().st_mode & 0o777 == 0o600
+    assert changes(session) == ()
+
+
+def test_an_unset_value_is_named_and_nothing_is_written(session: Session, repo: Path, home: Path) -> None:
+    """`apply` cannot invent the value, and a config written without it is the
+    silent failure the register exists to make loud."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+
+    found = changes(session)
+    apply(session)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.MISSING, Repair.BY_HAND)]
+    assert 'APP_SERVER' in found[0].detail
+    assert 'APP_SERVER' in found[0].advice
+    assert not rendered_target(home).exists()
+
+
+def test_a_value_only_in_this_process_s_environment_does_not_render(
+    session: Session, repo: Path, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A timer has never sourced a shell profile, so an answer that exists only in
+    the shell running this would be gone for the next process to render."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    monkeypatch.setenv('APP_SERVER', 'http://ambient:1')
+
+    found = changes(session)
+    outcomes = apply(session)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.MISSING, Repair.BY_HAND)]
+    assert 'nothing sets APP_SERVER' in found[0].detail
+    assert outcomes == []
+    assert not rendered_target(home).exists()
+
+
+def test_a_file_already_at_the_target_is_replaced_with_the_rendering(session: Session, repo: Path, home: Path) -> None:
+    """The hand-written file this mechanism replaces. A rendered file carries no
+    provenance, so a stale rendering and somebody's file read the same, and `apply`
+    overwrites both."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://inside:8888')
+    target = rendered_target(home)
+    target.parent.mkdir(parents=True)
+    target.write_text('enter_accept = true\n')
+
+    found = changes(session)
+    apply(session)
+
+    assert [(change.verdict, change.repair) for change in found] == [(Verdict.STALE, Repair.AUTOMATIC)]
+    assert target.read_text() == 'server = "http://inside:8888"\n'
+
+
+def test_a_changed_value_renders_again(session: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://old:1')
+    apply(session)
+    answer(session, 'http://new:2')
+
+    apply(session)
+
+    assert rendered_target(home).read_text() == 'server = "http://new:2"\n'
+
+
+def test_a_link_at_the_target_is_replaced_rather_than_written_through(session: Session, repo: Path, home: Path) -> None:
+    """A link into the repo is what deploying the file by link left behind, and
+    writing through it would fill in the template itself."""
+    source = declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(session, 'http://inside:8888')
+    target = rendered_target(home)
+    target.parent.mkdir(parents=True)
+    target.symlink_to(source)
+
+    apply(session)
+
+    assert not target.is_symlink()
+    assert target.read_text() == 'server = "http://inside:8888"\n'
+    assert source.read_text() == TEMPLATE_TEXT
+
+
+def test_a_copy_machine_renders_a_template_rather_than_copying_it(copying: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    answer(copying, 'http://inside:8888')
+
+    apply(copying)
+
+    assert rendered_target(home).read_text() == 'server = "http://inside:8888"\n'
+
+
+def test_unlinking_takes_back_a_rendering_and_leaves_an_edited_one(session: Session, repo: Path, home: Path) -> None:
+    """The copy pass's rule against the rendering: a target holding exactly what this
+    machine renders is this manager's output, and anything else is somebody's."""
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    declare(repo, 'configs/trust/fleet/.config/other/other.toml.tmpl', TEMPLATE_TEXT)
+    answer(session, 'http://inside:8888')
+    apply(session)
+    edited = home / '.config' / 'other' / 'other.toml'
+    edited.write_text(edited.read_text() + 'kept = true\n')
+
+    removed, kept = symlinks.remove_rendered(session)
+
+    assert removed == 1
+    assert not rendered_target(home).exists()
+    assert [target for target, _ in kept] == [edited]
