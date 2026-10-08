@@ -382,7 +382,11 @@ def _atuin(session: Session) -> Credential:
 
 
 def _claude(session: Session) -> Credential:
-    """The OAuth block in Claude Code's own credential file.
+    """Either credential variable, or the OAuth block in Claude Code's own credential file.
+
+    `CLAUDE_CODE_OAUTH_TOKEN` is what `claude setup-token` mints for a box nobody
+    logs in to. A check sees it only under a fleet unit that loads `service.env`,
+    never in an SSH shell, because that file is fleet's and is never read here.
 
     `claude` exposes no auth verb to ask, so the file is the only local answer.
     It carries `mcpOAuth` beside the Claude login and a machine can hold one with
@@ -398,6 +402,8 @@ def _claude(session: Session) -> Credential:
         return _uninstalled('claude')
     if os.environ.get('ANTHROPIC_API_KEY'):
         return Credential(Verdict.MATCHED, 'ANTHROPIC_API_KEY is set')
+    if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN'):
+        return Credential(Verdict.MATCHED, 'CLAUDE_CODE_OAUTH_TOKEN is set')
     try:
         if b'claudeAiOauth' in (session.home / '.claude' / '.credentials.json').read_bytes():
             return Credential(Verdict.MATCHED, 'an OAuth session is stored')
@@ -405,8 +411,11 @@ def _claude(session: Session) -> Credential:
         pass
     return Credential(
         Verdict.MISSING,
-        'no OAuth session and no ANTHROPIC_API_KEY',
-        advice='run `claude` and complete the browser login',
+        'no OAuth session, no CLAUDE_CODE_OAUTH_TOKEN and no ANTHROPIC_API_KEY',
+        advice=(
+            'run `claude` and complete the browser login, set CLAUDE_CODE_OAUTH_TOKEN to what '
+            '`claude setup-token` prints, or set ANTHROPIC_API_KEY'
+        ),
     )
 
 

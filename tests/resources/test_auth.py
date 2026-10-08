@@ -67,6 +67,8 @@ def xdg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         'JIRA_API_TOKEN',
         'JIRA_CONFIG_FILE',
         'ATUIN_CONFIG_DIR',
+        'ANTHROPIC_API_KEY',
+        'CLAUDE_CODE_OAUTH_TOKEN',
     ):
         monkeypatch.delenv(name, raising=False)
     return tmp_path
@@ -564,20 +566,18 @@ def test_a_jira_with_no_config_and_no_token_names_init(xdg: Path, fake_bin: Path
     assert 'jira init' in found.advice
 
 
-def test_a_stored_oauth_session_is_a_claude_login(xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_stored_oauth_session_is_a_claude_login(xdg: Path, fake_bin: Path) -> None:
     executable(fake_bin, 'claude')
-    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
     (xdg / '.claude').mkdir(parents=True, exist_ok=True)
     (xdg / '.claude' / '.credentials.json').write_text('{"claudeAiOauth": {"scopes": []}}')
 
     assert changes(build(xdg, 'claude')) == ()
 
 
-def test_an_mcp_only_credential_file_is_not_a_claude_login(xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_mcp_only_credential_file_is_not_a_claude_login(xdg: Path, fake_bin: Path) -> None:
     """The same file carries MCP logins, and a machine can hold those with no
     Claude login at all — so existence answers a different question."""
     executable(fake_bin, 'claude')
-    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
     (xdg / '.claude').mkdir(parents=True, exist_ok=True)
     (xdg / '.claude' / '.credentials.json').write_text('{"mcpOAuth": {"a-server": {}}}')
 
@@ -587,15 +587,12 @@ def test_an_mcp_only_credential_file_is_not_a_claude_login(xdg: Path, fake_bin: 
     assert 'browser login' in found.advice
 
 
-def test_a_half_written_credential_file_costs_no_other_tool_its_measurement(
-    xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_half_written_credential_file_costs_no_other_tool_its_measurement(xdg: Path, fake_bin: Path) -> None:
     """A token refresh rewrites this file. Parsing it would raise `JSONDecodeError`
     inside the `OSError` guard and take the whole resource down to `auth could not
     be examined`, so a read landing mid-write must not interpret what it finds."""
     executable(fake_bin, 'claude')
     executable(fake_bin, 'atuin')
-    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
     (xdg / '.claude').mkdir(parents=True, exist_ok=True)
     (xdg / '.claude' / '.credentials.json').write_bytes(b'{"claudeAiOauth": {"acce')
 
@@ -612,13 +609,33 @@ def test_an_api_key_counts_as_a_claude_login(xdg: Path, fake_bin: Path, monkeypa
     assert changes(build(xdg, 'claude')) == ()
 
 
-def test_a_machine_with_no_credential_file_is_missing_rather_than_unknown(
-    xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_service_token_counts_as_a_claude_login_and_is_never_printed(xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     executable(fake_bin, 'claude')
-    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+    monkeypatch.setenv('CLAUDE_CODE_OAUTH_TOKEN', 'not-a-real-token')
+    session = build(xdg, 'claude')
+
+    found = auth.RESOURCE.observe(session, session.plan).found['claude']
+
+    assert found.verdict is Verdict.MATCHED
+    assert found.detail == 'CLAUDE_CODE_OAUTH_TOKEN is set'
+
+
+def test_an_empty_service_token_is_not_a_claude_login(xdg: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An environment file naming the key with nothing after the `=` exports it
+    empty, and Claude Code has no login to use from that."""
+    executable(fake_bin, 'claude')
+    monkeypatch.setenv('CLAUDE_CODE_OAUTH_TOKEN', '')
+
+    (found,) = changes(build(xdg, 'claude'))
+
+    assert found.verdict is Verdict.MISSING
+
+
+def test_a_machine_with_no_credential_file_is_missing_rather_than_unknown(xdg: Path, fake_bin: Path) -> None:
+    executable(fake_bin, 'claude')
 
     (found,) = changes(build(xdg, 'claude'))
 
     assert found.verdict is Verdict.MISSING
     assert found.repair is Repair.BY_HAND
+    assert 'claude setup-token' in found.advice
