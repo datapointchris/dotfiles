@@ -40,7 +40,8 @@ $WORKTREE_ROOT is the whole index — a repo has a directory there exactly when 
 has a worktree — and each one's checkout is read back out of git. No registry of
 repos is consulted, because this app is deployed to machines that have none. So a
 repo goes by its checkout's directory name, and `~/.claude` is `.claude`. A name
-with no worktree there is refused, naming the repos that have one.
+with no worktree there gets each command's empty result, and the repos that do
+have one are named beside it.
 
 `spawn` is `new` with a session in it. The dozen steps between deciding a repo
 needs an agent and having one — cut the worktree, open a pane, launch `claude`
@@ -243,10 +244,9 @@ class Fault(StrEnum):
     NOT_A_WORKTREE = 'not_a_worktree'
     PORT_REFUSED = 'port_refused'
     PORT_FAILED = 'port_failed'
-    UNKNOWN_REPO = 'unknown_repo'
 
 
-USAGE_FAULTS = frozenset({Fault.PORT_REFUSED, Fault.UNKNOWN_REPO})
+USAGE_FAULTS = frozenset({Fault.PORT_REFUSED})
 """Refusals a caller could have avoided, which exit 2 rather than 1.
 
 Only a different argument fixes one, and 1 says there is no argument to try."""
@@ -643,23 +643,37 @@ def scan(root: Path) -> list[tuple[str, bool, Path]]:
     return sorted(rows, key=lambda row: (row[0], not row[1], str(row[2])))
 
 
-def narrow(rows: Sequence[tuple[str, bool, Path]], repo: str | None) -> list[tuple[str, bool, Path]]:
-    """The scanned rows of the named repo, or every row when none is named.
+def narrow(rows: Sequence[tuple[str, bool, Path]], repo: str | None) -> tuple[list[tuple[str, bool, Path]], tuple[str, ...]]:
+    """The scanned rows of the named repo, and what to say when it has none.
 
-    A name that matches no row is refused. An empty answer cannot be told from a repo
-    with nothing to list or sweep, so a misspelling would read as a clean run.
+    Every row when no repo is named. A name no row carries gets back the repos the
+    root does hold, and a close match where difflib finds one. The exit stays each
+    verb's empty-result one: a repo's directory goes with its last worktree, so the
+    root cannot tell a misspelling from a repo with nothing left.
     """
     if repo is None:
-        return list(rows)
+        return list(rows), ()
     chosen = [row for row in rows if row[0] == repo]
     if chosen:
-        return chosen
+        return chosen, ()
 
     known = sorted({name for name, _, _ in rows})
     near = difflib.get_close_matches(repo, known, n=1)
-    hints = [f'Did you mean {near[0]}?'] if near else []
-    hints.append(f'Repos with a worktree there: {", ".join(known)}' if known else 'No repo has a worktree there')
-    raise Refused(f'No repo named {repo} has a worktree under {display_path(worktree_root())}', *hints, fault=Fault.UNKNOWN_REPO)
+    miss = [f'No worktree under {display_path(worktree_root())} belongs to {repo}']
+    if near:
+        miss.append(f'Did you mean {near[0]}?')
+    miss.append(f'Repos with a worktree there: {", ".join(known)}' if known else 'No repo has a worktree there')
+    return [], tuple(miss)
+
+
+def say_miss(miss: Sequence[str]) -> None:
+    """`narrow`'s lines for a name no worktree carries: the finding, then what the root holds."""
+    if not miss:
+        return
+    finding, *hints = miss
+    say_warning(finding)
+    for hint in hints:
+        say_info(hint)
 
 
 def describe(repo: str, path: Path, checkout: bool, sessions: Sequence[Session] | None) -> Worktree:
@@ -693,14 +707,18 @@ def describe_all(rows: Sequence[tuple[str, bool, Path]], sessions: Sequence[Sess
     return found
 
 
-def discover(repo_filter: str | None) -> list[Worktree]:
+def discover(repo_filter: str | None) -> tuple[list[Worktree], tuple[str, ...]]:
     """Read the world once: every worktree, with what it carries and who is in it.
+
+    The second half is `narrow`'s lines for a named repo with no worktree, and is
+    empty otherwise.
 
     Local reads only. `sweep` fetches before it describes, and does it in the open
     rather than behind a flag here, because the failures of that fetch decide
     whether its verdicts mean anything.
     """
-    return describe_all(narrow(scan(worktree_root()), repo_filter), live_sessions())
+    rows, miss = narrow(scan(worktree_root()), repo_filter)
+    return describe_all(rows, live_sessions()), miss
 
 
 def fetch_checkouts(rows: Sequence[tuple[str, bool, Path]]) -> set[Path]:
@@ -894,10 +912,14 @@ def render_table(worktrees: Sequence[Worktree]) -> list[str]:
 
 
 def cmd_list(repo_filter: str | None, as_json: bool) -> int:
-    worktrees = discover(repo_filter)
+    worktrees, miss = discover(repo_filter)
+    say_miss(miss)
 
     if as_json:
         OUT.print(json.dumps([worktree.as_json() for worktree in worktrees], indent=2), markup=False, highlight=False)
+        return 0
+
+    if miss:
         return 0
 
     if not worktrees:
@@ -1016,7 +1038,9 @@ def cmd_choose(repo_filter: str | None) -> int:
     if shutil.which('fzf') is None:
         raise Refused("fzf is not installed — 'worktree list' is the read that needs no terminal")
 
-    worktrees = discover(repo_filter)
+    worktrees, miss = discover(repo_filter)
+    if miss:
+        raise Refused(*miss)
     if not worktrees:
         scope = f' for {repo_filter}' if repo_filter else ''
         raise Refused(f'No worktrees{scope} under {display_path(worktree_root())}')
@@ -1696,7 +1720,11 @@ def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
     directories accumulate, and every tool that reports branch state reports each one
     forever.
     """
-    rows = narrow(scan(worktree_root()), repo_filter)
+    rows, miss = narrow(scan(worktree_root()), repo_filter)
+    if miss:
+        # Not "Nothing to sweep", which reads as a clean run over a repo it never found.
+        say_miss(miss)
+        return 0
     unreached = fetch_checkouts(rows)
     worktrees = describe_all(rows, live_sessions())
 
