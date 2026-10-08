@@ -718,3 +718,18 @@ def test_a_template_and_a_plain_file_landing_on_one_path_collide(tmp_path: Path)
     assert len(found) == 1
     assert '.config/app/app.toml' in found[0]
     assert 'common' in found[0] and 'trust/fleet' in found[0]
+
+
+def test_a_plain_file_beside_its_own_template_collides(tmp_path: Path) -> None:
+    """What converting a config with `cp` rather than `git mv` leaves behind. Both
+    files deploy to one target from one directory, so the pairing across
+    directories never sees them, and apply would alternate between the two."""
+    root = template_tree(tmp_path, required=[{'name': 'APP_SERVER', 'network_trust': 'fleet'}])
+    beside = root / 'configs' / TEMPLATE.removesuffix('.tmpl')
+    beside.write_text('server = "elsewhere"\n')
+
+    found = messages(validate.declaration(root), Severity.ERROR)
+
+    assert len(found) == 1
+    assert f'configs/{TEMPLATE}' in found[0]
+    assert f'configs/{TEMPLATE.removesuffix(".tmpl")}' in found[0]

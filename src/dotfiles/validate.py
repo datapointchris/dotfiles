@@ -287,10 +287,15 @@ def _colliding_variants(root: Path) -> list[Finding]:
     Pairwise on directories rather than by enumerating every expressible machine.
     The question is only whether two directories can co-occur, which is a fact
     about the axes and needs no coordinates resolved.
+
+    One directory can collide with itself: a template and a plain file of the
+    same name both deploy without the template's suffix. The filesystem keeps two
+    files of one name apart and cannot keep these apart, so that case is checked
+    first, ahead of a pairing that never pairs a directory with itself.
     """
-    findings = []
+    findings: list[Finding] = []
     for tree in FLATTENING_TREES:
-        declaring: dict[str, list[str]] = {}
+        declaring: dict[str, dict[str, list[str]]] = {}
         base = root / tree
         for directory in sorted(base.glob('*/')) + sorted(base.glob('*/*/')):
             relative = str(directory.relative_to(base))
@@ -298,9 +303,20 @@ def _colliding_variants(root: Path) -> list[Finding]:
                 continue
             for item in sorted(directory.rglob('*')):
                 if item.is_file() and not core.should_exclude(item.relative_to(directory)):
-                    declaring.setdefault(str(template.deployed_as(item.relative_to(directory))), []).append(relative)
+                    deployed = str(template.deployed_as(item.relative_to(directory)))
+                    declaring.setdefault(deployed, {}).setdefault(relative, []).append(str(item.relative_to(root)))
 
-        for deployed, sources in sorted(declaring.items()):
+        for deployed, files_by_directory in sorted(declaring.items()):
+            findings.extend(
+                Finding(
+                    'symlinks',
+                    Severity.ERROR,
+                    f'{" and ".join(files)} both deploy {tree}/{deployed} from {directory} — keep one of them',
+                )
+                for directory, files in sorted(files_by_directory.items())
+                if len(files) > 1
+            )
+            sources = sorted(files_by_directory)
             clash = sorted({(a, b) for a in sources for b in sources if a < b and _coselectable(a, b)})
             for first, second in clash:
                 findings.append(
