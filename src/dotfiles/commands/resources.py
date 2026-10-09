@@ -514,17 +514,28 @@ def packages_search(query: str = typer.Argument(..., help='Substring to match'))
 toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and their version managers')
 
 
-@toolchains_app.command('plan')
+@toolchains_app.command(
+    'plan',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles toolchains plan — what apply would install or raise\n\n'
+        'dotfiles toolchains plan --package uv — rehearse one runtime'
+    ),
+)
 def toolchains_plan(
     machine: str = MachineOption,
+    package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Show which language runtimes `apply` would install or raise."""
+    """Show which language runtimes `apply` would install or raise.
+
+    `--package` is `apply`'s, and means the same here.
+    """
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, Lens.PLAN, as_json, refresh=False, offline=offline)
+    _survey('toolchains', machine, Lens.PLAN, as_json, packages=frozenset(package or ()), refresh=False, offline=offline)
 
 
 @toolchains_app.command('check')
@@ -540,17 +551,30 @@ def toolchains_check(
     _survey('toolchains', machine, Lens.CHECK, as_json, refresh=False, offline=offline)
 
 
-@toolchains_app.command('apply')
+@toolchains_app.command(
+    'apply',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles toolchains apply — converge every runtime this machine needs\n\n'
+        'dotfiles toolchains apply --package uv — one runtime, leaving the others as they are\n\n'
+        'dotfiles toolchains apply --offline — install from the staged bundle'
+    ),
+)
 def toolchains_apply(
     machine: str = MachineOption,
+    package: list[str] = PackageOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Install or update the language toolchains."""
+    """Install or update the language toolchains.
+
+    `--package` takes a runtime's name, so `--package uv` converges uv without
+    installing a missing node beside it.
+    """
     verbosity(verbose, quiet)
-    _apply_resource('toolchains', machine, offline, None, as_json=as_json)
+    _apply_resource('toolchains', machine, offline, None, packages=frozenset(package or ()), as_json=as_json)
 
 
 @toolchains_app.command('list')

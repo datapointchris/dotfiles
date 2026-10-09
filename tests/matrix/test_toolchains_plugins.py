@@ -33,8 +33,13 @@ from typing import Any
 
 import pytest
 
+from dotfiles.coordinates import OSFamily
+from dotfiles.providers import Kind
+from dotfiles.providers import Result
+from dotfiles.providers import toolchain
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import REFUSED
+from matrix.harness import UV_RELEASE
 from matrix.harness import Invocation
 from matrix.harness import ReachedTheNetwork
 from matrix.harness import Sandbox
@@ -907,6 +912,61 @@ def test_narrowing_to_one_entry_drops_the_runtimes_nothing_named_needs(
     ran = cli('plan', '--package', 'ripgrep')
 
     assert reported(ran, RUNTIME_ROWS) == {'rust-toolchain/rust'}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# One runtime, named
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_applying_one_named_runtime_converges_it_and_leaves_a_missing_neighbor_alone(
+    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
+) -> None:
+    """uv one release behind its pin and node missing, with no fnm to install node.
+
+    `install_uv` is stubbed because it always ends in `uv python install`, which
+    the install guard refuses. Node's install is real: without fnm it fails without
+    running anything, so a run that attempts node exits ISSUE. The unnarrowed run
+    afterwards shows node was still missing and reachable.
+    """
+    only_the_sandbox_on_path(sandbox, monkeypatch)
+    sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'npm_globals': ['bash-language-server']})
+    sandbox.installed('uv', 'uv 0.9.8')
+    asked: list[bool] = []
+
+    def install_uv(_config: Path, _os_family: OSFamily, *, offline: bool) -> Result:
+        asked.append(offline)
+        sandbox.installed('uv', f'uv {UV_RELEASE}')
+        return Result(True, f'uv {UV_RELEASE}', kind=Kind.APPLIED)
+
+    monkeypatch.setattr(toolchain, 'install_uv', install_uv)
+
+    narrowed = cli('toolchains', 'apply', '--package', 'uv')
+
+    assert narrowed.exit_code == ExitCode.CONVERGED
+    assert asked == [False]
+
+    widened = cli('toolchains', 'apply')
+
+    assert widened.exit_code == ExitCode.ISSUE
+    assert 'fnm is not on PATH' in unwrapped(widened.output)
+    assert asked == [False]
+
+
+@pytest.mark.parametrize('verb', ['plan', 'apply'], ids=['plan', 'apply'])
+def test_a_name_no_planned_runtime_carries_is_refused_naming_the_ones_this_machine_plans(
+    verb: str, sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
+) -> None:
+    """`go` is a runtime the registry has and this machine does not plan, so it is
+    refused and left off the list."""
+    only_the_sandbox_on_path(sandbox, monkeypatch)
+    sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'npm_globals': ['bash-language-server']})
+
+    ran = cli('toolchains', verb, '--package', 'go')
+
+    assert ran.exit_code == ExitCode.USAGE
+    assert 'named go' in ran.stderr
+    assert 'this run reaches: node, uv' in ran.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────

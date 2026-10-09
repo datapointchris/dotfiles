@@ -401,8 +401,9 @@ def test_a_package_inside_the_selected_source_reaches_the_install(cli: Callable[
     [
         (('packages', 'apply', '--source', 'github_releases', '--package', 'ruff'), 'ruff', 'packages/uv'),
         (('packages', 'apply', '--package', 'uv'), 'uv', 'toolchains/uv-toolchain'),
+        (('toolchains', 'plan', '--package', 'ruff'), 'ruff', 'packages/uv'),
     ],
-    ids=['outside-the-source', 'outside-the-resource'],
+    ids=['outside-the-source', 'outside-the-resource', 'a-package-at-the-toolchains-door'],
 )
 def test_a_package_outside_the_selection_is_a_usage_error(
     argv: tuple[str, ...], named: str, carries: str, cli: Callable[..., Invocation]
@@ -414,8 +415,9 @@ def test_a_package_outside_the_selection_is_a_usage_error(
     as a reinstall that ran and did nothing". A name the machine declares and the
     *selection* excludes has exactly that shape. `ruff` is in the plan and outside
     `--source github_releases`; `uv` is in the plan as the toolchain and outside
-    the `packages` resource entirely. Accepted, both walk past the item and report
-    a converged machine.
+    the `packages` resource entirely. The third row is the second seen from the
+    other noun. Accepted, each walks past the item and reports a converged
+    machine.
 
     The advice names the address that does carry it, which is the one thing the
     caller cannot work out from the refusal.
