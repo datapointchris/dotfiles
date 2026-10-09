@@ -173,6 +173,52 @@ def test_a_go_binary_go_cannot_name_is_unknown_rather_than_its_banner(monkeypatc
     assert evidence.reported_version('gdu') is None
 
 
+@pytest.mark.parametrize(
+    ('printed', 'refusal'),
+    [
+        (
+            "tree-sitter: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found (required by tree-sitter)",
+            "tree-sitter: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found (required by tree-sitter)",
+        ),
+        (
+            'lazygit: error while loading shared libraries: libssl.so.1.1: cannot open shared object file: No such file or directory',
+            'lazygit: error while loading shared libraries: libssl.so.1.1: cannot open shared object file: No such file or directory',
+        ),
+        (
+            'dyld[4242]: Library not loaded: /usr/local/opt/icu4c/lib/libicuuc.73.dylib\n  Referenced from: /usr/local/bin/node',
+            'dyld[4242]: Library not loaded: /usr/local/opt/icu4c/lib/libicuuc.73.dylib',
+        ),
+        (
+            'Error loading shared library libgcc_s.so.1: No such file or directory (needed by /usr/local/bin/tool)',
+            'Error loading shared library libgcc_s.so.1: No such file or directory (needed by /usr/local/bin/tool)',
+        ),
+    ],
+    ids=['glibc-symbol-version', 'glibc-library', 'dyld', 'musl'],
+)
+def test_a_loader_refusal_is_the_answer_and_ends_the_probe(monkeypatch, printed: str, refusal: str) -> None:
+    """The binary never ran, so the second spelling would reach the same loader."""
+    monkeypatch.setattr(evidence.shutil, 'which', lambda name: '/home/u/.local/bin/tool')
+    calls: list[list[str]] = []
+
+    def refused(command, **_kwargs) -> Completed:
+        calls.append([str(part) for part in command])
+        return Completed(tuple(command), 1, printed)
+
+    monkeypatch.setattr(evidence, 'run', refused)
+
+    assert evidence.probe_version('tool') == evidence.Reported(None, refusal)
+    assert evidence.reported_version('tool') is None
+    assert len(calls) == 2, 'one probe per call, never the second spelling'
+
+
+def test_a_failed_probe_the_loader_did_not_write_carries_no_refusal(monkeypatch) -> None:
+    """A tool rejecting `--version` prints usage, which names nothing about loading."""
+    monkeypatch.setattr(evidence.shutil, 'which', lambda name: '/usr/bin/terrascan')
+    probed(monkeypatch, (1, 'Error: unknown flag: --version\nlibrary not found in config'), (1, ''))
+
+    assert evidence.probe_version('terrascan') == evidence.Reported(None)
+
+
 def test_a_missing_binary_is_none_before_anything_is_asked(monkeypatch) -> None:
     monkeypatch.setattr(evidence.shutil, 'which', lambda name: None)
     calls = probed(monkeypatch)

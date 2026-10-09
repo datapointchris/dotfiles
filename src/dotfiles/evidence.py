@@ -670,10 +670,45 @@ on its event loop until a person closes a window, and the scheduled
 """
 
 
+LOADER_REFUSALS = re.compile(
+    r'error while loading shared libraries: '
+    r"|: version `[^']+' not found \(required by "
+    r'|symbol lookup error: '
+    r'|Library not loaded: '
+    r'|Symbol not found: '
+    r'|Error loading shared library '
+    r'|Error relocating '
+)
+"""The dynamic loader's own diagnostics: glibc's `ld.so`, macOS's `dyld`, and musl's."""
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Reported:
+    """What a version probe learned about one binary."""
+
+    version: str | None
+
+    refusal: str = ''
+    """The loader's line where it would not start the binary, so the probe never reached it."""
+
+
+def loader_refusal(transcript: str) -> str:
+    """The first line of a failed probe that the dynamic loader wrote, or ''."""
+    return next((line.strip() for line in transcript.splitlines() if LOADER_REFUSALS.search(line)), '')
+
+
 def reported_version(executable: str) -> str | None:
-    """What a binary says its version is, or None when it will not say.
+    """`probe_version` for a caller that needs the version and not why it is absent."""
+    return probe_version(executable).version
+
+
+def probe_version(executable: str) -> Reported:
+    """What a binary says its version is, or why it said nothing.
 
     `executable` is a name looked up on PATH, or a path asked directly.
+
+    **A loader refusal ends the probe.** The binary never ran, so a second spelling
+    reaches the same loader and gets the same line.
 
     **A non-zero exit is None, never "whatever it printed".** A tool that does not
     recognize the probe prints usage, which is full of numbers `versions.parse`
@@ -698,18 +733,20 @@ def reported_version(executable: str) -> str | None:
     """
     found = shutil.which(executable)
     if not found:
-        return None
+        return Reported(None)
     if Path(found).resolve().parent == gotool.gobin().resolve():
         module = gotool.module_version(Path(found))
         if module is None:
-            return None
+            return Reported(None)
         if gotool.tagged(module):
-            return module
+            return Reported(module)
     for probe in VERSION_PROBES:
         result = run([found, probe], output=Output.QUIET, timeout=PROBE_SECONDS)
         if result.ok and result.stdout.strip():
-            return result.stdout.strip()
-    return None
+            return Reported(result.stdout.strip())
+        if not result.ok and (refusal := loader_refusal(result.transcript)):
+            return Reported(None, refusal)
+    return Reported(None)
 
 
 def have_github_credentials() -> bool:

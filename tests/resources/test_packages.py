@@ -1740,7 +1740,7 @@ def test_a_probe_that_raises_is_recorded_rather_than_dropped(
     Dropped is still the right outcome: one unaskable binary must not take the
     whole resource down. What this pins is that it leaves a trace."""
 
-    def raises(item: object, found: object) -> str:
+    def raises(item: object, found: object) -> ev.Reported:
         raise RuntimeError('the binary is a directory')
 
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
@@ -1768,6 +1768,6 @@ def test_a_reported_version_keeps_only_the_version_it_carries(
     into the row. Text with no version in it stays whole for the row to name."""
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
     (item,) = live.plan.for_resource('packages')
-    monkeypatch.setattr(packages, '_installed_version', lambda *_: printed)
+    monkeypatch.setattr(packages, '_installed_version', lambda *_: ev.Reported(printed))
 
-    assert packages._reported_versions((item,), {item.address: ev.Evidence(Verdict.MATCHED)}) == {item.address: kept}
+    assert packages._reported_versions((item,), {item.address: ev.Evidence(Verdict.MATCHED)}) == {item.address: ev.Reported(kept)}

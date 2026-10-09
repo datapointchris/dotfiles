@@ -321,6 +321,42 @@ def test_declaring_a_release_unaskable_stops_its_placeholder_reading_as_behind(s
     assert 'stale' not in was_unaskable
 
 
+REFUSED = f"{TOOL}: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found (required by {TOOL})"
+"""What glibc's loader printed for a release built against a newer glibc than the machine's."""
+
+
+@pytest.mark.parametrize('argv', READ)
+def test_a_release_the_loader_refuses_is_stale_and_left_to_a_person(
+    sandbox: Sandbox, cli: Callable[..., Invocation], argv: tuple[str, ...]
+) -> None:
+    """The refusal is a measurement, so the row is drift rather than unknown, and no
+    verb plans it: a reinstall would write the same build."""
+    sandbox.declare(packages=DECLARED, manifest=SUBSCRIBES)
+    sandbox.unloadable(TOOL, REFUSED)
+    sandbox.upstream({REPO: 'v0.45.0'})
+
+    ran = cli(*argv, '--json')
+    row = resource(ran, 'packages')
+    measured = {change['item']: (change['verdict'], change['repair'], change['detail']) for change in [*row['findings'], *row['others']]}
+
+    assert measured == {ADDRESS: ('stale', 'by_hand', f'{TOOL} is installed and cannot start: {REFUSED}')}
+    assert (row['pending'], row['attention']) == (0, 1)
+    assert ran.exit_code == (ExitCode.ISSUE if argv[1] == 'check' else ExitCode.CONVERGED)
+
+
+def test_an_offline_apply_leaves_a_release_the_loader_refuses(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Acting would reinstall the bytes the loader just refused, and report that as a repair."""
+    sandbox.declare(packages=DECLARED, manifest=SUBSCRIBES)
+    sandbox.unloadable(TOOL, REFUSED)
+    sandbox.stage_bundle({TOOL: '0.45.0'})
+
+    ran = cli('packages', 'apply', '--offline', '--json')
+
+    assert (f'packages/{ADDRESS}', 'stale', 'declined') in recorded(ran)
+    assert [row for row in recorded(ran) if row[2] == 'failed'] == []
+    assert ran.exit_code == ExitCode.CONVERGED
+
+
 def test_nothing_could_be_measured_says_which_refresh_would_fix_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """An unmeasurable row carries the command that makes it measurable.
 

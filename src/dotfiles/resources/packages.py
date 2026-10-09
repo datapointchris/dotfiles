@@ -92,6 +92,9 @@ class Observed:
     reported: dict[str, str] = dc.field(default_factory=dict)
     """Address → the version string an installed release binary printed."""
 
+    refused: dict[str, str] = dc.field(default_factory=dict)
+    """Address → the loader's line, for an installed binary it would not start."""
+
     shadowed: dict[str, tuple[str, ...]] = dc.field(default_factory=dict)
     """Address → the copies of its binary that nothing this machine declares explains.
 
@@ -206,11 +209,13 @@ class PackagesResource:
             item for item in mine if evidence[item.address].verdict is Verdict.MATCHED and _has_currency(item, offline=session.offline)
         )
         latest, consulted = _upstream(session, present)
+        probed = _reported_versions(present, evidence)
 
         return Observed(
             evidence=evidence,
             met=session.preconditions,
-            reported=_reported_versions(present, evidence),
+            reported={address: answer.version for address, answer in probed.items() if answer.version},
+            refused={address: answer.refusal for address, answer in probed.items() if answer.refusal},
             shadowed=_shadowing(mine, evidence, plan, session.repo),
             undeclared=_undeclared_own_tools(session, plan),
             latest=latest,
@@ -440,8 +445,8 @@ the wait, so the work being overlapped is exactly the part Python is not doing.
 """
 
 
-def _reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, ev.Evidence]) -> dict[str, str]:
-    """What every installed tool says it is, asked concurrently.
+def _reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, ev.Evidence]) -> dict[str, ev.Reported]:
+    """What every installed tool says it is, or the loader's refusal to start it, asked concurrently.
 
     The dominant cost of measuring this resource, and the one that made a `check`
     unusable on the slowest machine here: 69 probes, each its own process start,
@@ -469,7 +474,7 @@ def _reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, 
     if not present:
         return {}
 
-    found: dict[str, str] = {}
+    found: dict[str, ev.Reported] = {}
     with ThreadPoolExecutor(max_workers=min(PROBE_WORKERS, len(present))) as pool:
         probes = {pool.submit(_installed_version, item, evidence[item.address]): item for item in present}
         for probe in as_completed(probes):
@@ -479,12 +484,14 @@ def _reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, 
             except Exception as failed:  # noqa: BLE001 — a probe runs whatever a declaration names
                 log.debug('probe failed', address=item.address, executable=item.executable, error=str(failed))
                 continue
-            if reported:
-                found[item.address] = versions.written_in(reported) or reported
+            if reported.version:
+                found[item.address] = ev.Reported(versions.written_in(reported.version) or reported.version)
+            elif reported.refusal:
+                found[item.address] = reported
     return found
 
 
-def _installed_version(item: DesiredItem, found: ev.Evidence) -> str | None:
+def _installed_version(item: DesiredItem, found: ev.Evidence) -> ev.Reported:
     """What is actually installed, from whichever source can say it exactly.
 
     A git uv tool is asked through uv's receipt rather than by running it, and that
@@ -497,8 +504,8 @@ def _installed_version(item: DesiredItem, found: ev.Evidence) -> str | None:
     at all. The receipt is what uv resolved, so it is exact for both.
     """
     if isinstance(item.entry, catalog.GitUvTool):
-        return ev.uv_tool_pin(item.name)
-    return ev.reported_version(str(found.binary or item.executable))
+        return ev.Reported(ev.uv_tool_pin(item.name))
+    return ev.probe_version(str(found.binary or item.executable))
 
 
 def _wanted(item: DesiredItem) -> releases.Wanted:
@@ -586,6 +593,9 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     current, and the whole point of the cache is that it is allowed to be out of
     date without being allowed to lie.
 
+    **A binary the loader refused to start was measured.** It is present and
+    cannot run, which is drift with a cause rather than a silence.
+
     **Ahead of the newest release is drift, but only against a figure measured
     this run.** A version nothing upstream publishes is not current — it is a
     machine holding bytes no declaration can reproduce, which is what a repo that
@@ -610,6 +620,8 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     if reported is None:
         if isinstance(item.entry, catalog.GitUvTool):
             return _unpinned_git(item, observed)
+        if refusal := observed.refused.get(item.address):
+            return (_cannot_start(item, refusal),)
         return (
             Change(
                 NAME,
@@ -689,6 +701,20 @@ def _installed_without_its_lock(item: DesiredItem, reported: str, cached: releas
         and cached.locked is True
         and versions.exactly(reported, cached.version) is True
         and not ev.uv_tool_held(item.name)
+    )
+
+
+def _cannot_start(item: DesiredItem, refusal: str) -> Change:
+    """`BY_HAND`, because a reinstall writes the same build and the loader refuses it again."""
+    return Change(
+        NAME,
+        item.stage,
+        item.address,
+        Verdict.STALE,
+        repair=Repair.BY_HAND,
+        detail=f'{item.executable} is installed and cannot start: {refusal}',
+        advice=f"apply would write the same build again; install what the loader names, or drop {item.name} from this machine's manifest",
+        desired=item,
     )
 
 

@@ -468,6 +468,10 @@ class Sandbox:
         """
         return reporting(self.user_bin, name, version) if version is not None else executable(self.user_bin, name)
 
+    def unloadable(self, name: str, refusal: str) -> Path:
+        """A declared tool on disk that the dynamic loader will not start, refusing as `refusal` says."""
+        return executable(self.user_bin, name, f"#!/bin/sh\ncat >&2 <<'EOF'\n{refusal}\nEOF\nexit 1\n")
+
     def elsewhere(self, name: str, version: str | None = None) -> Path:
         """The same tool, installed by something that is not this repo.
 
