@@ -351,6 +351,59 @@ def test_linking_forces_because_keg_only_is_what_declines_without_it(fake_bin: P
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# The unattended /etc/hosts write
+# ─────────────────────────────────────────────────────────────────────────────
+
+NOT_ROOT = pytest.mark.skipif(os.geteuid() == 0, reason='root writes /etc/hosts without sudo, so the grant is never read')
+
+
+@NOT_ROOT
+def test_a_listed_nopasswd_rule_for_tee_on_etc_hosts_is_the_grant(fake_bin: Path) -> None:
+    listing = 'User chris may run the following commands on box:\n    (ALL : ALL) ALL\n    (root) NOPASSWD: /usr/bin/tee /etc/hosts\n'
+    executable(fake_bin, 'sudo', f'#!/bin/sh\n[ "$*" = "-n -l" ] || exit 1\nprintf "%s" "{listing}"\n')
+
+    assert steps.observe('etc-hosts-sudo-grant', ANY_RUN).verdict is Verdict.MATCHED
+
+
+@NOT_ROOT
+def test_a_sudo_that_asks_for_a_password_is_a_missing_grant(fake_bin: Path) -> None:
+    executable(fake_bin, 'sudo', '#!/bin/sh\necho "sudo: a password is required" >&2\nexit 1\n')
+
+    state = steps.observe('etc-hosts-sudo-grant', ANY_RUN)
+
+    assert state.verdict is Verdict.MISSING
+    assert state.repair is Repair.AUTOMATIC
+
+
+def test_the_grant_is_parsed_by_visudo_before_it_is_installed(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
+    """One unparseable drop-in stops sudo running at all. The staged file is read
+    by each fake as it is handed over, because it is deleted once the write ends."""
+    log = tmp_path / 'calls'
+    for name in ('visudo', 'install'):
+        executable(fake_bin, name, f'#!/bin/sh\necho "{name} $*" >> {log}\ncat "$3" >> {log}\n')
+
+    assert steps.apply('etc-hosts-sudo-grant', granted, ANY_RUN).ok
+    calls = log.read_text().splitlines()
+    rule = f'{steps.current_user()} ALL=(root) NOPASSWD: /usr/bin/tee /etc/hosts'
+    assert calls[0].startswith('visudo -c -f ')
+    assert calls[1] == rule
+    assert calls[2].startswith('install -m 0440 ') and calls[2].endswith(' /etc/sudoers.d/etc-hosts')
+    assert calls[3] == rule
+
+
+def test_a_rule_visudo_refuses_is_never_installed(fake_bin: Path, tmp_path: Path, granted: Privilege) -> None:
+    log = tmp_path / 'calls'
+    executable(fake_bin, 'visudo', '#!/bin/sh\necho "syntax error" >&2\nexit 1\n')
+    executable(fake_bin, 'install', f'#!/bin/sh\necho "install $*" >> {log}\n')
+
+    result = steps.apply('etc-hosts-sudo-grant', granted, ANY_RUN)
+
+    assert not result.ok
+    assert 'visudo refused' in result.detail
+    assert not log.exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # The declaration against the code
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -382,12 +435,12 @@ def test_a_step_with_no_function_says_so_rather_than_passing() -> None:
     assert state.repair is Repair.NONE
 
 
-def test_only_the_xcode_license_declares_that_it_needs_root() -> None:
+def test_only_the_xcode_license_and_the_hosts_grant_declare_that_they_need_root() -> None:
     """Every other row is user-level. Marking the section privileged would put a
     password prompt in front of a Mac setting its own screenshot directory."""
     privileged = {entry.name for entry in declared() if entry.needs_root}  # type: ignore[attr-defined]
 
-    assert privileged == {'xcode-license'}
+    assert privileged == {'xcode-license', 'etc-hosts-sudo-grant'}
 
 
 def test_the_windows_font_path_is_asked_of_windows_not_read_from_the_environment() -> None:

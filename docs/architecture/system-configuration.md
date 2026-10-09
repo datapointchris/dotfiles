@@ -49,8 +49,8 @@ reversed.
 
 Rows with nothing in common except needing to be reconciled. Each is a pair of
 functions in `providers/steps.py`, and `tests/resources/test_steps.py` asserts
-that the declared set and the implemented set match in both directions. Two of
-them are worth knowing about from here.
+that the declared set and the implemented set match in both directions. These
+are worth knowing about from here.
 
 **The scheduled check is a `steps` row.** `providers/steps.py` hands it to
 `providers/schedule.py`, which installs the timer and argues why a machine opts
@@ -62,6 +62,14 @@ Its state depends on the manifest it is measured for. A manifest's
 machine. A machine that declines still plans the row, so a timer installed
 earlier is found and removed. `registry.SystemConfigProvider.states` is how the
 manifest reaches the row.
+
+**The `/etc/hosts` sudo grant is a `steps` row, though it writes one file.** A
+`managed_files` row observes by reading the file, and a sudoers drop-in cannot be
+read unprivileged. On Arch, `/etc/sudoers.d` is 0750, so the row would report
+missing forever and ask for a password on every apply. A managed file is also
+installed unchecked, and one unparseable drop-in stops sudo running at all. The
+step reads the grant's effect from `sudo -n -l` instead, through
+`privilege.passwordless`. It installs nothing that `visudo` has not parsed first.
 
 **`install/wsl/docker-repo.sh` is deliberately not a row.** Nothing in the
 install path runs it. WSL borrows its engine from Docker Desktop, and

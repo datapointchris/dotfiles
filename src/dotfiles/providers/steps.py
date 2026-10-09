@@ -6,9 +6,10 @@ one observation in the repo that genuinely needs root. OrbStack's plugin
 directory is a JSON merge into a user config. libpq is a formula Homebrew
 installs and deliberately does not link. The Windows font path is discovered by
 asking Windows across a filesystem boundary only a WSL machine can see. The
-scheduled check is a systemd user timer or a LaunchAgent, and lives in
-`providers/schedule.py` because it is the only one long enough to crowd the
-others out.
+/etc/hosts grant is a sudoers rule only root can read, so it is observed through
+what sudo will list instead. The scheduled check is a systemd user timer or a
+LaunchAgent, and lives in `providers/schedule.py` because it is the only one
+long enough to crowd the others out.
 
 This is the shape `custom_installers` settled on and for the same reason: the
 declaration names *which*, this module says *how*, and a test asserts the two
@@ -29,6 +30,7 @@ import os
 import re
 import shutil
 import stat
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,11 +39,13 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.privilege import Escalates
 from dotfiles.privilege import PrivilegeUnavailable
+from dotfiles.privilege import passwordless
 from dotfiles.privilege import refusal
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import schedule
 from dotfiles.providers.sysconfig import State
+from dotfiles.providers.sysconfig import current_user
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 
@@ -401,6 +405,57 @@ def _link_psql() -> Result:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# The unattended /etc/hosts write
+# ─────────────────────────────────────────────────────────────────────────────
+
+HOSTS_WRITE = ('/usr/bin/tee', '/etc/hosts')
+"""The one command the grant names, by full path, because sudoers matches by path."""
+
+HOSTS_GRANT = Path('/etc/sudoers.d/etc-hosts')
+
+
+def _hosts_write_granted() -> State:
+    """The grant's effect, read from sudo, rather than the file that makes it.
+
+    The file is unreadable without root, and the effect is the question anyway:
+    a rule elsewhere granting everything NOPASSWD answers it as well.
+    """
+    if os.geteuid() == 0:
+        return State(Verdict.MATCHED, 'this account is root, so /etc/hosts is written without sudo')
+    if passwordless(HOSTS_WRITE):
+        return State(Verdict.MATCHED)
+    return State(Verdict.MISSING, f'sudo asks for a password before {" ".join(HOSTS_WRITE)}')
+
+
+def _grant_hosts_write(privilege: Escalates) -> Result:
+    """Install the rule after `visudo` has parsed it.
+
+    One unparseable file in /etc/sudoers.d stops sudo running at all, which on a
+    desk is a machine nobody can repair without booting something else. So the
+    staged file is checked first, and nothing is installed if the check refuses.
+    `visudo` runs through sudo because Debian keeps it in /usr/sbin, which is on
+    root's secure_path and not on an account's own PATH.
+    """
+    rule = f'{current_user()} ALL=(root) NOPASSWD: {" ".join(HOSTS_WRITE)}\n'
+    staged = Path(tempfile.mkstemp(prefix='dotfiles-sudoers-')[1])
+    try:
+        staged.write_text(rule)
+        parsed = privilege.run(['visudo', '-c', '-f', str(staged)], reason=f'check the rule for {HOSTS_GRANT}')
+        if not parsed.ok:
+            return Result(
+                False, f'visudo refused the rule, so {HOSTS_GRANT} was not written: {parsed.transcript.strip()}', kind=Kind.COMMAND_FAILED
+            )
+        installed = privilege.run(['install', '-m', '0440', str(staged), str(HOSTS_GRANT)], reason=f'write {HOSTS_GRANT}')
+    except PrivilegeUnavailable:
+        return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
+    finally:
+        staged.unlink(missing_ok=True)
+    if not installed.ok:
+        return Result(False, f'could not write {HOSTS_GRANT}: {installed.transcript.strip()}', kind=Kind.WRITE_FAILED)
+    return Result(True, f'{HOSTS_GRANT} written', kind=Kind.APPLIED)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # The table
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -448,6 +503,7 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
     'orbstack-docker-plugins': (_anywhere(_orbstack_plugins), _unprivileged(_add_orbstack_plugins)),
     'windows-fonts': (_anywhere(_windows_fonts), _unprivileged(_write_fontconfig)),
     'psql-linked': (_anywhere(_psql_linked), _unprivileged(_link_psql)),
+    'etc-hosts-sudo-grant': (_anywhere(_hosts_write_granted), _escalating(_grant_hosts_write)),
 }
 """Every `steps` row, and the pair of functions that answers for it."""
 

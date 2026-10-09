@@ -228,3 +228,51 @@ def test_a_refused_run_raises_having_written_nothing(fake_bin: Path) -> None:
     with pytest.raises(PrivilegeUnavailable):
         privilege.run(['true'], reason='anything')
     assert 'no sudo' in privileges.refusal(privilege.state)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# What sudo would run without asking
+# ─────────────────────────────────────────────────────────────────────────────
+
+LISTING = """Matching Defaults entries for chris on box:
+    secure_path=/usr/local/sbin\\:/usr/local/bin\\:/usr/bin
+
+Runas and Command-specific defaults for chris:
+    Defaults!/usr/bin/visudo env_keep+="SUDO_EDITOR EDITOR VISUAL"
+
+User chris may run the following commands on box:
+{rules}
+"""
+
+
+@pytest.mark.parametrize(
+    ('rules', 'waived'),
+    [
+        # Arch's stock wheel rule lists above every drop-in.
+        ('    (ALL : ALL) ALL\n    (root) NOPASSWD: /usr/bin/tee /etc/hosts', True),
+        # A container template granting everything without a password.
+        ('    (ALL : ALL) ALL\n    (ALL) NOPASSWD: ALL', True),
+        ('    (ALL : ALL) ALL', False),
+        # The last match decides, so a password rule below the grant takes it back.
+        ('    (root) NOPASSWD: /usr/bin/tee /etc/hosts\n    (ALL : ALL) ALL', False),
+        # No arguments in the rule means any, so the bare program matches.
+        ('    (root) NOPASSWD: /usr/bin/tee', True),
+        ('    (root) NOPASSWD: /usr/bin/tee /etc/shadow', False),
+        ('    (backup) NOPASSWD: /usr/bin/tee /etc/hosts', False),
+        # A tag carries to the commands after it on the line, until another replaces it.
+        ('    (root) NOPASSWD: /usr/bin/true, /usr/bin/tee /etc/hosts', True),
+        ('    (root) NOPASSWD: /usr/bin/true, PASSWD: /usr/bin/tee /etc/hosts', False),
+        ('    (ALL) NOPASSWD: ALL, !/usr/bin/tee /etc/hosts', False),
+    ],
+)
+def test_the_last_matching_rule_decides_whether_sudo_asks(rules: str, waived: bool) -> None:
+    assert privileges.last_rule_waives_password(LISTING.format(rules=rules), '/usr/bin/tee /etc/hosts') is waived
+
+
+def test_a_listing_sudo_refuses_is_a_password_required(tmp_path: Path, fake_bin: Path) -> None:
+    """sudo lists without a password only when some rule is NOPASSWD, so a refusal
+    to list at all already answers no."""
+    fake_sudo(fake_bin, tmp_path / 'calls')
+
+    assert privileges.passwordless(['/usr/bin/tee', '/etc/hosts']) is False
+    assert recorded(tmp_path / 'calls') == ['-n -l']

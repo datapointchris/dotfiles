@@ -21,7 +21,8 @@
 #   requires_package   a system package this machine's manifest installs
 #   feature            a manifest boolean
 #   <axis>             any coordinate SystemConfig carries a field for, today
-#                      os_family, host and display_stack — plus machine and platform
+#                      os_family, host, display_stack and network_trust — plus
+#                      machine and platform
 # An entry with none of them applies to every machine.
 #
 # `scope: user` on a systemd unit narrows nothing. It says which manager reads
@@ -656,3 +657,23 @@ steps:
   - name: windows-fonts
     description: fontconfig pointing at the Windows user font directory
     host: wsl
+
+  # A scheduled job writes /etc/hosts from the fleet's inventory with
+  # `sudo -n /usr/bin/tee /etc/hosts`, and this rule is what lets it do so with
+  # nobody there. Without it the job is refused, never prompted: a sudo that
+  # prompts with no terminal fails authentication, and pam_faillock counts every
+  # one toward faillock-deny's limit above.
+  #
+  # tee rather than a script installed for the purpose. It is the operating
+  # system's own file in a directory only root writes, and sudoers matches its
+  # argument exactly, so the rule writes /etc/hosts and nothing else. The content
+  # arrives on stdin as data.
+  #
+  # `network_trust: fleet` for faillock-deny's reason: loosening sudo is a
+  # decision about a machine this repo's owner owns. Linux only, because only
+  # the Linux boxes run the schedule. Nothing in the rule is Linux-specific.
+  - name: etc-hosts-sudo-grant
+    description: sudo runs /usr/bin/tee /etc/hosts for this account without a password
+    os_family: linux
+    network_trust: fleet
+    needs_root: true

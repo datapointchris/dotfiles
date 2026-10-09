@@ -40,7 +40,9 @@ from __future__ import annotations
 
 import enum
 import os
+import re
 import shutil
+from collections.abc import Sequence
 from typing import Protocol
 
 from dotfiles.effects import Completed
@@ -169,6 +171,56 @@ def _already_granted() -> bool:
     answers yes here too, which is the same property and equally welcome.
     """
     return run(['sudo', '-n', 'true'], output=Output.QUIET).ok
+
+
+def passwordless(command: Sequence[str]) -> bool:
+    """Whether sudo would run exactly `command` as root for this account, asking nobody.
+
+    Read from `sudo -n -l`, never from the rule files. /etc/sudoers.d is 0750 on
+    Arch, so an unprivileged read cannot even see the file names. Asking sudo
+    also answers for every rule at once: a container template's `NOPASSWD: ALL`
+    grants the command as surely as a drop-in naming it.
+
+    sudo lists without a password once any of the account's rules is NOPASSWD,
+    and refuses to list otherwise. A refusal is therefore already the answer no.
+    """
+    listed = run(['sudo', '-n', '-l'], output=Output.QUIET)
+    return listed.ok and last_rule_waives_password(listed.stdout, ' '.join(command))
+
+
+RULES_HEADING = 'may run the following commands'
+TAG = re.compile(r'^([A-Z_]+):\s*')
+
+
+def last_rule_waives_password(listing: str, command: str) -> bool:
+    """Whether the last rule in a `sudo -l` listing matching `command` as root is NOPASSWD.
+
+    The last match decides because that is how sudoers resolves a command that
+    several rules match. Arch's stock `%wheel ALL=(ALL:ALL) ALL` lists above every
+    drop-in, and a drop-in naming the command NOPASSWD below it wins.
+
+    A tag carries to the commands after it on the same line, as it does in the
+    rule. A command listed without arguments matches any, so the bare program is
+    a match too. A negated command that matches denies outright.
+    """
+    lines = listing.splitlines()
+    start = next((i + 1 for i, line in enumerate(lines) if RULES_HEADING in line), len(lines))
+    program = command.split()[0]
+    waived = False
+    for line in lines[start:]:
+        runas, closed, spec = line.strip().removeprefix('(').partition(')')
+        if not closed or not {'root', 'ALL'} & {user.strip() for user in runas.split(':')[0].split(',')}:
+            continue
+        nopasswd = False
+        for entry in spec.split(','):
+            entry = entry.strip()
+            while tag := TAG.match(entry):
+                nopasswd = {'NOPASSWD': True, 'PASSWD': False}.get(tag[1], nopasswd)
+                entry = entry[tag.end() :]
+            negated = entry.startswith('!')
+            if entry.lstrip('!').strip() in ('ALL', command, program):
+                waived = nopasswd and not negated
+    return waived
 
 
 def refusal(state: Authorization) -> str:
