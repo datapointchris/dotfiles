@@ -219,19 +219,31 @@ def test_an_owner_with_nothing_here_plans_nothing(quiet: None, monkeypatch: pyte
 
 
 class Walk:
-    """A stand-in for the engine, yielding whatever a test needs it to have found."""
+    """A stand-in for the engine, yielding whatever a test needs it to have found.
 
-    def __init__(self, *events: Event, outcomes: tuple[Event, ...] = ()) -> None:
+    `found` is what measuring a stage again turns up, keyed by stage. Stubbed with
+    the rest, because the real `engine.remeasure` measures this machine.
+    """
+
+    def __init__(self, *events: Event, outcomes: tuple[Event, ...] = (), found: dict[Stage, list[Event]] | None = None) -> None:
         self.assessed = events
         self.outcomes = outcomes
+        self.found = found or {}
         self.acted = False
+        self.handed: list[str] = []
+        self.remeasured: list[Stage] = []
 
     def assess(self, session, selection=None):
         return iter(self.assessed)
 
     def execute(self, session, planned, privilege):
         self.acted = True
+        self.handed.extend(event.item for event in planned)
         return iter(self.outcomes)
+
+    def remeasure(self, session, selection, stage, planned):
+        self.remeasured.append(stage)
+        return self.found.get(stage, [])
 
 
 def drift(item: str, repair: Repair = Repair.AUTOMATIC) -> Event:
@@ -261,6 +273,7 @@ def walked(monkeypatch: pytest.MonkeyPatch, walk: Walk) -> Walk:
     monkeypatch.setenv('MACHINE', MACHINE)
     monkeypatch.setattr(engine, 'assess', walk.assess)
     monkeypatch.setattr(engine, 'execute', walk.execute)
+    monkeypatch.setattr(engine, 'remeasure', walk.remeasure)
     return walk
 
 
@@ -327,6 +340,7 @@ def test_a_group_is_announced_before_it_runs_rather_than_after(quiet: None, monk
     monkeypatch.setenv('MACHINE', MACHINE)
     monkeypatch.setattr(engine, 'assess', lambda *args, **kwargs: iter((drift('ripgrep'),)))
     monkeypatch.setattr(engine, 'execute', acting)
+    monkeypatch.setattr(engine, 'remeasure', lambda *args: [])
     monkeypatch.setattr('dotfiles.reconcile.render_section', lambda address, *args, **kwargs: announced.append(f'section:{address}'))
 
     reconcile.apply_machine(engine.Selection.everything())
@@ -392,6 +406,39 @@ def test_the_run_records_both_what_was_decided_and_what_was_done(monkeypatch: py
     # Stamped before the walk, not when the record is assembled afterwards, or the
     # run's own duration measures the loop over an already-collected list.
     assert identity.started < dt.datetime.now(dt.UTC)
+
+
+def test_a_run_that_changed_nothing_measures_nothing_again(quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A refused row wrote nothing, so no later stage can read anything new, and a
+    converged machine pays for one measurement."""
+    walk = walked(monkeypatch, Walk(drift('win32yank'), outcomes=(done('win32yank', OutcomeStatus.REFUSED),)))
+
+    reconcile.apply_machine(engine.Selection.everything())
+
+    assert walk.acted
+    assert walk.remeasured == []
+
+
+def test_a_row_measured_again_is_acted_on_in_the_same_run_and_recorded_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unmeasurable before the install and actionable after it. The record keeps
+    the later finding alone, so the row is not reported both as unmeasured and as
+    done."""
+    kept: list[Event] = []
+    monkeypatch.setattr('dotfiles.checkout.report_stray_branch', lambda: None)
+    monkeypatch.setattr(deploy, 'epilogue', lambda session: None)
+    monkeypatch.setattr(sinks, 'keep', lambda events, identity, flags: kept.extend(events))
+    first = Event(
+        'system', Change('system', Stage.SYSTEM_CONFIG, 'file/thing', Verdict.UNKNOWN, repair=Repair.NONE), stage=Stage.SYSTEM_CONFIG
+    )
+    again = Event(
+        'system', Change('system', Stage.SYSTEM_CONFIG, 'file/thing', Verdict.MISSING, repair=Repair.AUTOMATIC), stage=Stage.SYSTEM_CONFIG
+    )
+    walk = walked(monkeypatch, Walk(drift('ripgrep'), first, outcomes=(done('ripgrep'),), found={Stage.SYSTEM_CONFIG: [again]}))
+
+    reconcile.apply_machine(engine.Selection.everything())
+
+    assert walk.handed == ['ripgrep', 'file/thing']
+    assert [event.payload for event in kept if isinstance(event.payload, Change) and event.payload.item == 'file/thing'] == [again.payload]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

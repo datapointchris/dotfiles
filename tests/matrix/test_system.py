@@ -965,6 +965,31 @@ def test_a_timer_the_manifest_declines_is_reported_as_left_behind(
     assert 'check_schedule is off' in step['detail']
 
 
+def test_a_first_apply_installs_the_timer_its_own_symlink_pass_turned_on(
+    sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
+) -> None:
+    """The row reads `[schedule] enabled` from `~/.config/dotfiles/config.toml`,
+    and a fresh machine has none until the symlink pass deploys the trust
+    variant. Measured only before that pass, the row reads the schedule as off
+    and plans nothing.
+
+    `$XDG_CONFIG_HOME` names the sandbox's `~/.config` because that is where the
+    symlink pass deploys, and on a real machine the two are one directory.
+    """
+    monkeypatch.setattr(schedule, '_is_darwin', lambda: False)
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(sandbox.home / '.config'))
+    declare_system(sandbox, SCHEDULE_STEP)
+    write(sandbox.repo / 'configs' / 'trust' / 'fleet' / '.config' / 'dotfiles' / 'config.toml', '[schedule]\nenabled = true\n')
+    sandbox.shadow('systemctl', ANSWERS)
+    units = sandbox.home / '.config' / 'systemd' / 'user'
+
+    ran = cli('apply')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert (units / 'dotfiles-check.timer').is_file()
+    assert (units / 'dotfiles-check.service').is_file()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # What the verbs write, and what they leave alone
 # ─────────────────────────────────────────────────────────────────────────────

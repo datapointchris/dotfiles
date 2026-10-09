@@ -193,10 +193,18 @@ something needs it.
 
 ## Selective installs and updates
 
-There is no phase registry. `dotfiles apply` measures the whole plan once and
-acts on it in `Stage` order. Keeping a hand-written order beside that is what let
+There is no phase registry. `dotfiles apply` measures the whole plan, then acts
+on it in `Stage` order. Keeping a hand-written order beside that is what let
 `system/manager`, the OS package upgrade, sit at a stage no phase named and never
 run at all.
+
+A row can read what an earlier stage of the same run writes, so a stage is
+measured again once an earlier one has changed the machine. Without that, a fresh
+fleet machine's first apply installed no check timer: the switch for it is in a
+config the symlink pass deploys, and the row was measured before the pass ran.
+Having that one row read the repo's copy of the config instead of the deployed
+one was rejected. It fixes the row and leaves the next row that reads an earlier
+stage's output to install one apply late.
 
 A selector is a resource, or one provider inside one, and `dotfiles apply --help`
 lists what each flag takes. Four hand-maintained groups (`system`, `languages`,

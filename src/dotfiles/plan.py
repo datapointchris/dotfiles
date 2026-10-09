@@ -123,6 +123,11 @@ class Stage(enum.IntEnum):
     resolved to will start, which is a smaller set that nothing declares.
     """
 
+    @property
+    def writes(self) -> bool:
+        """Whether `apply` ever acts at this stage, which every stage below AUTH does."""
+        return self < Stage.AUTH
+
 
 class Precondition(enum.StrEnum):
     """State a machine can be in that stops an item installing, checked live.

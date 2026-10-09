@@ -16,6 +16,7 @@ from __future__ import annotations
 import dataclasses as dc
 from collections.abc import Iterable
 from collections.abc import Iterator
+from collections.abc import Sequence
 
 from dotfiles import logging
 from dotfiles import registry
@@ -306,16 +307,86 @@ def assess(session: Session, selection: Selection | None = None) -> Iterator[Eve
             yield from _measure(session, address, resource, covered.plan_for(address, session.plan))
 
 
+UNPROVIDED_STAGES: dict[str, Stage] = {
+    'env': Stage.ENVIRONMENT,
+    'identity': Stage.IDENTITY,
+    'symlinks': Stage.SYMLINKS,
+    'auth': Stage.AUTH,
+    'credentials': Stage.CREDENTIALS,
+}
+"""The stage of each resource with no provider, which its `diff` otherwise states
+only on the changes it returns."""
+
+
+def resource_at(stage: Stage) -> str | None:
+    """The one resource whose rows sit at this stage, or None where no resource's do."""
+    for provider in registry.PROVIDERS:
+        if provider.stage is stage:
+            return provider.resource
+    return next((resource for resource, at in UNPROVIDED_STAGES.items() if at is stage), None)
+
+
+def remeasure(session: Session, selection: Selection, stage: Stage, planned: Sequence[Event]) -> list[Event]:
+    """What one stage needs now that the walk's first measurement did not plan.
+
+    `assess` measures every resource before `apply` acts on any, and an
+    observation can read what an earlier stage writes. `check-schedule` reads
+    `[schedule] enabled` from the config the symlink pass deploys. Measured before
+    that pass on a fresh machine, it reads the schedule as off and plans nothing.
+
+    **Additive.** A row already planned is not asked again, because `perform`
+    re-checks it live. Every other row at the stage is asked again, and comes back
+    only where it is now actionable. A finding that is still not work stays as the
+    first measurement left it. `session` should be one that does not refresh. A
+    read that skipped the network cannot tell a plugin behind its remote from a
+    current one, so it must not re-decide what a read that asked found.
+
+    A provider's rows are narrowed to the ones not planned, and a stage whose rows
+    were all planned costs no observation. A resource with no provider has no rows
+    to narrow, so it is measured whole and its changes at other stages dropped.
+    """
+    address = resource_at(stage)
+    if address is None or address not in selection.resources or not selection.reaches(stage):
+        return []
+
+    acting = {
+        event.payload.item
+        for event in planned
+        if event.resource == address and isinstance(event.payload, Change) and event.payload.actionable
+    }
+    plan = selection.plan_for(address, session.plan)
+    if address not in UNPROVIDED_STAGES:
+        unplanned = tuple(item for item in plan.for_stage(stage) if item.address not in acting)
+        if not unplanned:
+            return []
+        plan = dc.replace(plan, items=unplanned)
+
+    found = [
+        event
+        for event in _measure(session, address, resources()[address], plan)
+        if isinstance(event.payload, Refusal)
+        or (
+            isinstance(event.payload, Change)
+            and event.payload.stage is stage
+            and event.payload.actionable
+            and event.payload.item not in acting
+        )
+    ]
+    log.debug('remeasured', resource=address, stage=stage.name.lower(), found=len(found))
+    return found
+
+
 def execute(session: Session, planned: Iterable[Event], privilege: Escalates) -> Iterator[Event]:
     """Act on what `assess` decided, in the order the machine converges.
 
-    Takes the stream rather than a fresh measurement, which is the whole of "apply
-    is plan then execute": the changes acted on are the ones that were printed, not
-    a second look that may have found something different.
+    Takes the stream rather than measuring for itself, so what it acts on is what
+    the caller decided and will record.
 
-    `perform` re-verifies live and returns `REFUSED` rather than forcing, so a plan
-    that has gone stale between the two halves is a reported outcome and not a bad
-    write. That re-check is what makes measuring once safe.
+    `perform` re-verifies live and returns `REFUSED` rather than forcing, so a
+    planned row that has gone stale between the two halves is a reported outcome
+    and not a bad write. That covers only rows that were planned. A row measured
+    as needing nothing, on input an earlier stage had not yet written, is what
+    `remeasure` is for.
 
     Isolation is the same as `assess`'s and for the same reason: one item failing
     must not abandon the rest, or a run stops silently part-way through and the

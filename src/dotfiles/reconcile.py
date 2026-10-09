@@ -843,7 +843,7 @@ def apply_machine(
     flags: dict | None = None,
     as_json: bool = False,
 ) -> ExitCode:
-    """Measure the machine once, then act on what was decided, in stage order.
+    """Measure the machine, then act on what was decided, in stage order.
 
     The declaration check, the machine's resolution and the offline check all come
     before the walk: a run measured against a declaration that will not hold
@@ -945,7 +945,7 @@ def apply_machine(
     for unexamined in fold([event for event in planned if isinstance(event.payload, Refusal)], Lens.CHECK):
         render_result(unexamined, err_console)
 
-    performed = list(_perform(session, planned))
+    planned, performed = _perform(session, selection, planned)
 
     changes = [event.payload for event in planned if isinstance(event.payload, Change)]
     _, deferred, unmeasured = sift(changes)
@@ -1087,8 +1087,19 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
             render_change(change, min(width, SUBJECT_CEILING))
 
 
-def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
-    """Act, announcing each group of work before it happens.
+def _perform(session: Session, selection: engine.Selection, planned: Sequence[Event]) -> tuple[list[Event], list[Event]]:
+    """Act stage by stage, announcing each group of work before it happens.
+
+    Returns what the run decided and what it did. The first is `planned` with
+    whatever `engine.remeasure` found in place of the rows it supersedes, so the
+    record and the closing line answer for the work that ran.
+
+    **A stage is measured again once an earlier stage has changed the machine.**
+    `assess` ran before anything was written, and a row can read what an earlier
+    stage writes — `check-schedule` reads a config the symlink pass deploys. The
+    measurement reuses one non-refreshing session until the next change, so a
+    converged machine measures once and a fresh one measures each stage at most
+    twice.
 
     The section's name is the address `plan` prints and `--skip` takes, so one run's
     output and the next run's `--skip` argument are the same vocabulary.
@@ -1105,12 +1116,56 @@ def _perform(session: Session, planned: Sequence[Event]) -> Iterable[Event]:
     anybody gets is the one printed before the write asks.
     """
     privilege = privileges.Privilege()
-    for group in engine.batches(planned):
-        changes = [event.payload for event in group if isinstance(event.payload, Change)]
-        render_section(_address(group[0]), converging_line(changes), mark=PROGRESS_MARK, color='blue')
-        for event in engine.execute(session, group, privilege):
-            _render(event)
-            yield event
+    decided = list(planned)
+    performed: list[Event] = []
+    remeasuring: Session | None = None
+    changed = False
+    for stage in (stage for stage in Stage if stage.writes):
+        found: list[Event] = []
+        if changed:
+            remeasuring = remeasuring or dc.replace(session, refresh=False)
+            found = engine.remeasure(remeasuring, selection, stage, decided)
+            for unexamined in fold([event for event in found if isinstance(event.payload, Refusal)], Lens.CHECK):
+                render_result(unexamined, err_console)
+        earlier = _without(decided, found)
+        decided = [*earlier, *found]
+
+        for group in engine.batches(_joined(_at(earlier, stage), _at(found, stage))):
+            changes = [event.payload for event in group if isinstance(event.payload, Change)]
+            render_section(_address(group[0]), converging_line(changes), mark=PROGRESS_MARK, color='blue')
+            for event in engine.execute(session, group, privilege):
+                _render(event)
+                performed.append(event)
+                if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE:
+                    changed = True
+                    remeasuring = None
+    return decided, performed
+
+
+def _without(decided: Sequence[Event], found: Sequence[Event]) -> list[Event]:
+    """`decided`, less every row a re-measurement found again, which it supersedes."""
+    again = {(event.resource, event.payload.item) for event in found if isinstance(event.payload, Change)}
+    return [event for event in decided if not (isinstance(event.payload, Change) and (event.resource, event.payload.item) in again)]
+
+
+def _at(events: Sequence[Event], stage: Stage) -> list[Event]:
+    return [event for event in events if isinstance(event.payload, Change) and event.payload.stage is stage]
+
+
+def _joined(first: Sequence[Event], found: Sequence[Event]) -> list[Event]:
+    """One stage's rows, with each re-measured row placed after its own provider's.
+
+    `engine.batches` groups consecutive rows of one provider, so a row appended at
+    the end would split that provider's work into two groups, and two package
+    transactions where one would do. The first measurement's rows keep their order,
+    because a `diff` can order rows within a stage on purpose: `toolchains` puts
+    the Go module setting after the runtime that provides `go`.
+    """
+    joined = list(first)
+    for event in found:
+        same = [index for index, existing in enumerate(joined) if _address(existing) == _address(event)]
+        joined.insert(same[-1] + 1 if same else len(joined), event)
+    return joined
 
 
 def converging_line(changes: Sequence[Change]) -> str:

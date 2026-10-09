@@ -15,6 +15,7 @@ import pytest
 
 from dotfiles import engine
 from dotfiles import vocabulary
+from dotfiles.event import Event
 from dotfiles.event import Refusal
 from dotfiles.event import Started
 from dotfiles.event import Summary
@@ -90,20 +91,13 @@ def test_no_two_resources_share_a_stage() -> None:
     for provider in registry.PROVIDERS:
         owners.setdefault(provider.stage, set()).add(provider.resource)
 
-    # A resource with no provider decides its own stage inside its `diff`, where
-    # nothing else can read it. Naming them here is therefore a second list, so
-    # the assertion below covers it: one more such resource fails this test rather
-    # than slipping past the guard — which is the same drift that put
-    # `system/manager` at a stage no phase named.
-    unprovided = {
-        'env': Stage.ENVIRONMENT,
-        'identity': Stage.IDENTITY,
-        'symlinks': Stage.SYMLINKS,
-        'auth': Stage.AUTH,
-        'credentials': Stage.CREDENTIALS,
-    }
+    # A resource with no provider states its stage only on the changes its `diff`
+    # returns, so `engine.UNPROVIDED_STAGES` names it a second time. One more such
+    # resource fails here rather than slipping past the guard — the same drift
+    # that put `system/manager` at a stage no phase named.
+    unprovided = engine.UNPROVIDED_STAGES
     assert set(vocabulary.RESOURCES) == {provider.resource for provider in registry.PROVIDERS} | set(unprovided), (
-        'a resource appeared that this test does not know the stage of; read it out of its `diff` and add it'
+        'a resource appeared that engine.UNPROVIDED_STAGES does not know the stage of; read it out of its `diff` and add it'
     )
 
     for resource, stage in unprovided.items():
@@ -295,6 +289,46 @@ def test_one_item_failing_does_not_abandon_the_rest(session: Session, monkeypatc
 
     assert writer.performed == ['a', 'c']
     assert isinstance(payloads[1], Refusal)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Measuring a stage again once an earlier one has changed the machine
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_stage_whose_rows_were_all_planned_is_not_measured_again(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`perform` re-checks a planned row live, so asking it again buys nothing, and
+    a fresh machine plans nearly every row it declares."""
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': Fake('packages', raises=AssertionError('measured again'))})
+    rows = engine.Selection.everything().plan_for('packages', session.plan).for_stage(Stage.TOOLS)
+    planned = [
+        Event(
+            'packages',
+            Change('packages', Stage.TOOLS, item.address, Verdict.MISSING, repair=Repair.AUTOMATIC, desired=item),
+            stage=Stage.TOOLS,
+        )
+        for item in rows
+    ]
+
+    assert rows
+    assert engine.remeasure(session, engine.Selection.everything(), Stage.TOOLS, planned) == []
+
+
+def test_measuring_again_returns_only_new_work_at_its_own_stage(session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Additive: a finding `apply` cannot act on stays as the first measurement left
+    it, rather than being re-decided by a read that skipped the network."""
+    measured = (
+        change('now-missing'),
+        change('planned'),
+        Change('packages', Stage.TOOLS, 'by-hand', Verdict.MISSING, repair=Repair.BY_HAND, advice='install it by hand'),
+        Change('packages', Stage.NODE_TOOLS, 'later', Verdict.MISSING, repair=Repair.AUTOMATIC),
+    )
+    monkeypatch.setattr(engine, 'resources', lambda: {'packages': Fake('packages', changes=measured)})
+    planned = [Event('packages', change('planned'), stage=Stage.TOOLS)]
+
+    again = engine.remeasure(session, engine.Selection.everything(), Stage.TOOLS, planned)
+
+    assert [event.item for event in again] == ['now-missing']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
