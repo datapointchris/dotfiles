@@ -61,3 +61,34 @@ class Boundary(TyperGroup):
         except KeyboardInterrupt as interrupted:
             error('interrupted')
             raise typer.Exit(ExitCode.ISSUE) from interrupted
+        except Exception as failure:
+            name_takers(failure, ctx.find_root())
+            raise
+
+
+def name_takers(failure: Exception, root: Any) -> None:
+    """Append the commands that do take an option this one refused.
+
+    click's `NoSuchOption` is recognized by its `option_name`, `possibilities` and
+    `message` rather than by class, because naming the class means importing click.
+    """
+    option = getattr(failure, 'option_name', None)
+    if not option or not hasattr(failure, 'possibilities') or not hasattr(failure, 'message'):
+        return
+    takers = [f'`{path}`' for path in commands_taking(root.command, option, root.info_name or 'dotfiles')]
+    if takers:
+        listed = takers[0] if len(takers) == 1 else f'{", ".join(takers[:-1])} and {takers[-1]}'
+        failure.message = f'{failure.message}. {listed} {"takes" if len(takers) == 1 else "take"} it.'
+
+
+def commands_taking(group: Any, option: str, path: str) -> list[str]:
+    """Every visible leaf command under `group` that declares `option`, by its full path."""
+    found = []
+    for name, command in sorted(group.commands.items()):
+        if command.hidden:
+            continue
+        if hasattr(command, 'commands'):
+            found.extend(commands_taking(command, option, f'{path} {name}'))
+        elif any(option in getattr(param, 'opts', ()) for param in command.params):
+            found.append(f'{path} {name}')
+    return found
