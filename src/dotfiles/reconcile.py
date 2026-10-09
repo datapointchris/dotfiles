@@ -298,7 +298,7 @@ class NothingSelected(refusal.Refusal):
 
 
 class Unreachable(refusal.Refusal):
-    """A `--package` name that this run will not walk.
+    """A named entry that this run will not walk.
 
     `USAGE` for the reason `NothingSelected` is: retyping the command is what
     fixes it, and a run that accepted the name would report success for work it
@@ -326,21 +326,21 @@ def narrowed(selection: engine.Selection, session: Session) -> engine.Selection:
     about a machine nothing measured, which is what `plan` must never say.
 
     The refusal names whichever narrowing was given rather than assuming `--owner`.
-    A `--package` name cannot empty this today, but a message whose accuracy rests
-    on an argument elsewhere in the file goes wrong quietly.
+    A named entry cannot empty this today, but a message whose accuracy rests on
+    an argument elsewhere in the file goes wrong quietly.
     """
     confirm_reachable(session, selection)
-    if session.owner is None and not session.packages:
+    if session.owner is None and not session.entries:
         return selection
     narrowed_selection = selection.narrowed_to(session.plan.providers)
     if not narrowed_selection.resources:
-        asked = f'owner {session.owner}' if session.owner else ', '.join(sorted(session.packages))
+        asked = f'owner {session.owner}' if session.owner else ', '.join(sorted(session.entries))
         raise NothingSelected(f'nothing selected for {asked}')
     return narrowed_selection
 
 
 def confirm_reachable(session: Session, selection: engine.Selection) -> None:
-    """Refuse a `--package` name this run does not reach, before anything is measured.
+    """Refuse a named entry this run does not reach, before anything is measured.
 
     Against the *selection*, not `plan.items` alone: a name the machine declares
     and the narrowing excludes is accepted, matches nothing, and reads as a
@@ -351,12 +351,12 @@ def confirm_reachable(session: Session, selection: engine.Selection) -> None:
     reached by widening or by naming the address carrying it, so that refusal
     names the address, which a caller cannot work out alone.
     """
-    if not session.packages:
+    if not session.entries:
         return
     plan = session.plan
-    if undeclared := session.packages - {item.name for item in plan.items}:
-        raise Unreachable(_undeclared(undeclared, session.plan_before_package_narrowing, selection))
-    if unreached := session.packages - {item.name for item in plan.items if selection.covers(item)}:
+    if undeclared := session.entries - {item.name for item in plan.items}:
+        raise Unreachable(_undeclared(undeclared, session.plan_before_entry_narrowing, selection))
+    if unreached := session.entries - {item.name for item in plan.items if selection.covers(item)}:
         carries = sorted({addressed(item.resource, item.provider) for item in plan.items if item.name in unreached})
         raise Unreachable(
             f'this run does not reach {", ".join(sorted(unreached))}',
@@ -378,7 +378,7 @@ def _undeclared(names: frozenset[str], candidates: Plan, selection: engine.Selec
         lines.append(f'did you mean {next(iter(near.values()))}?')
     elif near:
         lines.append(f'did you mean {", ".join(f"{match} for {name}" for name, match in near.items())}?')
-    lines.append(f'this run reaches: {", ".join(reachable)}' if reachable else 'this run reaches no entry --package can name')
+    lines.append(f'this run reaches: {", ".join(reachable)}' if reachable else 'this run reaches no entry that can be named')
     return '\n'.join(lines)
 
 
@@ -404,7 +404,7 @@ def survey(
     *,
     refresh: bool = False,
     owner: str | None = None,
-    packages: frozenset[str] = frozenset(),
+    entries: frozenset[str] = frozenset(),
     offline: bool = False,
     announce_bundle: bool = True,
     report: Callable[[ResourceResult], None] | None = None,
@@ -414,7 +414,7 @@ def survey(
     A skipped address is absent rather than a fourth verdict: inventing a row would
     put something in `--json` that no checker produced.
 
-    `owner` and `packages` go through the same `narrowed` `apply_machine` does,
+    `owner` and `entries` go through the same `narrowed` `apply_machine` does,
     refusals included — a rehearsal walking a scope the write refuses rehearses a
     run that never happens.
 
@@ -431,7 +431,7 @@ def survey(
     # away from the next real step, in the state that is the first turn of the
     # loop. Not gated on `report is not None`: `plan --offline --json` and
     # `check --offline --json` both pass None and both genuinely install from it.
-    session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=refresh)
+    session = Session.resolve(machine, owner, entries=entries, offline=offline, refresh=refresh)
     if offline and announce_bundle:
         report_bundle(offline_bundle.describe(), session.machine_name)
     selection = narrowed(engine.Selection.excluding(skip), session)
@@ -837,7 +837,7 @@ def apply_machine(
     *,
     offline: bool = False,
     owner: str | None = None,
-    packages: frozenset[str] = frozenset(),
+    entries: frozenset[str] = frozenset(),
     force: bool = False,
     reinstall: bool = False,
     flags: dict | None = None,
@@ -885,7 +885,7 @@ def apply_machine(
         return exit_code([gate])
 
     try:
-        session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=True, force=force, reinstall=reinstall)
+        session = Session.resolve(machine, owner, entries=entries, offline=offline, refresh=True, force=force, reinstall=reinstall)
         _ = session.plan
     except refusal.Refusal as refused:
         # Every one of these carries its own code — `NoMachine` and `NoSuchMachine`
@@ -986,7 +986,7 @@ def apply_machine(
     changed = len([event for event in performed if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE])
     render_verdict(
         str(ResourceVerdict.ISSUE if unsuccessful else ResourceVerdict.CONVERGED),
-        applied_line(changed, unsuccessful, deferred, unmeasured, matched_under_package(planned, packages)),
+        applied_line(changed, unsuccessful, deferred, unmeasured, matched_under_entries(planned, entries)),
         err_console,
     )
     _name_the_shared_fix(unmeasured)
@@ -999,18 +999,19 @@ def apply_machine(
     return ExitCode.ISSUE if unsuccessful else ExitCode.CONVERGED
 
 
-def matched_under_package(planned: Sequence[Event], packages: frozenset[str]) -> tuple[str, ...]:
-    """What a `--package` run matched, worded for the closing line.
+def matched_under_entries(planned: Sequence[Event], entries: frozenset[str]) -> tuple[str, ...]:
+    """What a run narrowed to named entries matched, worded for the closing line.
 
     `Examined` is kept out of the run record on purpose — a whole-machine apply
     matches hundreds of rows and the count already answers for them. A run the
     caller narrowed to named entries is the opposite case: it matched a handful,
     and the closing verdict is unreadable without them.
 
-    Keyed on `--package` and not on `--owner`, because one names the entries and
-    the other is a bulk filter that can still cover most of the machine.
+    Keyed on the named entries and not on `--owner`, because one names the
+    entries and the other is a bulk filter that can still cover most of the
+    machine.
     """
-    if not packages:
+    if not entries:
         return ()
     return tuple(
         f'{row.item} {row.detail}'.strip() for event in planned if isinstance(event.payload, Summary) for row in event.payload.examined

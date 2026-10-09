@@ -1384,17 +1384,17 @@ def required_by(section: str) -> tuple[Provider, ...]:
     Derived from the registry rather than listed, so a section that grows a
     prerequisite gets it here the moment `needed_by` says so. Separate from
     `serving` below because two callers want different halves of one answer: a
-    `--source` selects the section *and* what it needs, while a `--package`
+    `--source` selects the section *and* what it needs, while an `--entry`
     narrowing keeps the entry it named and everything the named entry needs — the
     section's own provider is what the two disagree about.
 
     `''` is refused, for the reason `BY_SECTION` refuses to index it. Two
     different facts are spelled that way and matching them against each other
     equates them: a row belonging to no section — a manager upgrade, a plugin
-    sync — would be answered with every runtime gated by no section. `--package
-    tpm` named the tmux sync, whose section is '', and resolved a plan carrying
-    the uv runtime, which `apply` then installed. `serving` never met this
-    because `BY_SECTION.get('')` is None and it returns before asking.
+    sync — would be answered with every runtime gated by no section. `--entry
+    tpm` names the tmux sync, whose section is '', and matching it would plan the
+    uv runtime for `apply` to install. `serving` never meets this because
+    `BY_SECTION.get('')` is None and it returns before asking.
     """
     if not section:
         return ()

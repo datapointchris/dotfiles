@@ -145,7 +145,7 @@ class Observed:
     is the one input here that is not a measurement, which is why it produces a
     Change with its own detail rather than being folded into a verdict.
 
-    A boolean rather than the entry names: which entries is `--package`'s question,
+    A boolean rather than the entry names: which entries is `--entry`'s question,
     and by the time a plan reaches here it has already been answered. The plan holds
     what the run covers, so a name test here would be the narrowing decided a second
     time and free to disagree with the first.
@@ -228,7 +228,7 @@ class PackagesResource:
         and drop the item the caller explicitly asked for.
 
         It reaches every item the plan still holds, which is the whole of what
-        `--reinstall` covers: `--package` has already narrowed that plan, so this
+        `--reinstall` covers: `--entry` has already narrowed that plan, so this
         asks nothing about scope.
         """
         changes = []
@@ -323,13 +323,13 @@ def _undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
     owner's reports nothing of theirs, which is correct and not merely cautious.
 
     A whole-machine run only, because the question is whether the *declaration*
-    explains the machine and `--package` narrows the declaration to one entry.
+    explains the machine and `--entry` narrows the declaration to one entry.
     Everything else that owner published then falls outside the declared set:
     `packages apply --package forge` advised removing fleet, ifiles and todoui,
     and `~/go/bin` holds the only copy of each. `--owner` narrows to one
     owner's whole set, which still answers.
     """
-    if session.packages:
+    if session.entries:
         return {}
     owners = {owner for item in plan.items if item.entry and (owner := item.entry.owner)}
     if not owners:

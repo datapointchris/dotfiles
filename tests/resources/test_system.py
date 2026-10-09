@@ -1186,13 +1186,11 @@ def test_a_manager_that_cannot_be_asked_is_not_a_manager_that_chose_nothing(tmp_
 
 
 def test_a_narrowed_run_reports_nothing_undeclared(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`--package` narrows the declaration to one entry, so everything else the
+    """`--entry` narrows the declaration to one entry, so everything else the
     machine holds falls outside the declared set. Asking the question against a
     plan that is deliberately partial answers it wrong."""
     chose(monkeypatch, 'bat', CONTROL)
-    # `dc.replace` rather than an override on `session`, whose own second argument
-    # is named `packages` and is the declaration rather than the narrowing.
-    live = dc.replace(session(tmp_path, DECLARES_BAT, MAC), packages=frozenset({'bat'}))
+    live = session(tmp_path, DECLARES_BAT, MAC, entries=frozenset({'bat'}))
 
     assert undeclared(live) == []
 

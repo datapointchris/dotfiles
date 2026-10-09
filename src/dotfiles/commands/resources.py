@@ -96,7 +96,7 @@ def _survey(
     *,
     source: str | None = None,
     owner: str | None = None,
-    packages: frozenset[str] = frozenset(),
+    entries: frozenset[str] = frozenset(),
     offline: bool = False,
 ) -> None:
     """One noun's selection, through the same engine and the same fold the composite uses.
@@ -136,15 +136,15 @@ def _survey(
     machine was `""` while the walk had correctly read `~/.env`.
     """
     began = dt.datetime.now(dt.UTC)
-    session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=refresh)
+    session = Session.resolve(machine, owner, entries=entries, offline=offline, refresh=refresh)
     if offline:
         reconcile.report_bundle(offline_bundle.describe(), session.machine_name)
-    selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session)
+    selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, entries)), session)
     walked = reconcile.fold(engine.assess(session, selection), lens)
     _report(walked, as_json, machine=session.machine_name, when=began, lens=lens)
 
 
-def _selected(resource: str, source: str | None, packages: frozenset[str] = frozenset()) -> tuple[str, ...]:
+def _selected(resource: str, source: str | None, entries: frozenset[str] = frozenset()) -> tuple[str, ...]:
     """The addresses this noun's narrowings name, plus whatever they cannot install without.
 
     A section names a provider and an address is `resource/provider`, so `--source`
@@ -157,7 +157,7 @@ def _selected(resource: str, source: str | None, packages: frozenset[str] = froz
     cannot install. The addresses carry their own resources, which is what lets a
     `packages` selection reach `toolchains` without naming it here.
 
-    **`--package` reaches the same runtime through the same relation**, one row
+    **A named entry reaches the same runtime through the same relation**, one row
     below `--source`. Which *entries* are wanted is the resolver's — an address is
     as fine as a selection gets, so a single entry has none of its own and is
     filtered out of the plan instead — but what those entries *need* is a
@@ -170,7 +170,7 @@ def _selected(resource: str, source: str | None, packages: frozenset[str] = froz
     the narrowed plan left, so a prerequisite offered here and not wanted costs a
     row nobody sees.
     """
-    needed = _prerequisites(packages)
+    needed = _prerequisites(entries)
     if not source:
         return (resource, *needed)
     provider = registry.for_section(source)
@@ -183,8 +183,8 @@ def _selected(resource: str, source: str | None, packages: frozenset[str] = froz
     return (*(addressed(one.resource, one.name) for one in registry.serving(source)), *needed)
 
 
-def _prerequisites(packages: frozenset[str]) -> tuple[str, ...]:
-    """The addresses the entries `--package` named cannot install without.
+def _prerequisites(entries: frozenset[str]) -> tuple[str, ...]:
+    """The addresses the named entries cannot install without.
 
     Resolved from the declaration rather than from the plan, because this decides
     the walk and the walk is chosen before a machine is resolved on the `apply`
@@ -198,11 +198,11 @@ def _prerequisites(packages: frozenset[str]) -> tuple[str, ...]:
     `packages apply --package uv` a usage error naming the toolchain that carries
     it: a runtime is gated by no section, so naming one widens nothing.
     """
-    if not packages:
+    if not entries:
         return ()
 
     declared = catalog.load()
-    sections = {entry.section for entry in declared.all_entries() if entry.name in packages}
+    sections = {entry.section for entry in declared.all_entries() if entry.name in entries}
     wanted = (addressed(one.resource, one.name) for section in sections for one in registry.required_by(section))
     return tuple(dict.fromkeys(wanted))
 
@@ -229,8 +229,8 @@ def available_sources() -> list[str]:
     return sorted(declared)
 
 
-def declared_names() -> list[str]:
-    """Every entry name `--package` could take, from the parsed declaration.
+def _declared_entries() -> tuple[catalog.Entry, ...]:
+    """Every row the parsed declaration carries, for the completion callbacks below.
 
     Through the catalog rather than the YAML that `available_sources` reads,
     because two of the sections nest their rows under editorial category keys and
@@ -242,9 +242,29 @@ def declared_names() -> list[str]:
     user was typing, and `apply` refuses on an invalid declaration anyway.
     """
     try:
-        return sorted({entry.name for entry in catalog.load().all_entries()})
+        return tuple(catalog.load().all_entries())
     except catalog.CatalogError:
-        return []
+        return ()
+
+
+def declared_names() -> list[str]:
+    """What `--entry` completes to: every declared row, and every runtime.
+
+    The runtimes come from the registry, because uv and node have no declared row
+    and are still the names `toolchains apply --entry` takes.
+    """
+    runtimes = {provider.runtime for provider in registry.PROVIDERS if isinstance(provider, registry.ToolchainProvider)}
+    return sorted({entry.name for entry in _declared_entries()} | runtimes)
+
+
+def declared_packages() -> list[str]:
+    """What `--package` completes to: the rows in sections the `packages` resource installs.
+
+    A step or a systemd unit is refused under `packages` anyway, so offering one
+    there completes to a usage error.
+    """
+    sections = set(registry.sections_for('packages'))
+    return sorted({entry.name for entry in _declared_entries() if entry.section in sections})
 
 
 def _validate_source(value: str | None) -> str | None:
@@ -266,12 +286,22 @@ MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
-PackageOption = typer.Option(
+EntryOption = typer.Option(
     None,
-    '--package',
+    '--entry',
     help='Only this declared entry, and whatever it needs to install (repeatable)',
     autocompletion=declared_names,
 )
+PackageOption = typer.Option(
+    None,
+    '--package',
+    help='Only this declared package, and whatever it needs to install (repeatable)',
+    autocompletion=declared_packages,
+)
+"""`--entry` as the `packages` noun spells it, because every row that noun reaches is a package.
+
+The same narrowing underneath. The other nouns reach steps, units and runtimes,
+which is why they take `--entry`."""
 ReinstallOption = typer.Option(False, '--reinstall', help='Install again whatever measuring concludes, for everything this run covers')
 
 
@@ -282,7 +312,7 @@ def _apply_resource(
     source: str | None,
     owner: str | None = None,
     *,
-    packages: frozenset[str] = frozenset(),
+    entries: frozenset[str] = frozenset(),
     force: bool = False,
     reinstall: bool = False,
     as_json: bool = False,
@@ -294,14 +324,14 @@ def _apply_resource(
     so a preview and the write it rehearses cannot disagree about what a section
     covers.
 
-    `--owner` and `--package` narrow the plan rather than the selection, because
-    which entries are wanted is a fact about the entries. What a named entry
-    *needs* is not, which is why `_selected` takes the names too. `--owner` arrived
-    to serve `update.sh --mine` against `install/phases.sh`'s hand-maintained
-    `owner_aware` column; the column and the script are gone and the flag is the
-    survivor.
+    `--owner` and the named entries narrow the plan rather than the selection,
+    because which entries are wanted is a fact about the entries. What a named
+    entry *needs* is not, which is why `_selected` takes the names too. `--owner`
+    arrived to serve `update.sh --mine` against `install/phases.sh`'s
+    hand-maintained `owner_aware` column; the column and the script are gone and
+    the flag is the survivor.
     """
-    addresses = _selected(resource, source, packages)
+    addresses = _selected(resource, source, entries)
 
     raise typer.Exit(
         reconcile.apply_machine(
@@ -309,7 +339,7 @@ def _apply_resource(
             machine=machine,
             offline=offline,
             owner=owner,
-            packages=packages,
+            entries=entries,
             force=force,
             reinstall=reinstall,
             as_json=as_json,
@@ -321,7 +351,7 @@ def _apply_resource(
             # forced run's row is byte-identical to an ordinary install.
             flags={
                 'selection': ', '.join(addresses),
-                'package': sorted(packages),
+                'entry': sorted(entries),
                 'force': force,
                 'reinstall': reinstall,
             },
@@ -372,7 +402,7 @@ def packages_plan(
         as_json,
         source=source,
         owner=owner,
-        packages=frozenset(package or ()),
+        entries=frozenset(package or ()),
         offline=offline,
         refresh=currency(refresh, offline=offline),
     )
@@ -477,7 +507,7 @@ def packages_apply(
         offline,
         source,
         owner,
-        packages=frozenset(package or ()),
+        entries=frozenset(package or ()),
         force=force,
         reinstall=reinstall,
         as_json=as_json,
@@ -519,12 +549,12 @@ toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and t
     epilog=(
         'Examples:\n\n'
         'dotfiles toolchains plan — what apply would install or raise\n\n'
-        'dotfiles toolchains plan --package uv — rehearse one runtime'
+        'dotfiles toolchains plan --entry uv — rehearse one runtime'
     ),
 )
 def toolchains_plan(
     machine: str = MachineOption,
-    package: list[str] = PackageOption,
+    entry: list[str] = EntryOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
@@ -532,10 +562,10 @@ def toolchains_plan(
 ) -> None:
     """Show which language runtimes `apply` would install or raise.
 
-    `--package` is `apply`'s, and means the same here.
+    `--entry` is `apply`'s, and means the same here.
     """
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, Lens.PLAN, as_json, packages=frozenset(package or ()), refresh=False, offline=offline)
+    _survey('toolchains', machine, Lens.PLAN, as_json, entries=frozenset(entry or ()), refresh=False, offline=offline)
 
 
 @toolchains_app.command('check')
@@ -556,13 +586,13 @@ def toolchains_check(
     epilog=(
         'Examples:\n\n'
         'dotfiles toolchains apply — converge every runtime this machine needs\n\n'
-        'dotfiles toolchains apply --package uv — one runtime, leaving the others as they are\n\n'
+        'dotfiles toolchains apply --entry uv — one runtime, leaving the others as they are\n\n'
         'dotfiles toolchains apply --offline — install from the staged bundle'
     ),
 )
 def toolchains_apply(
     machine: str = MachineOption,
-    package: list[str] = PackageOption,
+    entry: list[str] = EntryOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
@@ -570,11 +600,11 @@ def toolchains_apply(
 ) -> None:
     """Install or update the language toolchains.
 
-    `--package` takes a runtime's name, so `--package uv` converges uv without
+    `--entry` takes a runtime's name, so `--entry uv` converges uv without
     installing a missing node beside it.
     """
     verbosity(verbose, quiet)
-    _apply_resource('toolchains', machine, offline, None, packages=frozenset(package or ()), as_json=as_json)
+    _apply_resource('toolchains', machine, offline, None, entries=frozenset(entry or ()), as_json=as_json)
 
 
 @toolchains_app.command('list')
@@ -774,7 +804,7 @@ system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this re
 def system_plan(
     machine: str = MachineOption,
     source: str = SourceOption,
-    package: list[str] = PackageOption,
+    entry: list[str] = EntryOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     refresh: bool | None = refresh_flag(THE_MANAGERS),
@@ -783,7 +813,7 @@ def system_plan(
 ) -> None:
     """Show which system packages and configuration rows `apply` would change.
 
-    `--source` and `--package` are `apply`'s, and the narrow write they name — the
+    `--source` and `--entry` are `apply`'s, and the narrow write they name — the
     package payload without the configuration rows, or one row out of it — is the
     one most worth rehearsing here.
 
@@ -799,7 +829,7 @@ def system_plan(
         Lens.PLAN,
         as_json,
         source=source,
-        packages=frozenset(package or ()),
+        entries=frozenset(entry or ()),
         offline=offline,
         refresh=currency(refresh, offline=offline),
     )
@@ -824,7 +854,7 @@ def system_apply(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
     source: str = SourceOption,
-    package: list[str] = PackageOption,
+    entry: list[str] = EntryOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
@@ -835,10 +865,11 @@ def system_apply(
     sections beside its configuration rows. `--source system_packages` is the
     payload without the configuration — which is what a container image wants
     baked in, and what a machine wants after adding one package to the list.
-    `--package` is the same act one row further down.
+    `--entry` is the same act one row further down, and the row can be a step or
+    a unit as readily as a package.
     """
     verbosity(verbose, quiet)
-    _apply_resource('system', machine, offline, source, packages=frozenset(package or ()), as_json=as_json)
+    _apply_resource('system', machine, offline, source, entries=frozenset(entry or ()), as_json=as_json)
 
 
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")

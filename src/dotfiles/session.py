@@ -115,11 +115,12 @@ class Session:
     *release*. A superseded system package refuses whatever this says.
     """
 
-    packages: frozenset[str] = frozenset()
+    entries: frozenset[str] = frozenset()
     """Entry names this run is narrowed to, or empty for every one this machine declares.
 
-    `--package`, narrowing the plan as `owner` does, plus the prerequisites
-    `resolve._named` keeps. Empty means unnarrowed, never a plan with nothing in it.
+    `--entry`, or `--package` on the `packages` noun, narrowing the plan as `owner`
+    does, plus the prerequisites `resolve._named` keeps. Empty means unnarrowed,
+    never a plan with nothing in it.
 
     Measured against the walk's `Selection` before anything runs, so a name outside
     the narrowing is a usage error rather than a converged verdict about a machine
@@ -129,7 +130,7 @@ class Session:
     reinstall: bool = False
     """Install again whatever measuring concludes, for everything this run covers.
 
-    A boolean, never a set of names: scope is `--package`'s job, and scope is
+    A boolean, never a set of names: scope is `--entry`'s job, and scope is
     structural — the argument's presence selects it, never a flag.
 
     Bare it means everything the run covers, which is expensive rather than
@@ -142,7 +143,7 @@ class Session:
         cls,
         machine: str | None = None,
         owner: str | None = None,
-        packages: frozenset[str] = frozenset(),
+        entries: frozenset[str] = frozenset(),
         *,
         offline: bool = False,
         refresh: bool = False,
@@ -176,7 +177,7 @@ class Session:
         session = cls(
             machine_name=resolve_machine(machine),
             owner=owner,
-            packages=packages,
+            entries=entries,
             offline=offline,
             refresh=refresh and not offline,
             force=force,
@@ -195,16 +196,16 @@ class Session:
 
     @functools.cached_property
     def plan(self) -> planning.Plan:
-        return resolver.resolve(self.catalog, self.machine, owner=self.owner, packages=self.packages or None)
+        return resolver.resolve(self.catalog, self.machine, owner=self.owner, entries=self.entries or None)
 
     @functools.cached_property
-    def plan_before_package_narrowing(self) -> planning.Plan:
-        """The plan `--owner` leaves, which is every row a `--package` name could have meant.
+    def plan_before_entry_narrowing(self) -> planning.Plan:
+        """The plan `--owner` leaves, which is every row a named entry could have meant.
 
         Resolved only to list the valid names when one is refused: `plan` has
         already dropped every row the name did not match.
         """
-        if not self.packages:
+        if not self.entries:
             return self.plan
         return resolver.resolve(self.catalog, self.machine, owner=self.owner)
 

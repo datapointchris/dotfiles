@@ -223,7 +223,7 @@ def test_the_token_is_resolved_before_the_pool_opens(answers: dict, monkeypatch:
 
 def test_nothing_to_refresh_resolves_no_token(answers: dict, monkeypatch: pytest.MonkeyPatch) -> None:
     """The priming sits below the empty guard, so a run with nothing declared
-    spawns nothing — which is what `--package` narrowing to an absent tool does."""
+    spawns nothing — which is what `--entry` narrowing to an absent tool does."""
     asked: list[str] = []
 
     def note() -> str:

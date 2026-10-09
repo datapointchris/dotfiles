@@ -137,7 +137,7 @@ def test_advice_prints_on_its_own_line(capsys: pytest.CaptureFixture) -> None:
 def test_a_refusal_line_too_long_for_the_terminal_wraps_under_its_indent(
     capsys: pytest.CaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A refused `--package` lists every name the run reaches, which on a real
+    """A refused `--entry` lists every name the run reaches, which on a real
     machine is over a hundred. A piece wrapped to column 0 reads as a line nobody
     attributed."""
     monkeypatch.setenv('COLUMNS', '40')

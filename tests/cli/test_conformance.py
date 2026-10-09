@@ -237,7 +237,7 @@ def test_machine_and_offline_bind_to_leaves_not_groups() -> None:
         assert '--offline' not in names, f'{"/".join(path) or "root"} declares --offline on the group'
 
 
-SELECTORS = ('--machine', '--source', '--owner', '--package', '--offline')
+SELECTORS = ('--machine', '--source', '--owner', '--entry', '--package', '--offline')
 """Options that narrow *what* a verb covers, rather than how it writes.
 
 `--offline` belongs here despite reading as a write instruction: under the flag the
@@ -391,7 +391,7 @@ def test_every_resource_that_reads_currency_offers_the_flag_on_both_read_verbs()
             assert '--refresh' in options, f'{resource} {verb} reads currency and cannot be told whether to measure'
 
 
-WITHHELD_FROM_CHECK = ('--source', '--owner', '--package')
+WITHHELD_FROM_CHECK = ('--source', '--owner', '--entry', '--package')
 """The narrowings `check` deliberately does not take.
 
 `check` asks whether anything is *wrong*, and none of these narrows that: a
@@ -413,6 +413,17 @@ def test_no_check_offers_a_narrowing(flag: str) -> None:
     for path, options in ACCEPTED.items():
         if path[-1] == 'check':
             assert flag not in options, f'{"/".join(path)} is a check offering {flag}'
+
+
+def test_only_the_packages_noun_spells_the_entry_narrowing_package() -> None:
+    """Every row `packages` reaches is a package. Every other door reaches steps,
+    units or runtimes too, and `system apply --package etc-hosts-sudo-grant` calls
+    a step a package. No leaf takes both, because the second would be an alias."""
+    spelled = {flag: {path for path, options in ACCEPTED.items() if flag in options} for flag in ('--entry', '--package')}
+
+    assert spelled['--entry'] and spelled['--package'], 'neither spelling is in the tree, so this asserts nothing'
+    assert all(path[0] == 'packages' for path in spelled['--package']), f'--package outside packages: {spelled["--package"]}'
+    assert not any(path[0] == 'packages' for path in spelled['--entry']), f'--entry under packages: {spelled["--entry"]}'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -25,7 +25,7 @@ def resolve(
     machine: machines.Machine,
     *,
     owner: str | None = None,
-    packages: frozenset[str] | None = None,
+    entries: frozenset[str] | None = None,
 ) -> planning.Plan:
     """Everything `machine` should have, in the order it has to be installed.
 
@@ -40,7 +40,7 @@ def resolve(
     resolves to zero items and is skipped because it is empty, not because a
     column said so.
 
-    `packages` is `--package`, and it narrows the same way. None is every entry;
+    `entries` is `--entry`, and it narrows the same way. None is every entry;
     an empty set would be a plan with nothing in it, which is a different
     instruction and one no caller means by not passing the flag.
     """
@@ -53,16 +53,16 @@ def resolve(
             planned = tuple(item for item in planned if item.entry is not None and item.entry.owner == owner)
         items.extend(planned)
 
-    if packages is not None:
-        items = _named(items, packages)
+    if entries is not None:
+        items = _named(items, entries)
     return planning.Plan(machine=machine, items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))))
 
 
-def _named(items: list[planning.DesiredItem], packages: frozenset[str]) -> list[planning.DesiredItem]:
-    """The entries `--package` named, plus whatever those entries need to install.
+def _named(items: list[planning.DesiredItem], entries: frozenset[str]) -> list[planning.DesiredItem]:
+    """The entries `--entry` named, plus whatever those entries need to install.
 
     The prerequisite is kept rather than dropped, because a narrowing flag reaches
-    the whole run or what it cannot reach is left out of the run: `--package task`
+    the whole run or what it cannot reach is left out of the run: `--entry task`
     on a machine with no Go plans the Go runtime too, because a narrowing that left
     it out would ask for something that cannot install. `registry.required_by` is
     where that relation is declared, so a section growing a prerequisite gets one
@@ -75,6 +75,6 @@ def _named(items: list[planning.DesiredItem], packages: frozenset[str]) -> list[
     the finished list asks one question of every row: was it named, or is it
     required by something that was.
     """
-    sections = {item.section for item in items if item.name in packages}
+    sections = {item.section for item in items if item.name in entries}
     prerequisites = {provider.name for section in sections for provider in registry.required_by(section)}
-    return [item for item in items if item.name in packages or item.provider in prerequisites]
+    return [item for item in items if item.name in entries or item.provider in prerequisites]

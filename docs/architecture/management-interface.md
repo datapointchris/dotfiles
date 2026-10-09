@@ -238,12 +238,23 @@ be remembered on every new tool and silently excludes whatever it misses.
 be installed before any self-updater can maintain it, and those tools span four
 sections at once.
 
-**Scope and force are different flags.** `--package` narrows and `--reinstall`
+**Scope and force are different flags.** `--entry` narrows and `--reinstall`
 overrules what measuring concluded. One flag carrying both — `--reinstall
 lazygit` — puts a scope somewhere no other resource can see, so none of them can
 honor the force. Bare, `--reinstall` covers the whole run, which is expensive
 and not dangerous. Scope is structural — the argument's presence selects it,
 never a flag — and an absent argument is what sanctions a set-wide act.
+
+**The narrowing is spelled for the rows it names.** One filter matches a row's
+name in any resource. Those rows are packages, runtimes, group memberships,
+systemd units, managed files and steps. So `plan`, `apply`, `toolchains` and
+`system` take `--entry`, and only the `packages` noun says `--package`, because
+every row it reaches is one. A toolchain row is a runtime the registry derives
+from the tool sections, and two of the four have no declared row at all, so it is
+an entry rather than a package. *Rejected:* one spelling everywhere, which makes
+`system apply --package etc-hosts-sudo-grant` call a step a package. No hidden
+alias keeps the other spelling, because a tool with one operator takes a clean
+break over a deprecation window.
 
 ### Install and update are one act
 

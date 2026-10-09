@@ -1622,7 +1622,7 @@ def test_an_undeclared_own_tool_is_not_something_apply_can_repair(tmp_path: Path
 
 
 def test_a_run_narrowed_to_one_package_reports_none_of_the_others(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`--package` narrows the declaration, and this reads the machine against it.
+    """`--entry` narrows the declaration, and this reads the machine against it.
     Answering from a one-entry plan calls every other tool of that owner
     undeclared and advises removing the only copy on the box."""
     go_bin(tmp_path)
@@ -1637,7 +1637,7 @@ def test_a_run_narrowed_to_one_package_reports_none_of_the_others(tmp_path: Path
     }
     live = session(tmp_path, declares_both, {'machine': 'box', 'platform': 'linux', 'go_tools': ['task', 'gum']})
 
-    assert undeclared_own(dc.replace(live, packages=frozenset({'task'}))) == []
+    assert undeclared_own(dc.replace(live, entries=frozenset({'task'}))) == []
 
 
 def test_a_run_narrowed_to_an_owner_still_answers(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:

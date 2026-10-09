@@ -871,7 +871,7 @@ def test_narrowing_a_read_to_a_section_reports_the_runtime_it_selected(
 def test_narrowing_to_one_entry_keeps_the_runtime_that_entry_needs(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
-    """`--package` is the same narrowing one row below `--source`, so it answers
+    """`--entry` is the same narrowing one row below `--source`, so it answers
     `needed_by` the same way.
 
     A narrowing flag reaches the whole run, or what it cannot
@@ -886,7 +886,7 @@ def test_narrowing_to_one_entry_keeps_the_runtime_that_entry_needs(
     sandbox.installed('rg', 'ripgrep 14.1.1')
 
     with pytest.raises(ReachedTheNetwork) as reached:
-        cli('apply', '--package', 'ripgrep')
+        cli('apply', '--entry', 'ripgrep')
 
     assert reached_through(reached, 'toolchain.py')
 
@@ -902,14 +902,14 @@ def test_narrowing_to_one_entry_drops_the_runtimes_nothing_named_needs(
     them whenever anything pulls them in.
 
     Through the composite verb, because that is the door with no resource scope of
-    its own: `toolchains plan --package ripgrep` names an entry that noun does not
+    its own: `toolchains plan --entry ripgrep` names an entry that noun does not
     reach and is refused, which is a different assertion and one the selection
     matrix already makes.
     """
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep'], 'go_tools': ['task']})
 
-    ran = cli('plan', '--package', 'ripgrep')
+    ran = cli('plan', '--entry', 'ripgrep')
 
     assert reported(ran, RUNTIME_ROWS) == {'rust-toolchain/rust'}
 
@@ -941,7 +941,7 @@ def test_applying_one_named_runtime_converges_it_and_leaves_a_missing_neighbor_a
 
     monkeypatch.setattr(toolchain, 'install_uv', install_uv)
 
-    narrowed = cli('toolchains', 'apply', '--package', 'uv')
+    narrowed = cli('toolchains', 'apply', '--entry', 'uv')
 
     assert narrowed.exit_code == ExitCode.CONVERGED
     assert asked == [False]
@@ -962,7 +962,7 @@ def test_a_name_no_planned_runtime_carries_is_refused_naming_the_ones_this_machi
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'npm_globals': ['bash-language-server']})
 
-    ran = cli('toolchains', verb, '--package', 'go')
+    ran = cli('toolchains', verb, '--entry', 'go')
 
     assert ran.exit_code == ExitCode.USAGE
     assert 'named go' in ran.stderr

@@ -29,7 +29,9 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pytest
+import yaml
 
+from dotfiles.commands import resources
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import Invocation
 from matrix.harness import ReachedTheNetwork
@@ -90,7 +92,7 @@ def test_every_flag_that_narrowed_or_authorized_the_run_is_in_its_record(sandbox
 
     assert sandbox.latest_record['flags'] == {
         'selection': 'packages',
-        'package': ['ruff'],
+        'entry': ['ruff'],
         'force': True,
         'reinstall': False,
     }
@@ -265,6 +267,16 @@ def test_a_misspelt_package_name_is_offered_the_close_one_before_the_list(cli: C
     assert ran.stderr.index('did you mean lazygit?') < ran.stderr.index('this run reaches: lazygit, ruff')
 
 
+def test_package_completes_only_the_rows_this_noun_installs(sandbox: Sandbox) -> None:
+    """`--entry` offers every row a narrowing can name: a system package, a step,
+    and uv, which only the registry declares. `--package` offers none of those,
+    because `packages` refuses each one."""
+    (sandbox.repo / 'install' / 'system.yml').write_text(yaml.safe_dump({'steps': [{'name': 'check-schedule', 'description': 'A step'}]}))
+
+    assert resources.declared_packages() == ['lazygit', 'ruff', 'task']
+    assert {'ripgrep', 'check-schedule', 'uv', 'lazygit'} <= set(resources.declared_names())
+
+
 def test_a_package_narrowing_measures_only_the_entry_it_names(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """The narrowing is real and not cosmetic, which is the same thing the
     `--source` and `--owner` rows above assert one level up: a release gone missing
@@ -401,7 +413,7 @@ def test_a_package_inside_the_selected_source_reaches_the_install(cli: Callable[
     [
         (('packages', 'apply', '--source', 'github_releases', '--package', 'ruff'), 'ruff', 'packages/uv'),
         (('packages', 'apply', '--package', 'uv'), 'uv', 'toolchains/uv-toolchain'),
-        (('toolchains', 'plan', '--package', 'ruff'), 'ruff', 'packages/uv'),
+        (('toolchains', 'plan', '--entry', 'ruff'), 'ruff', 'packages/uv'),
     ],
     ids=['outside-the-source', 'outside-the-resource', 'a-package-at-the-toolchains-door'],
 )

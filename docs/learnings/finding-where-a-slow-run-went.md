@@ -24,7 +24,7 @@ visible from a verdict row:
 - **A networked refresh.** Every verb resolves with `refresh=True`, so `plan`,
   `check` and `apply` each ask GitHub for the newest release of every present
   tool. Behind a firewall that answers slowly, this is minutes and it looks
-  identical to a hang. `--cached` answers locally instead, and `--package` or
+  identical to a hang. `--cached` answers locally instead, and `--entry` or
   `--source` cut the refresh to the entries named.
 - **The same flag pays for two other things nobody looks for.** `refresh` is a
   session-wide permission to spend the network, not a release-lookup switch.

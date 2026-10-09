@@ -110,7 +110,7 @@ MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
-PackageOption = resources.PackageOption
+EntryOption = resources.EntryOption
 """Shared with the resource leaves rather than declared twice.
 
 The help text has to read identically wherever it appears — `commands/__init__.py`
@@ -152,7 +152,7 @@ def plan(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
     owner: str = OwnerOption,
-    package: list[str] = PackageOption,
+    entry: list[str] = EntryOption,
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     refresh: bool | None = commands.refresh_flag(),
@@ -170,7 +170,7 @@ def plan(
     `--cached` declines the network and answers from `$XDG_CACHE_HOME` instead,
     for a rate-limited box or one with no route to GitHub. It also declines the
     package managers that cost a round trip, which `syspkg.NETWORKED` names. And
-    the narrowings do the same job more cheaply: `--package` and `--owner` cut the
+    the narrowings do the same job more cheaply: `--entry` and `--owner` cut the
     refresh to the entries named, which is under a second for one entry.
     `--source` names a `packages.yml` section, so it narrows `packages` and
     `system` and is not offered here, where most resources have no sections.
@@ -185,7 +185,7 @@ def plan(
     Exits 1 when there are changes pending, which is `terraform plan
     -detailed-exitcode`. Whether anything is *wrong* is `check`'s question.
 
-    `--owner` and `--package` are `apply`'s and mean the same, because a scope the
+    `--owner` and `--entry` are `apply`'s and mean the same, because a scope the
     write accepts and the read cannot express is not a narrower preview but no
     preview at all.
 
@@ -211,7 +211,7 @@ def plan(
         machine,
         refresh=refreshing,
         owner=owner,
-        packages=frozenset(package or ()),
+        entries=frozenset(entry or ()),
         offline=offline,
         report=None if as_json else answered,
     )
@@ -308,7 +308,7 @@ def apply_command(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
     owner: str = OwnerOption,
-    package: list[str] = PackageOption,
+    entry: list[str] = EntryOption,
     reinstall: bool = resources.ReinstallOption,
     offline: bool = OfflineOption,
     through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
@@ -323,7 +323,7 @@ def apply_command(
 
     `--reinstall` is the one flag here that adds work rather than narrowing it:
     everything this run covers is installed again whatever measuring concludes.
-    Bare it is the whole machine, which is expensive and not dangerous; `--package`
+    Bare it is the whole machine, which is expensive and not dangerous; `--entry`
     is how a caller spends less, and the two compose because scope and force are
     different questions.
 
@@ -354,9 +354,9 @@ def apply_command(
             machine=machine,
             offline=offline,
             owner=owner,
-            packages=frozenset(package or ()),
+            entries=frozenset(entry or ()),
             reinstall=reinstall,
-            # `skip`, `offline`, `package` and `reinstall` unconditionally; `through`
+            # `skip`, `offline`, `entry` and `reinstall` unconditionally; `through`
             # only when given. The first four each decide how a row in the record is
             # read back — what the currency verdicts were measured against, which
             # part of the machine this run covered, and why an installed item was
@@ -368,7 +368,7 @@ def apply_command(
             flags={
                 'skip': sorted(skipped),
                 'offline': offline,
-                'package': sorted(package or ()),
+                'entry': sorted(entry or ()),
                 'reinstall': reinstall,
                 **({'through': through} if through else {}),
             },
@@ -383,7 +383,7 @@ def _converged(
     machine: str | None,
     offline: bool,
     owner: str | None,
-    packages: frozenset[str],
+    entries: frozenset[str],
     reinstall: bool,
     flags: dict[str, object],
     as_json: bool,
@@ -404,7 +404,7 @@ def _converged(
         machine=machine,
         offline=offline,
         owner=owner,
-        packages=packages,
+        entries=entries,
         reinstall=reinstall,
         flags=flags,
         as_json=as_json,

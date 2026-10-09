@@ -335,14 +335,14 @@ def _undeclared_packages(session: Session) -> dict[str, Stray]:
     every resource, which dropped the `github_releases` and `go_tools` entries and
     reported `ntfy`, `sops`, `hadolint` and `ascii-image-converter` as strays — the
     four that **What this does not do** promises are excluded. `session.plan` is
-    the whole machine's declaration, narrowed by `--package` and `--owner` and by
+    the whole machine's declaration, narrowed by `--entry` and `--owner` and by
     nothing else.
 
-    **A whole-machine run only**, for the reason the Go check gives: `--package`
+    **A whole-machine run only**, for the reason the Go check gives: `--entry`
     narrows the declaration to one entry, and everything else the machine holds
     then falls outside the declared set and reads as undeclared.
     """
-    if session.packages:
+    if session.entries:
         return {}
     found: dict[str, Stray] = {}
     for manager in syspkg.REQUESTED:

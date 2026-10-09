@@ -714,6 +714,25 @@ def test_a_source_the_machine_declares_no_section_for_is_rejected_rather_than_em
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# --entry: one row, whichever mechanism it belongs to
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_narrowing_to_a_configuration_row_plans_that_row_alone(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """A managed file is a row `--entry` names as readily as a package, and the
+    package beside it drops out with the manager row it brought."""
+    sandbox.declare(packages=CURL, manifest=LINUX)
+    sandbox.shadow('dpkg-query', NOTHING_INSTALLED)
+    declare_system(sandbox, managed_whole(sandbox))
+
+    whole = cli('system', 'plan', '--json')
+    narrowed = cli('system', 'plan', '--entry', 'autologin', '--json')
+
+    assert {'system/curl', 'file/autologin'} <= {*named(whole, 'findings'), *named(whole, 'others')}
+    assert {*named(narrowed, 'findings'), *named(narrowed, 'others')} == {'file/autologin'}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # The manager currency rows, and the flag that declines them
 # ─────────────────────────────────────────────────────────────────────────────
 

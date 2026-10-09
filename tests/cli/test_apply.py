@@ -970,7 +970,7 @@ class TestTheClosingLine:
 
 
 class TestWhatANarrowedRunMatched:
-    """`matched_under_package` is what puts the operand on the closing line.
+    """`matched_under_entries` is what puts the operand on the closing line.
 
     `Examined` rides on `Summary` and reaches neither the run record nor the exit
     code, so a whole-machine apply that matched 173 symlinks says so as a count.
@@ -983,26 +983,26 @@ class TestWhatANarrowedRunMatched:
         line already answers for a whole-machine run."""
         planned = [Event('symlinks', Summary('184 in place', examined=(Examined('~/.zshrc', 'present'),)))]
 
-        assert reconcile.matched_under_package(planned, frozenset()) == ()
+        assert reconcile.matched_under_entries(planned, frozenset()) == ()
 
-    def test_a_package_run_carries_every_row_the_walk_examined(self) -> None:
+    def test_a_narrowed_run_carries_every_row_the_walk_examined(self) -> None:
         planned = [Event('packages', Summary('1 of 1 installed', examined=(Examined('custom/theme', 'theme v7.1.0'),)))]
 
-        assert reconcile.matched_under_package(planned, frozenset({'theme'})) == ('custom/theme theme v7.1.0',)
+        assert reconcile.matched_under_entries(planned, frozenset({'theme'})) == ('custom/theme theme v7.1.0',)
 
     def test_a_row_with_no_detail_is_named_without_a_trailing_space(self) -> None:
         """An `Examined` detail is optional, and a bare item is still the answer to
         what the run looked at."""
         planned = [Event('env', Summary('matches the manifest', examined=(Examined('~/.env'),)))]
 
-        assert reconcile.matched_under_package(planned, frozenset({'anything'})) == ('~/.env',)
+        assert reconcile.matched_under_entries(planned, frozenset({'anything'})) == ('~/.env',)
 
     def test_events_that_are_not_summaries_carry_no_rows(self) -> None:
         """An apply's stream is mostly `Change` and `Outcome`, and only `Summary`
         holds what a resource examined and had nothing to report about."""
         planned = [Event('packages', Refusal('pacman is not installed'))]
 
-        assert reconcile.matched_under_package(planned, frozenset({'theme'})) == ()
+        assert reconcile.matched_under_entries(planned, frozenset({'theme'})) == ()
 
 
 class TestARunThatNeverStarted:

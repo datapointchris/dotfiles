@@ -352,7 +352,7 @@ def test_owner_narrowing_drops_the_runtimes_whole(tmp_path: Path) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# --package
+# --entry
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -361,13 +361,13 @@ WANTS_TPM = {**WANTS_GO, 'tmux_plugins': True}
 
 
 def narrowed_to(
-    tmp_path: Path, packages: frozenset[str], declared: dict[str, Any] | None = None, manifest: dict[str, Any] | None = None
+    tmp_path: Path, entries: frozenset[str], declared: dict[str, Any] | None = None, manifest: dict[str, Any] | None = None
 ) -> list[str]:
-    plan = synthetic(tmp_path, declared or {'runtimes': RUNTIMES, **GO_TOOL}, manifest or WANTS_GO, packages=packages)
+    plan = synthetic(tmp_path, declared or {'runtimes': RUNTIMES, **GO_TOOL}, manifest or WANTS_GO, entries=entries)
     return [item.address for item in plan.items]
 
 
-def test_a_package_narrowing_keeps_the_runtime_that_entry_needs(tmp_path: Path) -> None:
+def test_an_entry_narrowing_keeps_the_runtime_that_entry_needs(tmp_path: Path) -> None:
     """A narrowing flag reaches the whole run, or what it cannot
     reach is left out of the run: narrowing to `task` and dropping Go asks for
     something that cannot install, which is the failure `--source` already had and
@@ -379,7 +379,7 @@ def test_a_package_narrowing_keeps_the_runtime_that_entry_needs(tmp_path: Path) 
     assert narrowed_to(tmp_path, frozenset({'task'})) == ['go-toolchain/go', 'go/task']
 
 
-def test_a_package_narrowing_can_name_the_runtime_itself(tmp_path: Path) -> None:
+def test_an_entry_narrowing_can_name_the_runtime_itself(tmp_path: Path) -> None:
     """A runtime is a planned entry like any other, so naming one narrows to it.
 
     The tool it exists for is not dragged in with it: `needed_by` points from the
@@ -391,14 +391,14 @@ def test_a_package_narrowing_can_name_the_runtime_itself(tmp_path: Path) -> None
 
 def test_an_empty_set_is_not_the_absence_of_the_flag(tmp_path: Path) -> None:
     """None is every entry and an empty set is none of them, which is why
-    `Session.plan` passes `self.packages or None` rather than the field itself. A
+    `Session.plan` passes `self.entries or None` rather than the field itself. A
     frozenset that meant both would make an unpassed flag resolve an empty plan and
     report a converged machine."""
     assert narrowed_to(tmp_path, frozenset()) == []
     assert narrowed_to(tmp_path, frozenset({'task', 'uv'})) == ['go-toolchain/go', 'uv-toolchain/uv', 'go/task']
 
 
-def test_a_package_naming_a_row_that_belongs_to_no_section_keeps_no_runtime(tmp_path: Path) -> None:
+def test_an_entry_naming_a_row_that_belongs_to_no_section_keeps_no_runtime(tmp_path: Path) -> None:
     """`''` is two different facts, and matching them against each other equated them.
 
     A manager upgrade, a plugin sync and a toolchain gated by nothing all carry
