@@ -26,6 +26,7 @@ from dotfiles import declaration
 from dotfiles import logging
 from dotfiles import output
 from dotfiles.plan import Stage
+from dotfiles.refusal import Refusal
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Repair
@@ -131,6 +132,21 @@ def test_advice_prints_on_its_own_line(capsys: pytest.CaptureFixture) -> None:
     assert len(lines) == 2
     assert 'run dotfiles apply' in lines[1]
     assert 'ripgrep' not in lines[1]
+
+
+def test_a_refusal_line_too_long_for_the_terminal_wraps_under_its_indent(
+    capsys: pytest.CaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A refused `--package` lists every name the run reaches, which on a real
+    machine is over a hundred. A piece wrapped to column 0 reads as a line nobody
+    attributed."""
+    monkeypatch.setenv('COLUMNS', '40')
+
+    output.report(Refusal('one finding\nthis run reaches: ' + ', '.join(f'name{index}' for index in range(14))))
+
+    continuation = capsys.readouterr().err.splitlines()[1:]
+    assert len(continuation) > 1
+    assert all(line.startswith(output.CONTINUATION) and len(line) <= 40 for line in continuation)
 
 
 def test_the_observed_value_appears_only_when_there_is_one(capsys: pytest.CaptureFixture) -> None:

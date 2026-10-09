@@ -198,6 +198,17 @@ class Session:
         return resolver.resolve(self.catalog, self.machine, owner=self.owner, packages=self.packages or None)
 
     @functools.cached_property
+    def plan_before_package_narrowing(self) -> planning.Plan:
+        """The plan `--owner` leaves, which is every row a `--package` name could have meant.
+
+        Resolved only to list the valid names when one is refused: `plan` has
+        already dropped every row the name did not match.
+        """
+        if not self.packages:
+            return self.plan
+        return resolver.resolve(self.catalog, self.machine, owner=self.owner)
+
+    @functools.cached_property
     def inventories(self) -> evidence.Inventories:
         """What the package managers report, shared by everything that asks.
 

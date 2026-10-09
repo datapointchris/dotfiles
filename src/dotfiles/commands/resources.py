@@ -139,7 +139,7 @@ def _survey(
     session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=refresh)
     if offline:
         reconcile.report_bundle(offline_bundle.describe(), session.machine_name)
-    selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session.plan, owner, packages)
+    selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, packages)), session)
     walked = reconcile.fold(engine.assess(session, selection), lens)
     _report(walked, as_json, machine=session.machine_name, when=began, lens=lens)
 

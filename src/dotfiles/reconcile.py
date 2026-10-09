@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
+import difflib
 import functools
 from collections.abc import Callable
 from collections.abc import Iterable
@@ -317,7 +318,7 @@ class NoBundle(refusal.Refusal):
     """
 
 
-def narrowed(selection: engine.Selection, plan: Plan, owner: str | None, packages: frozenset[str]) -> engine.Selection:
+def narrowed(selection: engine.Selection, session: Session) -> engine.Selection:
     """This selection, reduced to the providers the narrowed plan still needs.
 
     **One function for all three doors**, or they disagree about the empty case: a
@@ -328,41 +329,57 @@ def narrowed(selection: engine.Selection, plan: Plan, owner: str | None, package
     A `--package` name cannot empty this today, but a message whose accuracy rests
     on an argument elsewhere in the file goes wrong quietly.
     """
-    confirm_reachable(packages, plan, selection)
-    if owner is None and not packages:
+    confirm_reachable(session, selection)
+    if session.owner is None and not session.packages:
         return selection
-    narrowed_selection = selection.narrowed_to(plan.providers)
+    narrowed_selection = selection.narrowed_to(session.plan.providers)
     if not narrowed_selection.resources:
-        asked = f'owner {owner}' if owner else ', '.join(sorted(packages))
+        asked = f'owner {session.owner}' if session.owner else ', '.join(sorted(session.packages))
         raise NothingSelected(f'nothing selected for {asked}')
     return narrowed_selection
 
 
-def confirm_reachable(packages: frozenset[str], plan: Plan, selection: engine.Selection) -> None:
+def confirm_reachable(session: Session, selection: engine.Selection) -> None:
     """Refuse a `--package` name this run does not reach, before anything is measured.
 
     Against the *selection*, not `plan.items` alone: a name the machine declares
     and the narrowing excludes is accepted, matches nothing, and reads as a
     reinstall that ran and did nothing.
 
-    Two sentences because the fixes differ — a name nothing declares is retyped,
-    and a name outside the narrowing is reached by widening or by naming the
-    address carrying it. The second names that address, which is the one thing a
-    caller cannot work out from the refusal.
+    Two refusals because the fixes differ. A name nothing declares is retyped, so
+    that refusal lists every name the run reaches. A name outside the narrowing is
+    reached by widening or by naming the address carrying it, so that refusal
+    names the address, which a caller cannot work out alone.
     """
-    if not packages:
+    if not session.packages:
         return
-    if undeclared := packages - {item.name for item in plan.items}:
-        raise Unreachable(
-            f'nothing this machine declares is named {", ".join(sorted(undeclared))}',
-            advice="'dotfiles packages list' names what it could be",
-        )
-    if unreached := packages - {item.name for item in plan.items if selection.covers(item)}:
+    plan = session.plan
+    if undeclared := session.packages - {item.name for item in plan.items}:
+        raise Unreachable(_undeclared(undeclared, session.plan_before_package_narrowing, selection))
+    if unreached := session.packages - {item.name for item in plan.items if selection.covers(item)}:
         carries = sorted({addressed(item.resource, item.provider) for item in plan.items if item.name in unreached})
         raise Unreachable(
             f'this run does not reach {", ".join(sorted(unreached))}',
             advice=f'{", ".join(carries)} installs it — narrow to that, or drop the narrowing',
         )
+
+
+def _undeclared(names: frozenset[str], candidates: Plan, selection: engine.Selection) -> str:
+    """The finding, a close match where one exists, then every name the run reaches.
+
+    Listed rather than pointed at `packages list`, which prints the declaration.
+    The declaration is not what a run reaches: it lists an unsubscribed entry this
+    refuses, and it has no row for uv, whose name the registry gives.
+    """
+    reachable = sorted({item.name for item in candidates.items if selection.covers(item)})
+    lines = [f'nothing this machine declares is named {", ".join(sorted(names))}']
+    near = {name: match[0] for name in sorted(names) if (match := difflib.get_close_matches(name, reachable, n=1))}
+    if len(names) == 1 and near:
+        lines.append(f'did you mean {next(iter(near.values()))}?')
+    elif near:
+        lines.append(f'did you mean {", ".join(f"{match} for {name}" for name, match in near.items())}?')
+    lines.append(f'this run reaches: {", ".join(reachable)}' if reachable else 'this run reaches no entry --package can name')
+    return '\n'.join(lines)
 
 
 @dataclass(frozen=True)
@@ -417,7 +434,7 @@ def survey(
     session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=refresh)
     if offline and announce_bundle:
         report_bundle(offline_bundle.describe(), session.machine_name)
-    selection = narrowed(engine.Selection.excluding(skip), session.plan, owner, packages)
+    selection = narrowed(engine.Selection.excluding(skip), session)
 
     results: list[ResourceResult] = []
 
@@ -869,7 +886,7 @@ def apply_machine(
 
     try:
         session = Session.resolve(machine, owner, packages=packages, offline=offline, refresh=True, force=force, reinstall=reinstall)
-        plan = session.plan
+        _ = session.plan
     except refusal.Refusal as refused:
         # Every one of these carries its own code — `NoMachine` and `NoSuchMachine`
         # are USAGE because naming a different machine is what fixes them, and a
@@ -886,7 +903,7 @@ def apply_machine(
     # for how it was typed never measured this machine, and filing one under it
     # puts a record in `dotfiles report` that answers for nothing.
     try:
-        selection = narrowed(selection, plan, owner, packages)
+        selection = narrowed(selection, session)
     except (NothingSelected, Unreachable) as refused:
         # Reported here rather than raised past this frame, so the function keeps
         # answering in exit codes. A run that completed and found drift is a

@@ -245,6 +245,9 @@ def test_a_package_name_the_resolved_plan_does_not_carry_is_a_usage_error(
     nothing, which reads as a narrowed run that measured a converged machine. A
     run naming one good name and one bad one is refused whole, before anything is
     installed.
+
+    The refusal lists what the run does reach. `task` is the case a pointer at
+    `packages list` got wrong: the declaration lists it, and this run refuses it.
     """
     argv = [flag for name in names for flag in ('--package', name)]
 
@@ -252,7 +255,14 @@ def test_a_package_name_the_resolved_plan_does_not_carry_is_a_usage_error(
 
     assert ran.exit_code == ExitCode.USAGE
     assert says in ran.stderr
-    assert 'packages list' in ran.stderr
+    assert 'this run reaches: lazygit, ruff' in ran.stderr
+
+
+def test_a_misspelt_package_name_is_offered_the_close_one_before_the_list(cli: Callable[..., Invocation]) -> None:
+    ran = cli('packages', 'apply', '--package', 'lazygt')
+
+    assert ran.exit_code == ExitCode.USAGE
+    assert ran.stderr.index('did you mean lazygit?') < ran.stderr.index('this run reaches: lazygit, ruff')
 
 
 def test_a_package_narrowing_measures_only_the_entry_it_names(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

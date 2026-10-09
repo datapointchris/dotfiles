@@ -21,6 +21,7 @@ from typing import Any
 from rich.console import Console
 from rich.control import Control
 from rich.segment import ControlType
+from rich.text import Text
 
 from dotfiles import vocabulary
 from dotfiles.refusal import Refusal
@@ -629,6 +630,10 @@ def hint(message: str) -> None:
     err_console.print(f'[blue]→[/] {message}')
 
 
+CONTINUATION = '  '
+"""What a refusal's second and later lines start with: the width of `error`'s marker and space."""
+
+
 def report(refused: Refusal) -> ExitCode:
     """Print a refusal the way every door prints it, and answer with its code.
 
@@ -648,8 +653,10 @@ def report(refused: Refusal) -> ExitCode:
         # Aligned under the first line's text rather than its marker, so a
         # manifest with three faults reads as one refusal with three reasons.
         # Unindented, the second reason has no marker and looks like a separate
-        # unattributed line.
-        err_console.print(f'  {line}', markup=False, highlight=False)
+        # unattributed line. Wrapped here so a long line keeps the indent too.
+        for wrapped in Text(line).wrap(err_console, max(err_console.width - len(CONTINUATION), 1)):
+            wrapped.rstrip()
+            err_console.print(Text.assemble(CONTINUATION, wrapped), soft_wrap=True, highlight=False)
     if refused.advice:
         hint(refused.advice)
     return refused.code
