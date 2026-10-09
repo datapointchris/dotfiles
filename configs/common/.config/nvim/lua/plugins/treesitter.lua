@@ -8,12 +8,15 @@ return {
     'MeanderingProgrammer/treesitter-modules.nvim',
   },
   config = function()
+    -- Every parser is compiled by the tree-sitter CLI. Without one, installing
+    -- fails once per parser, so Neovim keeps its bundled parsers and syntax files.
+    local can_build = vim.fn.executable('tree-sitter') == 1
     require('treesitter-modules').setup({
-      auto_install = true,
+      auto_install = can_build,
       sync_install = false,
       highlight = { enable = true },
       indent = { enable = true },
-      ensure_installed = {
+      ensure_installed = not can_build and {} or {
         -- Web development (Vue needs all of these for proper injection)
         'vue',
         'typescript',

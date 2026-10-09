@@ -43,8 +43,11 @@ custom_installers:
 github_releases:
   - fzf         # fuzzy finder — backs the shell functions
   - neovim      # editor for on-box config/log edits
-  - tree-sitter # neovim highlighting
-  - glow        # render markdown/docs over SSH
+  # Not tree-sitter: every release nvim-treesitter accepts links a newer glibc than
+  # Debian 12 carries, so the loader refuses it and no parser ever builds. Neovim
+  # highlights with its own syntax files instead. To re-measure a release:
+  # `objdump -T tree-sitter | rg -o 'GLIBC_[0-9.]+' | sort -uV | tail -1`.
+  - glow       # render markdown/docs over SSH
   - duf         # disk-free at a glance
   - atuin       # shell history (zsh init expects it)
   - shellcheck  # debug shell scripts on the box

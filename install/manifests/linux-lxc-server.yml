@@ -35,8 +35,9 @@ github_releases:
   - glow        # render markdown/docs over SSH
   - duf         # disk-free at a glance
   - atuin       # shell history (zsh init expects it)
-  - tree-sitter # neovim highlighting
-  - shellcheck  # debug shell scripts on the box
+  # Not tree-sitter, for scheduler.yml's reason: these boxes run Debian 12, whose
+  # glibc is older than any release nvim-treesitter accepts links against.
+  - shellcheck # debug shell scripts on the box
 
 custom_installers: []
 
