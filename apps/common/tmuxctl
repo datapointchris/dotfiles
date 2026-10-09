@@ -117,11 +117,15 @@ PLACEHOLDER_COMMAND = 'tail -f /dev/null'
 """What a pane runs until it holds `remain-on-exit`. It cannot exit on its own."""
 
 WINDOW_NAME = 'agents'
-"""The default name for a window this has to open, spelled once.
+"""What a window this opens is called when the caller gave no name, spelled once.
 
-The coordinator's own window derives its name from this, and so does the flag's
-default and the sentence in its help.
+The coordinator's promoted window derives its name from this and never from the
+request. A request's name is one worker's work, and the coordinator's window holds
+none of it.
 """
+
+NAME_SEPARATOR = ' · '
+"""What stands between the names of the workers sharing one window."""
 
 USAGE_ERROR = 2
 FAILURE = 1
@@ -269,6 +273,14 @@ class Window:
     session: str = ''
     dedicated: bool = False
     """True where a promoted coordinator lives, which is never a placement target."""
+    name: str = ''
+    named: bool = False
+    """Whether somebody chose `name`, which tmux records by turning `automatic-rename` off.
+
+    `rename-window`, `new-window -n` and `break-pane -n` all turn it off. A window
+    still on automatic-rename carries whatever tmux.conf's format made of its panes,
+    which nobody chose and nothing should append to.
+    """
 
     @property
     def columns(self) -> tuple[tuple[Pane, ...], ...]:
@@ -475,6 +487,8 @@ class Placement:
     across: int | None = None
     pair: str = ''
     promote: Promotion | None = None
+    title: str | None = None
+    """The name the pane's window carries once this lands, or None to leave it alone."""
 
     @property
     def opens_window(self) -> bool:
@@ -509,7 +523,8 @@ class Request:
     role: Role
     caller: str
     partner: str = ''
-    window_name: str = WINDOW_NAME
+    window_name: str = ''
+    """The worker's own name for its work, or empty where the caller gave none."""
     monitor_command: str = MONITOR_COMMAND
 
 
@@ -549,8 +564,37 @@ def place(windows: Sequence[Window], request: Request) -> Placement:
     if request.role is Role.WORKER:
         if request.partner:
             raise Usage(Refusal.STRAY_PARTNER)
-        return alongside(known, request)
+        placement = alongside(known, request)
+        return replace(placement, title=title(known, placement, request.window_name))
     raise Usage(Refusal.UNPLACEABLE, role=request.role)
+
+
+def title(windows: Sequence[Window], placement: Placement, name: str) -> str | None:
+    """What a worker's window is called once the worker lands in it, or None to leave it.
+
+    This is the one moment a window is named. Nothing renames it when a worker
+    finishes or moves, so a window can name work that has left it until somebody
+    renames it by hand.
+
+    A window this opens takes the name. A window somebody named keeps that name and
+    gains this one after `NAME_SEPARATOR`. A window still on automatic-rename takes
+    the name outright. That is usually the coordinator's own window before its
+    promotion, and appending there would leave the coordinator's title on a window
+    the coordinator later leaves to its workers. A window already carrying the name
+    is left alone, which is what a worker respawned into the same work finds.
+
+    A reviewer never reaches this. It sits under a worker the name already describes.
+    """
+    if placement.opens_window:
+        return name or WINDOW_NAME
+    if not name:
+        return None
+    window = next(window for window in windows if window.window_id == placement.window)
+    if not window.named or not window.name:
+        return name
+    if name in window.name.split(NAME_SEPARATOR):
+        return None
+    return f'{window.name}{NAME_SEPARATOR}{name}'
 
 
 def beneath(windows: Sequence[Window], request: Request) -> Placement:
@@ -628,7 +672,7 @@ def alongside(windows: Sequence[Window], request: Request) -> Placement:
         if free_columns(opened) > 0 and any(pane.role is Role.WORKER for pane in opened.panes):
             promotion = Promotion(
                 pane=crowned.pane_id,
-                window_name=f'{request.window_name}-coordinator',
+                window_name=f'{WINDOW_NAME}-coordinator',
                 monitor_width=MIN_COLUMNS,
                 monitor_command=request.monitor_command,
             )
@@ -730,8 +774,14 @@ WINDOW_FIELDS = '\t'.join(('#{window_id}', '#{window_width}', '#{window_height}'
 A tmux session name can hold a space, and nothing stops it holding a tab either,
 so a field after it would be shifted by its contents. Reading one such field and
 splitting with a maxsplit puts whatever it contains in the tail where it can do no
-harm. The window name would be a second one, so it is not read at all; nothing
-here addresses a window by name.
+harm. The window name would be a second one, so it has a listing of its own in
+`NAME_FIELDS`.
+"""
+
+NAME_FIELDS = '\t'.join(('#{window_id}', '#{automatic-rename}', '#{window_name}'))
+"""A window's name and whether somebody chose it, last for the same reason as the session.
+
+Read so a worker's name can be appended to it, and never to address a window.
 """
 
 COLUMN_FIELDS = '#{pane_id}\t#{pane_left}'
@@ -896,6 +946,12 @@ def parse_window(line: str) -> tuple[str, int, int, bool, str]:
     return window_id, int(width), int(height), dedicated == str(Role.COORDINATOR), session
 
 
+def parse_name(line: str) -> tuple[str, str, bool]:
+    """One `NAME_FIELDS` row: the window, its name, and whether somebody chose it."""
+    window_id, automatic, name = line.split('\t', 2)
+    return window_id, name, automatic != '1'
+
+
 def parse_pane(line: str) -> tuple[str, Pane]:
     """One `PANE_FIELDS` row: which window it is in, and the pane.
 
@@ -929,11 +985,28 @@ def read_workspace() -> tuple[Window, ...]:
         window_id, pane = parse_pane(line)
         panes.setdefault(window_id, []).append(pane)
 
+    names: dict[str, tuple[str, bool]] = {}
+    for line in tmux('list-windows', '-a', '-F', NAME_FIELDS).splitlines():
+        window_id, name, named = parse_name(line)
+        names[window_id] = (name, named)
+
     windows = []
     for window_id, (width, height, dedicated, session) in sizes.items():
         members = tuple(panes.get(window_id, ()))
         across, down = reconcile(width, height, members)
-        windows.append(Window(window_id=window_id, width=across, height=down, session=session, dedicated=dedicated, panes=members))
+        name, named = names.get(window_id, ('', False))
+        windows.append(
+            Window(
+                window_id=window_id,
+                width=across,
+                height=down,
+                session=session,
+                dedicated=dedicated,
+                panes=members,
+                name=name,
+                named=named,
+            )
+        )
     return tuple(windows)
 
 
@@ -1106,7 +1179,7 @@ def measure(pane: str, placement: Placement) -> Landed:
     )
 
 
-def execute(placement: Placement, command: Sequence[str], cwd: str, window_name: str, handle: str = '') -> Landed:
+def execute(placement: Placement, command: Sequence[str], cwd: str, handle: str = '') -> Landed:
     """Carry out one placement and read back the pane it made.
 
     Everything is addressed by `#{pane_id}` and `#{window_id}`. Pane indices
@@ -1126,6 +1199,10 @@ def execute(placement: Placement, command: Sequence[str], cwd: str, window_name:
     why `eligible()` refuses a window holding a pane this tool did not place. It
     is never used on a stacked split, where it would span the window and take the
     reviewer out of its worker's column.
+
+    A window the pane joins is renamed only once the command is running. A rename
+    before the split would leave the window naming a worker that never arrived
+    whenever the split is refused.
     """
     if placement.promote is not None:
         perform_promotion(placement.promote)
@@ -1137,7 +1214,7 @@ def execute(placement: Placement, command: Sequence[str], cwd: str, window_name:
 
     if placement.opens_window:
         after = ['-a', '-t', placement.near] if placement.near else []
-        made = tmux('new-window', '-d', *after, '-n', window_name, '-P', '-F', '#{pane_id}', *run, *opening).strip()
+        made = tmux('new-window', '-d', *after, '-n', placement.title or WINDOW_NAME, '-P', '-F', '#{pane_id}', *run, *opening).strip()
     else:
         axis = ['-h', '-f'] if placement.direction is Direction.BESIDE else ['-v']
         # A size is given for a stacked split, where nothing reflows afterwards, and
@@ -1158,6 +1235,11 @@ def execute(placement: Placement, command: Sequence[str], cwd: str, window_name:
     except TmuxFailed:
         tmux_soft('kill-pane', '-t', made)
         raise
+
+    # Soft, because a working agent is not worth losing over its window's label.
+    joined = not placement.opens_window
+    if joined and placement.title is not None and (problem := tmux_soft('rename-window', '-t', placement.window, placement.title)):
+        err(f'{placement.window} could not be renamed to {placement.title}: {problem}')
 
     if placement.balance and placement.size is not None:
         balance_columns(placement.window, placement.size)
@@ -1206,6 +1288,8 @@ def describe(placement: Placement) -> str:
         lines.append(f'       with {placement.promote.monitor_command} beside it at {placement.promote.monitor_width} columns')
     lines.append(f'place: {placement.role} {where}, {extent}')
     lines.append(f'  why: {placement.why}')
+    if placement.title is not None:
+        lines.append(f' name: the window is called {placement.title}')
     if not placement.readable:
         lines.append(f'  ▲    under the {MIN_COLUMNS}x{MIN_ROWS} minimum, and there is nowhere on this client that is not')
     return '\n'.join(lines)
@@ -1347,7 +1431,7 @@ def cmd_open(args: argparse.Namespace) -> int:
     if was is not None and now is not None and was[1].role is not now[1].role:
         mark(request.caller, Role.COORDINATOR)
 
-    landed = execute(placement, args.command, args.cwd, args.window_name, handle)
+    landed = execute(placement, args.command, args.cwd, handle)
     if not landed.as_planned:
         err(f'▲ tmux made {landed.pane} {landed.width}x{landed.height}, and the plan said {placement.size}')
     if not landed.readable:
@@ -1453,6 +1537,8 @@ EXAMPLES = """examples:
   tmuxctl pane plan worker                   where the next agent would land, changing nothing
   tmuxctl pane open worker --name ph3 -- claude
                                              put an agent there, named ph3, and start it
+  tmuxctl pane open worker --window-name phase-3 -- claude
+                                             put an agent there, with phase-3 on its window
   tmuxctl pane plan reviewer --for ph3       where ph3's reviewer would go: directly below it
   tmuxctl pane status ph3                    running, dead with a code, or gone
   tmuxctl pane release ph3                   stop treating ph3 as a pane this tool placed
@@ -1465,7 +1551,11 @@ index and its window do not, which is why neither is ever an address here.
 A worker is an agent doing a piece of work. A reviewer reads one worker's output
 and is always placed in that worker's column, directly below it. A coordinator is
 the pane that dispatches them; when its window fills up it moves to a window of
-its own with a monitor beside it, and never moves back."""
+its own with a monitor beside it, and never moves back.
+
+A window is named when a worker is placed in it, and never again by this tool. A
+worker joining a window somebody named adds its name after a dot, so a window
+holding two workers reads `phase-3 · phase-4`."""
 
 
 ADDRESS = 'a pane, by the handle it was opened under or by its %%id'
@@ -1523,7 +1613,16 @@ def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
         placing.add_argument('role', choices=[str(Role.WORKER), str(Role.REVIEWER)], help='what is being placed')
         placing.add_argument('--name', default='', metavar='HANDLE', help='what to call it; the name survives every move the pane makes')
         placing.add_argument('--for', dest='partner', default='', metavar='ADDRESS', help=f'the worker a reviewer belongs to: {ADDRESS}')
-        placing.add_argument('--window-name', default=WINDOW_NAME, help=f'the name for a window this has to open (default: {WINDOW_NAME})')
+        placing.add_argument(
+            '--window-name',
+            default='',
+            metavar='NAME',
+            help=(
+                "a worker's name for its work, set on its window once: a window this opens takes it, "
+                f'a window somebody named gets it after "{NAME_SEPARATOR.strip()}", and a window nobody named takes it. '
+                f'A reviewer leaves the name alone. With none, a window this opens is called {WINDOW_NAME}'
+            ),
+        )
         placing.add_argument(
             '--monitor', default=MONITOR_COMMAND, help=f'runs beside a coordinator moved to its own window (default: {MONITOR_COMMAND})'
         )

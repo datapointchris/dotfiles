@@ -11,6 +11,19 @@
 # the same verbs, the same JSON and the same exit codes, and is free to reach
 # them however its multiplexer works.
 #
+# `pane open worker --window-name NAME` labels where the worker lands, once, at
+# the open. A window or tab the adapter opens takes NAME. One somebody named
+# gets " · NAME" appended, and one nobody named takes NAME outright. A reviewer
+# leaves the label alone, and nothing renames it after the open. Each adapter
+# reaches that its own way:
+#
+#   tmuxctl    new-window -n names what it opens. rename-window sets the rest,
+#              and switches automatic-rename off. "Nobody named it" is a
+#              window still on automatic-rename.
+#   zellijctl  new-tab --name names what it opens. list-tabs --json reads a
+#              tab's name and rename-tab-by-id sets it. "Nobody named it" is a
+#              tab still called zellij's default, Tab #<n>.
+#
 # It execs rather than running the adapter and relaying. The port's meaning is
 # carried by stdout, stderr and the exit code together, and replacing the
 # process is the only way to pass all three through untouched. A relay would

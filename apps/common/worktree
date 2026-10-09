@@ -141,8 +141,9 @@ MUXCTL = 'muxctl'
 `muxctl` resolves tmux, or whatever else the pane is inside, and answers the same
 verbs either way.
 
-The claim is scoped to panes: opening one, reading it, measuring it and closing
-it are asked of the port, and nothing here decides where a pane goes. It is not
+The claim is scoped to panes: opening one, naming the work in it, reading it,
+measuring it and closing it are asked of the port, and nothing here decides where
+a pane goes or how its name is shown. It is not
 that the word `tmux` is absent. `claude-sessions` names a `tmux` field in its
 JSON, and `cmd_choose` picks `fzf-tmux` over `fzf` off `$TMUX` — a popup that
 exists in one multiplexer and degrades to a full-screen picker everywhere else.
@@ -1359,7 +1360,7 @@ def keep_brief(source: Path, repo: str, slug: str | None) -> Path:
     return destination
 
 
-def open_session_pane(caller: str, workdir: Path, prompt: str, *, below: bool) -> dict[str, Any]:
+def open_session_pane(caller: str, workdir: Path, prompt: str, *, below: bool, slug: str | None) -> dict[str, Any]:
     """Ask for a pane to run a session in, and return what the multiplexer made.
 
     The request is intent rather than geometry. A reviewer names the pane it
@@ -1368,13 +1369,19 @@ def open_session_pane(caller: str, workdir: Path, prompt: str, *, below: bool) -
     wide, which way to split, or which window — those are answers, and asking for
     them here would make one multiplexer's answer the only implementable one.
 
+    A worker's slug goes to the port as the name of its work, which is how the
+    window list says what each worker is doing. How the multiplexer shows it is the
+    adapter's business. A reviewer sends none, because it sits under the worker
+    the name already describes.
+
     `readable` in the record is the multiplexer's claim that the pane can be
     followed. False is a real answer: it says nowhere on this client can be, which
     is worth a warning and is not worth refusing a session over.
     """
     role = REVIEWER if below else WORKER
     partner = ['--for', caller] if below else []
-    made = ctl('pane', 'open', role, *partner, '--cwd', str(workdir), '--', 'claude', prompt)
+    named = ['--window-name', slug] if slug and not below else []
+    made = ctl('pane', 'open', role, *partner, *named, '--cwd', str(workdir), '--', 'claude', prompt)
     if not made.get('readable', True):
         say_warning(f'{made["pane"]} is {made.get("width")}x{made.get("height")}, which is small to follow an agent in')
     return made
@@ -1565,7 +1572,7 @@ def cmd_spawn(slug: str | None, brief: str, *, below: bool, timeout: float, as_j
     # not collect, because nothing was ever pushed and it is held as UNPUBLISHED. So the
     # one thing this command created gets unwound before the refusal reaches the caller.
     try:
-        made = open_session_pane(caller, where.path, BRIEF_PROMPT.format(brief=kept), below=below)
+        made = open_session_pane(caller, where.path, BRIEF_PROMPT.format(brief=kept), below=below, slug=slug)
     except Refused:
         if where.created:
             unwind(checkout, where)

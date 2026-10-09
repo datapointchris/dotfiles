@@ -45,7 +45,17 @@ A plain `skipif` is silently skipped on a runner without tmux, which is the exac
 failure `--require-interpreters` exists to stop."""
 
 
-def layout(module, window_id: str, columns, width: int = WINDOW, height: int = HEIGHT, session: str = 'system', dedicated: bool = False):
+def layout(
+    module,
+    window_id: str,
+    columns,
+    width: int = WINDOW,
+    height: int = HEIGHT,
+    session: str = 'system',
+    dedicated: bool = False,
+    name: str = '',
+    named: bool = False,
+):
     """A window laid out the way tmux lays one out.
 
     `columns` is a list of columns, each a list of `(pane_id, role)` or
@@ -90,7 +100,16 @@ def layout(module, window_id: str, columns, width: int = WINDOW, height: int = H
             )
             top += heights[row] + 1
         left += column_width + 1
-    return module.Window(window_id=window_id, width=width, height=height, session=session, dedicated=dedicated, panes=tuple(panes))
+    return module.Window(
+        window_id=window_id,
+        width=width,
+        height=height,
+        session=session,
+        dedicated=dedicated,
+        panes=tuple(panes),
+        name=name,
+        named=named,
+    )
 
 
 @pytest.fixture
@@ -411,6 +430,79 @@ def test_the_coordinator_is_never_moved_back_when_a_pair_finishes(tmuxctl, build
     assert placement.promote is None
 
 
+# --- a window is named for the work in it, once, when a worker lands ---
+
+
+def coordinator_beside_a_hand_made_pane(build):
+    """The coordinator's window as it usually is: shared with a shell, so never placed into."""
+    return build('@1', [[('%1', 'coordinator')], [('%8', 'unknown')]])
+
+
+def test_a_worker_that_opens_a_window_names_it_with_its_work(tmuxctl, build, worker_request):
+    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build)], worker_request(window_name='alpha'))
+
+    assert placement.opens_window
+    assert placement.title == 'alpha'
+
+
+def test_a_window_opened_for_a_worker_with_no_name_is_called_the_default(tmuxctl, build, worker_request):
+    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build)], worker_request())
+
+    assert placement.opens_window
+    assert placement.title == tmuxctl.WINDOW_NAME
+
+
+def test_a_worker_joining_a_named_window_appends_its_name(tmuxctl, build, worker_request):
+    alpha = build('@2', [[('%2', 'worker')]], name='alpha', named=True)
+    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build), alpha], worker_request(window_name='beta'))
+
+    assert placement.window == '@2'
+    assert placement.title == 'alpha · beta'
+
+
+def test_a_window_nobody_named_takes_the_name_outright(tmuxctl, build, worker_request):
+    # The coordinator's own window before its promotion, named by tmux.conf's
+    # automatic-rename format. Appending would leave the coordinator's title on
+    # the window it later leaves to its workers.
+    home = build('@1', [[('%1', 'coordinator')]], name='Narrate skill overview')
+    placement = tmuxctl.place([home], worker_request(window_name='alpha'))
+
+    assert placement.window == '@1'
+    assert placement.title == 'alpha'
+
+
+def test_a_worker_with_no_name_leaves_an_existing_window_as_it_is(tmuxctl, build, worker_request):
+    alpha = build('@2', [[('%2', 'worker')]], name='alpha', named=True)
+    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build), alpha], worker_request())
+
+    assert placement.window == '@2'
+    assert placement.title is None
+
+
+def test_a_name_the_window_already_carries_is_not_added_again(tmuxctl, build, worker_request):
+    # A worker respawned into the same work, after its first pane died and was closed.
+    pair = build('@2', [[('%2', 'worker')]], name='alpha · beta', named=True)
+    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build), pair], worker_request(window_name='alpha'))
+
+    assert placement.window == '@2'
+    assert placement.title is None
+
+
+def test_a_reviewer_leaves_its_workers_window_name_alone(tmuxctl, build, reviewer_request):
+    alpha = build('@2', [[('%2', 'worker')]], name='alpha', named=True)
+    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build), alpha], reviewer_request('%2', window_name='beta'))
+
+    assert placement.title is None
+
+
+def test_the_promoted_coordinator_window_never_carries_a_workers_name(tmuxctl, build, worker_request):
+    placement = tmuxctl.place([full_window(build)], worker_request(window_name='gamma'))
+
+    assert placement.promote.window_name == f'{tmuxctl.WINDOW_NAME}-coordinator'
+    # The worker's name goes on the window the coordinator vacated, where the worker lands.
+    assert placement.title == 'gamma'
+
+
 # --- density is a ceiling, not a target ---
 
 
@@ -718,8 +810,8 @@ def recorded(tmuxctl, monkeypatch):
     monkeypatch.setattr(tmuxctl.subprocess, 'run', record)
     monkeypatch.setattr(tmuxctl.shutil, 'which', lambda name: f'/usr/bin/{name}')
 
-    def run(placement, command=('claude', 'go'), cwd='/tmp/work', window_name='agents'):
-        tmuxctl.execute(placement, command, cwd, window_name)
+    def run(placement, command=('claude', 'go'), cwd='/tmp/work'):
+        tmuxctl.execute(placement, command, cwd)
         return calls
 
     run.calls = calls
@@ -850,6 +942,17 @@ def test_a_new_window_opens_beside_the_caller_so_it_lands_in_that_session(tmuxct
     assert '-a' in opened
 
 
+def test_a_joined_window_is_renamed_only_once_the_command_is_running(tmuxctl, build, worker_request, recorded):
+    # Renamed before the split, a refused split would leave the window naming a
+    # worker that never arrived.
+    alpha = build('@2', [[('%2', 'worker')]], name='alpha', named=True)
+    calls = recorded(tmuxctl.place([coordinator_beside_a_hand_made_pane(build), alpha], worker_request(window_name='beta')))
+
+    verbs = [call[1] for call in calls]
+    assert calls[verbs.index('rename-window')][2:] == ['-t', '@2', 'alpha · beta']
+    assert verbs.index('respawn-pane') < verbs.index('rename-window')
+
+
 def test_the_command_reaches_the_pane_as_one_quoted_argument(tmuxctl, build, worker_request, recorded):
     window = build('@1', [[('%1', 'coordinator')]])
     calls = recorded(tmuxctl.place([window], worker_request()), command=('claude', 'read the brief'))
@@ -893,7 +996,7 @@ def test_the_pane_is_read_back_and_compared_against_what_was_announced(tmuxctl, 
     monkeypatch.setattr(tmuxctl.subprocess, 'run', record)
     monkeypatch.setattr(tmuxctl.shutil, 'which', lambda name: f'/usr/bin/{name}')
 
-    landed = tmuxctl.execute(placement, ('claude',), '', 'agents')
+    landed = tmuxctl.execute(placement, ('claude',), '')
     assert landed.width == 93
     assert not landed.as_planned, 'tmux gave 93 where the plan said 188'
     assert not landed.readable
@@ -1047,16 +1150,15 @@ def test_the_nouns_on_a_screen_are_defined_on_it(tmuxctl, capsys):
 
 
 def test_the_default_window_name_is_spelled_once(tmuxctl):
-    # The dataclass default, the flag's default and the sentence in its help all
-    # come from one constant, so they cannot drift apart.
-    assert tmuxctl.Request(role=tmuxctl.Role.WORKER, caller='%1').window_name == tmuxctl.WINDOW_NAME
-    parsed = tmuxctl.build_parser().parse_args(['pane', 'plan', 'worker'])
-    assert parsed.window_name == tmuxctl.WINDOW_NAME
-
-    # One literal in the whole module: the constant's own definition. The flag
-    # default and its help sentence interpolate it rather than repeating it.
+    # The opened window's fallback, the promoted coordinator's window and the
+    # sentence in the flag's help all interpolate the constant.
     source = Path(tmuxctl.__file__).read_text()
     assert source.count(f"'{tmuxctl.WINDOW_NAME}'") == 1
+
+    # And the flag defaults to no name rather than to the fallback, or every
+    # worker joining a window would append `agents` to it.
+    parsed = tmuxctl.build_parser().parse_args(['pane', 'plan', 'worker'])
+    assert parsed.window_name == ''
 
 
 def test_the_set_is_listed_and_never_shown(tmuxctl):
@@ -1222,7 +1324,7 @@ def test_a_real_first_dispatch_places_beside_the_caller_and_plan_agrees(tmuxctl,
     assert not before.opens_window
     assert before.size == tmuxctl.even_share(WINDOW, 2)
 
-    landed = tmuxctl.execute(before, server.idle_command, '', 'agents')
+    landed = tmuxctl.execute(before, server.idle_command, '')
     assert landed.as_planned
     assert sorted((left, width) for width, _, left, _, _ in server.geometry().values()) == [(0, 188), (189, 188)]
 
@@ -1240,11 +1342,11 @@ def test_a_real_pair_divides_one_column_between_two_readable_halves(tmuxctl, ser
     """
     caller = tmuxctl.caller_pane()
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-    worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents')
+    worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
     column = worker.height
 
     review = tmuxctl.Request(role=tmuxctl.Role.REVIEWER, caller=caller, partner=worker.pane)
-    reviewer = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '', 'agents')
+    reviewer = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '')
 
     sizes = server.geometry()
     above, below = sizes[worker.pane], sizes[reviewer.pane]
@@ -1266,9 +1368,9 @@ def test_a_real_second_pair_reaches_the_three_column_target(tmuxctl, server):
     caller = tmuxctl.caller_pane()
     for _ in range(2):
         request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-        worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents')
+        worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
         review = tmuxctl.Request(role=tmuxctl.Role.REVIEWER, caller=caller, partner=worker.pane)
-        tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '', 'agents')
+        tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '')
 
     widths = sorted({width for width, _, _, _, _ in server.geometry().values()})
     lefts = sorted({left for _, _, left, _, _ in server.geometry().values()})
@@ -1296,7 +1398,7 @@ def test_a_real_hand_made_pane_is_never_resized_by_a_placement(tmuxctl, server):
     placement = tmuxctl.place(tmuxctl.read_workspace(), request)
     assert placement.opens_window
 
-    tmuxctl.execute(placement, server.idle_command, '', 'agents')
+    tmuxctl.execute(placement, server.idle_command, '')
     after = {pane: seen[0] for pane, seen in server.geometry().items()}
     for pane, width in theirs.items():
         assert after[pane] == width, f'{pane} was resized from {width} to {after[pane]}'
@@ -1309,14 +1411,14 @@ def test_a_real_promotion_dedicates_its_window_without_a_monitor(tmuxctl, server
     caller = tmuxctl.caller_pane()
     for _ in range(2):
         request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-        worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents')
+        worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
         review = tmuxctl.Request(role=tmuxctl.Role.REVIEWER, caller=caller, partner=worker.pane)
-        tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '', 'agents')
+        tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '')
 
     third = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller, monitor_command='nosuchmonitor-xyz')
     placement = tmuxctl.place(tmuxctl.read_workspace(), third)
     assert placement.promote is not None
-    tmuxctl.execute(placement, server.idle_command, '', 'agents')
+    tmuxctl.execute(placement, server.idle_command, '')
 
     homes = [window for window in tmuxctl.read_workspace() if window.holds(caller)]
     assert len(homes) == 1
@@ -1332,9 +1434,9 @@ def test_a_real_promotion_dedicates_its_window_without_a_monitor(tmuxctl, server
 def test_a_real_reviewer_that_moved_windows_still_blocks_a_second_one(tmuxctl, server):
     caller = tmuxctl.caller_pane()
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-    worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents')
+    worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
     review = tmuxctl.Request(role=tmuxctl.Role.REVIEWER, caller=caller, partner=worker.pane)
-    reviewer = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '', 'agents')
+    reviewer = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '')
 
     server.run('break-pane', '-d', '-s', reviewer.pane, '-n', 'hold')
     live = every_pane(tmuxctl)
@@ -1344,6 +1446,36 @@ def test_a_real_reviewer_that_moved_windows_still_blocks_a_second_one(tmuxctl, s
     with pytest.raises(tmuxctl.Usage) as raised:
         tmuxctl.place(tmuxctl.read_workspace(), review)
     assert refusal(tmuxctl, raised) is tmuxctl.Refusal.REVIEWER_TAKEN
+
+
+@needs_tmux
+def test_a_real_window_takes_its_first_workers_name_and_appends_the_next(tmuxctl, server):
+    """The caller's window starts on automatic-rename, as a fresh window does.
+
+    The first name replaces the automatic one and switches automatic-rename off,
+    which is what stops the format renaming the window as its panes change. The
+    second reads the first back off the server and appends to it. The reviewer
+    changes nothing.
+    """
+    caller = tmuxctl.caller_pane()
+
+    def place(role, name: str = '', partner: str = ''):
+        request = tmuxctl.Request(role=role, caller=caller, partner=partner, window_name=name)
+        return tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
+
+    def window() -> list[str]:
+        return server.run('display-message', '-p', '-t', caller, '#{automatic-rename}\t#{window_name}').split('\t')
+
+    assert window()[0] == '1', 'the fixture window is not on automatic-rename, so nothing below is tested'
+
+    alpha = place(tmuxctl.Role.WORKER, 'alpha')
+    assert window() == ['0', 'alpha']
+
+    place(tmuxctl.Role.WORKER, 'beta')
+    assert window() == ['0', 'alpha · beta']
+
+    place(tmuxctl.Role.REVIEWER, partner=alpha.pane)
+    assert window() == ['0', 'alpha · beta']
 
 
 @needs_tmux
@@ -1377,7 +1509,7 @@ def test_the_command_functions_run_end_to_end_against_a_real_server(tmuxctl, ser
 def test_a_real_release_clears_every_mark_it_wrote(tmuxctl, server):
     caller = tmuxctl.caller_pane()
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-    tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents')
+    tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
     tmuxctl.mark(caller, tmuxctl.Role.COORDINATOR)
 
     assert tmuxctl.release([]) >= 2
@@ -1494,7 +1626,7 @@ def test_a_handle_rides_its_pane_through_break_join_and_swap(tmuxctl, server):
     # and the window both do, so a caller keyed on either would be addressing
     # somebody else's pane by the end of this test.
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
-    landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents', 'phase-3-worker')
+    landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'phase-3-worker')
     assert tmuxctl.resolve('phase-3-worker') == landed.pane
 
     server.run('break-pane', '-d', '-s', landed.pane)
@@ -1513,12 +1645,12 @@ def test_status_tells_running_from_dead_from_gone(tmuxctl, server):
     # The three are different answers to a caller waiting on a launch: it is
     # working, it failed and here is why, and there is nothing there at all.
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
-    alive = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents')
+    alive = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
     assert tmuxctl.pane_state(alive.pane) == (tmuxctl.PaneState.RUNNING, None)
     assert tmuxctl.pane_process(alive.pane) is not None
 
     dying = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
-    doomed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), dying), ('bash', '-c', 'exit 3'), '', 'agents')
+    doomed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), dying), ('bash', '-c', 'exit 3'), '')
     for _ in range(60):
         state, code = tmuxctl.pane_state(doomed.pane)
         if state is tmuxctl.PaneState.DEAD:
@@ -1542,7 +1674,7 @@ def test_a_pane_is_not_dead_until_its_exit_status_can_be_read(tmuxctl, server):
     # hangs up a command once it has closed that terminal's other end.
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
     lingering = ('bash', '-c', 'trap "" HUP; exec </dev/null >/dev/null 2>&1; sleep 1; exit 3')
-    landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), lingering, '', 'agents')
+    landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), lingering, '')
     for _ in range(60):
         state, code = tmuxctl.pane_state(landed.pane)
         if state is not tmuxctl.PaneState.RUNNING:
@@ -1587,7 +1719,7 @@ def test_close_drops_the_marks_before_it_kills_the_pane(tmuxctl, server, monkeyp
     # "no handles remain" holds whether or not release ran, and a check that
     # something else satisfies is not evidence about its subject.
     request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=tmuxctl.caller_pane())
-    landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'agents', 'phase-3-worker')
+    landed = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '', 'phase-3-worker')
 
     order: list[str] = []
     released, killed = tmuxctl.release, tmuxctl.tmux_soft

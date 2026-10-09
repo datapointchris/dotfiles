@@ -212,6 +212,16 @@ def test_pane_open_returns_a_placement_a_caller_can_read(adapter):
 
 
 @needs_tmux
+def test_pane_open_takes_a_name_for_the_workers_work(adapter):
+    # `worktree spawn` passes a worker's slug this way. An adapter refusing the
+    # flag fails every spawn that has a slug. What each adapter does with the
+    # name is in muxctl's header.
+    made = record(adapter('pane', 'open', 'worker', '--window-name', 'alpha', '--json', '--', 'sleep', '300'))
+
+    assert made['role'] == 'worker'
+
+
+@needs_tmux
 def test_plan_reports_the_same_fields_open_does(adapter):
     # The read verb is the write verb's dry run, so a caller that parses one
     # parses the other. A reviewer is the case the two disagreed on: `size` is

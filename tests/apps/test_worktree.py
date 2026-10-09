@@ -425,6 +425,9 @@ class Rig:
     def window_of(self, pane: str) -> str:
         return self.tmux('display-message', '-p', '-t', pane, '#{window_id}')
 
+    def window_name(self, pane: str) -> str:
+        return self.tmux('display-message', '-p', '-t', pane, '#{window_name}')
+
     def size(self, pane: str) -> tuple[int, int]:
         """One pane's width and height, for asserting it can be followed."""
         row = self.tmux('display-message', '-p', '-t', pane, '#{pane_width} #{pane_height}')
@@ -2262,6 +2265,54 @@ class TestSpawnLayout:
 
         assert result.returncode != 0
         assert 'reviewer sits below a worker' in plain(result.stderr)
+
+
+@pytest.mark.interpreter('tmux')
+class TestSpawnWindowName:
+    """A worker's slug goes on the window it lands in, so the window list says what each is doing.
+
+    The caller shares its window with a pane opened by hand, which is how a
+    coordinator usually sits. Nothing is placed beside such a pane, so the first
+    worker opens a window of its own and the second joins it.
+    """
+
+    def worker(self, spawn, fleet, tmp_path: Path, slug: str) -> str:
+        result = spawn(fleet['primary'], slug, '--brief', str(brief_at(tmp_path / f'{slug}.md')), '--json')
+        assert result.returncode == 0, plain(result.stderr)
+        return json.loads(result.stdout)['pane']
+
+    def test_a_worker_that_opens_a_window_names_it_with_its_slug(self, fleet, spawn, rig, tmp_path):
+        rig.add_pane_before_the_caller()
+        alpha = self.worker(spawn, fleet, tmp_path, 'alpha')
+
+        assert rig.window_of(alpha) != rig.window_of(rig.caller), 'the worker joined the caller instead of opening a window'
+        assert rig.window_name(alpha) == 'alpha'
+
+    def test_a_second_worker_in_that_window_appends_its_slug(self, fleet, spawn, rig, tmp_path):
+        rig.add_pane_before_the_caller()
+        alpha = self.worker(spawn, fleet, tmp_path, 'alpha')
+        beta = self.worker(spawn, fleet, tmp_path, 'beta')
+
+        assert rig.window_of(beta) == rig.window_of(alpha), 'the second worker opened a window of its own'
+        assert rig.window_name(beta) == 'alpha · beta'
+
+    def test_a_reviewer_under_one_of_them_leaves_the_name_as_it_was(self, fleet, run, spawn, rig, tmp_path):
+        rig.add_pane_before_the_caller()
+        alpha = self.worker(spawn, fleet, tmp_path, 'alpha')
+        self.worker(spawn, fleet, tmp_path, 'beta')
+
+        # Spawned from alpha's pane, which is how a worker asks for its own reviewer.
+        result = run(
+            fleet['primary'],
+            'spawn',
+            '--brief',
+            str(brief_at(tmp_path / 'review.md')),
+            '--below',
+            env={'TMUX': str(rig.socket), 'TMUX_PANE': alpha},
+        )
+
+        assert result.returncode == 0, plain(result.stderr)
+        assert rig.window_name(alpha) == 'alpha · beta'
 
 
 class TestHelp:
