@@ -201,6 +201,12 @@ system_packages:
     brew: jq
     description: JSON processor
 
+  - name: bc
+    tier: core
+    apt: bc
+    pacman: bc
+    description: Arbitrary-precision calculator (macOS has it built-in)
+
   - name: tree
     tier: core
     apt: tree
