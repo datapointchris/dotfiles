@@ -60,7 +60,14 @@ end
 return {
   'benlubas/molten-nvim',
   version = '^1.0.0',
-  build = ':UpdateRemotePlugins',
+  -- Registering molten imports it in the python3 host, and a failed import rewrites the
+  -- manifest without molten. Where the host cannot import it, keep the old registration.
+  -- The check starts python, so as a `cond` every startup would pay for it.
+  build = function(plugin)
+    if not pcall(vim.cmd.python3, 'import jupyter_client') then return end
+    vim.cmd('Lazy load ' .. plugin.name)
+    vim.cmd('UpdateRemotePlugins')
+  end,
   ft = { 'python', 'markdown', 'quarto' },
   init = function()
     -- Virtual text is the output surface, so the floating window must not also
