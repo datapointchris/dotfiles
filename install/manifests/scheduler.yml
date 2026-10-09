@@ -26,6 +26,10 @@ go_tools:
   - fleet     # the sweep, the schedule, and the timer that fires them
   - task      # Taskfile runner used across the repos
   - gdu       # the clones fill a disk, and this is how that gets diagnosed
+  # `fleet problems fix run` commits through the repo's own hooks, and a Go
+  # repo's hooks call these two by name.
+  - gofumpt
+  - golangci-lint
 
 git_uv_tools:
   - doit      # the usage-digest job runs `doit kit digest run` on this box
@@ -34,6 +38,7 @@ git_uv_tools:
 
 custom_installers:
   - claude-code   # the grader
+  - bats          # the commit hook of a repo with tests/*.bats, for the fix job
 
 github_releases:
   - fzf         # fuzzy finder — backs the shell functions
@@ -50,7 +55,8 @@ github_releases:
 cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta]
 
 npm_globals: []
-uv_tools: []
+uv_tools:
+  - pre-commit  # runs a repo's commit hooks when the fix job commits there
 
 shell_plugins: true
 tmux_plugins: true
