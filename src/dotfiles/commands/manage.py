@@ -13,6 +13,7 @@ updated. Nothing should be filed to add releases here on the strength of it.
 from __future__ import annotations
 
 import datetime as dt
+import json
 import os
 import sys
 import tempfile
@@ -30,6 +31,7 @@ from dotfiles.output import console
 from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import success
+from dotfiles.output import warn
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
@@ -88,13 +90,24 @@ def edit() -> None:
 def update(
     check_only: bool = typer.Option(False, '--check', help='Fetch and report the position, without pulling'),
 ) -> None:
-    """Update this installation: pull the checkout, and repair what the pull invalidated.
+    """Update this installation: pull the checkout, and repair what no update has repaired yet.
 
     Two things a pull can invalidate, repaired in the order they have to happen.
     Deployed files that moved leave the machine linked to paths that no longer
     exist, so the symlinks are rebuilt. A changed dependency set leaves the tool
     venv resolved against the old one, so it is reinstalled — last, because it
     replaces the virtualenv this interpreter is running from.
+
+    **Measured from the commit the last update repaired at, never from the HEAD
+    before this pull.** Anything else that pulls the checkout takes the commits
+    first: a second scheduled job, or a `git pull` by hand. This pull then brings
+    nothing, and measuring from it reports `already up to date` over commits
+    nothing repaired. `paths.REPAIRED_FILE` holds that commit. It is written only
+    when every repair that ran succeeded, so the next update retries a failed one.
+
+    With nothing usable recorded, both repairs run. An absent record says nothing
+    is known to have been repaired. Falling back to the HEAD before the pull would
+    assume everything before it was.
 
     Neither repair happens in this process. After the pull, nothing about this
     interpreter is whole: it holds modules imported from the old source and will
@@ -117,21 +130,28 @@ def update(
         raise Refusal('pull refused, and git said why above — a self-update never forces or resets')
 
     was, now = before.stdout.strip(), bridge.git('rev-parse', 'HEAD').stdout.strip()
-    if was == now:
+    repaired = last_repaired()
+    if was == now == repaired:
         success('already up to date')
         return
 
-    incoming = bridge.git('log', '--oneline', f'{was}..{now}').stdout.splitlines()
-    changed = bridge.git('diff', '--name-only', was, now).stdout.splitlines()
-    deployed = [path for path in changed if path.startswith(DEPLOYED_PREFIXES)]
-    dependencies = [path for path in changed if path in DEPENDENCY_FILES]
+    name_commits(f'{was}..{now}', 'pulled')
+    relink: str | None = 'nothing is recorded as repaired'
+    rebuild: str | None = relink
+    if repaired is None:
+        hint(f'no repair is recorded for {paths.REPO_ROOT}, so both run')
+    else:
+        if repaired != was:
+            name_commits(f'{repaired}..{was}', 'pulled before this update and never repaired')
+        changed = bridge.git('diff', '--name-only', repaired, now).stdout.splitlines()
+        deployed = [path for path in changed if path.startswith(DEPLOYED_PREFIXES)]
+        dependencies = [path for path in changed if path in DEPENDENCY_FILES]
+        relink = f'{len(deployed)} deployed file(s) changed' if deployed else None
+        rebuild = f'{", ".join(dependencies)} changed' if dependencies else None
 
-    console.print(f'{len(incoming)} commit(s) pulled:')
-    for line in incoming:
-        console.print(f'  {line}')
-
-    if deployed:
-        hint(f'{len(deployed)} deployed file(s) changed — rebuilding symlinks')
+    linked = True
+    if relink:
+        hint(f'{relink} — rebuilding symlinks')
         # A separate process, because this one is no longer whole. The pull
         # replaced the source under a running interpreter, and `engine.resources`
         # imports the resource modules lazily to keep `--help` fast — so the
@@ -141,12 +161,17 @@ def update(
         # a name that was present in the file on disk. Any update adding a name to
         # an eagerly-imported module and using it from a lazily-imported one does
         # this, so the fix is a fresh interpreter rather than an import order.
-        run(['dotfiles', 'symlinks', 'apply'], output=Output.STREAM)
+        linked = run(['dotfiles', 'symlinks', 'apply'], output=Output.STREAM).ok
+        if not linked:
+            error('the symlinks were not rebuilt, so this update is not recorded and the next one retries it')
 
-    if not dependencies:
+    if not rebuild:
+        if not linked:
+            raise typer.Exit(ExitCode.ISSUE)
+        record_repair(now)
         return
 
-    hint(f'{", ".join(dependencies)} changed — rebuilding the tool venv')
+    hint(f'{rebuild} — rebuilding the tool venv')
     try:
         pins = uv_lock.read(paths.REPO_ROOT)
     except uv_lock.Unexportable as unexportable:
@@ -160,11 +185,52 @@ def update(
     # `os._exit`, not a return: `--reinstall` has just deleted and recreated the
     # virtualenv this interpreter lives in, so any import from here on — including
     # the ones interpreter shutdown does on its own — reads files that no longer
-    # exist. Nothing above this line is left to print, and the buffers are flushed
-    # by hand because `_exit` skips that too.
+    # exist. The record is the one write left, through modules already loaded, and
+    # the buffers are flushed by hand because `_exit` skips that too.
+    whole = linked and rebuilt.ok
+    if whole:
+        record_repair(now)
     sys.stdout.flush()
     sys.stderr.flush()
-    os._exit(ExitCode.CONVERGED if rebuilt.ok else ExitCode.ISSUE)
+    os._exit(ExitCode.CONVERGED if whole else ExitCode.ISSUE)
+
+
+def name_commits(span: str, how: str) -> None:
+    commits = bridge.git('log', '--oneline', span).stdout.splitlines()
+    if not commits:
+        return
+    console.print(f'{len(commits)} commit(s) {how}:')
+    for line in commits:
+        console.print(f'  {line}')
+
+
+def last_repaired() -> str | None:
+    """The commit `update` last finished repairing this checkout at.
+
+    None for a record naming another checkout, because both repairs bind to the
+    checkout's path. None too for a commit this repository no longer holds, which
+    cannot be diffed from.
+    """
+    try:
+        recorded = json.loads(paths.REPAIRED_FILE.read_text())
+        checkout, commit = recorded['checkout'], recorded['commit']
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if checkout != str(paths.REPO_ROOT) or not isinstance(commit, str):
+        return None
+    if not bridge.git('cat-file', '-e', f'{commit}^{{commit}}').ok:
+        return None
+    return commit
+
+
+def record_repair(commit: str) -> None:
+    """Degrades to a warning: the repairs happened, and an unwritten record costs only a repeat."""
+    try:
+        paths.STATE_HOME.mkdir(parents=True, exist_ok=True)
+        paths.REPAIRED_FILE.write_text(json.dumps({'checkout': str(paths.REPO_ROOT), 'commit': commit}) + '\n')
+    except OSError as unwritable:
+        warn(f'could not record the repair under {paths.STATE_HOME}: {unwritable}')
+        hint('the next update repeats these repairs')
 
 
 def report_position() -> ExitCode:

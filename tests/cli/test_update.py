@@ -9,12 +9,14 @@ The command itself is exercised through `DOTFILES_DIR`, which is the documented
 way to point the whole package at another tree, in a subprocess so that the
 import-time binding happens against it. Every commit those tests pull touches a
 file that is neither deployed nor a dependency, because the repair paths write to
-the machine running the suite.
+the machine running the suite. For the same reason each clone starts with a repair
+recorded at the commit it was cloned at: a checkout with none runs both repairs.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import json
 import os
 import subprocess
 import sys
@@ -64,7 +66,15 @@ def clone(tmp_path: Path, remote: Path) -> Path:
     """A checkout of it, tracking `origin/main` and nothing fetched since."""
     working = tmp_path / 'clone'
     subprocess.run(['git', 'clone', '--quiet', str(remote), str(working)], check=True)
+    repair_record(working).write_text(json.dumps({'checkout': str(working.resolve()), 'commit': git(working, 'rev-parse', 'HEAD')}))
     return working
+
+
+def repair_record(repo: Path) -> Path:
+    """Where `update` keeps the commit it last repaired `repo` at, under the state home `run_update` gives it."""
+    record = repo.parent / 'state' / 'dotfiles' / paths.REPAIRED_FILE.name
+    record.parent.mkdir(parents=True, exist_ok=True)
+    return record
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -203,7 +213,7 @@ def run_update(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
         check=False,
         capture_output=True,
         text=True,
-        env={**os.environ, 'DOTFILES_DIR': str(repo)},
+        env={**os.environ, 'DOTFILES_DIR': str(repo), 'XDG_STATE_HOME': str(repo.parent / 'state')},
     )
 
 
@@ -390,6 +400,67 @@ def test_a_lock_uv_will_not_export_leaves_the_venv_alone(clone: Path, remote: Pa
     assert result.returncode == ExitCode.ISSUE
     assert [call['argv'][0] for call in recorded(record)] == ['export']
     assert 'was not rebuilt' in result.stderr
+
+
+def test_a_commit_pulled_by_something_else_is_repaired_by_the_next_update(clone: Path, remote: Path, repairs: Path) -> None:
+    """A second job pulling the checkout first leaves this pull with nothing to bring."""
+    deployed_commit(remote)
+    git(clone, 'pull', '--quiet', '--ff-only')
+
+    first = run_update(clone)
+    second = run_update(clone)
+
+    assert first.returncode == ExitCode.CONVERGED, first.stderr
+    assert '1 commit(s) pulled before this update and never repaired' in first.stdout
+    assert 'change configs/common/.config/x.conf' in first.stdout
+    assert recorded(repairs) == [['symlinks', 'apply']]
+    assert 'already up to date' in second.stderr
+
+
+@pytest.mark.parametrize(
+    'record',
+    [
+        None,
+        {'checkout': '/another/checkout', 'commit': 'HEAD'},
+        {'checkout': 'CLONE', 'commit': '0' * 40},
+        ['not', 'a', 'record'],
+    ],
+    ids=['absent', 'another-checkout', 'unknown-commit', 'malformed'],
+)
+def test_a_checkout_with_no_usable_record_runs_both_repairs_and_records_them(
+    clone: Path, repairs: Path, record: dict[str, str] | list[str] | None
+) -> None:
+    head = git(clone, 'rev-parse', 'HEAD')
+    if record is None:
+        repair_record(clone).unlink()
+    else:
+        if isinstance(record, dict):
+            record = {
+                key: str(clone.resolve()) if value == 'CLONE' else head if value == 'HEAD' else value for key, value in record.items()
+            }
+        repair_record(clone).write_text(json.dumps(record))
+
+    result = run_update(clone)
+
+    assert result.returncode == ExitCode.CONVERGED, result.stderr
+    assert 'no repair is recorded' in result.stderr
+    assert [call[0] for call in recorded(repairs)] == ['symlinks', 'tool']
+    assert json.loads(repair_record(clone).read_text()) == {'checkout': str(clone.resolve()), 'commit': head}
+
+
+def test_a_failed_relink_is_not_recorded_so_the_next_update_retries_it(clone: Path, remote: Path, fake_bin: Path, tmp_path: Path) -> None:
+    failing, passing = tmp_path / 'failing.jsonl', tmp_path / 'passing.jsonl'
+    install_spy(fake_bin, failing, name='dotfiles', code=1)
+    deployed_commit(remote)
+
+    failed = run_update(clone)
+    install_spy(fake_bin, passing, name='dotfiles')
+    retried = run_update(clone)
+
+    assert failed.returncode == ExitCode.ISSUE
+    assert 'not recorded' in failed.stderr
+    assert retried.returncode == ExitCode.CONVERGED, retried.stderr
+    assert recorded(passing) == [['symlinks', 'apply']]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

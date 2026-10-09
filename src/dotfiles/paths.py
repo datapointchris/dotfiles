@@ -94,6 +94,7 @@ MACHINE_ID = machine_id()
 
 LATEST_RUN = STATE_HOME / f'latest-{MACHINE_ID}'
 STATUS_FILE = STATE_HOME / f'status-{MACHINE_ID}.json'
+REPAIRED_FILE = STATE_HOME / f'repaired-{MACHINE_ID}.json'
 
 
 def uv_tool_dir() -> Path:

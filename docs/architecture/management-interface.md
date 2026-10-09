@@ -85,6 +85,15 @@ tool. It pulls `--ff-only` and repairs the two things a pull can invalidate, and
 stale only on a changed `pyproject.toml` or `uv.lock`, because uv points at the
 working tree, so code changes *are* the new code and never need a rebuild.
 
+**Repairs start from the last commit `update` repaired, not from its own pull.**
+A scheduled job or a hand-run `git pull` can fetch the commits before `update`
+runs. Measured from its own pull, `update` then had nothing to do, and the machine
+ran those commits unrepaired. The commit lives in
+`$XDG_STATE_HOME/dotfiles/repaired-<host>.json`, beside the check status.
+*Rejected:* falling back to the HEAD before the pull on a machine with no record.
+That assumes everything before it was repaired, so it keeps the gap open once on
+every machine.
+
 **`pyselfupdate` is deliberately not used, and its refusal is correct rather than
 a gap.** It declines to reinstall over a `directory`/`path`/`editable`
 requirement, which is the right answer. This repo publishes no releases, its
