@@ -137,7 +137,7 @@ def test_a_cargo_binary_no_crate_claims_falls_back_to_the_file(monkeypatch: pyte
 
     removal = diagnose.removal_of(tmp_path / '.cargo' / 'bin' / 'stray', PackageManager.BREW, tmp_path)
 
-    assert removal.command == 'rm ~/.cargo/bin/stray'
+    assert removal == diagnose.Removal('', 'rm ~/.cargo/bin/stray')
 
 
 def test_a_scoped_npm_package_keeps_both_segments(tmp_path: Path) -> None:
@@ -157,7 +157,8 @@ def test_a_scoped_npm_package_keeps_both_segments(tmp_path: Path) -> None:
 
 def test_a_uv_tool_is_told_apart_from_a_release_binary_beside_it(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """`~/.local/bin` is filled by uv tools and release binaries alike, so the
-    mechanism cannot be read off the path and uv is asked."""
+    mechanism cannot be read off the path and uv is asked. A file uv does not
+    claim is not uv's, so its row says `installed by` nothing."""
     monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/uv')
     monkeypatch.setattr(effects, 'run', answering(0, 'safekeep v0.4.0\n- safekeep\n'))
 
@@ -165,7 +166,7 @@ def test_a_uv_tool_is_told_apart_from_a_release_binary_beside_it(monkeypatch: py
     release = diagnose.removal_of(tmp_path / '.local' / 'bin' / 'lazygit', PackageManager.BREW, tmp_path)
 
     assert tool == diagnose.Removal('uv', 'uv tool uninstall safekeep')
-    assert release.command == 'rm ~/.local/bin/lazygit'
+    assert release == diagnose.Removal('', 'rm ~/.local/bin/lazygit')
 
 
 def test_a_binary_outside_every_language_directory_falls_to_the_os_manager(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

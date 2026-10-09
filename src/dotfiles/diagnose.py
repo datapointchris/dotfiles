@@ -320,10 +320,12 @@ def removal_of(path: Path, manager: PackageManager, home: Path) -> Removal:
             return Removal('npm', f'npm uninstall -g {package}')
         if mechanism == 'uv' and (tool := _uv_tool_providing(path.name)):
             return Removal('uv', f'uv tool uninstall {tool}')
-        # go writes a binary and keeps no receipt, and `~/.local/bin` holds
-        # release binaries beside the uv tools. Both leave a file and nothing to
-        # ask, so the file is what gets removed.
-        return Removal(mechanism, f'rm {shown}')
+        # go keeps no receipt, so its directory is the only evidence there is.
+        # The other managers were asked and did not claim the file, and
+        # `~/.local/bin` holds release binaries and vendor installs beside the uv
+        # tools, so naming that manager would name the one thing known not to
+        # have put it there.
+        return Removal(mechanism if mechanism == 'go' else '', f'rm {shown}')
 
     owner, _ = package_owning(path, manager)
     if owner:
