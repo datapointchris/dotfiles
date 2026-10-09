@@ -5,7 +5,7 @@ worth asserting: the mapping is short and the interesting failures are all about
 a *response shape*. Three of them are real and none would show up as an error.
 
 GitHub's is asked for over GraphQL rather than `gh search prs`, whose field set
-has no `headRefName` — so the response arrives under `.data.search.nodes` and a
+has no `headRefName` — so the response arrives under two aliased searches, and a
 `type: ISSUE` search can hand back a node the PullRequest fragment did not match.
 Bitbucket's arrives from a Server API that spells a branch `fromRef.displayId`,
 which shares no key with GitHub's. Both are mapped to one provider-neutral field
@@ -116,9 +116,21 @@ def run(tmp_path: Path):
     return _run
 
 
-def github_stub(*nodes: dict[str, Any]) -> str:
-    payload = json.dumps({'data': {'search': {'nodes': list(nodes)}}})
-    return f"#!/bin/sh\ncat <<'JSON'\n{payload}\nJSON\n"
+def github_stub(*mine: dict[str, Any], owned: tuple[dict[str, Any], ...] = (), record: Path | None = None) -> str:
+    """`mine` answers the author search and `owned` the registry owners' search.
+
+    `record` keeps the arguments gh was called with, one per line.
+    """
+    payload = json.dumps(
+        {
+            'data': {
+                'mine': {'issueCount': len(mine), 'nodes': list(mine)},
+                'owned': {'issueCount': len(owned), 'nodes': list(owned)},
+            }
+        }
+    )
+    keep = f'printf "%s\\n" "$@" > {record}\n' if record else ''
+    return f"#!/bin/sh\n{keep}cat <<'JSON'\n{payload}\nJSON\n"
 
 
 def test_a_github_pr_carries_the_branch_it_would_be_typed_as(run) -> None:
@@ -186,6 +198,45 @@ def test_a_repo_the_registry_does_not_name_is_left_out(run) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert [pr['repo'] for pr in json.loads(result.stdout)] == ['dotfiles']
+
+
+def test_a_pr_someone_else_opened_on_a_registry_repo_is_listed(run) -> None:
+    """A GitHub App's fix PR arrives only from the owner search, never the
+    author one, and it is still yours to merge."""
+    result = run(
+        registry('github', ('fleet', '~/tools/fleet')),
+        gh=github_stub(owned=(graphql_node('fleet', 60, 'scheduler-fix'),)),
+    )
+    assert result.returncode == 0, result.stderr
+    assert [pr['number'] for pr in json.loads(result.stdout)] == [60]
+
+
+def test_a_pr_both_searches_return_is_listed_once(run) -> None:
+    node = graphql_node('dotfiles', 1, 'mine')
+    result = run(registry('github', ('dotfiles', '~/dotfiles')), gh=github_stub(node, owned=(node,)))
+    assert result.returncode == 0, result.stderr
+    assert [pr['number'] for pr in json.loads(result.stdout)] == [1]
+
+
+def test_the_owner_search_names_every_owner_the_registry_does(run, tmp_path: Path) -> None:
+    record = tmp_path / 'gh-arguments'
+    repos = registry('github', ('dotfiles', '~/dotfiles'))
+    repos['repos'].append({'name': 'thing', 'owner': 'some-org', 'path': '~/code/thing', 'status': 'active'})
+    result = run(repos, gh=github_stub(record=record))
+    assert result.returncode == 0, result.stderr
+    assert 'owned=is:pr is:open user:datapointchris user:some-org' in record.read_text().splitlines()
+
+
+def test_a_search_past_one_page_says_what_it_left_out(run) -> None:
+    """The query reads one page of 100. An owner search over many repos can pass
+    that, and a listing cut short is otherwise indistinguishable from a whole one."""
+    payload = json.dumps({'data': {'mine': {'issueCount': 0, 'nodes': []}, 'owned': {'issueCount': 140, 'nodes': []}}})
+    result = run(
+        registry('github', ('dotfiles', '~/dotfiles')),
+        gh=f"#!/bin/sh\ncat <<'JSON'\n{payload}\nJSON\n",
+    )
+    assert result.returncode == 0, result.stderr
+    assert '"is:pr is:open user:datapointchris" matched 140 PRs' in result.stderr
 
 
 def test_a_bitbucket_pr_reports_its_branch_under_the_same_key(run, tmp_path: Path) -> None:

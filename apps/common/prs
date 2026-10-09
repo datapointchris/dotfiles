@@ -9,7 +9,7 @@
 # # over a second and fails outright with no network. That commit is v0.1.1.
 # pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", rev = "bef61a95120df523758029eac6692898140e4262" }
 # ///
-"""Pick one of your open PRs, from anywhere, and open its diff to read.
+"""Pick an open PR on any registry repo, whoever opened it, and open its diff to read.
 
     prs              pick one and open it in a tmux window
     prs list         print them instead, one row each

@@ -9,7 +9,7 @@
 # grows as this fixture gets older, which is what makes the color thresholds
 # visible without editing anything.
 cat <<'JSON'
-{"data":{"search":{"nodes":[
+{"data":{"mine":{"issueCount":8,"nodes":[
  {},
  {"number":7,"body":"Teaches the planning die to migrate a real directory into a symlink.\n\nRefuses when the copy has diverged from what is already synced, because\nsilently picking a winner there loses whichever side it does not pick.\n\n- [x] migrate a plain directory\n- [x] refuse a diverged copy\n- [ ] a --force that names what it would overwrite","title":"Teach the planning die to migrate a diverged copy",
   "url":"https://github.com/datapointchris/forge/pull/7",
@@ -80,5 +80,5 @@ cat <<'JSON'
   "reviews":{"totalCount":0},
   "commits":{"nodes":[]},
   "repository":{"name":"typos","nameWithOwner":"crate-ci/typos"}}
-]}}}
+]},"owned":{"issueCount":0,"nodes":[]}}}
 JSON

@@ -12,7 +12,7 @@
 # # That commit is v0.1.1; move both together.
 # pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", rev = "bef61a95120df523758029eac6692898140e4262" }
 # ///
-"""Every open PR you have, across the repos the registry names, as JSON.
+"""Every open PR on the repos the registry names, whoever opened it, as JSON.
 
     pull-requests [--registry FILE]
 
@@ -67,27 +67,37 @@ from pytermstyle import help_usage
 # flag fails with "Unknown JSON field". The alternative was `gh pr list --json
 # headRefName` per repo, which reads better and costs one request per repo; that
 # is the fan-out the bulk search exists to avoid. This keeps the single call.
+#
+# Two searches under aliases, still one request. `owned` is every open PR on a
+# repo the registry's owners hold, whoever opened it, which is what admits a bot's
+# or a contributor's PR. `mine` is what you authored. The registry filter keeps
+# only registry repos, and `owned` already covers those. So `mine` adds a row
+# only when `owned` passes the 100-node page and drops some of yours.
 GITHUB_SEARCH = """
-{
-  search(query: "author:@me is:pr is:open", type: ISSUE, first: 100) {
-    nodes {
-      ... on PullRequest {
-        number
-        title
-        body
-        url
-        headRefName
-        baseRefName
-        isDraft
-        createdAt
-        additions
-        deletions
-        changedFiles
-        reviewDecision
-        reviews { totalCount }
-        commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
-        repository { name nameWithOwner }
-      }
+query($mine: String!, $owned: String!) {
+  mine: search(query: $mine, type: ISSUE, first: 100) { ...PullRequests }
+  owned: search(query: $owned, type: ISSUE, first: 100) { ...PullRequests }
+}
+
+fragment PullRequests on SearchResultItemConnection {
+  issueCount
+  nodes {
+    ... on PullRequest {
+      number
+      title
+      body
+      url
+      headRefName
+      baseRefName
+      isDraft
+      createdAt
+      additions
+      deletions
+      changedFiles
+      reviewDecision
+      reviews { totalCount }
+      commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
+      repository { name nameWithOwner }
     }
   }
 }"""
@@ -98,6 +108,7 @@ class Repo:
     """One active registry entry, for the provider being asked."""
 
     name: str
+    owner: str
     slug: str
     path: Path
 
@@ -151,6 +162,7 @@ def load_repos(registry: Path, provider: str) -> list[Repo]:
         repos.append(
             Repo(
                 name=entry['name'],
+                owner=entry['owner'],
                 slug=f'{entry["owner"]}/{entry["name"]}',
                 path=expand(entry['path']),
             )
@@ -164,18 +176,30 @@ def registry_paths(registry: Path) -> dict[str, Path]:
     return {entry['name']: expand(entry['path']) for entry in document['repos'] if entry['status'] == 'active'}
 
 
-def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
-    """One search for everything you authored, then keep what the registry names.
+def github_searches(repos: list[Repo]) -> dict[str, str]:
+    """The search string behind each alias in `GITHUB_SEARCH`.
 
-    Searching by author rather than per repo is what makes this one call;
-    filtering afterwards is what keeps it honest about scope.
+    The owners come from the registry, so a repo added under a new owner is
+    searched without editing this file. GitHub ORs repeated `user:` qualifiers,
+    and `user:` matches an organization as well as a person.
+    """
+    owners = ' '.join(f'user:{owner}' for owner in sorted({repo.owner for repo in repos}))
+    return {'mine': 'author:@me is:pr is:open', 'owned': f'is:pr is:open {owners}'}
+
+
+def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
+    """Every open PR on the registry owners' repos, plus every one you authored,
+    then keep what the registry names.
+
+    Searching by owner and author rather than per repo is what makes this one
+    call; filtering afterwards is what keeps it honest about scope.
 
     The filter matches `owner/name` against `nameWithOwner`, never the basename.
-    This search covers all of GitHub, so a PR you authored upstream in a project
-    that happens to share a name with one of yours — `crate-ci/typos` against the
-    registry's `typos` — passed a basename filter and then took your clone's
-    path, which `prs` fetched a pull ref from. Being a contributor elsewhere is
-    enough to hit it; a fork is not required.
+    The `mine` search covers all of GitHub, so a PR you authored upstream in a
+    project that happens to share a name with one of yours — `crate-ci/typos`
+    against the registry's `typos` — passed a basename filter and then took your
+    clone's path, which `prs` fetched a pull ref from. Being a contributor
+    elsewhere is enough to hit it; a fork is not required.
     """
     if not repos:
         return []
@@ -183,8 +207,10 @@ def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
         warn('gh is not installed; skipping GitHub repos')
         return []
 
+    searches = github_searches(repos)
+    variables = [argument for alias, query in searches.items() for argument in ('-f', f'{alias}={query}')]
     found = subprocess.run(
-        ['gh', 'api', 'graphql', '-f', f'query={GITHUB_SEARCH}'],
+        ['gh', 'api', 'graphql', '-f', f'query={GITHUB_SEARCH}', *variables],
         capture_output=True,
         text=True,
         check=False,
@@ -194,15 +220,27 @@ def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
         warn(f"gh could not list PRs (check 'gh auth status'): {first_line[0] if first_line else ''}")
         return []
 
+    answered = json.loads(found.stdout)['data']
+    nodes = []
+    for alias, query in searches.items():
+        connection = answered[alias]
+        if connection['issueCount'] > len(connection['nodes']):
+            warn(f'"{query}" matched {connection["issueCount"]} PRs and only the first {len(connection["nodes"])} are listed')
+        nodes.extend(connection['nodes'])
+
     wanted = {repo.slug for repo in repos}
+    listed = set()
     prs = []
     # `type: ISSUE` searches issues and PRs from one index, so a node the inline
     # fragment does not match arrives as `{}`. `is:pr` should prevent it; without
     # the guard one would emit a row of nulls, and a null number is a hard
     # unmarshal failure in fleet rather than a visibly empty row.
-    for node in json.loads(found.stdout)['data']['search']['nodes']:
-        if node.get('number') is None or node['repository']['nameWithOwner'] not in wanted:
+    #
+    # A PR you opened on your own repo matches both searches, so it arrives twice.
+    for node in nodes:
+        if node.get('number') is None or node['repository']['nameWithOwner'] not in wanted or node['url'] in listed:
             continue
+        listed.add(node['url'])
         rollup = node['commits']['nodes']
         prs.append(
             {
@@ -373,7 +411,7 @@ OPTIONS = (
 )
 
 BLURB = (
-    'Every pull request you have open, across every repo the registry names, as',
+    'Every open pull request on a repo the registry names, whoever opened it, as',
     'JSON on stdout. Oldest first, because a backlog is a gauge and age is what',
     'it measures.',
     '',
