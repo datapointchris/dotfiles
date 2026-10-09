@@ -589,7 +589,9 @@ def build(root: Path, monkeypatch: pytest.MonkeyPatch) -> Sandbox:
     # An absolute path, so an offline run would otherwise accept this desk's `/usr/bin/node`.
     monkeypatch.setattr(registry, 'PACKAGED_NODE', {manager: (root / 'packaged' / 'node',) for manager in PackageManager})
 
-    for refused in ('gh', 'curl', *PACKAGE_MANAGERS):
+    # `hyprctl` because `PATH` keeps `/usr/bin` behind the sandbox, and a Wayland
+    # machine's epilogue reloads whatever compositor it finds there.
+    for refused in ('gh', 'curl', 'hyprctl', *PACKAGE_MANAGERS):
         box.shadow(refused, REFUSED)
     box.settle()
     return box
@@ -657,8 +659,16 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
     module afterwards. `Session.repo` is the load-bearing one: the CLI builds its
     own Session, so without this every leaf would read `~/dotfiles`'s declaration
     however the sandbox is configured.
+
+    `deploy.GIT_CONFIG_ENTRY` and `deploy.HOME_GITCONFIG` are `Path.home()` at
+    import, and `tests/cli/test_deploy.py` imports `dotfiles.deploy` at collection,
+    before any sandbox exists. Every whole-machine `apply` ends in
+    `deploy.epilogue`, which creates the first and unlinks the second, so unbound
+    they name the real home: a fresh CI runner gains a `~/.config/git/config` and
+    loses a `~/.gitconfig`.
     """
     from dotfiles import checkout
+    from dotfiles import deploy
     from dotfiles.symlinks import core
 
     derivations.rerun(monkeypatch)
@@ -666,6 +676,8 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(core, 'DOTFILES_DIR', repo)
     monkeypatch.setattr(core, 'TARGET_DIR', box.home.resolve())
+    monkeypatch.setattr(deploy, 'GIT_CONFIG_ENTRY', box.home / '.config' / 'git' / 'config')
+    monkeypatch.setattr(deploy, 'HOME_GITCONFIG', box.home / '.gitconfig')
 
     rebind_default(monkeypatch, Session.__init__, 'repo', repo)
     for reader in (checkout.read, checkout.stray_branch, checkout.fetch):

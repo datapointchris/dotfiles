@@ -24,7 +24,6 @@ from pathlib import Path
 import pytest
 
 from dotfiles.vocabulary import ExitCode
-from matrix.harness import REFUSED
 from matrix.harness import Invocation
 from matrix.harness import Sandbox
 from matrix.harness import resource
@@ -57,35 +56,6 @@ The same platform deliberately: every declaration these tests make lands at the
 same target either way, so the mechanism is the only difference between the two
 and an assertion about it cannot be an assertion about the coordinates.
 """
-
-
-@pytest.fixture(autouse=True)
-def the_epilogue_cannot_leave_this_sandbox(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Point the three things `deploy.epilogue` writes at this test's machine.
-
-    `symlinks apply` ends in `deploy.epilogue`, which is not reached by `$HOME`
-    the way everything else is: `GIT_CONFIG_ENTRY` and `HOME_GITCONFIG` are
-    `Path.home()` evaluated at *import*, and `tests/cli/test_deploy.py` imports
-    `dotfiles.deploy` at collection time — before any sandbox exists. Under
-    `pytest tests/` they therefore name the real home, and this module's applies
-    would create `~/.config/git/config` on a fresh CI runner and unlink a real
-    `~/.gitconfig` that happened to be a link.
-
-    There is no knob to set instead. This is the seam `harness.rebind` already
-    re-derives for `core.DOTFILES_DIR` and `core.TARGET_DIR`, and the same
-    two attributes are already rebound by `tests/cli/test_deploy.py` for the same
-    reason — it belongs in the harness, and until it lives there it belongs here
-    rather than in the real home.
-
-    `hyprctl` is the third: `PATH` keeps `/usr/bin` behind the sandbox, so a
-    Wayland machine's `apply` finds the real compositor and reloads it. That one
-    *is* a real seam — a binary on `PATH` — and it answers no.
-    """
-    from dotfiles import deploy
-
-    monkeypatch.setattr(deploy, 'GIT_CONFIG_ENTRY', sandbox.home / '.config' / 'git' / 'config')
-    monkeypatch.setattr(deploy, 'HOME_GITCONFIG', sandbox.home / '.gitconfig')
-    sandbox.shadow('hyprctl', REFUSED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
