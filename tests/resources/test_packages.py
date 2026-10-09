@@ -729,8 +729,22 @@ AWSCLI = {
 }
 DECLARES_AWSCLI = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['awscli']}
 
-NO_REPO = {'custom_installers': [{'name': 'claude-code', 'command': 'claude', 'description': 'self-updating'}]}
-DECLARES_NO_REPO = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['claude-code']}
+NO_REPO = {'custom_installers': [{'name': 'vendor-cli', 'command': 'vendor', 'description': 'a vendor script'}]}
+DECLARES_NO_REPO = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['vendor-cli']}
+
+CLAUDE_CODE = {
+    'custom_installers': [
+        {
+            'name': 'claude-code',
+            'command': 'claude',
+            'install_url': 'https://claude.ai/install.sh',
+            'url': 'https://downloads.claude.ai/claude-code-releases',
+            'description': 'Claude Code',
+        }
+    ]
+}
+DECLARES_CLAUDE_CODE = {'machine': 'box', 'platform': 'linux', 'custom_installers': ['claude-code']}
+CLAUDE_CHANNEL_FILE = 'https://downloads.claude.ai/claude-code-releases/latest'
 
 
 def test_a_custom_installer_behind_its_repo_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
@@ -752,12 +766,52 @@ def test_a_custom_installer_at_its_repos_latest_reports_nothing(tmp_path: Path, 
     assert changes(live) == ()
 
 
-def test_a_custom_installer_naming_no_repo_is_not_asked(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """claude-code updates itself in the background and names no repo, so there is
-    nothing to compare against. Silence is the honest answer — an UNKNOWN row on
-    every plan for a question nobody can answer is noise, not a finding."""
-    reporting(fake_bin, 'claude', '2.1.226 (Claude Code)')
+def test_a_custom_installer_naming_no_upstream_is_not_asked(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """Neither a repo nor a version file, so there is nothing to compare against.
+    An UNKNOWN row on every plan for a question nobody can answer is noise."""
+    reporting(fake_bin, 'vendor', 'vendor 1.0.0')
     live = session(tmp_path, NO_REPO, DECLARES_NO_REPO)
+
+    assert changes(live) == ()
+
+
+def test_claude_code_behind_its_channel_file_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    reporting(fake_bin, 'claude', '2.1.278 (Claude Code)')
+    cached(release_cache, {CLAUDE_CHANNEL_FILE: '2.1.295'})
+    live = session(tmp_path, CLAUDE_CODE, DECLARES_CLAUDE_CODE)
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict, change.observed) for change in found] == [('custom/claude-code', Verdict.STALE, '2.1.278')]
+    assert found[0].detail == '2.1.295 is the latest release'
+
+
+def test_claude_code_at_its_channel_file_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    reporting(fake_bin, 'claude', '2.1.295 (Claude Code)')
+    cached(release_cache, {CLAUDE_CHANNEL_FILE: '2.1.295'})
+    live = session(tmp_path, CLAUDE_CODE, DECLARES_CLAUDE_CODE)
+
+    assert changes(live) == ()
+
+
+def test_claude_code_with_no_cached_channel_file_names_the_file(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """The row names the file that went unasked, which is the host a firewalled
+    machine has to get unblocked."""
+    reporting(fake_bin, 'claude', '2.1.278 (Claude Code)')
+    live = session(tmp_path, CLAUDE_CODE, DECLARES_CLAUDE_CODE)
+
+    found = changes(live)
+
+    assert [change.verdict for change in found] == [Verdict.UNKNOWN]
+    assert CLAUDE_CHANNEL_FILE in found[0].detail
+
+
+def test_an_offline_run_does_not_ask_about_claude_code(tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch) -> None:
+    """No bundle records the channel file, and the script reaches the vendor's host
+    for every byte, so an offline row could only be unrepairable."""
+    reporting(fake_bin, 'claude', '2.1.278 (Claude Code)')
+    staged_bundle(tmp_path, monkeypatch, {})
+    live = dc.replace(session(tmp_path, CLAUDE_CODE, DECLARES_CLAUDE_CODE), offline=True)
 
     assert changes(live) == ()
 
@@ -1112,6 +1166,19 @@ def only_change(live: Session) -> Change:
     found = changes(live)
     assert len(found) == 1, f'expected one change, got {[change.verdict for change in found]}'
     return found[0]
+
+
+def test_applying_a_behind_claude_code_reaches_its_installer(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, installs: list[str], unprivileged: Privilege
+) -> None:
+    reporting(fake_bin, 'claude', '2.1.278 (Claude Code)')
+    cached(release_cache, {CLAUDE_CHANNEL_FILE: '2.1.295'})
+    live = session(tmp_path, CLAUDE_CODE, DECLARES_CLAUDE_CODE)
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert installs == ['claude-code']
 
 
 # ─────────────────────────────────────────────────────────────────────────────

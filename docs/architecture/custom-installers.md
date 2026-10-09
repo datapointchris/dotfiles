@@ -20,6 +20,12 @@ where the *version* lives, which stays a declarative fact even when the
 distribution is not. That is what lets `dotfiles check` say a custom installer is
 behind, rather than treating presence as the whole verdict.
 
+Claude Code names no repo, because its install path consults none. Its version
+lives in the vendor's channel file, the one the install script reads, and
+`custom.version_file` points currency there. Presence was never enough for it
+either. A desk updates Claude Code in the background, and a machine that only
+runs `claude -p` falls behind.
+
 ## Every host an installer reaches is declared by the installer itself
 
 `custom.sources()` answers where a given tool is fetched from.
@@ -37,6 +43,10 @@ dotfiles network check --json | jq -r '.probes[] | select(.name == "theme") | .t
 over a pipe which file to fetch puts the staged filename in two places. The
 declaration's `install_url` is the one place. Two answers can drift apart, and the
 bundle then holds a file the install never looks for.
+
+**Rejected: measuring Claude Code against `anthropics/claude-code` releases.** The
+install script never reads them. A comparison there would track a second
+publisher's schedule rather than the channel file the machine installs from.
 
 **Rejected: a shared "run a vendor script" abstraction beyond staging it.** Several
 functions run one, and all they share is where the script comes from — the offline

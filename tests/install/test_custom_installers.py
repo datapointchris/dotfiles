@@ -380,20 +380,48 @@ class TestBashselfupdate:
 
 
 class TestClaudeCode:
-    def test_an_installed_claude_is_left_to_update_itself(self, declared, home, bundle, effected, monkeypatch):
-        reports(monkeypatch, claude='2.1.0 (Claude Code)')
+    def test_its_version_is_the_channel_file_its_install_script_reads(self, declared):
+        """`DOWNLOAD_BASE_URL` in https://claude.ai/install.sh, plus the file it reads first."""
+        entry = declared.find('custom_installers', 'claude-code')
+
+        assert custom.version_file(entry) == 'https://downloads.claude.ai/claude-code-releases/latest'
+
+    def test_a_behind_claude_is_upgraded_by_the_install_script(self, declared, home, bundle, effected, monkeypatch):
+        reports(monkeypatch, claude='2.1.278 (Claude Code)')
         runs, fetches = effected()
 
         result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX)
 
         assert result.ok
+        assert result.kind is Kind.APPLIED
+        assert fetches.urls == ['https://claude.ai/install.sh']
+        assert runs.scripts == [SCRIPT]
+
+    def test_the_upgrade_runs_a_staged_script_ahead_of_the_network(self, declared, home, bundle, effected, monkeypatch):
+        reports(monkeypatch, claude='2.1.278 (Claude Code)')
+        (bundle / 'scripts' / 'claude-code-install.sh').write_bytes(b'#!/bin/sh\necho from-bundle\n')
+        runs, fetches = effected()
+
+        result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX)
+
+        assert result.ok
+        assert fetches.urls == []
+        assert runs.scripts == [b'#!/bin/sh\necho from-bundle\n']
+
+    def test_an_offline_run_leaves_an_installed_claude_alone(self, declared, home, bundle, effected, monkeypatch):
+        reports(monkeypatch, claude='2.1.278 (Claude Code)')
+        runs, fetches = effected()
+
+        result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX, offline=True)
+
+        assert result.ok
         assert result.kind is Kind.UNCHANGED
         assert runs.calls == [] and fetches.urls == []
 
-    def test_an_installer_refusing_because_claude_is_running_is_not_a_failure(self, declared, home, bundle, effected, monkeypatch):
-        """On this machine Claude is always running, because the process asking for
-        the install is Claude. The binary already there keeps working."""
-        reports(monkeypatch, claude=None)
+    def test_losing_the_install_lock_is_not_a_failure(self, declared, home, bundle, effected, monkeypatch):
+        """The background updater takes the same lock, so whoever holds it is
+        installing, and the binary already there keeps working meanwhile."""
+        reports(monkeypatch, claude='2.1.278 (Claude Code)')
         effected(Runs(**{'install.sh': Completed(('bash',), 1, 'another process is currently installing Claude Code')}))
 
         result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX)

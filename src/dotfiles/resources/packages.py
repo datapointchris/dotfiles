@@ -41,6 +41,7 @@ from dotfiles.plan import Preconditions
 from dotfiles.plan import Stage
 from dotfiles.privilege import Escalates
 from dotfiles.providers import bundle
+from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import syspkg
@@ -71,13 +72,14 @@ manager already owns.
 
 `CustomInstaller` belongs with them because a vendor that ships its own installer
 still publishes releases somewhere, and the entry names where: the repo is a
-declarative fact even when the bytes come from an S3 bucket or a HashiCorp mirror.
+declarative fact even when the bytes come from an S3 bucket or a HashiCorp mirror,
+and `custom.version_file` is the vendor's own file where no repo answers.
 The engine acts on verdicts, so a section with no verdict for "behind" is a section
 that silently never upgrades.
 
 Which entries cannot be asked is `_has_currency`'s answer rather than a list here —
-an entry naming no repo, reporting no version, or installing no binary drops out
-there, and `dotfiles machines show --json` is what enumerates them.
+an entry naming no upstream, reporting no version, or installing no binary drops
+out there, and `dotfiles machines show --json` is what enumerates them.
 """
 
 
@@ -200,7 +202,9 @@ class PackagesResource:
         mine = plan.for_resource(NAME)
         evidence = {item.address: registry.evidence_for(item, session.inventories) for item in mine}
 
-        present = tuple(item for item in mine if evidence[item.address].verdict is Verdict.MATCHED and _has_currency(item))
+        present = tuple(
+            item for item in mine if evidence[item.address].verdict is Verdict.MATCHED and _has_currency(item, offline=session.offline)
+        )
         latest, consulted = _upstream(session, present)
 
         return Observed(
@@ -264,7 +268,7 @@ class PackagesResource:
                         observed=observed.reported.get(item.address, ''),
                     )
                 )
-            elif _has_currency(item):
+            elif _has_currency(item, offline=observed.from_bundle):
                 changes.extend(currency_of(item, observed))
 
             if stray := observed.shadowed.get(item.address):
@@ -399,7 +403,7 @@ def _shadowing(
     return shadowed
 
 
-def _has_currency(item: DesiredItem) -> bool:
+def _has_currency(item: DesiredItem, *, offline: bool) -> bool:
     """Whether this item can be compared against an upstream at all.
 
     Every clause has to hold, and an entry failing one is not a finding — it is a
@@ -410,8 +414,16 @@ def _has_currency(item: DesiredItem) -> bool:
     something that installs no binary has nothing to ask — `bashselfupdate` is a
     sourced library found by its `installed_path`, so it names a repo and still has
     no version to report.
+
+    A vendor's version file is a question for an online run only. No bundle
+    records what one said, and the script that would act on it downloads from
+    that vendor's host. Offline, a present claude-code is left alone, which is
+    what `custom._claude_code` does with it too.
     """
-    return isinstance(item.entry, CURRENCY) and item.entry.reports_version and bool(item.executable) and bool(_wanted(item).repo)
+    if not (isinstance(item.entry, CURRENCY) and item.entry.reports_version and item.executable):
+        return False
+    wanted = _wanted(item)
+    return bool(wanted.repo) or (bool(wanted.version_file) and not offline)
 
 
 PROBE_WORKERS = 8
@@ -493,7 +505,8 @@ def _wanted(item: DesiredItem) -> releases.Wanted:
     entry = item.entry
     if isinstance(entry, catalog.GithubRelease | catalog.CustomInstaller):
         from_tags = entry.version_source == catalog.VERSION_FROM_TAGS
-        return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix, from_tags=from_tags)
+        vendor_file = custom.version_file(entry) if isinstance(entry, catalog.CustomInstaller) else ''
+        return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix, from_tags=from_tags, version_file=vendor_file)
     if isinstance(entry, catalog.GoTool | catalog.CargoPackage):
         return releases.Wanted(repo=entry.github_repo)
     if isinstance(entry, catalog.GitUvTool):
@@ -768,7 +781,8 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
             return f'the sparse bundle neither carries {item.name} nor measured it, so it was never considered'
         return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
-    return f'no cached release for {_wanted(item).repo} within the TTL ({reason})'
+    wanted = _wanted(item)
+    return f'no cached release for {wanted.version_file or wanted.repo} within the TTL ({reason})'
 
 
 def _never_bundled(item: DesiredItem) -> str:

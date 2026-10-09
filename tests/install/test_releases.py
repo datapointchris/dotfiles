@@ -298,6 +298,23 @@ def test_each_repo_is_asked_with_its_own_etag(monkeypatch: pytest.MonkeyPatch) -
     assert asked == {'owner/has': 'W/"held"', 'owner/none': ''}
 
 
+def test_a_version_file_is_asked_in_place_of_any_repo_and_keyed_by_its_url(answers: dict, monkeypatch: pytest.MonkeyPatch) -> None:
+    channel = 'https://downloads.claude.ai/claude-code-releases/latest'
+    asked: list[tuple[str, str]] = []
+
+    def read(url: str, etag: str = '') -> github_release.Newest:
+        asked.append((url, etag))
+        return github_release.Newest(version='2.1.295', etag='"g"')
+
+    monkeypatch.setattr(releases.github_release, 'newest_in_version_file', read)
+    existing = {channel: releases.Cached('2.1.278', NOW, etag='"f"')}
+
+    entries = releases.refresh((releases.Wanted('', version_file=channel),), existing, NOW)
+
+    assert asked == [(channel, '"f"')]
+    assert entries[channel] == releases.Cached('2.1.295', NOW, etag='"g"')
+
+
 def test_an_unmatched_repo_is_asked_unconditionally(monkeypatch: pytest.MonkeyPatch) -> None:
     """A repo with no entry has nothing to revalidate against, so it costs what it
     always did rather than being skipped."""

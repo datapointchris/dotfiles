@@ -15,16 +15,17 @@ modes, and which one ran decided whether a tool already present was upgraded;
 converges.
 
 **Whether a tool is behind is not asked here.** `resources/packages.CURRENCY`
-measures it, off the `repo:` each entry declares, so an installer that is called
-is one the machine needs and every function below can simply converge. What
-differs between them is only what converging means:
+measures it, off the `repo:` each entry declares or the vendor file
+`version_file` names, so an installer that is called is one the machine needs
+and every function below can simply converge. What differs between them is only
+what converging means:
 
     theme, font, zmk         the tool has its own `update`, so delegate to it
     bashselfupdate           the install script is the update, so always run it
+    claude-code              the install script is the update, so run it
     bats, terraform-ls       clone or download at the tag upstream reports
     mount-s3                 the bucket serves `latest/`, so just fetch it
-    claude-code              self-updates in the background; presence is enough
-    awscli                   no release to compare against; presence is enough
+    awscli                   AWS's installer takes `--update`, so run it
 
 Every failure is returned, never raised: one broken vendor must not stop the
 eight after it, and the stage reports all of them together.
@@ -96,6 +97,29 @@ def missing_parts(entry: catalog.CustomInstaller) -> tuple[str, ...]:
     if entry.name != 'bats':
         return ()
     return tuple(f'bats-{helper}' for helper in BATS_HELPERS if not (local_dir() / 'lib' / f'bats-{helper}').is_dir())
+
+
+CLAUDE_CODE_CHANNEL = 'latest'
+"""The channel file Claude Code's install script reads, under the entry's `url`.
+
+The script downloads the release this file names and runs its `claude install`
+with no target. That installs the channel Claude's own settings choose, which
+defaults to this one. A machine whose settings choose `stable` installs an older
+release than this file names, so it reads behind after every apply.
+"""
+
+
+def version_file(entry: catalog.CustomInstaller) -> str:
+    """Where a vendor publishes its newest version itself, or ''.
+
+    The custom-installer twin of an entry's `repo:`, and code for the reason
+    asset naming is: the host is declared, and which file on it names the
+    version is the vendor's layout. Empty for every entry but claude-code, which
+    leaves the rest measured against their `repo` or not at all.
+    """
+    if entry.name != 'claude-code' or not entry.url:
+        return ''
+    return f'{entry.url}/{CLAUDE_CODE_CHANNEL}'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -268,18 +292,25 @@ def _bashselfupdate(request: Request) -> Result:
 
 
 def _claude_code(request: Request) -> Result:
-    """Installed by a vendor script, kept current by itself.
+    """Anthropic's install script, which is the upgrade as well as the install.
 
-    Two things the other script installers do not have. It updates itself in the
-    background, so presence is the whole question — re-running the installer would
-    fight the thing it is trying to converge. And it refuses to install while
-    Claude is running, which on this machine is *always*, because the process
-    asking for the install is Claude. That refusal is reported as success: the
-    binary already there keeps working, and the next run installs.
+    Claude Code updates itself in the background on a desk, and a machine that
+    only ever runs `claude -p` falls behind. So presence is not currency, and
+    reaching here means missing or behind. Both converge the same way.
+
+    The script rather than `claude update`. Both end in the same install routine
+    under the same lock, but `claude update` runs it from the installed binary,
+    which is the stale one. The script downloads the release its channel file
+    names and runs *that* binary's installer, and it is the path the offline
+    bundle already stages.
+
+    The lock is also taken by the background updater on an interactive machine.
+    Losing it is reported as unchanged: the process holding it is installing, and
+    the next run measures whether the release arrived.
     """
-    installed = evidence.reported_version(request.entry.executable)
-    if installed:
-        return Result(True, f'claude-code {installed.splitlines()[0]} (self-updating)', kind=Kind.UNCHANGED)
+    installed = evidence.reported_version(request.entry.executable) is not None
+    if offline := _present_and_offline(request, installed):
+        return offline
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-claude-code-') as scratch:
         # Named before it is reached, as `theme`, `font` and the runtimes do through

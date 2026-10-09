@@ -654,6 +654,32 @@ class TestNewestVersion:
         assert asked[0][1] == 'W/"held"'
 
 
+class TestNewestInVersionFile:
+    """A vendor file whose body is the version, read through the same revalidation."""
+
+    CHANNEL = 'https://downloads.claude.ai/claude-code-releases/latest'
+
+    answering = staticmethod(TestNewestVersion.answering)
+
+    def test_the_body_is_the_version_and_its_etag_is_carried(self, monkeypatch):
+        asked = self.answering(monkeypatch, github_release.Conditional(b'2.1.295\n', '"g"'))
+
+        assert github_release.newest_in_version_file(self.CHANNEL, '"f"') == github_release.Newest(version='2.1.295', etag='"g"')
+        assert asked == [(self.CHANNEL, '"f"')]
+
+    def test_an_unchanged_file_says_so_and_names_no_version(self, monkeypatch):
+        self.answering(monkeypatch, github_release.Conditional(None, '"g"'))
+
+        assert github_release.newest_in_version_file(self.CHANNEL, '"g"') == github_release.Newest(etag='"g"', unchanged=True)
+
+    def test_a_page_carrying_a_version_is_not_one(self, monkeypatch):
+        """What downloads.claude.ai serves in a region it does not, and the case
+        the install script refuses on the same test."""
+        self.answering(monkeypatch, github_release.Conditional(b'<html><p>Claude Code 2.1.295 is unavailable</p></html>', '"h"'))
+
+        assert github_release.newest_in_version_file(self.CHANNEL) == github_release.Newest()
+
+
 class TestTokenLookup:
     """Asked on every request, so it has to cost once per run and not once per repo.
 

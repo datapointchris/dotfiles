@@ -1103,11 +1103,14 @@ custom_installers:
     assert_repo: bats-core/bats-assert
     description: Bash Automated Testing System (cloned from GitHub, builds from source)
 
+  # `url` is where the install script downloads from. Its `latest` file names
+  # the release the script installs, and currency reads that same file.
   - name: claude-code
     command: claude
     install_url: https://claude.ai/install.sh
+    url: https://downloads.claude.ai/claude-code-releases
     bundle_install_script: true
-    description: Claude Code CLI (self-updating, installs to ~/.local/bin via official installer)
+    description: Claude Code CLI (official installer, installs to ~/.local/bin)
 
   # Distributed from AWS's own bucket, which serves only `latest/` and no version.
   # `repo` is where the version lives: awslabs publishes the same builds as GitHub

@@ -637,6 +637,34 @@ def newest_tag(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
     return Newest(version=_tag_from(payload, tag_prefix), etag=answer.etag)
 
 
+VERSION_FILE_BODY = re.compile(r'\d+\.\d+\.\d+\S*')
+"""A version file's whole body: one version and nothing else.
+
+Claude Code's install script applies the same test before trusting the file.
+downloads.claude.ai answers an HTML page in a region it does not serve, and a
+page that happens to contain a version is still not one.
+"""
+
+
+def newest_in_version_file(url: str, etag: str = '') -> Newest:
+    """A vendor's own file whose body is its newest version, revalidated like a release.
+
+    Beside `newest_version` because it shares `revalidate`, whose `_headers` is
+    what keeps a GitHub credential off another host. The bucket behind
+    downloads.claude.ai answers `ETag` and 304 the way GitHub does, so a cached
+    answer costs one revalidation.
+    """
+    answer = _revalidated(url, etag)
+    if answer is None:
+        return Newest()
+    if answer.payload is None:
+        return Newest(etag=answer.etag, unchanged=True)
+    body = answer.payload.decode(errors='replace').strip()
+    if not VERSION_FILE_BODY.fullmatch(body):
+        return Newest()
+    return Newest(version=body, etag=answer.etag)
+
+
 def tag_for_version(repo: str, version: str, tag_prefix: str = '') -> str | None:
     """The published tag a declared pin means, or None when nothing published it.
 

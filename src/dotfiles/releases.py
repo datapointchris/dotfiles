@@ -102,7 +102,7 @@ class Cached:
 @dc.dataclass(frozen=True, slots=True)
 class Wanted:
     """A repo to ask about, the tag prefix that narrows the answer, and which
-    endpoint holds it."""
+    endpoint holds it — or a vendor's own file, for a tool no repo answers for."""
 
     repo: str
     tag_prefix: str = ''
@@ -120,6 +120,13 @@ class Wanted:
     asks_lock: bool = False
     """Whether to record `Cached.locked` for this repo's newest tag. Only git uv tools install from a lock."""
 
+    version_file: str = ''
+    """A URL whose whole body is the newest version, asked instead of any repo.
+
+    Claude Code's channel file is the one declared, because it is what that
+    tool's install script reads to decide what to install.
+    """
+
     @property
     def key(self) -> str:
         """What the cache is keyed on.
@@ -127,6 +134,8 @@ class Wanted:
         The prefix is part of it: one monorepo releases four different CLIs, and
         keying on the repo alone would have them overwrite each other's answer.
         """
+        if self.version_file:
+            return self.version_file
         return f'{self.repo}#{self.tag_prefix}' if self.tag_prefix else self.repo
 
 
@@ -191,7 +200,7 @@ def save(entries: dict[str, Cached], path: Path | None = None) -> bool:
 
 
 def refresh(wanted: tuple[Wanted, ...], existing: dict[str, Cached], now: dt.datetime) -> dict[str, Cached]:
-    """Ask GitHub about each repo, keeping the previous answer where it cannot.
+    """Ask upstream about each one, keeping the previous answer where it cannot.
 
     Kept rather than dropped: a request that failed says nothing about whether the
     last answer was right, and dropping it would turn one rate-limited refresh into
@@ -258,6 +267,8 @@ def _newest(wanted: Wanted, previous: Cached | None = None) -> github_release.Ne
     exactly what it always did.
     """
     etag = previous.etag if previous else ''
+    if wanted.version_file:
+        return github_release.newest_in_version_file(wanted.version_file, etag)
     if wanted.from_tags:
         return github_release.newest_tag(wanted.repo, wanted.tag_prefix, etag)
     return github_release.newest_version(wanted.repo, wanted.tag_prefix, etag)
