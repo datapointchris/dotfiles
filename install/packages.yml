@@ -1627,6 +1627,14 @@ git_uv_tools:
     requires_github_auth: true
     description: Analytics over Claude Code sessions — DuckDB, Parquet and automated insights
 
+  - name: runthrough
+    repo: https://github.com/datapointchris/runthrough.git
+    description: Record real terminal sessions from declarative tapes, and author those tapes from a question
+
+  - name: git-graph
+    repo: https://github.com/datapointchris/git-graph.git
+    description: Build synthetic git histories from named scenarios, to see what merge, rebase, squash and worktrees produce
+
 # ================================================================
 # GO TOOLS
 # ================================================================

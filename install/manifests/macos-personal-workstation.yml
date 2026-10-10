@@ -110,6 +110,8 @@ git_uv_tools:
   - typos
   - homelab
   - claude-code-metrics
+  - runthrough
+  - git-graph
 
 shell_plugins: true
 tmux_plugins: true
