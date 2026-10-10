@@ -134,7 +134,6 @@ repoPaths:
     datapointchris/goselfupdate: ~/tools/goselfupdate
     datapointchris/gotermstyle: ~/tools/gotermstyle
     datapointchris/homelab: ~/homelab
-    datapointchris/iceberg-intro-lessons: ~/code/iceberg-intro-lessons
     datapointchris/ichrisbirch-rust: ~/code/rust/ichrisbirch
     datapointchris/ichrisbirch: ~/webapps/ichrisbirch
     datapointchris/ifiles: ~/tools/ifiles
