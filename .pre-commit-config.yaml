@@ -1,4 +1,4 @@
-# forge-toolchain: 30
+# forge-toolchain: 31
 fail_fast: true
 default_stages: [pre-commit]
 repos:
@@ -262,10 +262,12 @@ repos:
         files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/tmuxctl|apps/common/worktree|apps/common/zsh-startup)$'
 
 # generated:lua - Lua
+  # The cargo hook, not stylua-github: that one finds the release through
+  # GitHub's API unauthenticated, and a spent hourly budget blocks every commit.
   - repo: https://github.com/JohnnyMorganz/StyLua
     rev: v2.5.2
     hooks:
-      - id: stylua-github
+      - id: stylua
 
 # generated:github-actions - GitHub Actions
   - repo: https://github.com/rhysd/actionlint
