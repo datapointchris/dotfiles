@@ -237,8 +237,12 @@ def running_binary(tmp_path: Path):
     reproduce, so copying its metadata raises `PermissionError` before the test
     starts. Only the executable content matters here, and `chmod` supplies the
     one bit of metadata that does.
+
+    The copy keeps the name `sleep`. On Ubuntu `/bin/sleep` is the uutils
+    multi-call binary, which picks its utility from the name of the file it runs
+    and exits at once under any other.
     """
-    target = tmp_path / 'held'
+    target = tmp_path / 'sleep'
     target.write_bytes(Path('/bin/sleep').read_bytes())
     target.chmod(0o755)
     child = subprocess.Popen([str(target), '60'])

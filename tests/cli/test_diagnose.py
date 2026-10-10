@@ -223,8 +223,12 @@ def held_binary(tmp_path: Path) -> tuple[Path, subprocess.Popen[bytes]]:
     system volume. A copy that dies on exec holds nothing, so `lsof` answers
     correctly with nothing and the assertion below has no subject. Linux runs the
     copy untouched.
+
+    The copy keeps the name `sleep`. On Ubuntu `/bin/sleep` is the uutils
+    multi-call binary, which picks its utility from the name of the file it runs
+    and exits at once under any other.
     """
-    held = tmp_path / 'held'
+    held = tmp_path / 'sleep'
     held.write_bytes(Path('/bin/sleep').read_bytes())
     held.chmod(0o755)
     if sys.platform == 'darwin':
