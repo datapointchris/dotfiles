@@ -1,7 +1,11 @@
-# Every PR here is your own, so sections split by STATE rather than by role.
-# The stock team layout filtered on -author:@me, review-requested:@me and
-# involves:@me -author:@me, none of which can ever match for a solo fleet — three
-# empty sections and one real one.
+# Every PR a person opens here is your own, so sections split by STATE rather than
+# by role. The stock team layout filtered on review-requested:@me and involves:@me
+# -author:@me, and with no other reviewer neither one matches.
+#
+# The other author is an app, such as dependabot. Its PRs match no `author:@me`
+# section, so `Automation` is the one place they appear, and it is the one section
+# split by author: `user:` scopes it to your repos and `-author:@me` leaves the
+# apps. It sits last because a tab shows its count wherever it is.
 #
 # `Open` leads and is unfiltered, because the first section is the one gh-dash
 # lands on and every other section here can be empty while PRs are open. The
@@ -32,6 +36,8 @@ prSections:
       filters: is:open author:@me created:<@today-7d
     - title: Draft
       filters: is:open author:@me draft:true
+    - title: Automation
+      filters: is:open user:datapointchris -author:@me
 issuesSections:
     - title: My Issues
       filters: is:open author:@me
