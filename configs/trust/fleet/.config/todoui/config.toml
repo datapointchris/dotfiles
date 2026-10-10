@@ -17,10 +17,11 @@
 # has not restored yet, while the clone is what `dotfiles apply` puts there.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 
-# api_key is deliberately absent and belongs in $TODOUI_SYNC_KEY below the
-# OVERRIDES marker in ~/.env. It is a personal API key, so it cannot enter this
-# repo, and this file is deployed rather than hand-written — a secret here would
-# either be committed or block the symlink.
+# The token comes from the API's own CLI login, so no secret is deployed here or
+# kept in ~/.env. The command runs again whenever the API refuses the token it
+# printed. A lapsed login shows in the status bar as the CLI's own message, and
+# local data keeps working until the login is renewed.
 [sync]
 enabled = true
-api_url = "https://api.ichrisbirch.com"
+api_url = "https://ichrisbirch.com/api"
+token_command = "icb auth token"

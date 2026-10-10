@@ -9,19 +9,14 @@
 # after one as belonging to it.
 repos_registry = "~/.config/repos.json"
 
-# api_key is deliberately absent and belongs in $TODOUI_SYNC_KEY below the
-# OVERRIDES marker in ~/.env. It is a personal API key, so it cannot enter this
-# repo, and this file is deployed rather than hand-written — a secret here would
-# either be committed or block the symlink.
-#
 # Sync is off here and on in the fleet copy. A personal task list syncing from a
 # managed machine sends personal data across a monitored egress to a domain that
-# is nobody's business but mine, authenticated with a personal key — which is the
-# arrangement data-loss monitoring is built to notice, and it is the same standing
-# rule the atuin config follows: nothing written on this box travels back.
+# is nobody's business but mine, authenticated as me — which is the arrangement
+# data-loss monitoring is built to notice, and it is the same standing rule the
+# atuin config follows: nothing written on this box travels back.
 #
-# The URL stays so the file still says where sync would go, and turning it on is
-# then one word rather than a lookup.
+# The URL stays so the file still says where sync would go. There is no
+# token_command, because the CLI that prints the token is not installed here.
 [sync]
 enabled = false
-api_url = "https://api.ichrisbirch.com"
+api_url = "https://ichrisbirch.com/api"
