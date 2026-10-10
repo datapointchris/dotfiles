@@ -73,6 +73,9 @@ General technical notes that name nothing in this repo live on the hub at
   report an `unknown` version so `apply` never upgrades them, and gopls cannot find `go`
 - [A Unix Socket Path Is Shorter Than tmp_path](unix-socket-path-is-shorter-than-tmp-path.md) —
   `tmux.sock (File name too long)` at fixture setup, on macOS only
+- [tmux Before 3.6 Can Lose a Pane's Exit Status](tmux-before-3-6-can-lose-a-panes-exit-status.md)
+  — a `remain-on-exit` pane reads dead with no status forever, its command `<defunct>` under the
+  server, on CI only
 - [A Cache Outlives the File You Restored](a-cache-outlives-the-file-you-restored.md) — a test
   fails on a mutation the file no longer contains, and two identical mypy runs disagree by hundreds
   of errors

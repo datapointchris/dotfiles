@@ -1687,7 +1687,7 @@ def test_a_live_sibling_is_not_read_in_place_of_the_pane_asked_about(tmuxctl, mo
     # `list-panes` answers for a whole window, so the row has to be found by id. A
     # caller's own healthy pane sits in the same answer as the dead one being asked
     # about, and reading the first row would report whichever tmux listed first.
-    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%0\t0\t\t\n%1\t1\t127\t\n')
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%0\t0\t\t\t4242\n%1\t1\t127\t\t4242\n')
 
     assert tmuxctl.pane_state('%1') == (tmuxctl.PaneState.DEAD, 127)
     assert tmuxctl.pane_state('%0') == (tmuxctl.PaneState.RUNNING, None)
@@ -1696,7 +1696,7 @@ def test_a_live_sibling_is_not_read_in_place_of_the_pane_asked_about(tmuxctl, mo
 def test_a_pane_killed_by_a_signal_is_dead_with_no_exit_status(tmuxctl, monkeypatch):
     # A signal leaves no exit status to report, and not having one is not a reason
     # to call a dead pane healthy. tmux prints the signal by number on Linux.
-    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\t1\n')
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\t1\t4242\n')
 
     assert tmuxctl.pane_state('%1') == (tmuxctl.PaneState.DEAD, None)
 
@@ -1705,9 +1705,34 @@ def test_a_pane_tmux_has_not_reaped_is_still_running(tmuxctl, monkeypatch):
     # What tmux before 3.7 prints between closing a pane's terminal and reaping its
     # command. The live test reproduces it only on such a tmux, so this pins the
     # reading on every machine.
-    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\t\n')
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\t\t4242\n')
+    monkeypatch.setattr(tmuxctl.os, 'kill', lambda *_args: None)
 
     assert tmuxctl.pane_state('%1') == (tmuxctl.PaneState.RUNNING, None)
+
+
+def test_a_pane_tmux_has_not_reaped_sends_the_server_the_sigchld_it_may_have_lost(tmuxctl, monkeypatch):
+    # tmux before 3.6 built with utempter can discard the SIGCHLD of a command that
+    # exits while the pane's utmp record is removed, and then reaps it only when
+    # another of its children exits. A caller polling a launch would wait forever.
+    sent = []
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%1\t1\t\t\t4242\n')
+    monkeypatch.setattr(tmuxctl.os, 'kill', lambda pid, sig: sent.append((pid, sig)))
+
+    tmuxctl.pane_state('%1')
+
+    assert sent == [(4242, tmuxctl.signal.SIGCHLD)]
+
+
+def test_a_pane_with_a_status_sends_the_server_nothing(tmuxctl, monkeypatch):
+    sent = []
+    monkeypatch.setattr(tmuxctl, 'tmux_read', lambda *_args: '%0\t0\t\t\t4242\n%1\t1\t3\t\t4242\n')
+    monkeypatch.setattr(tmuxctl.os, 'kill', lambda pid, sig: sent.append((pid, sig)))
+
+    tmuxctl.pane_state('%0')
+    tmuxctl.pane_state('%1')
+
+    assert sent == []
 
 
 @needs_tmux

@@ -51,11 +51,13 @@ a window instead costs nothing.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -870,19 +872,45 @@ def pane_state(pane_id: str) -> tuple[PaneState, int | None]:
     terminal closes and reaps the command afterwards. Read alone, that flag calls
     a command still exiting dead with no status. 3.7 holds `pane_dead` back until
     the reaping, and requiring one of the two here reads every version that way.
+
+    A tmux before 3.6 built with utempter can miss the reaping altogether. Closing
+    the terminal runs utempter's helper, and libutempter sets SIGCHLD to SIG_DFL
+    while it waits. A command exiting in that window has its SIGCHLD discarded,
+    so it stays a zombie until some other child of the server exits. Measured on
+    Ubuntu 24.04's 3.4 under load: 16 of 200 launches of `exit 3` read dead with
+    no status for the whole six seconds a caller waited. 3.6 sends itself a
+    SIGCHLD after removing the record, and `nudge_reaper` sends the same one from
+    here, so the next read has the status.
     """
-    fields = '#{pane_id}\t#{pane_dead}\t#{pane_dead_status}\t#{pane_dead_signal}'
+    fields = '#{pane_id}\t#{pane_dead}\t#{pane_dead_status}\t#{pane_dead_signal}\t#{pid}'
     listed = tmux_read('list-panes', '-t', pane_id, '-F', fields)
     if listed is None:
         return PaneState.GONE, None
     for row in listed.splitlines():
-        found, dead, status, signal = row.split('\t')
+        found, dead, status, killed_by, server = row.split('\t')
         if found != pane_id:
             continue
-        if dead != '1' or not (status or signal):
+        if dead != '1':
+            return PaneState.RUNNING, None
+        if not (status or killed_by):
+            nudge_reaper(server)
             return PaneState.RUNNING, None
         return PaneState.DEAD, int(status) if status.isdigit() else None
     return PaneState.GONE, None
+
+
+def nudge_reaper(server: str) -> None:
+    """Send the tmux server a SIGCHLD, so it reaps whatever has exited.
+
+    Its handler loops `waitpid(WAIT_ANY, WNOHANG)`, so a SIGCHLD with nothing to
+    reap does nothing, and one sent while a command is still exiting is answered
+    by that command's own. Best effort, because a server that has gone away is
+    read as GONE on the next call anyway.
+    """
+    if not server.isdigit():
+        return
+    with contextlib.suppress(OSError):
+        os.kill(int(server), signal.SIGCHLD)
 
 
 def pane_size(pane_id: str) -> tuple[int, int]:
