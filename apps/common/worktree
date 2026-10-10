@@ -797,6 +797,11 @@ def landed(path: Path, base: str) -> bool | None:
     selects its own file selects nothing, the comparison finds no difference, and the
     worktree is deleted holding the only copy of the work.
 
+    `:(top)` on each path because the listing names paths from the top of the
+    repository and git reads a pathspec from the directory it runs in. `land` runs
+    from wherever the session stands, so from a nested module every name would select
+    a path under that module, match nothing, and read as landed.
+
     `:(literal)` on each path so a name is never read as a pattern. Nothing measured
     turns on it: a `*` or a `[` in a filename widens the pathspec rather than missing
     the file, and widening errs toward keeping. It is here because the pathspec is data
@@ -824,7 +829,7 @@ def landed(path: Path, base: str) -> bool | None:
     paths = [name for name in listing.stdout.split('\0') if name]
     if not paths:
         return True
-    comparison = git_effect(path, 'diff', '--quiet', f'origin/{base}', 'HEAD', '--', *(f':(literal){name}' for name in paths))
+    comparison = git_effect(path, 'diff', '--quiet', f'origin/{base}', 'HEAD', '--', *(f':(top,literal){name}' for name in paths))
     if comparison.returncode > 1:
         return None
     return comparison.returncode == 0

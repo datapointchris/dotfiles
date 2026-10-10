@@ -636,6 +636,18 @@ class TestLanding:
         assert 'feat: x' in landed and 'feat: y' in landed
         assert git(fleet['primary'], 'log', '--merges', '--oneline', 'origin/main') == ''
 
+    def test_landing_from_a_subdirectory_lands(self, fleet, run):
+        """A session in a repo's nested module runs `land` from there."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        (alpha / 'sub').mkdir()
+        commit_in(alpha, 'sub/x')
+
+        result = run(alpha / 'sub', 'land')
+
+        assert result.returncode == 0, result.stderr
+        assert 'feat: sub/x' in git(fleet['primary'], 'log', '--oneline', 'origin/main')
+
     def test_landing_cleans_up_after_itself(self, fleet, run):
         run(fleet['primary'], 'new', 'alpha')
         alpha = fleet['roots'] / 'primary' / 'alpha'
@@ -868,6 +880,17 @@ class TestLanded:
         commit_in(alpha, 'only-copy.txt')
 
         assert worktree_app.landed(alpha, 'main') is False
+
+    def test_work_read_from_a_subdirectory_that_never_landed_has_not_landed(self, worktree_app, fleet, run):
+        """git names the changed paths from the top of the repository and reads a
+        pathspec from the directory it runs in. Asked from `sub/`, `sub/only-copy.txt`
+        would select `sub/sub/only-copy.txt`, match nothing, and read as landed."""
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+        run(fleet['primary'], 'new', 'alpha')
+        (alpha / 'sub').mkdir()
+        commit_in(alpha, 'sub/only-copy.txt')
+
+        assert worktree_app.landed(alpha / 'sub', 'main') is False
 
     def test_a_rename_whose_deletion_never_landed_has_not_landed(self, worktree_app, fleet, run):
         """Rename detection reports a rename as the new path alone, so the old path
