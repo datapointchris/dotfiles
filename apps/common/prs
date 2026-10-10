@@ -101,13 +101,15 @@ REVIEW_ICON = ''  # U+F41E octicon checklist, beside DIFF_ICON and MERGE_ICON
 # marks the status column, which renders the one GitHub already reached. Two
 # different things, so two names.
 CLOSE_ICON = ''  # U+F057 times-circle, the mate of CHECKS_ICON's check-circle
+BOT_ICON = ''  # U+EE0D fa-robot, on the row of a PR an app opened
 
 # Picked against each font's cmap rather than by looking at a terminal. U+F544,
 # the Material robot and the obvious glyph for a review, is in no Nerd Font —
 # and a glyph the font lacks draws as tofu, whose width is the terminal's guess
 # rather than one cell, so it takes the whole column out of line for the same
 # reason the paragraph above rules out emoji. Ask a font what it carries with
-# `fontTools.ttLib.TTFont(path).getBestCmap()`, over what `fc-list` reports.
+# `fontTools.ttLib.TTFont(path).getBestCmap()`, over what `fc-list` reports. The
+# Font Awesome robot, U+EE0D, is in every Nerd Font this repo installs.
 
 CHECK_STYLES = {'SUCCESS': 'green', 'FAILURE': 'red', 'ERROR': 'red'}
 REVIEW_STYLES = {'APPROVED': 'green', 'CHANGES_REQUESTED': 'red', 'REVIEW_REQUIRED': 'cyan'}
@@ -198,6 +200,8 @@ class PullRequest:
     checks: str
     provider: str
     body: str
+    author: str
+    bot: bool | None
 
     @classmethod
     def from_json(cls, row: dict) -> PullRequest:
@@ -219,6 +223,8 @@ class PullRequest:
             checks=row.get('checks') or '',
             provider=row.get('provider') or '',
             body=row.get('body') or '',
+            author=row.get('author') or '',
+            bot=row.get('bot'),
         )
 
 
@@ -377,6 +383,15 @@ def number_cell(pr: PullRequest) -> Text:
     return cell
 
 
+def bot_cell(pr: PullRequest) -> Text:
+    """Which app opened it. A PR you opened carries no cell, so the marker is what
+    sets an app's row apart rather than one name among many."""
+    cell = Text()
+    cell.append(f'{BOT_ICON}  ', style='magenta')
+    cell.append(f'bot {pr.author}', style='magenta')
+    return cell
+
+
 @dataclass(frozen=True)
 class Action:
     """One thing you can do to a PR, and which providers can do it.
@@ -428,7 +443,8 @@ def compose(prs: list[PullRequest], *, width: int) -> tuple[Text, list[list[Text
 
     Everything else you scan by is on the first line: title, size, age, branch.
     The second carries where it lives on this disk and its number, which are what
-    you want once you have already chosen the row.
+    you want once you have already chosen the row, and the app that opened it
+    where an app did.
 
     Widths are measured on `cell_len`, which counts what a terminal draws rather
     than how many characters there are. Padding on `len` is what puts an em dash
@@ -459,6 +475,9 @@ def compose(prs: list[PullRequest], *, width: int) -> tuple[Text, list[list[Text
         second.append(where_cell(pr))
         second.append('   ')
         second.append(number_cell(pr))
+        if pr.bot:
+            second.append('   ')
+            second.append(bot_cell(pr))
         items.append([first, second])
 
     titled = lead(status_label)

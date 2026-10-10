@@ -71,6 +71,7 @@ def graphql_node(repo: str, number: int, branch: str, base: str = 'main', **over
         # answers a request for a field. Leaving one out here models a response
         # the API does not send, and reading it back leniently would hide a query
         # that had stopped asking.
+        'author': {'__typename': 'User', 'login': 'datapointchris'},
         'body': f'what {repo} #{number} changes',
         'additions': 12,
         'deletions': 4,
@@ -211,6 +212,32 @@ def test_a_pr_someone_else_opened_on_a_registry_repo_is_listed(run) -> None:
     assert [pr['number'] for pr in json.loads(result.stdout)] == [60]
 
 
+def test_a_pr_an_app_opened_is_marked_as_a_bot(run) -> None:
+    """An app's PR reads like one of yours, title, branch and all, so the row has to
+    say who opened it."""
+    result = run(
+        registry('github', ('dotfiles', '~/dotfiles')),
+        gh=github_stub(
+            graphql_node('dotfiles', 1, 'mine'),
+            owned=(graphql_node('dotfiles', 2, 'dependabot/uv/rich', author={'__typename': 'Bot', 'login': 'dependabot'}),),
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+    authors = {pr['number']: (pr['author'], pr['bot']) for pr in json.loads(result.stdout)}
+    assert authors == {1: ('datapointchris', False), 2: ('dependabot', True)}
+
+
+def test_a_pr_whose_author_was_deleted_leaves_bot_unsaid(run) -> None:
+    """GitHub answers a deleted account with a null author, and that is not a person."""
+    result = run(
+        registry('github', ('dotfiles', '~/dotfiles')),
+        gh=github_stub(graphql_node('dotfiles', 1, 'a-branch', author=None)),
+    )
+    assert result.returncode == 0, result.stderr
+    (pr,) = json.loads(result.stdout)
+    assert (pr['author'], pr['bot']) == ('', None)
+
+
 def test_a_pr_both_searches_return_is_listed_once(run) -> None:
     node = graphql_node('dotfiles', 1, 'mine')
     result = run(registry('github', ('dotfiles', '~/dotfiles')), gh=github_stub(node, owned=(node,)))
@@ -264,6 +291,20 @@ def test_a_bitbucket_pr_reports_its_branch_under_the_same_key(run, tmp_path: Pat
     (pr,) = json.loads(result.stdout)
     assert pr['branch'] == 'feature/PROJ-1'
     assert pr['base'] == 'develop'
+
+
+def test_a_bitbucket_pr_names_its_author_and_leaves_bot_unsaid(run, tmp_path: Path) -> None:
+    """bbkt's listing drops Bitbucket's account type, so `false` would be a guess."""
+    checkout = tmp_path / 'service'
+    checkout.mkdir()
+    payload = json.dumps([{'id': 42, 'title': 'a change in service', 'author': {'user': {'name': 'jdoe', 'displayName': 'J Doe'}}}])
+    result = run(
+        registry('bitbucket', ('service', str(checkout))),
+        bbkt=f"#!/bin/sh\ncat <<'JSON'\n{payload}\nJSON\n",
+    )
+    assert result.returncode == 0, result.stderr
+    (pr,) = json.loads(result.stdout)
+    assert (pr['author'], pr['bot']) == ('jdoe', None)
 
 
 def test_an_unauthenticated_gh_skips_github_rather_than_failing_the_run(run) -> None:

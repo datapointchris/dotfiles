@@ -85,6 +85,7 @@ fragment PullRequests on SearchResultItemConnection {
     ... on PullRequest {
       number
       title
+      author { __typename login }
       body
       url
       headRefName
@@ -242,6 +243,9 @@ def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
             continue
         listed.add(node['url'])
         rollup = node['commits']['nodes']
+        # Null for a deleted account, which says nothing about whether a bot
+        # opened it.
+        author = node['author']
         prs.append(
             {
                 # Who hosts it. Every action but the local diff has
@@ -252,6 +256,9 @@ def from_github(repos: list[Repo]) -> list[dict[str, Any]]:
                 'slug': node['repository']['nameWithOwner'],
                 'number': node['number'],
                 'title': node['title'],
+                'author': author['login'] if author else '',
+                # GitHub types the account behind a GitHub App's PR as `Bot`.
+                'bot': author['__typename'] == 'Bot' if author else None,
                 'body': node['body'] or '',
                 'url': node['url'],
                 'branch': node['headRefName'],
@@ -311,6 +318,10 @@ def bitbucket_rows(repo: str, payload: Any) -> list[dict[str, Any]]:
             'slug': repo,
             'number': row.get('id') or row.get('number'),
             'title': row['title'],
+            'author': dig(row, 'author.user.name') or dig(row, 'author.nickname') or '',
+            # None, never False. Bitbucket types a service account, and bbkt's
+            # listing drops the type, so nothing here can tell.
+            'bot': None,
             'body': row.get('description') or '',
             'url': (row.get('links', {}).get('self') or [{}])[0].get('href') or row.get('url') or '',
             'branch': dig(row, 'fromRef.displayId') or dig(row, 'source.branch.name') or '',
@@ -382,6 +393,8 @@ EXAMPLE = {
     'slug': 'datapointchris/safekeep',
     'number': 3,
     'title': 'Hard-link unchanged files between snapshots',
+    'author': 'datapointchris',
+    'bot': False,
     'body': 'Cuts a full snapshot from 94G to 3G on the second run.',
     'url': 'https://github.com/datapointchris/safekeep/pull/3',
     'branch': 'hardlink-snapshots',
@@ -433,6 +446,9 @@ NOTES = (
     '',
     "`review` is the provider's decision. `reviews` is how many were submitted, which",
     'is a different fact — a review setting no decision leaves the first empty.',
+    '',
+    '`author` is the login that opened the PR. `bot` is true where the provider',
+    'says an app opened it, and null where its listing does not say.',
 )
 
 

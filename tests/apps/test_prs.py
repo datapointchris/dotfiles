@@ -85,6 +85,8 @@ def pr(repo: str, number: int, branch: str, **overrides: Any) -> dict[str, Any]:
         'checks': '',
         'provider': 'github',
         'body': f'what {repo} #{number} changes',
+        'author': 'datapointchris',
+        'bot': False,
     }
     return row | overrides
 
@@ -440,6 +442,20 @@ def test_a_provider_decision_outranks_the_reviews_posted_beside_it(listing) -> N
     only = listed(listing(pr('doit', 1, 'a-branch', review='CHANGES_REQUESTED', reviews=3)))[0]
 
     assert 'review changes' in only
+
+
+def test_only_a_pr_an_app_opened_names_who_opened_it(listing) -> None:
+    """An app's PR reads like one of yours, title, branch and all. A marker on every
+    row would hide it again, and a provider that cannot say is not saying `bot`."""
+    rows = listed(
+        listing(
+            pr('dotfiles', 1, 'yours'),
+            pr('etl', 2, 'unknown', author='jdoe', bot=None),
+            pr('service', 3, 'dependabot/uv/rich', author='dependabot', bot=True),
+        )
+    )
+
+    assert [('bot dependabot' in row, 'jdoe' in row) for row in rows] == [(False, False), (False, False), (True, False)]
 
 
 def test_a_draft_is_marked_the_way_fleet_marks_it(listing) -> None:
