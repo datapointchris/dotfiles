@@ -82,8 +82,22 @@ def check(probe: Path, config: str = '', tmp_path: Path | None = None) -> str:
     it resolves the relative entries in `mypy_path`. The root conftest pins
     `DOTFILES_DIR` to the checkout the suite lives in, so that is this branch
     rather than whichever tree the shell is pointed at.
+
+    `--no-incremental` stops mypy reading its cache but not writing it, and the
+    cache is SQLite. Every xdist worker writing the one `.mypy_cache` crashes a
+    run now and then on `database is locked`. A cache dir under `os.devnull` is
+    mypy's own spelling for writing none, so no run opens a database at all.
     """
-    command = [sys.executable, '-m', 'mypy', str(probe), '--no-pretty', '--no-incremental']
+    command = [
+        sys.executable,
+        '-m',
+        'mypy',
+        str(probe),
+        '--no-pretty',
+        '--no-incremental',
+        '--cache-dir',
+        os.devnull,
+    ]
     if config:
         assert tmp_path is not None, 'a named config needs somewhere to live'
         named = tmp_path / 'mypy.toml'
