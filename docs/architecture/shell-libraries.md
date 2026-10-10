@@ -99,7 +99,8 @@ Two rules follow from the buffer: close a screen with `help_end`, and use `help_
 bare `echo` for prose between rows, so pending rows flush ahead of it.
 
 The `pytermstyle` package mirrors all six functions for the Python apps, and `gotermstyle` does the
-same for the Go CLIs; all three render byte-identical screens. `pytermstyle` was extracted from this
+same for the Go CLIs. All three draw the same screen, though the bytes differ: the Go library
+opens a row's color after its indent rather than before. `pytermstyle` was extracted from this
 repo in August 2026 — it lived here as `appcore/formatting.py` for as long as every consumer was a
 script in `apps/`, and left when one stopped being: `safekeep` moved to its own repo and could
 not take the help grammar with it through a `sys.path` hack. A consumer declares `pytermstyle` in
