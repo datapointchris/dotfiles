@@ -12,7 +12,7 @@ Nothing here asserts on a printed sentence. `score.render` returns lines and the
 from __future__ import annotations
 
 import ast
-import dataclasses
+import dataclasses as dc
 import datetime as dt
 import json
 import re
@@ -441,7 +441,7 @@ def test_the_report_verb_answers_about_the_directory_it_is_pointed_at(tmp_path: 
     assert score.main(['--runs-dir', str(tmp_path)]) == 1
     score.record(toy_run([result(score.KILLED)]), tmp_path, 'box')
     score.record(
-        dataclasses.replace(toy_run([result(score.SURVIVED)]), started_at='20260102T000000Z'),
+        dc.replace(toy_run([result(score.SURVIVED)]), started_at='20260102T000000Z'),
         tmp_path,
         'box',
     )

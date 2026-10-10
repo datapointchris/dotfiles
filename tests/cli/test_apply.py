@@ -10,7 +10,7 @@ hand-written one existed.
 
 from __future__ import annotations
 
-import dataclasses
+import dataclasses as dc
 import datetime as dt
 import json
 from collections import Counter
@@ -585,7 +585,7 @@ def test_a_machine_declaring_coordinates_still_has_a_label() -> None:
     `platform:` key to read a label from. Derived, it lands on the pacman answer —
     which is what a fused PLATFORM string had no row for.
     """
-    arch_on_wsl = dataclasses.replace(coordinates.PLATFORM_BUNDLES['archlinux'], host=coordinates.Host.WSL)
+    arch_on_wsl = dc.replace(coordinates.PLATFORM_BUNDLES['archlinux'], host=coordinates.Host.WSL)
 
     assert coordinates.platform_label(arch_on_wsl) == 'archlinux'
     assert machines.load(MACHINE).platform_label == coordinates.platform_label(LINUX)

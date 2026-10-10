@@ -28,7 +28,7 @@ between machines — so the fleet manages what accumulates there, not this modul
 
 from __future__ import annotations
 
-import dataclasses
+import dataclasses as dc
 import datetime as dt
 import enum
 import json
@@ -147,7 +147,7 @@ def _stamp(moment: dt.datetime) -> str:
     return moment.isoformat().replace('+00:00', 'Z')
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Identity:
     """Who a run is, settled before it starts.
 
@@ -216,13 +216,13 @@ def begin(machine: str, verb: str, started: dt.datetime | None = None, host: str
     )
 
 
-@dataclasses.dataclass
+@dc.dataclass
 class Timing:
     """How long an item took, and where the time went."""
 
     started_at: str
     duration_seconds: float
-    steps: dict[str, float] = dataclasses.field(default_factory=dict)
+    steps: dict[str, float] = dc.field(default_factory=dict)
 
     @classmethod
     def from_record(cls, payload: dict) -> Timing:
@@ -240,7 +240,7 @@ class Timing:
         return cls(**carried)
 
 
-@dataclasses.dataclass
+@dc.dataclass
 class RunOutcome:
     """One item, what was decided about it, and what that cost."""
 
@@ -254,7 +254,7 @@ class RunOutcome:
     the one thing a record uploaded off it cannot do."""
 
 
-@dataclasses.dataclass
+@dc.dataclass
 class Issue:
     """Something wrong, as distinct from drift.
 
@@ -269,7 +269,7 @@ class Issue:
     message: str
 
 
-@dataclasses.dataclass
+@dc.dataclass
 class RunRecord:
     """One invocation, start to finish."""
 
@@ -285,8 +285,8 @@ class RunRecord:
     """Empty on a record written before schema 3, which is why every reader takes
     `host or machine` rather than `host` — a bare `host` would pool the entire
     pre-3 history of every box into one nameless bucket."""
-    outcomes: list[RunOutcome] = dataclasses.field(default_factory=list)
-    issues: list[Issue] = dataclasses.field(default_factory=list)
+    outcomes: list[RunOutcome] = dc.field(default_factory=list)
+    issues: list[Issue] = dc.field(default_factory=list)
 
     @property
     def box(self) -> str:
@@ -415,7 +415,7 @@ def write(record: RunRecord, runs_dir: Path | None = None) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
 
     destination = directory / f'{record_filename(record)}.json'
-    destination.write_text(json.dumps(dataclasses.asdict(record), indent=2) + '\n')
+    destination.write_text(json.dumps(dc.asdict(record), indent=2) + '\n')
 
     latest = directory.parent / paths.LATEST_RUN.name
     if latest.is_symlink() or latest.exists():

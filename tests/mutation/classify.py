@@ -17,7 +17,7 @@ than trusted.
 from __future__ import annotations
 
 import ast
-import dataclasses
+import dataclasses as dc
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -113,7 +113,7 @@ RENDER_KEYWORDS = frozenset({'help', 'short_help', 'epilog', 'title', 'prompt', 
 """Keyword arguments whose value is shown to a person wherever they appear."""
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Verdict:
     bucket: str
     rule: str

@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import argparse
 import collections
-import dataclasses
+import dataclasses as dc
 import json
 import os
 import tempfile
@@ -88,7 +88,7 @@ red after that is a red suite, which is the harness's existing refusal rather th
 """
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Footprint:
     """What one test executes, and what it executes alone."""
 
@@ -116,7 +116,7 @@ def footprints(contexts: subset.Contexts) -> dict[str, Footprint]:
     }
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Survey:
     """The cheap condition, answered for the whole suite before anything is planted."""
 
@@ -173,7 +173,7 @@ def screen(setup: harness.Setup, room: Sequence[str], scratch: Path, scope: Sequ
     Run before anything is planted, for the same reason the harness runs a control: a failure that is already there is a failure
     every mutant inherits, and one test failing everywhere is one test subsuming everybody.
     """
-    workers = harness.Workers(dataclasses.replace(setup, jobs=1), scratch)
+    workers = harness.Workers(dc.replace(setup, jobs=1), scratch)
     shadow, basetemp = workers.take()
     # The same text every mutant runs against. `ast.unparse` drops comments and
     # requotes every string, so a test sensitive to either passed the screen and
@@ -201,7 +201,7 @@ def screen(setup: harness.Setup, room: Sequence[str], scratch: Path, scope: Sequ
     raise RuntimeError(f'the room is still red after dropping {len(dropped)} tests, so the suite is red rather than the harness')
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Mutant:
     """One planted bug and who noticed it."""
 
@@ -245,7 +245,7 @@ def unmeasured_by(run: score.Run) -> frozenset[str]:
     return frozenset(name for result in run.results for name in result.unmeasured)
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Proof:
     """One candidate, everything it killed, and what covers it."""
 
@@ -263,7 +263,7 @@ class Proof:
     """
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Verification:
     """The proof carried out rather than computed: the same scope, planted again, with the deletions actually taken out.
 
@@ -282,7 +282,7 @@ class Verification:
         return not self.lost
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Verdicts:
     """What a run concluded, split by what it is entitled to say."""
 
@@ -392,7 +392,7 @@ def prove(
     # pool member back to cover a mutant something else already covers.
     room = set(run_set) | set(proving) | {name for mutant in planted for name in mutant.killers}
     joint = together(planted, [proof.test for proof in redundant], room)
-    redundant = [dataclasses.replace(proof, together=proof.test in joint) for proof in redundant]
+    redundant = [dc.replace(proof, together=proof.test in joint) for proof in redundant]
 
     return Verdicts(
         scope=tuple(scope),
@@ -465,13 +465,13 @@ def as_payload(found: Survey, verdicts: Verdicts) -> dict:
         'run_set': list(verdicts.run_set),
         'planted': verdicts.planted,
         'attributable': verdicts.attributable,
-        'redundant': [dataclasses.asdict(proof) for proof in verdicts.redundant],
-        'load_bearing': [dataclasses.asdict(proof) for proof in verdicts.load_bearing],
+        'redundant': [dc.asdict(proof) for proof in verdicts.redundant],
+        'load_bearing': [dc.asdict(proof) for proof in verdicts.load_bearing],
         'unprovable': [list(row) for row in verdicts.unprovable],
         'dropped': list(verdicts.dropped),
         'blocked': list(verdicts.blocked),
         'deletable': list(verdicts.deletable),
-        'verified': dataclasses.asdict(verdicts.verified) if verdicts.verified is not None else None,
+        'verified': dc.asdict(verdicts.verified) if verdicts.verified is not None else None,
     }
 
 
@@ -503,7 +503,7 @@ def measure(
     run = harness.measure(setup, list(scope), forced_contexts(scope, run_set, setup.repo), announce=announce)
     verdicts = prove(run, proving, footprint, scope, run_set, dropped)
     if verified and verdicts.deletable:
-        verdicts = dataclasses.replace(verdicts, verified=verify(setup, scope, run_set, verdicts.deletable, run, announce))
+        verdicts = dc.replace(verdicts, verified=verify(setup, scope, run_set, verdicts.deletable, run, announce))
     return found, verdicts
 
 

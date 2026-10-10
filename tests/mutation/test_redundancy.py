@@ -13,7 +13,7 @@ pytest that exits 1 in silence, because that is the failure the whole proof rest
 from __future__ import annotations
 
 import ast
-import dataclasses
+import dataclasses as dc
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -111,7 +111,7 @@ def test_pytest_records_the_ids_it_was_handed_however_they_are_shaped(tmp_path: 
         'tests/test_shapes.py::test_parametrized[a - b]',
         'tests/test_shapes.py::TestGrouped::test_inside',
     ]
-    setup = dataclasses.replace(toy_tree(tmp_path / 'tree'), repo=tmp_path, pytest_prefix=(sys.executable, '-m', 'pytest'))
+    setup = dc.replace(toy_tree(tmp_path / 'tree'), repo=tmp_path, pytest_prefix=(sys.executable, '-m', 'pytest'))
 
     _, _, _, reported = harness.run_pytest(
         setup, tmp_path, handed, stop_early=False, timeout=120.0, basetemp=tmp_path / 'bt', attributed=True
@@ -519,9 +519,7 @@ def stub_recording(tmp_path: Path, recorded: Sequence[str], code: int) -> Path:
 @pytest.mark.replants
 def test_a_kill_the_summary_cannot_attribute_is_a_harness_error_rather_than_a_kill(tmp_path: Path) -> None:
     """Exit 1 with nothing named would otherwise be a mutant with no killers, which blocks no proof and licenses a false one."""
-    setup = dataclasses.replace(
-        toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub_pytest(tmp_path, 'import sys\nsys.exit(1)\n')))
-    )
+    setup = dc.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub_pytest(tmp_path, 'import sys\nsys.exit(1)\n'))))
     result = executed(setup, ('tests/test_thing.py::test_over_high',), tmp_path / 'scratch')
     assert result.status == score.HARNESS_ERROR
     assert harness.UNATTRIBUTED in result.detail
@@ -540,7 +538,7 @@ def executed(setup: harness.Setup, tests: tuple[str, ...], scratch: Path) -> sco
 def test_a_mutant_that_stops_a_module_being_collected_is_a_kill_by_the_tests_in_it(tmp_path: Path) -> None:
     """Exit 4 because the named node ids stopped resolving is the suite noticing in the loudest way it has."""
     stub = stub_recording(tmp_path, ['tests/test_thing.py'], code=4)
-    setup = dataclasses.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub)))
+    setup = dc.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub)))
     result = executed(setup, ('tests/test_thing.py::test_over_high', 'tests/other.py::test_z'), tmp_path / 'scratch')
     assert result.status == score.KILLED
     assert result.killers == ('tests/test_thing.py::test_over_high',)
@@ -551,7 +549,7 @@ def test_a_mutant_that_stops_a_module_being_collected_is_a_kill_by_the_tests_in_
 def test_exit_four_that_names_nothing_stays_a_harness_error(tmp_path: Path) -> None:
     """The guard the harness was built around: a flag that is not installed made the first prototype report a perfect score."""
     body = 'import sys\nprint("ERROR: unrecognized arguments: --timeout")\nsys.exit(4)\n'
-    setup = dataclasses.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub_pytest(tmp_path, body))))
+    setup = dc.replace(toy_tree(tmp_path / 'tree'), pytest_prefix=(sys.executable, str(stub_pytest(tmp_path, body))))
     result = executed(setup, ('tests/test_thing.py::test_over_high',), tmp_path / 'scratch')
     assert result.status == score.HARNESS_ERROR
     assert result.killers == ()
@@ -561,7 +559,7 @@ def test_exit_four_that_names_nothing_stays_a_harness_error(tmp_path: Path) -> N
 def test_the_collection_flag_is_asked_for_only_when_the_killers_are_wanted(tmp_path: Path) -> None:
     """It decides what an uncollectable mutant scores — exit 4 is a harness fault and exit 1 is a kill — so a run that is not
     recording killers keeps the stricter reading."""
-    setup = dataclasses.replace(
+    setup = dc.replace(
         toy_tree(tmp_path / 'tree'),
         pytest_prefix=(
             sys.executable,

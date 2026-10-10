@@ -12,7 +12,7 @@ gives: state is replicated between machines, and several boxes writing `<timesta
 from __future__ import annotations
 
 import argparse
-import dataclasses
+import dataclasses as dc
 import datetime as dt
 import json
 from collections.abc import Iterable
@@ -31,7 +31,7 @@ HARNESS_ERROR = 'harness-error'
 SCHEMA = 1
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class SiteResult:
     """One planted bug and what became of it."""
 
@@ -66,7 +66,7 @@ class SiteResult:
         return f'{self.file}:{self.line}:{self.col}'
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Tally:
     """The four numbers a run is read for, plus the two that say whether to believe them."""
 
@@ -93,7 +93,7 @@ class Tally:
         return (self.killed + self.timed_out) / self.scored if self.scored else 1.0
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Run:
     """One invocation of the harness over one or more targets."""
 
@@ -135,7 +135,7 @@ def tally(results: Iterable[SiteResult]) -> Tally:
 
 
 def as_payload(run: Run) -> dict:
-    return {**dataclasses.asdict(run), 'targets': list(run.targets), 'results': [dataclasses.asdict(result) for result in run.results]}
+    return {**dc.asdict(run), 'targets': list(run.targets), 'results': [dc.asdict(result) for result in run.results]}
 
 
 def from_payload(payload: dict) -> Run:
@@ -186,7 +186,7 @@ def read(path: Path) -> Run:
     return from_payload(json.loads(path.read_text()))
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Comparison:
     """What moved between two runs, over the targets they both measured."""
 

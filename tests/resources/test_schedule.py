@@ -13,7 +13,7 @@ path.
 
 from __future__ import annotations
 
-import dataclasses
+import dataclasses as dc
 import datetime as dt
 import json
 import plistlib
@@ -40,7 +40,7 @@ from dotfiles.vocabulary import ExitCode
 
 WHEN = dt.datetime(2026, 8, 8, 12, 0, tzinfo=dt.UTC)
 
-BOX = dataclasses.replace(machines.load('archlinux-personal-workstation'), check_schedule=None)
+BOX = dc.replace(machines.load('archlinux-personal-workstation'), check_schedule=None)
 """A manifest that leaves the schedule to the deployed config."""
 
 
@@ -321,7 +321,7 @@ def test_turning_it_off_removes_a_timer_that_is_already_installed(linux: Path, f
 def test_a_manifest_that_declines_removes_a_timer_its_trust_domain_turned_on(
     linux: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    declines = dataclasses.replace(BOX, check_schedule=False)
+    declines = dc.replace(BOX, check_schedule=False)
     executable(fake_bin, 'systemctl')
     schedule.apply(BOX)
 
@@ -341,7 +341,7 @@ def test_a_manifest_that_wants_the_timer_overrides_a_config_that_declines(linux:
     want_schedule(enabled=False)
     executable(fake_bin, 'systemctl')
 
-    assert schedule.observe(dataclasses.replace(BOX, check_schedule=True)).verdict is Verdict.MISSING
+    assert schedule.observe(dc.replace(BOX, check_schedule=True)).verdict is Verdict.MISSING
     assert schedule.observe(BOX).verdict is Verdict.MATCHED
 
 

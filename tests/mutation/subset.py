@@ -19,7 +19,7 @@ indistinguishable from a correct one until it produces a wrong kill.
 
 from __future__ import annotations
 
-import dataclasses
+import dataclasses as dc
 import hashlib
 import json
 import os
@@ -37,7 +37,7 @@ IMPORT_TIME = ''
 PHASES = ('|run', '|setup', '|teardown')
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Contexts:
     """Line-to-tests for every measured file, interned so the whole suite's map is a few megabytes rather than a few hundred.
 

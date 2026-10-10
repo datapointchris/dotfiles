@@ -12,7 +12,7 @@ a reason.
 from __future__ import annotations
 
 import ast
-import dataclasses
+import dataclasses as dc
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -55,7 +55,7 @@ exist.
 UNPARSEABLE = 'unparseable'
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Site:
     """One place a bug can be planted, named by where it is rather than by what is around it."""
 
@@ -67,7 +67,7 @@ class Site:
     skipped: str = ''
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Held:
     """A node together with where it hangs off its parent, which is what `not` removal needs to replace it."""
 

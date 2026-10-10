@@ -12,7 +12,6 @@ because a verb that makes you go and ask for one is a verb nobody knows about:
 
 from __future__ import annotations
 
-import dataclasses
 import dataclasses as dc
 import json
 import statistics
@@ -359,7 +358,7 @@ def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
           | "\\(.seconds)\\t\\(.argv | join(" "))"' | sort -rn | head
     """
     if as_json:
-        emit_json(dataclasses.asdict(record))
+        emit_json(dc.asdict(record))
     else:
         _render(path, record)
 

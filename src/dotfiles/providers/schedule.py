@@ -26,7 +26,7 @@ interactive check spends no API calls.
 
 from __future__ import annotations
 
-import dataclasses
+import dataclasses as dc
 import os
 import shutil
 from pathlib import Path
@@ -60,7 +60,7 @@ MANIFEST_KEY = 'check_schedule'
 """The manifest key that answers for one machine ahead of its trust domain's config."""
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dc.dataclass(frozen=True, slots=True)
 class Answer:
     """Whether this machine wants the timer, the setting that said so, and the file
     that setting is in."""

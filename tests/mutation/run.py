@@ -20,7 +20,7 @@ from __future__ import annotations
 import argparse
 import ast
 import concurrent.futures
-import dataclasses
+import dataclasses as dc
 import datetime as dt
 import os
 import queue
@@ -140,7 +140,7 @@ def repo_root() -> Path:
     raise RuntimeError(f'{found} does not look like the dotfiles checkout')
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Setup:
     """Everything the harness needs that is not a target, so its own tests can drive it against a toy tree.
 
@@ -163,7 +163,7 @@ class Setup:
     """
 
 
-@dataclasses.dataclass(frozen=True)
+@dc.dataclass(frozen=True)
 class Planned:
     """One site, its bucket and the tests that execute its line."""
 
