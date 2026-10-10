@@ -1,4 +1,4 @@
-# forge-toolchain: 38
+# forge-toolchain: 39
 name: CI
 
 on:
@@ -13,7 +13,7 @@ permissions:
 jobs:
 
   shell:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
 
       - uses: actions/checkout@v7
@@ -187,7 +187,7 @@ jobs:
           bats tests/
 
   lua:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
 
       - uses: actions/checkout@v7
@@ -209,7 +209,7 @@ jobs:
           "$stylua_bin" --check .
 
   python:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
 
       - uses: actions/checkout@v7
@@ -272,7 +272,7 @@ jobs:
           exit 1
 
   hooks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
 
       - uses: actions/checkout@v7
@@ -365,7 +365,7 @@ jobs:
   # Its own job rather than a step inside `python`: it needs apt packages that
   # job has no reason to carry, and a separate job runs it in parallel.
   shell-suite:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
 
       - uses: actions/checkout@v7
