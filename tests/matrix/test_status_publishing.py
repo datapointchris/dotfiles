@@ -406,20 +406,28 @@ class TestPublishing:
         assert sent['version'] == shown['version']
         assert [row['address'] for row in sent['resources']] == [row['address'] for row in shown['resources']]
 
-    def test_a_fleet_machine_names_itself_in_the_filename(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
+    def test_a_fleet_machine_names_itself_in_the_filename(
+        self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Two machines share `macos-personal-workstation`, so the manifest alone
         would have one overwrite the other. On the fleet the hostname is not a
-        secret and it is what a reader of the shelf wants."""
+        secret and it is what a reader of the shelf wants.
+
+        The hostname is pinned to one without a hyphen. A hyphenated one falls back
+        to the digest, so the real one would decide the outcome on whichever box ran this."""
+        monkeypatch.setattr(paths, 'machine_id', lambda: 'workstation')
         cli('status', 'upload')
         published = next(iter(shelf(server).iterdir())).name
 
-        assert status_commands.wrote(published) == paths.machine_id()
+        assert status_commands.wrote(published) == 'workstation'
 
-    def test_off_the_fleet_the_discriminator_names_nothing(self) -> None:
+    def test_off_the_fleet_the_discriminator_names_nothing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The hostname is an employer asset tag on the machine this exists for, so
         anything that is not FLEET gets a digest — the direction a privacy boundary
-        has to fail in."""
-        named = paths.machine_id()
+        has to fail in. Pinned to a hostname without a hyphen, the only kind the
+        FLEET answer names rather than digests."""
+        named = 'workstation'
+        monkeypatch.setattr(paths, 'machine_id', lambda: named)
 
         assert status_commands.discriminator(axes.NetworkTrust.FLEET) == named
         assert status_commands.discriminator(axes.NetworkTrust.NONFLEET) != named
