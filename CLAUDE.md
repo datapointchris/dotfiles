@@ -63,8 +63,9 @@ An app that is part of the CLI's own surface becomes a module in `src/dotfiles/`
 
 **Choosing an install method.** `install/packages.yml` is the source of truth, and its header maps
 each section to a method. OS utilities, GUI apps and compiled libraries go to `system_packages`. Rust
-CLIs go to `cargo_packages` via `cargo binstall`, which builds from source where no prebuilt binary
-exists. A crate moves to the system manager only when the offline bundle has to carry it and no
+CLIs go to `cargo_packages` via `cargo binstall`, pointed at the release asset `binary_pattern` names.
+Where the target has no such asset, or binstall cannot find the binary inside it, binstall takes
+cargo-quickinstall's build or compiles from source. A crate moves to the system manager only when the offline bundle has to carry it and no
 source has a binary to cache. Tools needing the latest upstream go to `github_releases`. Language
 runtimes go through `providers/toolchain.py` — uv, rustup, the go.dev tarball, and fnm for Node —
 never a system language package; none is subscribed to, so a machine gets Go because it declared

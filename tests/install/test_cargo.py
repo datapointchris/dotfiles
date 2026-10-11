@@ -46,6 +46,11 @@ BINSTALL = ('cargo', 'binstall', '-y', 'fd-find')
 source and the one asserting when `--force` joins it cannot drift apart."""
 
 
+def unreadable(repo: str) -> str:
+    """`github_release.latest_version` on a machine whose network cannot read the API."""
+    raise github_release.Unreadable(f'could not read the releases of {repo}')
+
+
 @pytest.fixture
 def home(tmp_path, monkeypatch) -> Path:
     root = tmp_path / 'home'
@@ -111,7 +116,7 @@ def test_an_online_run_takes_binstall_even_when_a_bundle_is_present(home, staged
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     reached = crates()
 
-    result = cargo.install(FD, LINUX, offline=False, floor='')
+    result = cargo.install(FD, LINUX, offline=False, floor='', reinstall=False)
 
     assert result.ok
     assert reached.calls == [BINSTALL]
@@ -127,7 +132,7 @@ def test_a_binary_the_bundle_left_behind_is_installed_over_with_force(home, stag
     left.write_bytes(BINARY)
     reached = crates()
 
-    cargo.install(FD, LINUX, offline=False, floor='')
+    cargo.install(FD, LINUX, offline=False, floor='', reinstall=False)
 
     assert reached.calls == [('cargo', 'binstall', '-y', '--force', 'fd-find')]
 
@@ -141,15 +146,99 @@ def test_a_binary_cargo_owns_is_installed_over_without_force(home, staged, ready
     (home / '.cargo' / '.crates.toml').write_text('[v1]\n"fd-find 10.4.2 (registry+https://x)" = ["fd"]\n')
     reached = crates()
 
-    cargo.install(FD, LINUX, offline=False, floor='')
+    cargo.install(FD, LINUX, offline=False, floor='', reinstall=False)
 
     assert reached.calls == [BINSTALL]
+
+
+def test_a_reinstall_forces_past_a_binary_cargo_owns(home, staged, ready, crates) -> None:
+    """Without `--force`, binstall answers `already installed` and exits 0, so
+    `--reinstall` would report a tool reinstalled that it never touched."""
+    (home / '.cargo' / 'bin' / 'fd').write_bytes(BINARY)
+    (home / '.cargo' / '.crates.toml').write_text('[v1]\n"fd-find 10.4.2 (registry+https://x)" = ["fd"]\n')
+    reached = crates()
+
+    cargo.install(FD, LINUX, offline=False, floor='', reinstall=True)
+
+    assert reached.calls == [('cargo', 'binstall', '-y', '--force', 'fd-find')]
 
 
 def test_a_first_install_has_nothing_to_force_over(home, staged, ready, crates) -> None:
     reached = crates()
 
-    cargo.install(FD, LINUX, offline=False, floor='')
+    cargo.install(FD, LINUX, offline=False, floor='', reinstall=False)
+
+    assert reached.calls == [BINSTALL]
+
+
+STYLUA = catalog.CargoPackage.from_mapping(
+    {
+        'name': 'stylua',
+        'github_repo': 'JohnnyMorganz/StyLua',
+        'binary_pattern': 'stylua-{target}-{arch}.zip',
+        'linux_target': 'linux',
+        'darwin_target': 'macos',
+    }
+)
+
+RIPGREP = catalog.CargoPackage.from_mapping(
+    {
+        'name': 'ripgrep',
+        'command': 'rg',
+        'github_repo': 'BurntSushi/ripgrep',
+        'binary_pattern': 'ripgrep-{version}-{target}.tar.gz',
+    }
+)
+
+
+@pytest.mark.parametrize(
+    ('entry', 'tag', 'target', 'url', 'fmt'),
+    [
+        (STYLUA, 'v2.6.0', LINUX, 'https://github.com/JohnnyMorganz/StyLua/releases/download/v{ version }/stylua-linux-x86_64.zip', 'zip'),
+        (STYLUA, 'v2.6.0', MACOS, 'https://github.com/JohnnyMorganz/StyLua/releases/download/v{ version }/stylua-macos-aarch64.zip', 'zip'),
+        (
+            RIPGREP,
+            '15.2.0',
+            LINUX,
+            'https://github.com/BurntSushi/ripgrep/releases/download/{ version }/ripgrep-{ version }-x86_64-unknown-linux-gnu.tar.gz',
+            'tgz',
+        ),
+    ],
+    ids=['v-tag-linux', 'v-tag-macos', 'bare-tag'],
+)
+def test_a_declared_pattern_points_binstall_at_the_asset_a_bundle_stages(
+    home, staged, ready, crates, monkeypatch, entry, tag, target, url, fmt
+) -> None:
+    """binstall's own guesses miss an asset not named after the crate, and StyLua's
+    then compiles without the LuaJIT syntax. The version is left as binstall's
+    `{ version }`, so the binary and the version cargo records cannot differ; only
+    the tag's `v` comes from the newest release."""
+    monkeypatch.setattr(github_release, 'latest_version', lambda repo: tag)
+    reached = crates()
+
+    cargo.install(entry, target, offline=False, floor='', reinstall=False)
+
+    assert reached.calls == [('cargo', 'binstall', '-y', '--pkg-url', url, '--pkg-fmt', fmt, entry.name)]
+
+
+def test_an_unreadable_release_api_leaves_binstall_to_its_own_guesses(home, staged, ready, crates, monkeypatch) -> None:
+    """The prefix is all the API is asked for, and binstall still installs without it."""
+    monkeypatch.setattr(github_release, 'latest_version', unreadable)
+    reached = crates()
+
+    cargo.install(STYLUA, LINUX, offline=False, floor='', reinstall=False)
+
+    assert reached.calls == [('cargo', 'binstall', '-y', 'stylua')]
+
+
+def test_an_entry_without_a_pattern_asks_no_release_api(home, staged, ready, crates, monkeypatch) -> None:
+    def asked(repo: str) -> str:
+        raise AssertionError(f'asked for the newest release of {repo}')
+
+    monkeypatch.setattr(github_release, 'latest_version', asked)
+    reached = crates()
+
+    cargo.install(FD, LINUX, offline=False, floor='', reinstall=False)
 
     assert reached.calls == [BINSTALL]
 
@@ -174,7 +263,7 @@ def test_an_unreadable_receipt_is_not_read_as_ownership(home, staged, ready) -> 
 
 def test_binstall_is_streamed_so_a_source_build_is_visible(home, staged, ready, crates) -> None:
     """binstall's last strategy is a source build, and a crate with no prebuilt
-    binary for this target reaches it — `oxker` and `broot` both do on macOS.
+    binary for this target reaches it — `webviewrs` does on Intel macOS.
     That build takes as long as the crate takes. Buffered, it reads as a deadlock
     — the failure `Output.STREAM` exists to prevent.
 
@@ -187,7 +276,7 @@ def test_binstall_is_streamed_so_a_source_build_is_visible(home, staged, ready, 
     """
     reached = crates()
 
-    cargo.install(FD, LINUX, offline=False, floor='')
+    cargo.install(FD, LINUX, offline=False, floor='', reinstall=False)
 
     passed = next(kw for argv, kw in zip(reached.calls, reached.kwargs, strict=True) if argv[:2] == ('cargo', 'binstall'))
     assert 'output' not in passed
@@ -197,7 +286,7 @@ def test_an_offline_run_takes_the_bundle_without_trying_crates_io(home, staged, 
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     reached = crates()
 
-    result = cargo.install(FD, LINUX, offline=True, floor='')
+    result = cargo.install(FD, LINUX, offline=True, floor='', reinstall=False)
 
     assert result.ok
     assert reached.calls == []
@@ -211,7 +300,7 @@ def test_an_unreachable_crates_io_falls_back_to_the_bundle(home, staged, ready, 
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates(reachable=False)
 
-    result = cargo.install(FD, LINUX, offline=False, floor='')
+    result = cargo.install(FD, LINUX, offline=False, floor='', reinstall=False)
 
     assert result.ok
     assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
@@ -223,7 +312,7 @@ def test_a_bundle_no_newer_than_what_is_installed_is_not_written_again(home, sta
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates(reachable=False, said='could not GET the release asset: timeout')
 
-    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2')
+    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2', reinstall=False)
 
     assert not result.ok
     assert result.kind is Kind.BUNDLE_BEHIND
@@ -239,7 +328,7 @@ def test_a_bundle_ahead_of_what_is_installed_still_rescues_a_failed_binstall(hom
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates(reachable=False)
 
-    result = cargo.install(FD, LINUX, offline=False, floor='10.3.0')
+    result = cargo.install(FD, LINUX, offline=False, floor='10.3.0', reinstall=False)
 
     assert result.ok
     assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
@@ -255,13 +344,13 @@ def test_a_bundle_below_what_is_installed_is_still_written(home, staged, ready, 
     stage(staged, 'fd-v10.3.0-x86_64-unknown-linux-gnu.tar.gz', version='v10.3.0')
     crates(reachable=False)
 
-    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2')
+    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2', reinstall=False)
 
     assert result.ok
     assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
 
 
-def test_the_version_ranked_is_the_one_the_bytes_came_with(home, staged, ready, crates, tmp_path) -> None:
+def test_the_version_ranked_is_the_one_the_bytes_came_with(home, staged, ready, crates, tmp_path, monkeypatch) -> None:
     """`bundle.staged` merges rows newest-first and an archive resolved by filename
     is a second, independent newest-first search. Four declared crates name their
     asset with no version in it — `fnm`, `eza`, `oxker` and `abtop` — so for those
@@ -281,8 +370,9 @@ def test_the_version_ranked_is_the_one_the_bytes_came_with(home, staged, ready, 
 
     stage(staged, 'fd_x86_64-unknown-linux-gnu.tar.gz', version='v10.3.0')
     crates(reachable=False)
+    monkeypatch.setattr(github_release, 'latest_version', unreadable)
 
-    result = cargo.install(versionless, LINUX, offline=False, floor='10.3.0')
+    result = cargo.install(versionless, LINUX, offline=False, floor='10.3.0', reinstall=False)
 
     assert not result.ok
     assert result.kind is Kind.BUNDLE_BEHIND
@@ -300,7 +390,7 @@ def test_a_staged_version_that_cannot_be_ranked_does_not_lose_the_comparison(hom
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz', version=unrankable)
     crates(reachable=False)
 
-    assert cargo.install(FD, LINUX, offline=False, floor='10.4.2').ok
+    assert cargo.install(FD, LINUX, offline=False, floor='10.4.2', reinstall=False).ok
     assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
 
 
@@ -314,7 +404,7 @@ def test_a_failure_that_is_not_the_install_command_keeps_its_own_kind(home, stag
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates()
 
-    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2')
+    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2', reinstall=False)
 
     assert not result.ok
     assert result.kind is Kind.PREREQUISITE_MISSING
@@ -329,7 +419,7 @@ def test_the_refusal_carries_its_remedy_as_a_field(home, staged, ready, crates) 
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates(reachable=False)
 
-    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2')
+    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2', reinstall=False)
 
     assert result.advice == bundle.REBUILD
 
@@ -341,7 +431,7 @@ def test_the_refusal_leads_with_itself_and_the_transcript_follows(home, staged, 
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates(reachable=False, said='line one\nline two\nERROR Cargo errored!')
 
-    detail = cargo.install(FD, LINUX, offline=False, floor='10.4.2').detail
+    detail = cargo.install(FD, LINUX, offline=False, floor='10.4.2', reinstall=False).detail
 
     assert detail.index('staged bundle') < detail.index('ERROR Cargo errored!')
 
@@ -353,7 +443,7 @@ def test_an_offline_run_ignores_the_version_floor(home, staged, ready, crates) -
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates()
 
-    assert cargo.install(FD, LINUX, offline=True, floor='10.4.2').ok
+    assert cargo.install(FD, LINUX, offline=True, floor='10.4.2', reinstall=False).ok
     assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
 
 
@@ -376,7 +466,7 @@ def test_a_refusal_handed_in_stays_a_refusal(home, staged) -> None:
 def test_an_unreachable_crates_io_with_no_bundle_reports_what_binstall_said(home, staged, ready, crates) -> None:
     crates(reachable=False, said='error: could not resolve fd-find: dns error')
 
-    result = cargo.install(FD, LINUX, offline=False, floor='')
+    result = cargo.install(FD, LINUX, offline=False, floor='', reinstall=False)
 
     assert not result.ok
     assert result.kind is Kind.COMMAND_FAILED
@@ -386,7 +476,7 @@ def test_an_unreachable_crates_io_with_no_bundle_reports_what_binstall_said(home
 def test_offline_with_nothing_staged_says_where_it_looked(home, staged, ready, crates) -> None:
     crates()
 
-    result = cargo.install(FD, LINUX, offline=True, floor='')
+    result = cargo.install(FD, LINUX, offline=True, floor='', reinstall=False)
 
     assert not result.ok
     assert result.kind is Kind.NOT_IN_BUNDLE
@@ -399,7 +489,7 @@ def test_a_manifest_row_naming_a_file_the_bundle_lacks_is_a_miss(home, staged, r
     (staged / bundle.MANIFEST).write_text('cargo|fd-find|v10.4.2|fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz\n')
     reached = crates()
 
-    assert cargo.install(FD, LINUX, offline=False, floor='').ok
+    assert cargo.install(FD, LINUX, offline=False, floor='', reinstall=False).ok
     assert reached.calls == [BINSTALL]
 
 
@@ -415,7 +505,7 @@ def test_the_binary_is_found_by_the_name_the_declaration_gives_it(home, staged, 
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates(reachable=False)
 
-    assert cargo.install(FD, LINUX, offline=False, floor='').ok
+    assert cargo.install(FD, LINUX, offline=False, floor='', reinstall=False).ok
     assert (home / '.cargo' / 'bin' / 'fd').is_file()
     assert not (home / '.cargo' / 'bin' / 'fd-find').exists()
 
@@ -426,7 +516,7 @@ def test_a_binary_nested_in_the_archive_is_found(home, staged, ready, crates) ->
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz', at='fd-v10.4.2-x86_64-unknown-linux-gnu/fd')
     crates(reachable=False)
 
-    assert cargo.install(FD, LINUX, offline=False, floor='').ok
+    assert cargo.install(FD, LINUX, offline=False, floor='', reinstall=False).ok
     assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
 
 
@@ -436,7 +526,7 @@ def test_an_archive_without_the_binary_says_so_rather_than_falling_through(home,
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz', binary='something-else')
     crates(reachable=False)
 
-    result = cargo.install(FD, LINUX, offline=True, floor='')
+    result = cargo.install(FD, LINUX, offline=True, floor='', reinstall=False)
 
     assert not result.ok
     assert result.kind is Kind.ARCHIVE_INCOMPLETE
@@ -451,7 +541,7 @@ def test_a_bundled_binary_replaces_one_that_is_currently_running(home, staged, r
     running.chmod(0o755)
     crates(reachable=False)
 
-    assert cargo.install(FD, LINUX, offline=False, floor='').ok
+    assert cargo.install(FD, LINUX, offline=False, floor='', reinstall=False).ok
     assert running.read_bytes() == BINARY
     assert not running.with_name('fd.new').exists()
 
@@ -523,7 +613,7 @@ def test_a_precondition_that_would_not_build_is_not_reported_as_a_stale_bundle(h
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates(reachable=False, said='error: could not compile cargo-binstall')
 
-    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2')
+    result = cargo.install(FD, LINUX, offline=False, floor='10.4.2', reinstall=False)
 
     assert not result.ok
     assert result.kind is Kind.PREREQUISITE_MISSING
@@ -551,7 +641,7 @@ def test_a_package_still_reaches_the_bundle_when_the_precondition_fails(home, st
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')
     crates()
 
-    assert cargo.install(FD, LINUX, offline=False, floor='').ok
+    assert cargo.install(FD, LINUX, offline=False, floor='', reinstall=False).ok
     assert (home / '.cargo' / 'bin' / 'fd').read_bytes() == BINARY
 
 

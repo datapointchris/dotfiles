@@ -34,6 +34,7 @@ from pathlib import Path
 
 from dotfiles import catalog
 from dotfiles import effects
+from dotfiles import github_release
 from dotfiles import paths
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -104,7 +105,8 @@ def asset_target(entry: catalog.CargoPackage, target: Target) -> str:
 
 
 def stage(entry: catalog.CargoPackage, version: str, target: Target) -> str:
-    """The release asset an offline bundle stages for this package, by name.
+    """The release asset this package installs from, by name: what an offline bundle
+    stages, and what `release_override` points binstall at online.
 
     Here rather than in the bundler for the reason `gotool.stage` records: naming
     the file is the same question this module answers when installing from one,
@@ -121,13 +123,15 @@ def stage(entry: catalog.CargoPackage, version: str, target: Target) -> str:
     )
 
 
-def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, floor: str) -> Result:
+def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, floor: str, reinstall: bool) -> Result:
     """Converge one Rust CLI, from whichever source this run can reach.
 
     `floor` is what a staged bundle is ranked against before an online run installs
     from it, and it is required rather than defaulted. A default is the loop
     `bundle.behind_refusal` describes, restored by omission at a call site nothing
     would fail on — `registry.version_floor` is the one thing that knows the answer.
+    `reinstall` is required for the same reason: omitted, `--reinstall` reaches
+    binstall as an install of a version it already has, which it skips.
     """
     if offline:
         carried = _carried(entry)
@@ -142,7 +146,7 @@ def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, floor
     if not ready.ok:
         return _from_bundle_unless_behind(entry, ready, floor)
 
-    built = _from_binstall(entry)
+    built = _from_binstall(entry, target, reinstall=reinstall)
     if built.ok:
         return built
     return _from_bundle_unless_behind(entry, built, floor)
@@ -195,15 +199,15 @@ def _from_bundle_unless_behind(entry: catalog.CargoPackage, failure: Result, flo
     return bundle.behind_refusal(row, floor, failure) or _from_bundle(entry, row, archive) or failure
 
 
-def _from_binstall(entry: catalog.CargoPackage) -> Result:
-    """`cargo binstall`, keeping what it said.
+def _from_binstall(entry: catalog.CargoPackage, target: Target, *, reinstall: bool) -> Result:
+    """`cargo binstall`, pointed at the declared release asset, keeping what it said.
 
     Invoked as a cargo subcommand rather than as the `cargo-binstall` binary
     directly, which it also supports: cargo is a hard dependency of this provider
     either way — the Rust toolchain converges at an earlier stage — and the
     subcommand spelling is what every crates.io instruction uses.
 
-    **`--force` where a bundle already wrote this binary, and only there.**
+    **`--force` where a bundle already wrote this binary, or the run asked to reinstall.**
     binstall's last strategy is `compile`, which is `cargo install` building the
     crate, and `cargo install` refuses to overwrite a binary it does not own:
 
@@ -221,20 +225,67 @@ def _from_binstall(entry: catalog.CargoPackage) -> Result:
 
     Narrow on purpose. Passing it unconditionally would defeat binstall's
     already-installed short-circuit and re-download every crate on every apply.
+    `--reinstall` is the other place it belongs, because that short-circuit is
+    exactly what the flag asks past: without `--force`, binstall answers
+    `already installed` and exits 0 having changed nothing.
 
-    **Streamed, because the compile strategy is reachable.** A crate with no
-    prebuilt binary for this target builds from source, for as long as that crate
+    **Streamed, because the compile strategy is reachable.** A crate whose asset
+    binstall cannot find or open builds from source, for as long as that crate
     takes — `docs/learnings/cargo-binstall-falls-back-to-compiling.md` is the
     account of why that is acceptable rather than a defect. Held quiet it cannot
     be told from a deadlock, and streamed the `Compiling` lines say it is moving.
     """
-    forced = ['--force'] if placed_without_a_cargo_receipt(entry) else []
-    completed = effects.run(['cargo', 'binstall', '-y', *forced, entry.name])
+    forced = ['--force'] if reinstall or placed_without_a_cargo_receipt(entry) else []
+    completed = effects.run(['cargo', 'binstall', '-y', *forced, *release_override(entry, target), entry.name])
     if completed.ok:
         return Result(True, f'{entry.executable} installed by cargo binstall from {entry.name}', kind=Kind.APPLIED)
     return Result(
         False, f'cargo binstall {entry.name} exited {completed.returncode}: {completed.transcript.strip()}', kind=Kind.COMMAND_FAILED
     )
+
+
+BINSTALL_VERSION = '{ version }'
+"""binstall's placeholder for the crate version it resolved, filled in by binstall."""
+
+BINSTALL_FORMATS = (('.tar.gz', 'tgz'), ('.tgz', 'tgz'), ('.tar.xz', 'txz'), ('.txz', 'txz'), ('.tar.zst', 'tzstd'), ('.zip', 'zip'))
+"""binstall's `--pkg-fmt` name for each asset suffix a pattern ends in."""
+
+
+def release_override(entry: catalog.CargoPackage, target: Target) -> tuple[str, ...]:
+    """binstall's `--pkg-url` and `--pkg-fmt` for the asset `stage` names, or () where none can be named.
+
+    binstall's own guesses at an asset name miss wherever the asset is not named
+    after the crate: `fnm-linux.zip`, `stylua-linux-x86_64.zip`, `fd-v10.5.0-…`
+    for the crate `fd-find`. It then takes cargo-quickinstall's third-party build,
+    or compiles, and StyLua's source build parses none of LuaJIT's `goto`.
+
+    The version stays binstall's. The URL carries `{ version }`, which binstall
+    fills with the crate version it resolved, so the binary and the version
+    `.crates.toml` records cannot differ. Pinning the crate to GitHub's newest
+    tag instead fails outright where crates.io lags the release, as it did for
+    broot. Only the tag's `v` prefix is read from that tag, since a repo tags
+    `v1.2.3` or `1.2.3` and binstall's version is bare.
+
+    No `--bin-dir`. binstall uses one it is given in place of its own search, and
+    a miss there compiles: an archive with the binary at its root and one with it
+    under a directory cannot share a template the pattern could produce.
+
+    () where the release API cannot be read, which leaves binstall as it is
+    without a declaration.
+    """
+    if not entry.binary_pattern or not entry.github_repo:
+        return ()
+    try:
+        tag = github_release.latest_version(entry.github_repo)
+    except github_release.Unreadable:
+        return ()
+    if not tag:
+        return ()
+    prefixed = f'{tag[: len(tag) - len(tag.lstrip("v"))]}{BINSTALL_VERSION}'
+    asset = stage(entry, prefixed, target)
+    url = ('--pkg-url', f'https://github.com/{entry.github_repo}/releases/download/{prefixed}/{asset}')
+    fmt = next((fmt for suffix, fmt in BINSTALL_FORMATS if asset.endswith(suffix)), '')
+    return (*url, '--pkg-fmt', fmt) if fmt else url
 
 
 CRATES_RECEIPT = '.crates.toml'

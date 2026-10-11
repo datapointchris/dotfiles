@@ -40,8 +40,9 @@ binary the project already published, where `cargo install` compiles the same
 code from source. That is the whole reason it is the default here.
 
 An entry names its asset without asking the network, which is what lets these
-tools go into an offline bundle. The fields that do it are `CargoPackage` in
-`src/dotfiles/catalog.py`.
+tools go into an offline bundle. Online, binstall is handed the same name as its
+download URL, so both channels install the same file. The fields that do it are
+`CargoPackage` in `src/dotfiles/catalog.py`.
 
 ### Tier 3: System Package Managers (Stable)
 

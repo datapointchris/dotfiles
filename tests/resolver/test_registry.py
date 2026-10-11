@@ -343,6 +343,25 @@ class TestTheVersionFloorABundleHasToClear:
 
         assert passed == {'floor': '10.4.2'}
 
+    @pytest.mark.parametrize('reinstall', [True, False])
+    def test_reinstall_reaches_cargo_which_forces_binstall_with_it(self, monkeypatch, reinstall) -> None:
+        """binstall skips a version it already has and exits 0, so a `--reinstall`
+        dropped here reports a tool reinstalled that nothing touched."""
+        passed: dict[str, bool] = {}
+
+        def spy(entry, *args, reinstall: bool, **_kwargs):
+            passed['reinstall'] = reinstall
+            return providers.Result(True, '', kind=providers.Kind.APPLIED)
+
+        monkeypatch.setattr(cargo, 'install', spy)
+
+        change, planned = self.change('cargo', 'fd-find', self.FD, '10.4.2', Verdict.STALE)
+        found = registry.named('cargo')
+        assert found is not None
+        found.install(Session(machine_name=next(iter(machines.names())), reinstall=reinstall), change, planned, Privilege(offer=False))
+
+        assert passed == {'reinstall': reinstall}
+
 
 def test_every_packages_provider_can_install_what_it_plans() -> None:
     """The whole `packages` resource has converted, so the base `Provider.install`

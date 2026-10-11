@@ -1165,8 +1165,10 @@ custom_installers:
 # CARGO PACKAGES (Rust)
 # ================================================================
 # Installed by src/dotfiles/providers/cargo.py, which builds the argv.
-# Prebuilt release binaries where a crate publishes one for the target, and a
-# source build where it does not — see docs/learnings/cargo-binstall-falls-back-to-compiling.md
+# binstall is handed the asset `binary_pattern` names, the one an offline bundle
+# stages. Where the target has none, or binstall cannot find the binary inside
+# it, binstall takes cargo-quickinstall's build or compiles from source — see
+# docs/learnings/cargo-binstall-falls-back-to-compiling.md
 #
 # `checksum:` is the declaration `github_releases` above carries, vocabulary and
 # all. Here its subject is the archive an offline bundle downloads, and nothing
@@ -1300,11 +1302,12 @@ cargo_packages:
     tags: [cli, tui, development]
 
   # conform.nvim formats Lua with it on save, reading the .stylua.toml deployed
-  # beside the Neovim and Hyprland configs. binstall finds no prebuilt binary and
-  # builds it from source online. The release assets are named for the OS word
-  # and the CPU, like fnm's, so both targets are overridden and {arch} carries
-  # the CPU: stylua-linux-x86_64.zip needs glibc 2.34, which every Linux
-  # workstation manifest here clears.
+  # beside the Neovim and Hyprland configs. The release binary, never the crate:
+  # the crate builds without LuaJIT's syntax and fails on a `goto` label, which
+  # Neovim's Lua runs. The release assets are named for the OS word and the CPU,
+  # like fnm's, so both targets are overridden and {arch} carries the CPU:
+  # stylua-linux-x86_64.zip needs glibc 2.34, which every Linux workstation
+  # manifest here clears.
   - name: stylua
     command: stylua
     description: Lua formatter, run by conform.nvim on save

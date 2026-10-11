@@ -53,7 +53,8 @@ General technical notes that name nothing in this repo live on the hub at
 - [Resilient Installation Patterns](resilient-installation-patterns.md) — one unresolvable name
   aborts a whole `brew install` batch, and the loss surfaces phases later as a missing binary
 - [cargo binstall Falls Back to Compiling](cargo-binstall-falls-back-to-compiling.md) — an install
-  pauses for minutes with no output, which cannot be told from a deadlock
+  pauses for minutes with no output, which cannot be told from a deadlock, or a source-built StyLua
+  refuses a `goto` label
 - [A packages.yml Entry Is Not an Install](packages-yml-entry-is-not-an-install.md) — `fnm not
   found` on the offline box, with a complete `packages.yml` entry sitting right there
 - [A CIFS Mount Hides a Missing Helper](cifs-mount-hides-a-missing-helper.md) —

@@ -1130,7 +1130,7 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """
     attempted: list[str] = []
 
-    def record(entry, target=None, *, offline=False, again=False, before_place=None, floor=''):
+    def record(entry, target=None, *, offline=False, again=False, before_place=None, floor='', reinstall=False):
         """The engine's shape rather than only its name.
 
         `before_place` is what the release provider hands in to displace a package
@@ -1139,9 +1139,10 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         assertion below while the real engine did something else.
 
         `floor` is the version a staged bundle has to beat, taken by the two
-        providers with a bundle fallback and by neither of the other five. Accepted
-        and ignored here, because what it governs is which *source* answers and
-        nothing in this suite has a source to choose between —
+        providers with a bundle fallback and by neither of the other five, and
+        `reinstall` is taken by cargo alone. Both are accepted and ignored here,
+        because what they govern is how the source answers and nothing in this
+        suite has a source —
         `tests/resolver/test_registry.py` is where the value reaching the provider
         is asserted.
         """

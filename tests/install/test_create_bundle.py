@@ -518,7 +518,7 @@ class TestBundleRoundTrip:
         monkeypatch.setenv('HOME', str(tmp_path / 'home'))
         self.stage(tmp_path, monkeypatch, entry)
 
-        result = cargo.install(entry, Target(OSFamily.LINUX, Arch.X86_64), offline=True, floor='')
+        result = cargo.install(entry, Target(OSFamily.LINUX, Arch.X86_64), offline=True, floor='', reinstall=False)
 
         assert result.ok, result.detail
         assert (tmp_path / 'home' / '.cargo' / 'bin' / 'fd').is_file()

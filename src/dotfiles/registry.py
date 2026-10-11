@@ -448,9 +448,9 @@ def version_floor(session: MachineContext, change: Change) -> str:
 class CargoProvider(CatalogProvider):
     """A Rust CLI installed by `cargo binstall`, or restored from a bundle.
 
-    Not a `VendoredProvider` for the same reason `GoToolProvider` is not: nothing
-    here fetches an asset this package names. binstall resolves the crate, picks
-    the release its project published, and places the binary.
+    Not a `VendoredProvider`: the asset this package names reaches binstall as a
+    URL, and binstall owns the download, the unpack and the fall back to another
+    source. It resolves the crate's version and places the binary.
     """
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
@@ -465,6 +465,7 @@ class CargoProvider(CatalogProvider):
             coordinates.target_for(session.machine.coordinates),
             offline=session.offline,
             floor=version_floor(session, change),
+            reinstall=session.reinstall,
         )
         return Outcome.from_result(change, result)
 
