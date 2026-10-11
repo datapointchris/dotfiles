@@ -1834,7 +1834,16 @@ def cmd_sweep(repo_filter: str | None, assume_yes: bool) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='worktree',
-        description='Give a session its own index, and land it on main without a PR.',
+        description=(
+            'Give a session its own index, and land it on main without a PR.\n'
+            '\n'
+            'Start with `worktree new <slug>`, or `worktree spawn <slug> --brief <file>` for a\n'
+            'session in a pane of its own. Commit in it, then finish from inside it with\n'
+            '`worktree land`. `worktree drop` abandons it instead, and `worktree sweep`\n'
+            'collects worktrees whose pull request merged on GitHub.\n'
+            '\n'
+            'Options go after the command they belong to: `worktree land -q`, never `worktree -q land`.'
+        ),
         # Raw, so the examples keep their columns. The default formatter reflows an
         # epilog into a paragraph, which is what stopped one being written here.
         formatter_class=argparse.RawDescriptionHelpFormatter,

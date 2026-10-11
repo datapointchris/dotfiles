@@ -2365,6 +2365,25 @@ class TestHelp:
             assert result.returncode == 0, f'{command} --help exited {result.returncode}: {plain(result.stderr)}'
             assert result.stdout.startswith('usage:'), f'{command} --help printed no usage'
 
+    def test_every_command_the_root_help_spells_out_parses_as_it_says(self, worktree_app):
+        """A reader lifts a quoted command from the root help verbatim, so each one has to
+        be accepted, and the one it marks with 'never' has to be refused. A help that
+        teaches a form the parser rejects sends the reader back to the help."""
+        parser = worktree_app.build_parser()
+        text = parser.format_help()
+        quoted = list(re.finditer(r'`worktree ([^`]*)`', text))
+        assert quoted, 'the root help quotes no command'
+
+        for match in quoted:
+            argv = shlex.split(match.group(1))
+            refused = text[: match.start()].endswith('never ')
+            try:
+                parser.parse_args(argv)
+                parsed = True
+            except SystemExit:
+                parsed = False
+            assert parsed != refused, f'`worktree {match.group(1)}` should {"be refused" if refused else "parse"}'
+
 
 @pytest.mark.interpreter('tmux')
 class TestSpawnRefusals:
