@@ -3,9 +3,9 @@
 # claude-sessions - Live Claude Code sessions on this machine
 # ================================================================
 # Reads the session registry directly. `claude agents --json` is the
-# supported interface and was measured against it: ~356ms per call versus
-# ~12ms here, because it boots a full node process, and it omits the tmux
-# pane that makes a row worth jumping to.
+# supported interface and was measured against it: ~356ms per call, because
+# it boots a full node process, against a few milliseconds per session here.
+# It also omits the tmux pane that makes a row worth jumping to.
 #
 # This is the per-machine half of a fleet-wide listing: `fleet claude
 # sessions list` reaches other boxes by running this over ssh, so the
@@ -51,14 +51,19 @@ show_help() {
 # the dead as idle; the pid is the only honest liveness test, and it is only
 # honest on the box that owns it.
 #
-# jq writes the pid and the descriptor on one line so the filter never has to
-# take the JSON apart by hand — the blob is passed through untouched and handed
-# back to jq to render.
+# Each file is parsed alone. jq reads several files as one stream, so a file
+# caught half-written would run its unterminated string into the next one and
+# hide every session after it. A file that will not parse, or that vanished
+# with its session, is skipped.
 live_descriptors() {
-  fd -HI -e json . "$REGISTRY_DIR" -X jq -r '"\(.pid) \(tojson)"' 2>/dev/null \
-    | while read -r pid descriptor; do
-      kill -0 "$pid" 2>/dev/null && printf '%s\n' "$descriptor"
-    done
+  local file line
+  for file in "$REGISTRY_DIR"/*.json; do
+    [[ -f $file ]] || continue
+    line=$(jq -R -s -r 'fromjson? | "\(.pid) \(tojson)"' "$file" 2>/dev/null) || continue
+    [[ -n $line ]] || continue
+    kill -0 "${line%% *}" 2>/dev/null && printf '%s\n' "${line#* }"
+  done
+  return 0
 }
 
 # The session this process is running inside, found by walking the parent chain
