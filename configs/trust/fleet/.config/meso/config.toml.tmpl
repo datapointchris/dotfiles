@@ -1,0 +1,13 @@
+# meso's machine config: the API, the identity provider that signs its tokens,
+# and the OAuth client this machine logs in as.
+#
+# Rendered from ~/.env rather than linked. The addresses are this fleet's own
+# and this repo is public. The client id is this machine's, and a link into the
+# tree every machine shares would hand it to all of them.
+#
+# Fleet-scoped because every value names this fleet's installation. A nonfleet
+# manifest does not install meso, so configs/trust/nonfleet/ carries no
+# counterpart.
+api = "https://meso.${HOMELAB_DOMAIN}"
+issuer = "https://auth.${HOMELAB_DOMAIN}"
+client_id = "meso-${OAUTH_CLIENT_SUFFIX}"

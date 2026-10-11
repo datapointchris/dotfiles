@@ -1,0 +1,17 @@
+# homelab's machine config: the homelab API, the identity provider that signs
+# the tokens it takes, and the OAuth client this machine logs in as.
+#
+# Rendered from ~/.env rather than linked. The addresses are this fleet's own
+# and this repo is public, and homelab compiles neither in. The client id is
+# this machine's, and a link into the tree every machine shares would hand it to
+# all of them.
+#
+# The API's key is api_base, the one homelab reads. homelab refuses a key it
+# does not know, so this file carries no other spelling of it.
+#
+# Fleet-scoped because every value names this fleet's installation. A nonfleet
+# manifest does not install homelab, so configs/trust/nonfleet/ carries no
+# counterpart.
+api_base = "https://homelab.${HOMELAB_DOMAIN}"
+issuer = "https://auth.${HOMELAB_DOMAIN}"
+client_id = "homelab-${OAUTH_CLIENT_SUFFIX}"
