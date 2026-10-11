@@ -14,7 +14,9 @@ entry would test a function that does not exist.
 from __future__ import annotations
 
 import dataclasses as dc
+import hashlib
 import io
+import tarfile
 import zipfile
 from itertools import chain
 from pathlib import Path
@@ -745,22 +747,17 @@ def test_a_transport_that_delivered_nothing_is_not_reported_as_a_version_problem
 
 
 def _tarball(members: dict[str, bytes]) -> bytes:
-    import io as _io
-    import tarfile
-
-    buffer = _io.BytesIO()
+    buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode='w:gz') as archive:
         for name, payload in members.items():
             info = tarfile.TarInfo(name)
             info.size = len(payload)
             info.mode = 0o755
-            archive.addfile(info, _io.BytesIO(payload))
+            archive.addfile(info, io.BytesIO(payload))
     return buffer.getvalue()
 
 
 def _zip_with_digest(members: dict[str, bytes]) -> tuple[bytes, str]:
-    import hashlib
-
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w') as archive:
         for name, payload in members.items():

@@ -11,6 +11,7 @@ Nothing here is marked, so it runs in the default suite. It needs no Docker.
 from __future__ import annotations
 
 import dataclasses as dc
+import importlib
 import subprocess
 from pathlib import Path
 
@@ -38,6 +39,7 @@ from harness import shadow_source
 from harness import shell_path
 
 from dotfiles import network
+from dotfiles import paths
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Precondition
 from dotfiles.plan import Reason
@@ -139,8 +141,6 @@ def test_one_firewalled_environment_carries_no_bundle() -> None:
 def test_every_environment_names_a_manifest_that_exists(environment: Environment) -> None:
     """The name reaches `install.sh --machine`, which validates it itself and
     lists the alternatives — but only after a container has been built."""
-    from dotfiles import paths
-
     assert (paths.MANIFESTS_DIR / f'{environment.manifest}.yml').is_file()
 
 
@@ -169,8 +169,6 @@ def test_asking_for_one_environment_collects_only_that_one() -> None:
     137 — indistinguishable from an OOM in the log. Collection is checked in a
     subprocess because the option and the deselection are pytest's, not the rig's.
     """
-    from dotfiles import paths
-
     collected = subprocess.run(
         # `-o addopts=` drops the repo's `-vv`, which makes `--collect-only` print
         # a node tree rather than the ids this reads.
@@ -199,7 +197,6 @@ def test_the_set_tier_is_not_collected_when_nothing_may_install() -> None:
     documents and the one it delivered: nine minutes against the seconds that
     make it the rung most fixes land on.
     """
-    from dotfiles import paths
 
     def collect(*flags: str) -> list[str]:
         completed = subprocess.run(
@@ -516,7 +513,6 @@ def test_the_container_gets_the_checkout_the_tests_came_from() -> None:
 
 def test_the_repo_under_test_ignores_the_environment_the_product_reads(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv('DOTFILES_DIR', str(tmp_path))
-    import importlib
 
     assert tmp_path != importlib.reload(harness).UNDER_TEST
 
@@ -694,8 +690,6 @@ def test_every_item_node_is_paired_with_the_container_that_declares_it() -> None
     Collection in a subprocess for the same reason as the `--environment` test
     above: the deselection is pytest's, not the rig's.
     """
-    from dotfiles import paths
-
     collected = subprocess.run(
         ['uv', 'run', 'pytest', 'tests/e2e/test_verification.py', '--docker', '--collect-only', '-q', '-o', 'addopts='],
         cwd=paths.REPO_ROOT,

@@ -10,6 +10,7 @@ What `apply` covers, and what it does with what it finds, is `test_apply.py`.
 
 from __future__ import annotations
 
+import importlib
 import io
 import json
 from collections.abc import Iterator
@@ -19,8 +20,15 @@ import pytest
 from rich.console import Console
 from typer.testing import CliRunner
 
+from dotfiles import engine
+from dotfiles import paths
+from dotfiles import reconcile
+from dotfiles import runs
+from dotfiles import sinks
+from dotfiles import validate
 from dotfiles import vocabulary
 from dotfiles.commands import machines
+from dotfiles.commands.machines import manifest_names
 from dotfiles.main import app
 from dotfiles.plan import Precondition
 from dotfiles.vocabulary import ExitCode
@@ -39,8 +47,6 @@ def no_event_log(monkeypatch: pytest.MonkeyPatch) -> None:
     The same fixture guards `test_apply.py`, and `tests/conftest.py` has the
     session-wide backstop that fails a run which leaks one anyway.
     """
-    from dotfiles import sinks
-
     monkeypatch.setattr(sinks, 'open_log', lambda identity: None)
 
 
@@ -101,10 +107,6 @@ def test_apply_refuses_a_declaration_with_errors(monkeypatch: pytest.MonkeyPatch
     reasoning is stronger for `apply`, which would install whatever survived the
     parse and report success — and refusing to *act* is what the read-only verb
     could not do."""
-    from dotfiles import engine
-    from dotfiles import reconcile
-    from dotfiles import validate
-
     broken = (validate.Finding('go_tools', validate.Severity.ERROR, "manifest 'box' names 'ghost-tool'"),)
     monkeypatch.setattr(validate, 'declaration', lambda repo=None: broken)
 
@@ -114,10 +116,6 @@ def test_apply_refuses_a_declaration_with_errors(monkeypatch: pytest.MonkeyPatch
 def test_apply_is_not_stopped_by_warnings_alone(monkeypatch: pytest.MonkeyPatch) -> None:
     """An entry lands in `packages.yml` before the manifest that wants it. A tool
     being staged must not block every install on the fleet."""
-    from dotfiles import engine
-    from dotfiles import reconcile
-    from dotfiles import validate
-
     staged = (validate.Finding('go_tools', validate.Severity.WARNING, "'unused' is declared but no manifest names it"),)
     monkeypatch.setattr(validate, 'declaration', lambda repo=None: staged)
 
@@ -158,8 +156,6 @@ def test_repo_path_prints_the_repo_and_nothing_else() -> None:
 
 
 def test_machines_list_matches_the_manifests_on_disk() -> None:
-    from dotfiles.commands.machines import manifest_names
-
     result = runner.invoke(app, ['machines', 'list'])
     assert result.output.split() == manifest_names()
     assert manifest_names(), 'no manifests found, so the assertion above is vacuous'
@@ -188,11 +184,6 @@ def empty_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Pat
     XDG_STATE_HOME is a real knob rather than a seam cut for testing, and
     `paths` resolves it at import, so the module is reloaded to pick it up.
     """
-    import importlib
-
-    from dotfiles import paths
-    from dotfiles import runs
-
     monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path))
     importlib.reload(paths)
     importlib.reload(runs)

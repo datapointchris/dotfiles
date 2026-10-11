@@ -41,6 +41,7 @@ from dotfiles import logging as dotfiles_logging
 from dotfiles import paths
 from dotfiles import runs
 from dotfiles import sinks
+from dotfiles.providers import systemd
 from dotfiles.session import Session
 
 MACHINE = 'linux-lxc-server'
@@ -198,8 +199,6 @@ def test_disabling_a_unit_on_this_machine_is_refused() -> None:
     developer desk the call stops a real daemon. The unit named here exists nowhere,
     so a narrowed guard spends one failed `systemctl` rather than stopping anything.
     """
-    from dotfiles.providers import systemd
-
     with pytest.raises(WouldInstall):
         systemd.disable('dotfiles-no-such-unit-guard-probe.service')
 

@@ -371,8 +371,6 @@ def test_the_agent_is_serialized_by_plistlib_on_both_sides(darwin: Path, fake_bi
     """A hand-written plist is XML that has to stay escaped correctly forever,
     and the comparison would be against text whose whitespace launchd ignores and
     a diff does not."""
-    import plistlib
-
     executable(fake_bin, 'launchctl')
     schedule.apply(BOX)
     written = plistlib.loads(darwin.read_bytes())

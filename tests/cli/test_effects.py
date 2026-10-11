@@ -7,6 +7,8 @@ a command that cannot be executed is an exit code, not an exception.
 
 from __future__ import annotations
 
+import errno
+import shutil as sh
 import subprocess
 import sys
 import time
@@ -260,9 +262,6 @@ def test_copying_onto_a_running_binary_is_refused(running_binary: Path, tmp_path
     different filesystems — always here, since a download lands in `/tmp` on
     tmpfs and the binary belongs on the root disk.
     """
-    import errno
-    import shutil as sh
-
     replacement = tmp_path / 'replacement'
     sh.copy2('/bin/true', replacement)
 
@@ -281,8 +280,6 @@ def test_install_replaces_a_running_binary(running_binary: Path, tmp_path: Path)
     The cost of not doing it: a tool whose service holds its binary open stays at
     whatever version the service started with, across every apply, indefinitely.
     """
-    import shutil as sh
-
     replacement = tmp_path / 'replacement'
     sh.copy2('/bin/true', replacement)
     before = running_binary.stat().st_ino

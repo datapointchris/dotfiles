@@ -7,6 +7,7 @@ while it is still free to change.
 """
 
 import datetime as dt
+import importlib
 import json
 
 import derivations
@@ -182,8 +183,6 @@ class TestWhereRecordsLand:
         """Through the environment variable rather than the constant, because a
         path assembled at import is exactly what a monkeypatched `RUNS_DIR` would
         stop testing."""
-        import importlib
-
         monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path))
         importlib.reload(paths)
         try:

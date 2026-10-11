@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from dotfiles import catalog as catalogs
 from dotfiles import envfile
+from dotfiles import evidence
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import plan as planning
@@ -222,8 +223,6 @@ class Session:
         `evidence` is imported here rather than at module scope because it reaches
         the resource vocabulary, which reaches this file.
         """
-        from dotfiles import evidence
-
         return evidence.Inventories(refresh=self.refresh)
 
     @functools.cached_property
@@ -238,8 +237,6 @@ class Session:
         `evidence` is imported here rather than at module scope because it reaches
         the resource vocabulary, which reaches this file.
         """
-        from dotfiles import evidence
-
         return evidence.measured_preconditions()
 
     @property

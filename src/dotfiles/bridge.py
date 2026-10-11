@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import sys
 
+from dotfiles import declaration as declaration_module
 from dotfiles import paths
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
@@ -63,8 +64,6 @@ def declaration(*args: str, output: Output = Output.DATA) -> None:
     most invocations — `--help`, `report latest`, `repo path` — never read the
     declaration at all.
     """
-    from dotfiles import declaration as declaration_module
-
     redirect: contextlib.AbstractContextManager = (
         contextlib.redirect_stdout(sys.stderr) if output is Output.STREAM else contextlib.nullcontext()
     )

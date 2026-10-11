@@ -9,6 +9,8 @@ detail the run record exists to keep.
 import json
 import logging as stdlib_logging
 
+import httpcore2  # noqa: F401
+import httpx2  # noqa: F401
 import pytest
 import structlog
 
@@ -152,13 +154,10 @@ def test_every_http_logger_the_client_registers_is_pinned():
     response-header tuples as the event text, and unpinned they are the bulk of a
     log replicated to every machine.
 
-    Both modules are imported here because the loggers are registered on import
+    Both modules are imported at the top of this file because the loggers are registered on import
     and would otherwise not exist to be counted. No request is made, so this stays
     in the offline tier.
     """
-    import httpcore2  # noqa: F401
-    import httpx2  # noqa: F401
-
     registered = {name for name in stdlib_logging.Logger.manager.loggerDict if 'http' in name}
     pinned = dotfiles_logging.HTTP_LOGGERS
     unpinned = {name for name in registered if not any(name == p or name.startswith(f'{p}.') for p in pinned)}
@@ -213,15 +212,13 @@ def test_the_second_v_is_what_un_silences_the_http_client():
     """DEBUG is already the bottom, so `-vv` has to mean something other than a
     lower level. The request lines `_quiet_the_http_client` pins to WARNING are
     the only detail still withheld there."""
-    import logging as stdlib
-
     dotfiles_logging.choose_console(verbose=1)
     dotfiles_logging.configure()
-    assert stdlib.getLogger('httpx').level == stdlib.WARNING
+    assert stdlib_logging.getLogger('httpx').level == stdlib_logging.WARNING
 
     dotfiles_logging.choose_console(verbose=2)
     dotfiles_logging.configure()
-    assert stdlib.getLogger('httpx').level == stdlib.NOTSET
+    assert stdlib_logging.getLogger('httpx').level == stdlib_logging.NOTSET
 
 
 def test_a_flag_beats_log_level(monkeypatch, capsys):

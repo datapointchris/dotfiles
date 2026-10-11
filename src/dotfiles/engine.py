@@ -33,6 +33,15 @@ from dotfiles.privilege import Escalates
 from dotfiles.resources import Batched
 from dotfiles.resources import Change
 from dotfiles.resources import Resource
+from dotfiles.resources import auth
+from dotfiles.resources import credentials
+from dotfiles.resources import env
+from dotfiles.resources import identity
+from dotfiles.resources import packages
+from dotfiles.resources import plugins
+from dotfiles.resources import symlinks
+from dotfiles.resources import system
+from dotfiles.resources import toolchains
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
@@ -264,16 +273,6 @@ def resources() -> dict[str, Resource]:
     reaches into `providers/`, and importing the whole tree to ask the CLI for its
     help text is what made `--help` slow enough to notice.
     """
-    from dotfiles.resources import auth
-    from dotfiles.resources import credentials
-    from dotfiles.resources import env
-    from dotfiles.resources import identity
-    from dotfiles.resources import packages
-    from dotfiles.resources import plugins
-    from dotfiles.resources import symlinks
-    from dotfiles.resources import system
-    from dotfiles.resources import toolchains
-
     known: dict[str, Resource] = {
         'packages': packages.RESOURCE,
         'toolchains': toolchains.RESOURCE,

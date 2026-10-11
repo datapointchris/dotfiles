@@ -28,6 +28,8 @@ import pytest
 
 from dotfiles import coordinates as axes
 from dotfiles import create_bundle
+from dotfiles import network
+from dotfiles import paths
 from dotfiles import runs
 from dotfiles.commands import network as network_command
 from dotfiles.vocabulary import ExitCode
@@ -95,8 +97,6 @@ def unlink_the_latest_link(sandbox: Sandbox) -> None:
     A real state: the link is deliberately not synced, so a machine reading a
     fleet-shared `runs/` it has never written to has records and no link.
     """
-    from dotfiles import paths
-
     link = sandbox.runs.parent / paths.LATEST_RUN.name
     link.unlink(missing_ok=True)
 
@@ -1081,8 +1081,6 @@ def test_the_results_file_carries_the_columns_the_firewalled_containers_parse(sa
     """The layout is load-bearing rather than decorative: `tests/e2e/harness.py`
     splits these rows on the pipes to decide which hosts to blackhole, and the
     header word is what says whether a file carries the LANDED column at all."""
-    from dotfiles import network
-
     sandbox.shadow('curl', REFUSES)
     sandbox.shadow('git', REFUSES)
     destination = sandbox.root / 'measured' / 'connectivity-results.txt'

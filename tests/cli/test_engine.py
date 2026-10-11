@@ -14,6 +14,7 @@ import inspect
 import pytest
 
 from dotfiles import engine
+from dotfiles import registry
 from dotfiles import vocabulary
 from dotfiles.event import Event
 from dotfiles.event import Refusal
@@ -85,8 +86,6 @@ def test_no_two_resources_share_a_stage() -> None:
     nobody declared, decided by whichever happened to be measured first. Stage
     numbers exist to state that order rather than let it fall out of the walk.
     """
-    from dotfiles import registry
-
     owners: dict[Stage, set[str]] = {}
     for provider in registry.PROVIDERS:
         owners.setdefault(provider.stage, set()).add(provider.resource)

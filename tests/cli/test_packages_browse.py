@@ -44,6 +44,7 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
+import dotfiles
 from dotfiles import catalog
 from dotfiles import declaration
 from dotfiles import paths
@@ -758,8 +759,6 @@ def test_version_and_the_bare_invocation_answer_without_reading_the_declaration(
     """Both return before `load_packages`, which a checkout with no declaration
     at all is the way to prove — the refusal on `list` is what shows the tree
     really is empty rather than the assertion being vacuous."""
-    import dotfiles
-
     point_at(tmp_path / 'repo', None, monkeypatch)
 
     declaration.main(['--version'])

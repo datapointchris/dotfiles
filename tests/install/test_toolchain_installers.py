@@ -14,6 +14,7 @@ password.
 from __future__ import annotations
 
 import io
+import os
 import tarfile
 from itertools import chain
 from pathlib import Path
@@ -650,6 +651,4 @@ def test_a_directory_already_on_path_is_not_added_twice(monkeypatch) -> None:
 
 
 def os_path_entries() -> list[str]:
-    import os
-
     return os.environ['PATH'].split(os.pathsep)

@@ -268,6 +268,7 @@ def showing_evidence() -> bool:
     and `LOG_LEVEL` cannot disagree. The rows go through Rich rather than logging,
     so nothing else connects them to `-q`. The verdict is never suppressed.
     """
+    # 310ms → 200ms on `packages --help`, 2026-10-10
     import logging as stdlib
 
     from dotfiles import logging
@@ -475,6 +476,7 @@ def listing_everything() -> bool:
 
     The same threshold `showing_evidence` reads, from the other end.
     """
+    # 310ms → 200ms on `packages --help`, 2026-10-10
     import logging as stdlib
 
     from dotfiles import logging

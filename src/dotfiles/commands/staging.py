@@ -25,6 +25,7 @@ from pathlib import Path
 import typer
 
 from dotfiles import coordinates as axes
+from dotfiles import create_bundle
 from dotfiles import machine as machines
 from dotfiles import offline_bundle
 from dotfiles import paths
@@ -177,8 +178,6 @@ def create(
     a read of the input rather than a second effect — the same act as opening the
     file a path names.
     """
-    from dotfiles import create_bundle
-
     verbosity(verbose, quiet)
     chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for', no_input=no_input)
     offered = [str(value) for value in axes.Arch]

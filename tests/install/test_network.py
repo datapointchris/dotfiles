@@ -19,6 +19,7 @@ from dotfiles import machine as machines
 from dotfiles import network
 from dotfiles import paths
 from dotfiles import resolve
+from dotfiles.providers import toolchain
 from dotfiles.providers.custom import Reach
 
 WSL = 'wsl-work-workstation'
@@ -132,8 +133,6 @@ def test_the_head_comes_first_and_the_range_get_is_the_fallback() -> None:
 def test_the_runtime_urls_are_the_installers_own() -> None:
     """Imported rather than retyped, so there is one place a runtime's home is
     written and the probe cannot measure a URL no install would use."""
-    from dotfiles.providers import toolchain
-
     targets = {probe.target for probe in probes_for(WSL) if probe.section == 'language_manager'}
 
     uv = toolchain.UV_INSTALL_URL.format(version=toolchain.pinned_uv())
@@ -320,8 +319,6 @@ def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped(monkeyp
 
 
 def test_a_repo_pinning_no_uv_names_the_uv_installer_as_unprobed(monkeypatch: pytest.MonkeyPatch) -> None:
-    from dotfiles.providers import toolchain
-
     def unpinned(*_config: object) -> str:
         raise toolchain.UnpinnedUv('carries no uv-pre-commit hook')
 

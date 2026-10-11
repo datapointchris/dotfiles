@@ -20,6 +20,7 @@ from rich.console import Console
 
 from dotfiles import banner
 from dotfiles import output
+from dotfiles.main import app
 
 
 def captured(monkeypatch: pytest.MonkeyPatch, *, width: int = 200, terminal: bool = True) -> io.StringIO:
@@ -119,6 +120,4 @@ def test_every_ramp_colors_the_shortest_font_end_to_end() -> None:
 def test_the_root_group_carries_the_masthead() -> None:
     """`--help` and a bare `dotfiles` both exit during parsing and never reach the
     root callback, so the banner on those two screens hangs on this class alone."""
-    from dotfiles.main import app
-
     assert app.info.cls is banner.Masthead

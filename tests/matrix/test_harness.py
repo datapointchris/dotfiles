@@ -10,10 +10,15 @@ developer's machine and pass.
 from __future__ import annotations
 
 import datetime as dt
+import os
+import shutil
 from collections.abc import Callable
+from pathlib import Path
 
+import httpx2
 import pytest
 
+from dotfiles import evidence
 from dotfiles import github_release
 from dotfiles import paths
 from dotfiles import releases
@@ -189,8 +194,6 @@ def test_an_unhandled_exception_reaches_the_test_rather_than_becoming_an_exit_co
 
 
 def test_the_home_every_path_resolves_through_is_the_sandbox_one(sandbox: Sandbox) -> None:
-    from pathlib import Path
-
     assert Path.home() == sandbox.home
     assert Path.home() != Path('~').expanduser().parent / 'chris'
 
@@ -249,8 +252,6 @@ def test_an_env_apply_writes_the_sandbox_env_file(sandbox: Sandbox, cli: Callabl
 def test_a_shadowed_binary_wins_over_the_real_one(sandbox: Sandbox) -> None:
     """`PATH` keeps `/usr/bin:/bin` behind the sandbox, so this is what stops a tool
     the developer happens to have installed from answering."""
-    import shutil
-
     sandbox.shadow('git')
 
     assert shutil.which('git') == str(sandbox.bin / 'git')
@@ -276,10 +277,6 @@ def test_an_apply_that_would_install_is_stopped_rather_than_recorded_as_a_failur
 def test_the_ambient_github_token_cannot_reach_a_test(monkeypatch: pytest.MonkeyPatch) -> None:
     """One exported variable flips a private-repo entry from BY_HAND to AUTOMATIC,
     so the same assertion passes at one desk and fails on the runner."""
-    import os
-
-    from dotfiles import evidence
-
     assert os.environ.get('GITHUB_TOKEN') is None
     assert evidence.have_github_credentials() is False
 
@@ -297,8 +294,6 @@ def test_the_network_guard_fires_when_something_reaches_out() -> None:
 def test_the_guard_catches_a_client_built_somewhere_other_than_our_own_helper() -> None:
     """Guarding `github_release.request` would prove only that nobody called that
     one. The transport is between every caller and the socket."""
-    import httpx2
-
     with pytest.raises(ReachedTheNetwork):
         httpx2.Client().get('https://example.invalid/')
 

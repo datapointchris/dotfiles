@@ -8,6 +8,7 @@ rather than only exercised through a subprocess.
 """
 
 import os
+import subprocess
 
 # Before typer is imported, because typer.rich_utils reads both of these at
 # module scope and never again. `FORCE_TERMINAL` is True whenever GITHUB_ACTIONS
@@ -37,6 +38,7 @@ import levels  # noqa: E402
 import pytest  # noqa: E402
 
 from dotfiles import github_release  # noqa: E402
+from dotfiles import logging as dotfiles_logging
 from dotfiles.privilege import Privilege  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
@@ -70,7 +72,8 @@ os.environ['DOTFILES_DIR'] = str(REPO)
 # root is pinned. `guards` is the one to watch: it reads `paths.STATE_HOME` and
 # `settings.config_file()` at its own import, so moved above the assert it would
 # name the roots of whatever tree the shell was standing in.
-# `github_release` and `Privilege` reach it through nothing, so they stay up there.
+# `github_release`, `logging` and `Privilege` reach it through nothing, so they
+# stay up there.
 import guards  # noqa: E402
 from guards import WouldInstall  # noqa: E402
 from guards import WroteOntoThisMachine  # noqa: E402
@@ -291,8 +294,6 @@ def logging_is_configured():
     bound `run_id` outlives the test that bound it. Both are cheap to redo and
     neither is cheap to debug.
     """
-    from dotfiles import logging as dotfiles_logging
-
     dotfiles_logging.choose_console()
     dotfiles_logging.configure()
     dotfiles_logging.clear_run()
@@ -383,8 +384,6 @@ def no_installing_on_this_machine(request, monkeypatch):
     if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
         return
 
-    import subprocess
-
     def refuse_installs(original):
         def guarded(command, *args, **kwargs):
             argv = tuple(str(part) for part in command) if isinstance(command, list | tuple) else ()
@@ -417,12 +416,10 @@ def no_stopping_this_machines_daemons(request, monkeypatch):
     if request.node.get_closest_marker('e2e') or request.node.get_closest_marker('docker'):
         return
 
-    from dotfiles.providers import systemd
-
     def refuse(unit):
         raise WouldInstall(f'systemctl --user disable --now {unit} would stop a daemon on this machine — spy on it, or mark the test e2e')
 
-    monkeypatch.setattr(systemd, 'disable', refuse)
+    monkeypatch.setattr('dotfiles.providers.systemd.disable', refuse)
 
 
 @pytest.fixture(autouse=True)

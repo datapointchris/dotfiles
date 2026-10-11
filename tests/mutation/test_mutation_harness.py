@@ -20,6 +20,7 @@ import subprocess
 import textwrap
 from pathlib import Path
 
+import coverage
 import pytest
 
 from mutation import classify
@@ -290,8 +291,6 @@ def test_only_exit_one_is_a_kill(code: int | None, status: str) -> None:
 
 def written_coverage(tmp_path: Path) -> Path:
     """A real `CoverageData`, written through coverage's own API rather than a hand-shaped dict."""
-    import coverage
-
     basename = tmp_path / '.coverage'
     data = coverage.CoverageData(str(basename))
     measured = str(tmp_path / 'src' / 'pkg' / 'thing.py')

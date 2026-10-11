@@ -18,6 +18,7 @@ import functools
 
 import typer
 
+import dotfiles
 from dotfiles import banner
 from dotfiles import commands
 from dotfiles import engine
@@ -84,12 +85,10 @@ app.add_typer(manage.repo_app, name='repo', rich_help_panel='Manage')
 def _version(value: bool) -> None:
     if not value:
         return
-    # Resolved here rather than imported at module scope: reading it goes through
+    # Read here rather than at module scope: the package resolves it through
     # importlib.metadata, which every other invocation would pay for and none of
     # them needs.
-    from dotfiles import __version__
-
-    print(f'dotfiles {__version__}')
+    print(f'dotfiles {dotfiles.__version__}')
     raise typer.Exit(ExitCode.CONVERGED)
 
 

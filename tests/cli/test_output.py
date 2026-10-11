@@ -217,8 +217,6 @@ def test_every_label_fits_the_column_it_is_padded_into(label: str) -> None:
 def test_quiet_drops_the_evidence_and_keeps_the_verdict(capsys: pytest.CaptureFixture) -> None:
     """What `-q` actually buys. The rows are not log records, so before this the
     flag moved the log threshold and changed nothing a reader could see."""
-    from dotfiles import logging
-
     logging.choose_console(quiet=True)
 
     output.render_change(a_change())

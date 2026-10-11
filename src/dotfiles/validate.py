@@ -38,6 +38,9 @@ from dotfiles import catalog as catalogs
 from dotfiles import coordinates as axes
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles.providers import custom
+from dotfiles.providers import releases
+from dotfiles.resources import auth
 from dotfiles.resources import symlinks
 from dotfiles.symlinks import core
 from dotfiles.symlinks import template
@@ -149,9 +152,6 @@ def _uninstallable(declared: catalogs.Catalog) -> list[Finding]:
     "something knows how to install this", so the check followed the installers
     into Python rather than going with the scripts.
     """
-    from dotfiles.providers import custom
-    from dotfiles.providers import releases
-
     findings = []
     for section, known, module in (
         ('github_releases', set(releases.ASSETS), 'providers/releases.py'),
@@ -174,8 +174,6 @@ def _unprobeable(manifests: dict[str, machines.Machine]) -> list[Finding]:
     outside the exit code — so a typo in an `auth:` list reads as a machine with
     nothing wrong with it while the login it meant to ask about goes unasked.
     """
-    from dotfiles.resources import auth
-
     findings = []
     for name, manifest in sorted(manifests.items()):
         for tool in sorted(set(manifest.auth) - set(auth.PROBES)):

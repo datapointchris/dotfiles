@@ -51,6 +51,7 @@ from dotfiles import status as status_document
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
+from dotfiles.main import app
 from dotfiles.providers import bundle as bundle_format
 from dotfiles.providers import cargo
 from dotfiles.providers import releases
@@ -551,8 +552,6 @@ def run(*argv: str) -> Built:
     the fixtures above guard this interpreter, and a CLI run outside it could
     download for real with nothing able to say it did.
     """
-    from dotfiles.main import app
-
     result = CliRunner().invoke(app, ['bundle', 'create', '--no-input', '--print-path', *argv], catch_exceptions=False)
     printed = result.stdout.strip().splitlines()
     archive = Path(printed[-1]) if printed and printed[-1].endswith('.tar.gz') else None
@@ -935,8 +934,6 @@ def test_the_name_carries_the_manifest_and_the_platform_the_build_was_asked_for(
 def test_an_arch_the_tool_does_not_support_is_a_usage_error_before_anything_is_fetched(upstream: Upstream, cache: Path) -> None:
     """Refused by the `Arch` annotation at the boundary rather than inside the
     build, which is why the check inside `build` needs its own case below."""
-    from dotfiles.main import app
-
     result = CliRunner().invoke(app, ['bundle', 'create', '--no-input', '--machine', MACHINE, '--arch', 'sparc64'])
 
     assert result.exit_code == ExitCode.USAGE
@@ -968,8 +965,6 @@ def test_a_refused_build_exits_issue_and_prints_no_path(upstream: Upstream, cach
 
 
 def test_a_machine_with_no_manifest_is_named_rather_than_built_for(upstream: Upstream, cache: Path) -> None:
-    from dotfiles.main import app
-
     result = CliRunner().invoke(app, ['bundle', 'create', '--no-input', '--machine', 'nowhere', '--arch', 'x86_64'])
 
     assert result.exit_code == ExitCode.USAGE
@@ -1206,8 +1201,6 @@ def test_a_full_build_records_no_measurement_it_did_not_make(upstream: Upstream,
 
 
 def test_a_path_that_is_not_a_file_is_a_usage_error(upstream: Upstream, cache: Path, tmp_path: Path) -> None:
-    from dotfiles.main import app
-
     argv = ['bundle', 'create', '--no-input', '--machine', MACHINE, '--arch', 'x86_64', '--against', str(tmp_path / 'absent.json')]
     result = CliRunner().invoke(app, argv)
 

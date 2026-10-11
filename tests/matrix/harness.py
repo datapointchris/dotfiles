@@ -40,13 +40,19 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
+from dotfiles import checkout
+from dotfiles import deploy
+from dotfiles import envfile
+from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import registry
 from dotfiles import releases
 from dotfiles.coordinates import PackageManager
+from dotfiles.main import app
 from dotfiles.providers import bundle
 from dotfiles.providers import toolchain
 from dotfiles.session import Session
+from dotfiles.symlinks import core
 
 
 class ReachedTheNetwork(BaseException):
@@ -438,9 +444,6 @@ class Sandbox:
         manifest on purpose is measuring the refusal, and a settle that raised
         would take the test out before the command ran.
         """
-        from dotfiles import envfile
-        from dotfiles import machine as machines
-
         self.installed('uv', f'uv {UV_RELEASE}')
         entry = self.config / 'git' / 'config'
         entry.parent.mkdir(parents=True, exist_ok=True)
@@ -671,10 +674,6 @@ def rebind(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
     they name the real home: a fresh CI runner gains a `~/.config/git/config` and
     loses a `~/.gitconfig`.
     """
-    from dotfiles import checkout
-    from dotfiles import deploy
-    from dotfiles.symlinks import core
-
     derivations.rerun(monkeypatch)
     repo = paths.REPO_ROOT
 
@@ -792,8 +791,6 @@ def invoke(*argv: str, catch_exceptions: bool = False) -> Invocation:
     A fresh `CliRunner` per call: `typer.Typer` builds its Click command lazily and
     a shared runner is state a test can leave behind.
     """
-    from dotfiles.main import app
-
     result = CliRunner().invoke(app, list(argv), catch_exceptions=catch_exceptions)
     return Invocation(
         argv=argv,

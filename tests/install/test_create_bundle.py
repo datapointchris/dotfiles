@@ -10,6 +10,7 @@ Run with: pytest tests/install/test_create_bundle.py
 import datetime as dt
 import json
 import tarfile
+import tomllib
 import zipfile
 from itertools import product
 
@@ -255,8 +256,6 @@ class TestWheelSelection:
     def test_the_floor_is_read_from_requires_python(self):
         """Written here, it would be true only until the floor moved — and the
         symptom of a stale one is a bundle quietly carrying unusable wheels."""
-        import tomllib
-
         declared = tomllib.loads(paths.PYPROJECT_FILE.read_text())['project']['requires-python']
         assert f'3.{create_bundle.python_floor()}' in declared
 
