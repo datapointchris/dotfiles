@@ -93,7 +93,6 @@ venv/
 .claude/sessions/
 # Claude Code puts a git worktree per background agent in here
 .claude/worktrees/
-.discussion
 
 # Test artifacts
 test-wsl-setup.log
