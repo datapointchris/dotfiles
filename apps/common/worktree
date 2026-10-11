@@ -67,10 +67,13 @@ picked, the path `new` created, the session name `spawn` started. Everything
 written for a human to read goes to stderr, so `cd "$(worktree choose)"` cannot
 pick up a warning instead of a path.
 
-Every subprocess is echoed to stderr before it runs, indented and green, exactly
-as it could be re-typed. A fetch, a rebase and a push onto the default branch are
-what `land` is, and a tool that moves branches on your behalf should say which
-ones it moved. `-q` on any command hides them; the verdict keeps its channel.
+Every subprocess a write runs is echoed to stderr before it runs, indented and
+green, exactly as it could be re-typed. A fetch, a rebase and a push onto the
+default branch are what `land` is, and a tool that moves branches on your behalf
+should say which ones it moved. `-q` hides them; the verdict keeps its channel.
+`list`, `show` and `choose` move nothing, so they echo nothing: a listing's dozens
+of `git worktree list` reads named no change and buried the table in a `2>&1`
+capture. They still accept `-q`, which changes nothing there.
 
 Python rather than shell because the work stopped being control flow: measuring
 columns, matching sessions to worktrees by path, and emitting one set of rows as
@@ -431,6 +434,9 @@ def say_error(message: str) -> None:
 
 
 ECHO = True
+
+# The commands that change nothing, so have nothing to announce.
+READS = frozenset({'list', 'show', 'choose'})
 
 
 def set_echo(enabled: bool) -> None:
@@ -1031,13 +1037,12 @@ def preview_command() -> str:
     the dependencies into an environment, and going back through the shebang would
     make uv resolve them again on every keystroke that moves the cursor.
 
-    `-q` because the pane is a rendered artifact rather than a session: the git
-    reads behind a preview say nothing about the worktree it is previewing, and
-    they would be redrawn on every keystroke that moves the cursor.
+    `show` is a read, so it echoes none of the git behind the preview, which
+    would otherwise be redrawn on every keystroke that moves the cursor.
     """
     interpreter = shlex.quote(sys.executable)
     script = shlex.quote(str(Path(__file__).resolve()))
-    return f'FORCE_COLOR=1 {interpreter} {script} show -q {{1}}'
+    return f'FORCE_COLOR=1 {interpreter} {script} show {{1}}'
 
 
 def cmd_choose(repo_filter: str | None) -> int:
@@ -1848,7 +1853,8 @@ def build_parser() -> argparse.ArgumentParser:
             "'list' and 'choose' read every repo there unless you name one, which is what\n"
             'the positional repo is for — piping --json through a jq filter on .repo is\n'
             'the same narrowing done by hand.\n'
-            'Every command it runs is echoed to stderr as you could re-type it; -q hides them.\n'
+            'Every command a write runs is echoed to stderr as you could re-type it; -q hides them.\n'
+            "'list', 'show' and 'choose' move nothing and echo nothing.\n"
             "For work that grew into a large feature, 'git push -u origin HEAD' and open a PR instead."
         ),
     )
@@ -1859,6 +1865,10 @@ def build_parser() -> argparse.ArgumentParser:
     # A parent puts it on every leaf, which is where it is typed.
     quiet = argparse.ArgumentParser(add_help=False)
     quiet.add_argument('-q', '--quiet', action='store_true', help='hide the commands this runs')
+    # A read echoes nothing, so -q is accepted for the callers that pass it and
+    # left out of the help, where it would promise to hide what is never shown.
+    read_quiet = argparse.ArgumentParser(add_help=False)
+    read_quiet.add_argument('-q', '--quiet', action='store_true', help=argparse.SUPPRESS)
 
     repo_help = "narrow to one repo, by its checkout's directory name (~/.claude is .claude)"
 
@@ -1931,7 +1941,7 @@ def build_parser() -> argparse.ArgumentParser:
     sweep.add_argument('repo', nargs='?', help=repo_help)
     sweep.add_argument('--yes', action='store_true', help='remove without asking; required when there is no terminal')
 
-    listing = commands.add_parser('list', parents=[quiet], help="every worktree on this machine, or one repo's")
+    listing = commands.add_parser('list', parents=[read_quiet], help="every worktree on this machine, or one repo's")
     listing.add_argument('repo', nargs='?', help=repo_help)
     listing.add_argument('--json', action='store_true', dest='as_json', help='the same rows for a script to read')
     # Scope is structural here: `list` is the whole machine and `list <repo>` is
@@ -1941,10 +1951,10 @@ def build_parser() -> argparse.ArgumentParser:
     listing.add_argument('--all', action='store_true', help=argparse.SUPPRESS)
     listing.set_defaults(subparser=listing)
 
-    show = commands.add_parser('show', parents=[quiet], help='what one worktree carries, and which session is in it')
+    show = commands.add_parser('show', parents=[read_quiet], help='what one worktree carries, and which session is in it')
     show.add_argument('path', nargs='?', help='defaults to the worktree you are standing in')
 
-    choose = commands.add_parser('choose', parents=[quiet], help='pick one with fzf; prints the path it chose')
+    choose = commands.add_parser('choose', parents=[read_quiet], help='pick one with fzf; prints the path it chose')
     choose.add_argument('repo', nargs='?', help=repo_help)
 
     return parser
@@ -1983,7 +1993,7 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    set_echo(not getattr(args, 'quiet', False))
+    set_echo(args.command not in READS and not getattr(args, 'quiet', False))
     try:
         return dispatch(parser, args)
     except Refused as refusal:

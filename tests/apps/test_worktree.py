@@ -1526,7 +1526,7 @@ esac""",
 
 
 class TestEcho:
-    """Every subprocess is announced before it runs.
+    """Every subprocess a write runs is announced before it runs.
 
     `land` fetches, rebases and pushes onto the default branch, and the branch it
     moved is not recoverable from the one line it prints afterwards. The echo is
@@ -1548,17 +1548,9 @@ class TestEcho:
         assert f'git -C {alpha} push --quiet origin HEAD:main' in self.commands(result)
 
     def test_an_echoed_line_runs_as_it_stands(self, fleet, run):
-        """Pasteable is the claim, so the assertion pastes one.
-
-        A git line, and a worktree for it to be about. `discover` probes
-        `claude-sessions` before it runs any git, and the fixture's PATH ends in
-        the real one — so taking the first line asserts against whichever tools
-        the developer has installed, and finds nothing at all on a runner that
-        has neither them nor a worktree to list.
-        """
-        run(fleet['primary'], 'new', 'alpha')
-
-        result = run(fleet['primary'], 'list')
+        """Pasteable is the claim, so the assertion pastes one: the fetch `new`
+        runs before it adds the worktree."""
+        result = run(fleet['primary'], 'new', 'alpha')
 
         pasted = next(line for line in self.commands(result) if line.startswith('git '))
         replayed = subprocess.run(shlex.split(pasted), capture_output=True, text=True)
@@ -1569,9 +1561,20 @@ class TestEcho:
         """One choke point, or the next subprocess added here escapes it."""
         stub_sessions(bin_dir, session('one', fleet['primary']))
 
-        result = run(fleet['primary'], 'list')
+        result = run(fleet['primary'], 'sweep', '--yes')
 
         assert 'claude-sessions --json' in self.commands(result)
+
+    def test_a_read_announces_nothing(self, fleet, run):
+        """A listing ran dozens of git reads, named no change, and buried its
+        table in a `2>&1` capture."""
+        run(fleet['primary'], 'new', 'alpha')
+        alpha = fleet['roots'] / 'primary' / 'alpha'
+
+        for args in (('list',), ('list', '--json'), ('show', str(alpha)), ('list', '-q')):
+            result = run(fleet['primary'], *args)
+            assert result.returncode == 0, result.stderr
+            assert self.commands(result) == [], args
 
     def test_quiet_hides_the_commands_and_keeps_the_verdict(self, fleet, run):
         alpha = fleet['roots'] / 'primary' / 'alpha'
@@ -1584,13 +1587,11 @@ class TestEcho:
         assert 'Landed 1 commit' in plain(result.stderr)
 
     def test_no_command_reaches_stdout(self, fleet, run):
-        """One line of it on stdout and a caller's parse fails as malformed JSON."""
-        run(fleet['primary'], 'new', 'alpha')
-
-        result = run(fleet['primary'], 'list', '--json')
+        """One line of it on stdout and `cd "$(worktree new x)"` lands nowhere."""
+        result = run(fleet['primary'], 'new', 'alpha')
 
         assert self.commands(result) != [], 'the echo is on, so stdout is the thing under test'
-        assert len(json.loads(result.stdout)) == 2
+        assert result.stdout.strip() == str(fleet['roots'] / 'primary' / 'alpha')
 
 
 class TestListing:
@@ -1829,7 +1830,6 @@ class TestChoose:
 
         assert preview.endswith('{1}')
         assert 'FORCE_COLOR=1' in preview, 'a preview is a pipe, so color has to be asked for'
-        assert ' -q ' in preview, 'the pane previews a worktree, not the git reads behind it'
 
     def test_a_repo_argument_narrows_the_picker(self, fleet, populated, picker, run):
         run(fleet['other'], 'new', 'beta')
