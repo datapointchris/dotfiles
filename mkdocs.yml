@@ -170,7 +170,7 @@ nav:
       - Task Shell Printf Compatibility: learnings/task-shell-printf-compatibility.md
       - Profiling Zsh Startup: learnings/profiling-zsh-startup.md
       - Resilient Installation Patterns: learnings/resilient-installation-patterns.md
-      - cargo binstall Needs Release Binaries: learnings/cargo-binstall-needs-release-binaries.md
+      - cargo binstall Falls Back to Compiling: learnings/cargo-binstall-falls-back-to-compiling.md
       - A packages.yml Entry Is Not an Install: learnings/packages-yml-entry-is-not-an-install.md
       - A CIFS Mount Hides a Missing Helper: learnings/cifs-mount-hides-a-missing-helper.md
       - Pyright Config File Precedence: learnings/pyright-config-file-precedence.md

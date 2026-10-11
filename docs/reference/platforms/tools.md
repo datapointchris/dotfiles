@@ -23,7 +23,7 @@ other platform takes the uniform GitHub-releases path.
 
 atuin is the exception because no Mac ever installed it the Linux way. A tool
 already installed one way does not get split for being slow — see
-[cargo binstall falls back to compiling](../../learnings/cargo-binstall-needs-release-binaries.md).
+[cargo binstall falls back to compiling](../../learnings/cargo-binstall-falls-back-to-compiling.md).
 
 ## fnm reaches non-interactive shells, and nvm cannot
 

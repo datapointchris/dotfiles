@@ -169,7 +169,7 @@ system_packages:
   # stopped attaching release binaries after v13.0.0-alpha.0, so `cargo binstall`
   # finds nothing and falls back to compiling from source — slow on workstations
   # and broken on the offline/firewalled WSL box. pacman/brew ship maintained
-  # binaries. See docs/learnings/cargo-binstall-needs-release-binaries.md
+  # binaries. See docs/learnings/cargo-binstall-falls-back-to-compiling.md
   - name: tokei
     pacman: tokei
     brew: tokei
@@ -1166,7 +1166,7 @@ custom_installers:
 # ================================================================
 # Installed by src/dotfiles/providers/cargo.py, which builds the argv.
 # Prebuilt release binaries where a crate publishes one for the target, and a
-# source build where it does not — see docs/learnings/cargo-binstall-needs-release-binaries.md
+# source build where it does not — see docs/learnings/cargo-binstall-falls-back-to-compiling.md
 #
 # `checksum:` is the declaration `github_releases` above carries, vocabulary and
 # all. Here its subject is the archive an offline bundle downloads, and nothing

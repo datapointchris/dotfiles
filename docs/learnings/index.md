@@ -52,7 +52,7 @@ General technical notes that name nothing in this repo live on the hub at
   while most of them open in under half of one
 - [Resilient Installation Patterns](resilient-installation-patterns.md) — one unresolvable name
   aborts a whole `brew install` batch, and the loss surfaces phases later as a missing binary
-- [cargo binstall Needs Release Binaries](cargo-binstall-needs-release-binaries.md) — an install
+- [cargo binstall Falls Back to Compiling](cargo-binstall-falls-back-to-compiling.md) — an install
   pauses for minutes with no output, which cannot be told from a deadlock
 - [A packages.yml Entry Is Not an Install](packages-yml-entry-is-not-an-install.md) — `fnm not
   found` on the offline box, with a complete `packages.yml` entry sitting right there

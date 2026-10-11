@@ -224,7 +224,7 @@ def _from_binstall(entry: catalog.CargoPackage) -> Result:
 
     **Streamed, because the compile strategy is reachable.** A crate with no
     prebuilt binary for this target builds from source, for as long as that crate
-    takes — `docs/learnings/cargo-binstall-needs-release-binaries.md` is the
+    takes — `docs/learnings/cargo-binstall-falls-back-to-compiling.md` is the
     account of why that is acceptable rather than a defect. Held quiet it cannot
     be told from a deadlock, and streamed the `Compiling` lines say it is moving.
     """
