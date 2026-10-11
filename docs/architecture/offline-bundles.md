@@ -125,4 +125,4 @@ pointed it at. Each leg's module records what its own setting gates —
 - [Restricted Networks](../reference/support/corporate.md) — the runbook for both ends, in order
 - [Observability](observability.md) — the interchange document this all rides on
 - [GitHub Releases](github-releases.md) — how the assets a bundle carries are named
-- [Management Interface](management-interface.md) — the verbs and the two front doors
+- [Management Interface](management-interface.md) — the verbs, and what `task` keeps for itself

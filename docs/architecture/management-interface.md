@@ -1,9 +1,9 @@
 # Management Interface
 
 Drive this repository through the `dotfiles` CLI, which works from any directory.
-`task` is the second front door and keeps what belongs to working *in* the repo —
-the test suite and the docs site. Anything already one command gets no wrapper.
-Both doors reach one implementation in `src/dotfiles/`. The grammar is noun-verb
+`task` keeps what belongs to working *in* the repo — setup, the test suite and the
+docs site — and never renames a `dotfiles` command, so one operation has one name.
+The grammar is noun-verb
 with three reconcile verbs, Terraform-shaped, and all three sit at the top level
 and again under each resource, so narrowing to one part of the machine is the
 same sentence with a noun in it.

@@ -114,6 +114,6 @@ row naming its items rather than counting them, which is what a diff needs.
 
 ## Related
 
-- [Management Interface](management-interface.md) — the two front doors and the verbs
+- [Management Interface](management-interface.md) — the verbs, and what `task` keeps for itself
 - [System Configuration](system-configuration.md) — what the scheduled check measures
 - [Testing](../development/testing.md) — the tiers, and what each may touch

@@ -4,8 +4,9 @@
 or `mkdocs.yml`. It builds with `mkdocs build --strict`, so a broken internal
 link or a nav entry pointing at a deleted file fails the deploy rather than
 publishing a hole, then force-pushes the built site to `gh-pages` with
-`mkdocs gh-deploy --force`. `task docs:deploy` does the same thing from a local
-machine.
+`mkdocs gh-deploy --force`. `workflow_dispatch` republishes without a docs
+change. Nothing publishes from a desk, because a local `gh-deploy` is a second
+publisher outside the workflow's `concurrency` group.
 
 **Never add a second workflow that pushes `gh-pages`.** The existing one holds a
 `concurrency` group precisely so two docs pushes queue instead of racing; a

@@ -2112,9 +2112,9 @@ macos_casks:
 #
 # Installing what it declares:
 #   dotfiles apply                   # creates what is missing, upgrades what is
-#                                    # behind; `task update` is an alias for it
+#                                    # behind
 #
 # To add new packages:
 #   1. Add to this file under the appropriate section
-#   2. Run: task install or platform-specific install task
+#   2. Run: dotfiles packages apply
 #   3. Commit changes

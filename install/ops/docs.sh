@@ -15,12 +15,11 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 
 usage() {
   help_header "docs"
-  help_usage "docs.sh <serve|build|deploy>"
+  help_usage "docs.sh <serve|build>"
 
   help_section "Verbs"
   help_row "serve" "" "Serve the documentation site locally"
   help_row "build" "" "Build the static site, failing on any warning"
-  help_row "deploy" "" "Publish the site to GitHub Pages"
 
   help_end
   exit "${1:-0}"
@@ -35,7 +34,6 @@ main() {
   case "$verb" in
     serve) uv run mkdocs serve ;;
     build) uv run mkdocs build --strict ;;
-    deploy) uv run mkdocs gh-deploy --force ;;
     *)
       log_error "Unknown verb: $verb"
       usage 1

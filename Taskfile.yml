@@ -1,8 +1,9 @@
 version: '3'
 
-# Entry points onto src/dotfiles/, so this file and the `dotfiles` CLI share one
-# implementation. Platform detection is `coordinates.py`'s and reaches here only
-# through the CLI — do not reintroduce it as a Taskfile var.
+# The repo's own development tasks: setup, the test ladder and the docs site.
+# Anything that changes a machine is a `dotfiles` command and never a task here,
+# so one operation has one name. Platform detection is `coordinates.py`'s — do
+# not reintroduce it as a Taskfile var.
 vars:
   DOTFILES_DIR:
     sh: pwd
@@ -10,6 +11,7 @@ vars:
 tasks:
   default:
     desc: Show available tasks
+    silent: true
     cmds:
       - task --list
 
@@ -26,87 +28,6 @@ tasks:
     cmds:
       - uv sync
       - ln -sfn "$(readlink {{.PRIMARY}}/.planning)" .planning
-
-  # ================================================================
-  # PRIMARY COMMANDS (the front door — everyday verbs)
-  # ================================================================
-
-  install:
-    desc: "Reconcile this machine (needs sudo): task install -- --machine NAME"
-    cmds:
-      - uv run dotfiles apply {{.CLI_ARGS}}
-
-  # An alias for `install`, not a second verb. Reconcile has one act: `apply`
-  # installs what is missing and upgrades what is behind, and which of those a
-  # given row needs is the verdict's answer rather than the caller's.
-  update:
-    desc: "Reconcile this machine, same as install: task update -- --skip plugins"
-    cmds:
-      - uv run dotfiles apply {{.CLI_ARGS}}
-
-  relink:
-    desc: Deploy every symlink, pruning the ones whose source is gone
-    cmds:
-      - task: symlinks:apply
-
-  doctor:
-    desc: Health check — verify symlinks, package and flag drift
-    silent: true
-    cmds:
-      - uv run dotfiles check
-
-  # ================================================================
-  # MACHINE ENVIRONMENT
-  # ================================================================
-
-  env:show:
-    desc: Print the generated ~/.env section without writing
-    silent: true
-    cmds:
-      - uv run dotfiles env show
-
-  env:sync:
-    desc: Write ~/.env from the manifest, preserving hand-edited overrides
-    silent: true
-    cmds:
-      - uv run dotfiles env apply
-
-  env:check:
-    desc: Report drift between the declared flags and this machine
-    silent: true
-    cmds:
-      - uv run dotfiles env check
-
-  # ================================================================
-  # SYMLINKS MANAGEMENT
-  # ================================================================
-
-  # `link` and `relink` were two spellings of one operation, and the create-only
-  # one left a broken link behind for every deleted source. Reconciling always
-  # prunes, so there is one verb.
-  symlinks:apply:
-    desc: Deploy every symlink, pruning the ones whose source is gone
-    silent: true
-    cmds:
-      - uv run dotfiles symlinks apply
-
-  symlinks:check:
-    desc: Verify all symlinks are correct
-    silent: true
-    cmds:
-      - uv run dotfiles symlinks check
-
-  symlinks:show:
-    desc: Show all configured symlinks
-    silent: true
-    cmds:
-      - uv run dotfiles symlinks show
-
-  symlinks:unlink:
-    desc: Remove all symlinks
-    silent: true
-    cmds:
-      - uv run dotfiles symlinks unlink --force
 
   # ================================================================
   # TESTING
@@ -240,11 +161,6 @@ tasks:
     desc: Build documentation site
     cmds:
       - bash "{{.DOTFILES_DIR}}/install/ops/docs.sh" build
-
-  docs:deploy:
-    desc: Deploy documentation to GitHub Pages
-    cmds:
-      - bash "{{.DOTFILES_DIR}}/install/ops/docs.sh" deploy
 
   docs:duplication:
     desc: Rank docs pages by how much of each restates a module docstring

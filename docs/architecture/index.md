@@ -8,8 +8,8 @@ How the dotfiles repository is organized and why.
 
 ## Pages
 
-- [Management Interface](management-interface.md) — the `dotfiles` CLI and `task` as two front doors
-  onto one implementation, the noun-verb grammar, and why a CLI was built after being rejected
+- [Management Interface](management-interface.md) — the `dotfiles` CLI and what `task` keeps
+  for itself, the noun-verb grammar, and why a CLI was built after being rejected
 - [Shell Libraries](shell-libraries.md) — the libraries a script sources from `~/.local/shell/`, and
   why one of them may never touch shell options
 - [tmux Sessions](tmux-sessions.md) — a session is an initiative and a window is the unit of work;
@@ -47,9 +47,8 @@ a single file that served a single machine. That file named hosts on a network
 this repo is not party to, which the machine-local file handles instead. That is
 the better fit, because the code was never shareable in the first place.
 
-Deploy with `dotfiles symlinks apply`, which works from any directory. `task` is
-equivalent from inside the repo, and both front doors are
-[Management Interface](management-interface.md).
+Deploy with `dotfiles symlinks apply`, which works from any directory. The verbs
+are [Management Interface](management-interface.md).
 
 ## Nothing detects what a machine is
 

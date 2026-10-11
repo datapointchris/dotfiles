@@ -4,7 +4,7 @@ icon: material/tools
 
 # Tools
 
-The two front doors into the repo, past what `dotfiles --help` and `task --list-all` already say.
+The `dotfiles` CLI and the repo's own tasks, past what `dotfiles --help` and `task --list-all` already say.
 
 ## Pages
 

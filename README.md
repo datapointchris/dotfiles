@@ -134,7 +134,6 @@ theme apply rose-pine                   # Apply theme across terminal apps
 
 # Updates
 dotfiles update                         # Pull the repo and repair what the pull invalidated
-task update                             # Alias for install: apply is the update
 dotfiles apply --owner datapointchris   # Only my own tools
 dotfiles apply --reinstall --entry lazygit  # Install one entry again, whatever it measures
 
@@ -177,7 +176,7 @@ There's also a [learnings](https://datapointchris.github.io/dotfiles/learnings/)
 
 **Modern CLI replacements**: bat (cat with syntax highlighting), eza (ls with git integration), fd (find that respects .gitignore), ripgrep (grep but faster), yazi (terminal file manager).
 
-**Task automation**: one `Taskfile.yml` of namespaced entry points, listed by `task --list-all`. Both front doors reach the same place — nearly every task is a thin `uv run dotfiles ...` onto `src/dotfiles/`, so there is no second implementation to drift. `install/ops/docs.sh` is residue of an earlier split, not the mechanism.
+**Task automation**: `Taskfile.yml` holds the repo's own development tasks — the test ladder and the docs site — listed by `task --list`. Everything that changes a machine is a `dotfiles` command, never a task, so one operation has one name.
 
 ## Contributing
 
