@@ -82,6 +82,17 @@ systemd_units:
     enabled: true
     active: true
 
+  # systemd ships this user timer disabled, so no user-tmpfiles.d rule is ever
+  # cleaned until something enables it. `display_stack: wayland` matches the
+  # directory deploying claude-sessions.conf, the one rule that needs it.
+  - name: systemd-tmpfiles-clean.timer
+    description: Daily clean of the user tmpfiles rules, which ages out Claude's /tmp
+    display_stack: wayland
+    scope: user
+    needs_root: false
+    enabled: true
+    active: true
+
 managed_files:
   - name: tty1-autologin
     description: Auto-login on TTY1, which is what starts the compositor
