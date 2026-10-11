@@ -224,7 +224,7 @@ class Entry:
     beside the class whose installer reads it — so declaring a constraint where
     nothing honors it is an error rather than a silent no-op. Four such fields
     sat unread in `packages.yml` until a URL audit found them, one eight versions
-    stale. `.planning/version-constraints.md` carries the vocabulary.
+    stale. `docs/architecture/package-management.md` carries the vocabulary.
     """
 
     name: str

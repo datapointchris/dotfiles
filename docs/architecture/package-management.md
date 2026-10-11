@@ -158,8 +158,26 @@ not `v0.56.0`, `cli/v0.9.0` or `>=0.56.0`. The same release is spelled three
 different ways across this catalog, so resolving a version to a tag is the
 resolver's job rather than the declaration's.
 
-The three constraint keys, and why a section whose provider honors none of them
-refuses the key outright, are the `Entry` docstring in `src/dotfiles/catalog.py`.
+| key | means | resolver behavior |
+| --- | --- | --- |
+| `version` | install exactly this | resolve to this release; never report OUTDATED |
+| `min_version` | floor | a resolved version below it is an issue, not drift |
+| `max_version` | ceiling | resolve to the newest release at or below it |
+
+All three absent means latest. `version` excludes the other two, and
+`min_version` must not exceed `max_version`. The case the keys cannot express,
+"anything but this one broken release", is covered by holding `max_version`
+below it.
+
+*Rejected:* a constraint expression such as `>=1.2,<2.0`. Versions across the
+catalog are neither PEP 440 nor consistent semver, so an expression parser over
+them would need a second comparator. Three keys map one-to-one onto three
+resolver behaviors over the one comparator in `versions.py`.
+
+Why a section whose provider honors none of the keys refuses them outright is
+the `Entry` docstring in `src/dotfiles/catalog.py`. Why an offline run reads the
+bundle before any constraint resolves is `resolve_tag` in
+`src/dotfiles/providers/ghrelease.py`.
 
 ### Drift Detection
 

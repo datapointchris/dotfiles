@@ -2,7 +2,7 @@
 
 The capability exists so a machine can hold a known-good release while upstream
 is broken, and so an older distro can run an older build than the rest of the
-fleet. Vocabulary and the reasoning: .planning/version-constraints.md.
+fleet. Vocabulary and the reasoning: docs/architecture/package-management.md.
 
 Marked e2e where resolving a bare version to a tag means asking the repo which
 tags it published. That is not incidental: the constraint is deliberately a bare

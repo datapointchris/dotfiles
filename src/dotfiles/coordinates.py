@@ -11,7 +11,6 @@ Arch-on-WSL is inexpressible: it needs pacman from `archlinux` and the WSL host
 from `wsl`, and no single string carries both. A Ubuntu desktop is the same
 problem from the other side, costing a third apt installer and 19 duplicated
 Wayland files despite every one of its coordinates already existing.
-`.planning/machine-axes.md` carries the measurement.
 
 The label survives the split. `archlinux` stays a legal thing for a manifest to
 declare and means exactly one row of `PLATFORM_BUNDLES` — Bazel's correction,

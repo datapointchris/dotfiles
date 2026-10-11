@@ -196,8 +196,8 @@ docs/learnings/`. Nothing surfaces the directory at the moment something breaks,
 consulted when searching it is a deliberate first step. A learning quotes its error verbatim, because
 the literal string is what gets searched. Keep one to 30–50 lines: Problem, Solution, Key Learnings.
 
-`todo.md` is for creating future work items. Never use it for planning, move it to `.planning`, or
-change it otherwise.
+`todo.md` is for creating future work items. Never use it for planning, move it, or change it
+otherwise.
 
 The `dotfiles` CLI's three reconcile verbs are `plan`, `apply` and `check` — `check` reports what is
 *wrong*, which a machine merely behind on versions is not. `dotfiles --help` and

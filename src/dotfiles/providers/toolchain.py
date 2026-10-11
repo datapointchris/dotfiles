@@ -498,8 +498,8 @@ at all gets, and a repo wanting another version says so itself.
 
 Not a `runtimes` row, because `version:` there means an exact pin and this is a
 major line — `fnm install 24` takes the newest 24.x. Declaring it properly needs
-the pin/floor vocabulary in `.planning/version-constraints.md` to grow a third
-answer."""
+the `version`/`min_version`/`max_version` vocabulary to grow a fourth key, one
+meaning a release line."""
 
 FNM_HOME = Path('.local/share/fnm')
 

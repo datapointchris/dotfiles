@@ -17,8 +17,8 @@ flags:
 #
 # The repos arrive as clones and are graded as clones, which is the same input a
 # worktree gave: `git worktree add` checks out tracked files only, so no gitignored
-# file and no `.planning` symlink was ever in scope. Nothing here needs the
-# working trees a workstation happens to carry.
+# file was ever in scope. Nothing here needs the working trees a workstation
+# happens to carry.
 system_packages: core
 flatpak: false
 

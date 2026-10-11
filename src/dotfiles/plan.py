@@ -145,7 +145,7 @@ class Precondition(enum.StrEnum):
     """A ROCm build, which is 12 GiB of runtime for a device that may not be there.
 
     A precondition rather than a coordinate, and the distinction was argued rather
-    than assumed. A seventh axis fails the bar `.planning/machine-axes.md` sets —
+    than assumed. A seventh axis fails the bar the six were admitted on —
     each of the six is forced by dozens of consumers and this would be forced by
     one package name, which is what got "offline / restricted egress" rejected as
     n=1 and told to be a capability requirement instead. `coordinates.Arch` is the

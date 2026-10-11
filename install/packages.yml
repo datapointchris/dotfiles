@@ -826,7 +826,7 @@ runtimes:
 # never a tag, because the same release is spelled v0.56.0 here and cli/v0.9.0
 # by the personal CLIs. This is the one section where a pin is honored today;
 # `dotfiles machines check` rejects one written anywhere it is not. Vocabulary and the
-# reasoning: .planning/version-constraints.md.
+# reasoning: docs/architecture/package-management.md, "Version constraints".
 #
 # A verified checksum is the default, so a release that cannot supply one says so
 # here — `checksum: unpublished` for a release with no checksums file at all, and

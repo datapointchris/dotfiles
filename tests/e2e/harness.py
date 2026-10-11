@@ -1461,8 +1461,7 @@ CACHE_PATHS = ('/var/cache/pacman/pkg', '/var/cache/apt/archives', '{home}/.cach
 """Download caches a base has no use for, cleared before it is committed.
 
 Not a micro-optimization: they were 2.4 GB of a 14.4 GB Arch base, and a base is
-kept per environment for two weeks on a root volume `.planning/status.md` already
-records as too small. What they hold is packages already installed and archives
+kept per environment for two weeks on a root volume that is already too small. What they hold is packages already installed and archives
 already unpacked — a set installing over this image re-downloads what *it* needs
 and nothing here would have been a hit for it.
 """
