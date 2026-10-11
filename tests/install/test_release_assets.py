@@ -20,6 +20,7 @@ it lands, and a test naming its asset would be the same string typed twice.
 
 from __future__ import annotations
 
+from itertools import product
 from pathlib import Path
 from pathlib import PurePosixPath
 
@@ -46,7 +47,7 @@ windows manifest already records as the reason it declares no releases —
 what holds that line rather than a comment.
 """
 
-TARGETS = tuple(Target(family, arch) for family in RELEASE_FAMILIES for arch in Arch)
+TARGETS = tuple(Target(family, arch) for family, arch in product(RELEASE_FAMILIES, Arch))
 """Both architectures on both systems, including the linux arm64 no machine here
 runs: `atuin` and `hadolint` each carry a linux arm branch, and it is reachable
 from nothing else."""
@@ -66,7 +67,7 @@ dict and every case parametrized from it would simply not run.
 
 assert len(DECLARED) == len(_ROWS), 'every github_releases row loads as a GithubRelease'
 
-CORPUS = tuple((entry, target) for entry in ENTRIES for target in TARGETS)
+CORPUS = tuple(product(ENTRIES, TARGETS))
 
 
 def case_id(value: str | Target) -> str:

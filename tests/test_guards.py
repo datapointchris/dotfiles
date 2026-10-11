@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import os
 import subprocess
+from itertools import chain
+from itertools import product
 from pathlib import Path
 
 import guards
@@ -180,9 +182,9 @@ def test_every_write_verb_is_refused_on_each_owned_root_and_under_it() -> None:
     `status.record` names `paths.STATE_HOME` itself, so dropping `self == owned`
     lets it reach this machine while every probe under a root still refuses.
     """
-    targets = [target for root in guards.OWNED for target in (root, root / PROBE)]
-    expected = [(target, verb) for target in targets for verb in ATTEMPTS]
-    refused = [(target, verb) for target in targets for verb in ATTEMPTS if _is_refused(target, verb)]
+    targets = list(chain.from_iterable((root, root / PROBE) for root in guards.OWNED))
+    expected = list(product(targets, ATTEMPTS))
+    refused = [(target, verb) for target, verb in expected if _is_refused(target, verb)]
 
     assert len(expected) == 2 * len(guards.OWNED) * len(ATTEMPTS)
     assert refused == expected

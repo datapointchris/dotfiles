@@ -31,6 +31,7 @@ from collections.abc import Callable
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from itertools import product
 from pathlib import Path
 
 from dotfiles import github_release
@@ -121,7 +122,7 @@ def redacted(text: str) -> str:
 
 def yields_credential(argv: Sequence[str]) -> bool:
     """Whether this command was asked for a secret, so its answer is dropped."""
-    return any(word in part.lower() for part in argv for word in CREDENTIAL_WORDS)
+    return any(word in part.lower() for part, word in product(argv, CREDENTIAL_WORDS))
 
 
 SLOW_SECONDS = 5.0

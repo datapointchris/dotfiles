@@ -11,6 +11,7 @@ import datetime as dt
 import json
 import tarfile
 import zipfile
+from itertools import product
 
 import pytest
 
@@ -234,7 +235,7 @@ class TestWheelSelection:
         Windows manifest hit it on the first platform wheel PyPI serves for
         anything, which meant no bundle could be built for that machine at all —
         including the winget executables it has no other way to get."""
-        declarable = {(str(family), str(arch)) for family in OSFamily for arch in Arch}
+        declarable = {(str(family), str(arch)) for family, arch in product(OSFamily, Arch)}
 
         assert declarable <= set(create_bundle.WHEEL_PLATFORMS)
 

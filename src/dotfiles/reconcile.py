@@ -23,6 +23,7 @@ from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
 
 from dotfiles import checkout
@@ -517,19 +518,20 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     # the same properties `sift` classifies by. A verb's own half is `findings` and
     # the other verb's is `others`, so the two are gathered from opposite fields
     # under opposite lenses.
-    own = [change.item for result in results for change in result.findings]
+    own = [change.item for change in chain.from_iterable(result.findings for result in results)]
+    others = list(chain.from_iterable(result.others for result in results))
 
     if lens is Lens.PLAN:
         if own:
             return _sentence(_clause(own, Phrase.TO_CHANGE), blind)
-        attention = _clause([change.item for result in results for change in result.others if change.declined], Phrase.NEED_ATTENTION)
+        attention = _clause([change.item for change in others if change.declined], Phrase.NEED_ATTENTION)
         head = Phrase.NOTHING_FOR_APPLY_TO_CHANGE if attention or blind else Phrase.NOTHING_TO_CHANGE
         return _sentence(head, attention, blind)
 
     # A declaration finding has no Change to carry it and is the same kind of thing
     # as one: `machines` is the resource nobody but a person can put right.
-    troubled = own + [section for result in results for section, _ in result.invalid]
-    drift = [change.item for result in results for change in result.others if change.actionable]
+    troubled = own + [section for section, _ in chain.from_iterable(result.invalid for result in results)]
+    drift = [change.item for change in others if change.actionable]
     # `nothing wrong` survives beside a drift clause, and is this verb's own answer
     # rather than a filler. The verdict word beside it is green, because drift is
     # not this verb's subject and does not move it — so a line that opened on the
@@ -1013,9 +1015,8 @@ def matched_under_entries(planned: Sequence[Event], entries: frozenset[str]) -> 
     """
     if not entries:
         return ()
-    return tuple(
-        f'{row.item} {row.detail}'.strip() for event in planned if isinstance(event.payload, Summary) for row in event.payload.examined
-    )
+    examined = chain.from_iterable(event.payload.examined for event in planned if isinstance(event.payload, Summary))
+    return tuple(f'{row.item} {row.detail}'.strip() for row in examined)
 
 
 def applied_line(

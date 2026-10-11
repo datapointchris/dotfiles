@@ -22,6 +22,7 @@ import shutil
 import tarfile
 import tempfile
 from collections.abc import Iterable
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -592,7 +593,7 @@ def newest(*searched: Path, machine: str = '') -> Path | None:
     `stage`'s `bundle.json` check is the backstop. `''` means no filter at all.
     """
     directories = searched or (paths.archive_dir(), Path.cwd(), Path.home())
-    found = [archive for directory in directories if directory.is_dir() for archive in directory.glob(ARCHIVES)]
+    found = list(chain.from_iterable(directory.glob(ARCHIVES) for directory in directories if directory.is_dir()))
     if machine:
         found = [archive for archive in found if manifest_of(archive.name) in ('', machine)]
     return max(found, key=lambda archive: archive.name, default=None)

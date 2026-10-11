@@ -16,6 +16,7 @@ from __future__ import annotations
 import dataclasses as dc
 import io
 import zipfile
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -100,7 +101,7 @@ class Runs:
         return answer
 
     def ran(self, fragment: str) -> bool:
-        return any(fragment in part for argv in self.calls for part in argv)
+        return any(fragment in part for part in chain.from_iterable(self.calls))
 
 
 class Fetches:

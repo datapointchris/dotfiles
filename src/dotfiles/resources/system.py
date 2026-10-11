@@ -24,6 +24,7 @@ from __future__ import annotations
 import dataclasses as dc
 import enum
 from collections.abc import Sequence
+from itertools import chain
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
@@ -382,7 +383,7 @@ def _catalogd_names(catalog: catalog.Catalog, manager: str) -> tuple[frozenset[s
             names = ev.entry_names(entry)
             installable.update(names.get(manager, ()))
             known.add(entry.name)
-            known.update(name for spellings in names.values() for name in spellings)
+            known.update(chain.from_iterable(names.values()))
     return frozenset(installable), frozenset(known)
 
 

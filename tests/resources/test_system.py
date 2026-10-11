@@ -13,6 +13,7 @@ import dataclasses as dc
 import shutil
 import stat
 from collections.abc import Callable
+from itertools import chain
 from pathlib import Path
 from typing import Any
 from typing import cast
@@ -213,7 +214,7 @@ def test_every_installer_maps_to_a_query_that_exists() -> None:
     the set of them is written out: one joining it silently is the failure the
     whole table is shaped against.
     """
-    installers = {installer for manager in axes.PackageManager for installer in axes.INSTALLER_FAMILIES[manager]}
+    installers = set(chain.from_iterable(axes.INSTALLER_FAMILIES[manager] for manager in axes.PackageManager))
 
     assert installers <= set(ev.INSTALLER_QUERIES)
     assert {'cask', 'flatpak', 'mas'} <= set(ev.INSTALLER_QUERIES)

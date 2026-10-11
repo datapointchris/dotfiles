@@ -16,6 +16,7 @@ broken between the install and the restore.
 from __future__ import annotations
 
 import dataclasses as dc
+from itertools import chain
 from pathlib import Path
 
 from dotfiles import envfile
@@ -138,7 +139,7 @@ class EnvResource:
         path = session.env_file
         config = settings.read_config()
         resolved = settings.resolve_all(
-            {name for entry in plan.machine.requirements for name in entry.declared_names},
+            set(chain.from_iterable(entry.declared_names for entry in plan.machine.requirements)),
             config,
         )
         return Observed(

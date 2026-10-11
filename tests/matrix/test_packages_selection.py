@@ -27,6 +27,7 @@ the `Selection` the walk will use rather than against the whole machine's plan, 
 from __future__ import annotations
 
 from collections.abc import Callable
+from itertools import chain
 
 import pytest
 import yaml
@@ -258,7 +259,7 @@ def test_a_package_name_the_resolved_plan_does_not_carry_is_a_usage_error(
     The refusal lists what the run does reach. `task` is the case a pointer at
     `packages list` got wrong: the declaration lists it, and this run refuses it.
     """
-    argv = [flag for name in names for flag in ('--package', name)]
+    argv = list(chain.from_iterable(('--package', name) for name in names))
 
     ran = cli('packages', 'apply', *argv)
 

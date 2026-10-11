@@ -16,6 +16,7 @@ import datetime as dt
 import json
 import tarfile
 from collections.abc import Callable
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -653,7 +654,7 @@ class TestTheAutomaticPaths:
         """
         sandbox.declare(packages=LAZYGIT, manifest=DECLARES_LAZYGIT)
         declare(sandbox.config, extra='publish_status_after_offline_apply = true\n')
-        skipped = [flag for resource in RESOURCES if resource != 'symlinks' for flag in ('--skip', resource)]
+        skipped = list(chain.from_iterable(('--skip', resource) for resource in RESOURCES if resource != 'symlinks'))
 
         ran = cli('apply', *skipped, catch_exceptions=True)
 

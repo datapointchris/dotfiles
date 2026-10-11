@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -82,7 +83,7 @@ def test_the_homebrew_installer_is_never_escalated(world, monkeypatch) -> None:
     bootstrap.homebrew()
 
     assert reached.argv0 == ['bash']
-    assert 'sudo' not in [part for call in reached.calls for part in call]
+    assert 'sudo' not in list(chain.from_iterable(reached.calls))
 
 
 def test_the_installer_runs_non_interactively(world, monkeypatch) -> None:
@@ -198,7 +199,7 @@ def test_makepkg_is_never_escalated(world, monkeypatch, tmp_path) -> None:
 
     bootstrap.aur()
 
-    assert 'sudo' not in [part for call in reached.calls for part in call]
+    assert 'sudo' not in list(chain.from_iterable(reached.calls))
 
 
 def test_the_gnupg_home_exists_before_makepkg_verifies_anything(world, monkeypatch, tmp_path) -> None:

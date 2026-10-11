@@ -13,6 +13,7 @@ import contextlib
 import os
 import sqlite3
 import stat
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -84,7 +85,7 @@ def changes(session: Session) -> tuple:
 
 
 def declared_tools() -> set[str]:
-    return {tool for name in machines.names(paths.REPO_ROOT) for tool in machines.load(name, paths.REPO_ROOT).auth}
+    return set(chain.from_iterable(machines.load(name, paths.REPO_ROOT).auth for name in machines.names(paths.REPO_ROOT)))
 
 
 def test_every_declared_tool_has_a_probe() -> None:

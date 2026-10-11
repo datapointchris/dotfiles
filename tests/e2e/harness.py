@@ -25,6 +25,7 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import field
+from itertools import chain
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -838,7 +839,7 @@ def blocked_host_args(environment: Environment) -> list[str]:
     if not environment.firewalled:
         return []
     blocked, _ = measured_network()
-    return [argument for host in blocked for argument in ('--add-host', f'{host}:127.0.0.1')]
+    return list(chain.from_iterable(('--add-host', f'{host}:127.0.0.1') for host in blocked))
 
 
 def github_token() -> str:
@@ -1099,6 +1100,7 @@ def probe_script(items: Sequence[DesiredItem]) -> str:
         for precondition, probe in PRECONDITION_PROBES.items()
         if any(item.precondition is precondition for item in items)
     ]
+    queries = sorted(set(chain.from_iterable(registry_names(item) for item in items)))
     # Guarded on the binary existing, and that guard is the whole point: a manager
     # this machine does not have must leave *no* line, so an apt-only package on
     # Arch is unaskable rather than reported absent. Piping a missing command
@@ -1107,7 +1109,7 @@ def probe_script(items: Sequence[DesiredItem]) -> str:
     lines += [
         f'command -v {ev.QUERIES[query][0]} >/dev/null 2>&1 && '
         f"printf 'listed\\t%s\\t%s\\n' {query} \"$({shlex.join(ev.QUERIES[query])} 2>/dev/null | tr '\\n' ' ')\""
-        for query in sorted({query for item in items for query in registry_names(item)})
+        for query in queries
         if query in ev.QUERIES
     ]
     lines += [
@@ -1150,7 +1152,7 @@ class Sweep:
             answerable = {query: found for query, found in names.items() if query in self.listed}
             if not answerable:
                 return None
-            return any(name in self.listed[query] for query, found in answerable.items() for name in found)
+            return any(any(name in self.listed[query] for name in found) for query, found in answerable.items())
         if item.address in self.found:
             return bool(self.found[item.address])
         return None
@@ -1233,7 +1235,7 @@ def unexplained_copies(machine: Machine, items: Sequence[DesiredItem]) -> dict[s
         for installer in ('apt', 'pacman', 'aur', 'brew')
         if (name := item.entry.package_for(installer))
     }
-    every = [path for paths in duplicated.values() for path in paths]
+    every = list(chain.from_iterable(duplicated.values()))
     answered = machine.exec(ownership_script(every))
 
     explained = set()

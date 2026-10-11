@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from itertools import chain
+from itertools import product
 
 import pytest
 
@@ -60,7 +62,7 @@ def skipping(*dropped: str) -> list[str]:
     out of. A parameter that shadows a helper reads fine until the helper is
     wanted inside the function that hid it.
     """
-    return [argument for address in dropped for argument in ('--skip', address)]
+    return list(chain.from_iterable(('--skip', address) for address in dropped))
 
 
 def broken_identity(sandbox: Sandbox) -> None:
@@ -803,4 +805,4 @@ def test_the_status_file_a_check_writes_carries_its_verdicts_and_none_of_its_row
     assert [row['address'] for row in written['resources']] == addresses(ran)
     assert [row['verdict'] for row in written['resources']] == [row['verdict'] for row in ran.document['resources']]
     assert written['verdict'] == ran.document['verdict']
-    assert not any(key in row for row in written['resources'] for key in ('findings', 'others', 'examined', 'invalid'))
+    assert not any(key in row for row, key in product(written['resources'], ('findings', 'others', 'examined', 'invalid')))

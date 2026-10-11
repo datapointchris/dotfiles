@@ -230,7 +230,7 @@ def vanished_in(output: str, tests: Sequence[str]) -> tuple[str, ...]:
     everyone still addressable, so the loss is the handful of tests whose identity moved rather than the module.
     """
     named = [match.group(1) for line in output.splitlines() if (match := NOT_FOUND.match(line))]
-    return tuple(sorted({test for test in tests for absolute in named if absolute.endswith(test)}))
+    return tuple(sorted({test for test in tests if any(absolute.endswith(test) for absolute in named)}))
 
 
 CONTROL_TIMEOUT = 1800.0

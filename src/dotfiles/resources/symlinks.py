@@ -48,6 +48,7 @@ from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Mapping
+from itertools import chain
 from pathlib import Path
 from typing import assert_never
 
@@ -611,7 +612,7 @@ def measure_rendered(session: Session, templates: list[Link]) -> dict[Path, Rend
             named[link.target] = template.placeholders(link.source)
         except OSError as unreadable:
             measured[link.target] = Rendered(None, problem=f'the template cannot be read: {unreadable.strerror}')
-    values = machine_values(session, (name for names in named.values() for name in names))
+    values = machine_values(session, chain.from_iterable(named.values()))
 
     for link in templates:
         if link.target in measured:

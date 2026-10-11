@@ -14,6 +14,7 @@ tree the property is never asked of.
 
 from __future__ import annotations
 
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -40,14 +41,15 @@ def library_directories() -> tuple[str, ...]:
     outlives the directory that justified it, which is this file's own recorded
     failure mode, one level up from the list it replaced.
     """
-    return tuple(sorted({str(path.parent.relative_to(REPO)) for root in LIBRARY_ROOTS for path in (REPO / root).rglob('*.sh')}))
+    scripts = chain.from_iterable((REPO / root).rglob('*.sh') for root in LIBRARY_ROOTS)
+    return tuple(sorted({str(path.parent.relative_to(REPO)) for path in scripts}))
 
 
 LIBRARY_DIRS = library_directories()
 
 
 def libraries() -> list[Path]:
-    return sorted(path for directory in LIBRARY_DIRS for path in (REPO / directory).glob('*.sh'))
+    return sorted(chain.from_iterable((REPO / directory).glob('*.sh') for directory in LIBRARY_DIRS))
 
 
 def identifier(path: Path) -> str:

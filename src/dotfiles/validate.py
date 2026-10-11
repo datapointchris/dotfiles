@@ -27,6 +27,8 @@ import dataclasses as dc
 import enum
 import tomllib
 from collections.abc import Callable
+from itertools import chain
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
@@ -234,7 +236,7 @@ def _unreferenced(declared: catalogs.Catalog, manifests: dict[str, machines.Mach
         subscriptions = [manifest.subscription(section) for manifest in manifests.values()]
         if any(subscription.coverage is machines.Coverage.ALL for subscription in subscriptions):
             continue
-        referenced = {name for subscription in subscriptions for name in subscription.names}
+        referenced = set(chain.from_iterable(subscription.names for subscription in subscriptions))
         for name in sorted({entry.name for entry in declared.section(section)} - referenced):
             findings.append(Finding(section, Severity.WARNING, f'{name!r} is declared but no manifest names it'))
     return findings
@@ -317,7 +319,7 @@ def _colliding_variants(root: Path) -> list[Finding]:
                 if len(files) > 1
             )
             sources = sorted(files_by_directory)
-            clash = sorted({(a, b) for a in sources for b in sources if a < b and _coselectable(a, b)})
+            clash = sorted({(a, b) for a, b in combinations(sources, 2) if _coselectable(a, b)})
             for first, second in clash:
                 findings.append(
                     Finding(

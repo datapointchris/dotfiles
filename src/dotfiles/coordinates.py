@@ -244,7 +244,10 @@ def directory_names() -> frozenset[str]:
     `apps/` that is neither `common` nor one of these is a typo that would
     otherwise deploy to nobody and say nothing.
     """
-    return frozenset(f'{directory}/{value}' for axis, directory in AXIS_DIRS.items() for value in AXIS_TYPES[axis])
+    names: set[str] = set()
+    for axis, directory in AXIS_DIRS.items():
+        names.update(f'{directory}/{value}' for value in AXIS_TYPES[axis])
+    return frozenset(names)
 
 
 class Arch(enum.StrEnum):

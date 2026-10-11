@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Sequence
+from itertools import chain
 
 import typer
 import yaml
@@ -203,7 +204,8 @@ def _prerequisites(entries: frozenset[str]) -> tuple[str, ...]:
 
     declared = catalog.load()
     sections = {entry.section for entry in declared.all_entries() if entry.name in entries}
-    wanted = (addressed(one.resource, one.name) for section in sections for one in registry.required_by(section))
+    required = chain.from_iterable(registry.required_by(section) for section in sections)
+    wanted = (addressed(one.resource, one.name) for one in required)
     return tuple(dict.fromkeys(wanted))
 
 
@@ -216,7 +218,7 @@ def _within(resource: str) -> tuple[str, ...]:
     `toolchains show` was narrowed to nothing at all and answered for any package
     in the file.
     """
-    return tuple(flag for section in registry.sections_for(resource) for flag in ('--section', section))
+    return tuple(chain.from_iterable(('--section', section) for section in registry.sections_for(resource)))
 
 
 def available_sources() -> list[str]:

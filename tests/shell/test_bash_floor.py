@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -119,7 +120,7 @@ def bash_scripts(directory: Path) -> list[Path]:
     )
 
 
-SCRIPTS = [path for directory in SCANNED_DIRS for path in bash_scripts(directory)]
+SCRIPTS = list(chain.from_iterable(bash_scripts(directory) for directory in SCANNED_DIRS))
 
 
 def identifier(path: Path) -> str:

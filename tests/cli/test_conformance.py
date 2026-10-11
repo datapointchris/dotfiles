@@ -24,6 +24,7 @@ import re
 import sys
 from collections.abc import Callable
 from collections.abc import Sequence
+from itertools import chain
 from pathlib import Path
 from types import ModuleType
 from types import SimpleNamespace
@@ -69,7 +70,7 @@ GROUPS = [(path, cmd) for path, cmd in TREE if isinstance(cmd, click.Group)]
 
 
 ACCEPTED = {
-    path: {option for parameter in command.params for option in (*parameter.opts, *parameter.secondary_opts)} for path, command in LEAVES
+    path: set(chain.from_iterable((*parameter.opts, *parameter.secondary_opts) for parameter in command.params)) for path, command in LEAVES
 }
 """Every leaf's option names, derived once.
 
@@ -171,7 +172,7 @@ def test_every_leaf_that_owes_the_verbosity_pair_takes_it(path: tuple[str, ...],
     is the drift this file exists to catch — the same asymmetry `--dry-run` and
     `--force` had, one subcommand at a time. `bundle create` is the loudest verb
     in the offline loop and was one of two there with no way to quieten it."""
-    flags = {name for param in command.params for name in param.opts}
+    flags = set(chain.from_iterable(param.opts for param in command.params))
     assert {'-v', '--verbose'} <= flags, f'`dotfiles {" ".join(path)}` cannot be turned up'
     assert {'-q', '--quiet'} <= flags, f'`dotfiles {" ".join(path)}` cannot be quietened'
 
@@ -232,7 +233,7 @@ def test_machine_and_offline_bind_to_leaves_not_groups() -> None:
     --machine X` — the exact line a bootstrap runs — would raise `No such option`
     if these were declared on the callback."""
     for path, group in GROUPS:
-        names = {option for parameter in group.params for option in parameter.opts}
+        names = set(chain.from_iterable(parameter.opts for parameter in group.params))
         assert '--machine' not in names, f'{"/".join(path) or "root"} declares --machine on the group'
         assert '--offline' not in names, f'{"/".join(path) or "root"} declares --offline on the group'
 
@@ -298,7 +299,7 @@ def test_no_leaf_offers_dry_run() -> None:
     """`check` is `apply` with the last step not run, so there is no code path a
     flag could switch off. A `--dry-run` would have to be a second implementation."""
     for path, command in LEAVES:
-        names = {option for parameter in command.params for option in parameter.opts}
+        names = set(chain.from_iterable(parameter.opts for parameter in command.params))
         assert '--dry-run' not in names, f'{"/".join(path)} offers --dry-run'
 
 
@@ -612,7 +613,8 @@ def members_read(paths: Sequence[Path] = SOURCE) -> set[str]:
     reached = set()
     for path in paths:
         tree = ast.parse(path.read_text())
-        declared = {id(inner) for node in ast.walk(tree) if is_phrase_table(node) for inner in ast.walk(node)}
+        tables = (node for node in ast.walk(tree) if is_phrase_table(node))
+        declared = {id(inner) for inner in chain.from_iterable(ast.walk(table) for table in tables)}
         for node in ast.walk(tree):
             if isinstance(node, ast.Attribute) and id(node) not in declared and names_the_table(node.value):
                 reached.add(node.attr)
@@ -1053,14 +1055,15 @@ def test_every_rendered_line_reads_its_wording_from_the_table(monkeypatch: pytes
     reached only by `.heading`, so a search built from `str(phrase)` alone never
     holds a wording that a render site could type.
     """
-    shipped = [spelling for phrase in output.Phrase for spelling in {str(phrase), phrase.heading}]
+    shipped = list(chain.from_iterable({str(phrase), phrase.heading} for phrase in output.Phrase))
     stand_ins = stand_in_phrases()
     swept = rebind(monkeypatch, TABLE, stand_ins)
 
     for where, text in rendered_lines(monkeypatch).items():
         typed = [phrase for phrase in shipped if phrase in text]
         assert not typed, f'{where} types {typed} rather than reading it, with {sorted(set(swept))} swapped: {text!r}'
-        reached = [spelling for member in vars(stand_ins).values() for spelling in member.spellings if spelling in text]
+        spellings = chain.from_iterable(member.spellings for member in vars(stand_ins).values())
+        reached = [spelling for spelling in spellings if spelling in text]
         assert reached, f'{where} words no phrase at all: {text!r}'
 
 

@@ -540,7 +540,9 @@ def resolve_interpreters(config, items):
     narrowed to one of them enforces a subset and reports nothing about the rest.
     `validate.yml` collects the whole suite under the flag for that reason.
     """
-    required = {marker.args[0] for item in items for marker in item.iter_markers('interpreter')}
+    required: set[str] = set()
+    for item in items:
+        required.update(marker.args[0] for marker in item.iter_markers('interpreter'))
     missing = sorted(name for name in required if shutil.which(name) is None)
 
     if config.getoption('--require-interpreters'):

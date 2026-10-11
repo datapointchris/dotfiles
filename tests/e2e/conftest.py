@@ -235,7 +235,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if 'declared_item' not in metafunc.fixturenames:
         return
 
-    offered = [Declared(environment.name, item) for environment in ENVIRONMENTS for item in declared_items(environment)]
+    offered: list[Declared] = []
+    for environment in ENVIRONMENTS:
+        offered.extend(Declared(environment.name, item) for item in declared_items(environment))
     metafunc.parametrize('declared_item', offered, ids=[f'{one.environment}-{one.item.address}' for one in offered])
 
 

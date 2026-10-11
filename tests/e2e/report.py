@@ -22,6 +22,7 @@ import json
 import statistics
 import subprocess
 import sys
+from itertools import chain
 from pathlib import Path
 
 from dotfiles import paths
@@ -123,7 +124,8 @@ def tail(cell: str) -> int:
             print(f'{log}\n', flush=True)
             return subprocess.run(['tail', '-F', '-n', '40', str(log)]).returncode
 
-    available = sorted({log.stem for run in runs() for log in run.glob('*.log')})
+    logs = chain.from_iterable(run.glob('*.log') for run in runs())
+    available = sorted({log.stem for log in logs})
     print(f'no log named {cell!r}; available: {", ".join(available) or "none"}', file=sys.stderr)
     return 1
 

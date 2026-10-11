@@ -14,6 +14,8 @@ what the machine gets.
 
 from __future__ import annotations
 
+from itertools import chain
+
 from dotfiles import catalog
 from dotfiles import machine as machines
 from dotfiles import plan as planning
@@ -76,5 +78,6 @@ def _named(items: list[planning.DesiredItem], entries: frozenset[str]) -> list[p
     required by something that was.
     """
     sections = {item.section for item in items if item.name in entries}
-    prerequisites = {provider.name for section in sections for provider in registry.required_by(section)}
+    providers = chain.from_iterable(registry.required_by(section) for section in sections)
+    prerequisites = {provider.name for provider in providers}
     return [item for item in items if item.name in entries or item.provider in prerequisites]

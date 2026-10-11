@@ -23,6 +23,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 from collections.abc import Callable
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -206,7 +207,7 @@ class TestWhatTheTargetDecides:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
 
         assert [row['verdict'] for row in rows if 'lazygit' in row['item']] == ['stale']
 
@@ -218,7 +219,7 @@ class TestWhatTheTargetDecides:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
 
         assert not [row for row in rows if 'lazygit' in row['item']]
 
@@ -235,7 +236,7 @@ class TestWhatTheTargetDecides:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
 
         assert not [row for row in rows if 'lazygit' in row['item']]
 
@@ -261,7 +262,7 @@ class TestWhatTheTargetDecides:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
 
         assert not [row for row in rows if 'lazygit' in row['item']]
 
@@ -273,7 +274,7 @@ class TestWhatTheTargetDecides:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
 
         assert [row['verdict'] for row in rows if 'lazygit' in row['item']] == ['stale']
 
@@ -289,7 +290,7 @@ class TestWhatTheTargetDecides:
         # its own finding. It reaches `--json` all the same, which is the property
         # "a fact on screen is reachable through some machine door" states.
         ran = cli('check', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['others']]
+        rows = list(chain.from_iterable(resource['others'] for resource in ran.document['resources']))
         found = next(row for row in rows if 'lazygit' in row['item'])
 
         assert found['verdict'] == 'unknown'
@@ -302,7 +303,7 @@ class TestWhatTheTargetDecides:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('check', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['others']]
+        rows = list(chain.from_iterable(resource['others'] for resource in ran.document['resources']))
         found = next(row for row in rows if 'lazygit' in row['item'])
 
         assert found['verdict'] == 'unknown'
@@ -326,7 +327,7 @@ class TestNamingWhereTheFigureCameFrom:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
         found = next(row for row in rows if 'lazygit' in row['item'])
 
         assert 'what the staged bundle carries' in found['detail']
@@ -338,7 +339,7 @@ class TestNamingWhereTheFigureCameFrom:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
 
         assert next(row for row in rows if 'lazygit' in row['item'])['detail'] == '0.46.0 is what the staged bundle carries'
 
@@ -349,7 +350,7 @@ class TestNamingWhereTheFigureCameFrom:
         sandbox.upstream({'jesseduffield/lazygit': '0.46.0'})
 
         ran = cli('plan', '--cached', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
 
         assert next(row for row in rows if 'lazygit' in row['item'])['detail'] == '0.46.0 is the latest release'
 
@@ -372,7 +373,7 @@ class TestWhatNoBundleEverCarries:
         sandbox.upstream({'datapointchris/syncer': 'v12.0.0'})
 
     def row(self, ran: Invocation) -> dict[str, str]:
-        rows = [row for resource in ran.document['resources'] for row in resource['others']]
+        rows = list(chain.from_iterable(resource['others'] for resource in ran.document['resources']))
         return next(row for row in rows if 'syncer' in row['item'])
 
     def test_offline_the_row_names_the_kind_rather_than_the_bundle(self, sandbox: Sandbox, cli) -> None:
@@ -410,7 +411,7 @@ class TestWhatNoBundleEverCarries:
         sandbox.installed('terraform-ls', '0.39.0')
 
         ran = cli('check', '--offline', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['others']]
+        rows = list(chain.from_iterable(resource['others'] for resource in ran.document['resources']))
         found = next(row for row in rows if 'terraform-ls' in row['item'])
 
         assert 'terraform-ls declares no bundle_install_script' in found['detail']
@@ -422,7 +423,7 @@ class TestWhatNoBundleEverCarries:
         self.staged(sandbox)
 
         ran = cli('plan', '--cached', '--json', catch_exceptions=True)
-        rows = [row for resource in ran.document['resources'] for row in resource['findings']]
+        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
 
         assert [row['verdict'] for row in rows if 'syncer' in row['item']] == ['stale']
 

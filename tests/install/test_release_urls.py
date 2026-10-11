@@ -639,7 +639,9 @@ class TestBundledCorpus:
         in step with it."""
         declared = declaration()
         sections = sections_staged_from_a_declared_asset()
-        walked = {(section, entry.name) for section in sections for entry in declared.section(section) if entry.names_its_asset}
+        walked: set[tuple[str, str]] = set()
+        for section in sections:
+            walked.update((section, entry.name) for entry in declared.section(section) if entry.names_its_asset)
         assert len(walked) == len(BUNDLED), 'the corpus lost an entry between the walk and the collection'
         assert walked == set(BUNDLED)
         assert {section for section, _ in BUNDLED} == sections, 'a section staged from a declared asset contributes no entry'

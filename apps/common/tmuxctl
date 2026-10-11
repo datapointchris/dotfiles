@@ -64,6 +64,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import replace
 from enum import StrEnum
+from itertools import chain
 from typing import Any
 
 MIN_COLUMNS = 120
@@ -542,7 +543,7 @@ def crown(windows: Sequence[Window], caller: str) -> tuple[Window, ...]:
     differently from the write verb on exactly the placement that matters most,
     and left a permanent mark behind when the run then refused.
     """
-    if any(pane.role is Role.COORDINATOR for window in windows for pane in window.panes):
+    if any(pane.role is Role.COORDINATOR for pane in chain.from_iterable(window.panes for window in windows)):
         return tuple(windows)
     return tuple(
         replace(
@@ -622,7 +623,8 @@ def beneath(windows: Sequence[Window], request: Request) -> Placement:
     # reviewer moved to another window still reviews this worker -- and a guard
     # that scanned one window would be disarmed by the one operation the marks
     # were kept for.
-    taken = [pane for other in windows for pane in other.panes if pane.role is Role.REVIEWER and pane.pair == worker.pane_id]
+    panes = chain.from_iterable(other.panes for other in windows)
+    taken = [pane for pane in panes if pane.role is Role.REVIEWER and pane.pair == worker.pane_id]
     if taken:
         raise Usage(Refusal.REVIEWER_TAKEN, pane=request.partner, reviewer=taken[0].pane_id)
 

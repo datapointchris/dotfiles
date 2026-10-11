@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from itertools import chain
 from typing import Any
 
 import pytest
@@ -310,7 +311,7 @@ class TestPaneCap:
 
     def test_order_survives_the_split(self, tmux_rearrange):
         members = [f'%{n}' for n in range(9)]
-        assert [p for run in tmux_rearrange.balanced_chunks(members, 6) for p in run] == members
+        assert list(chain.from_iterable(tmux_rearrange.balanced_chunks(members, 6))) == members
 
     def test_an_over_cap_window_is_rewritten_and_named(self, tmux_rearrange):
         cap = tmux_rearrange.MAX_PANES_PER_WINDOW
@@ -329,7 +330,8 @@ class TestPaneCap:
             ]
         }
         tmux_rearrange.cap_windows(grouping)
-        widths = [len(w['panes']) for s in grouping['sessions'] for w in s['windows']]
+        windows = chain.from_iterable(s['windows'] for s in grouping['sessions'])
+        widths = [len(w['panes']) for w in windows]
         assert max(widths) <= cap
 
     def test_a_grouping_already_within_the_cap_is_untouched(self, tmux_rearrange):

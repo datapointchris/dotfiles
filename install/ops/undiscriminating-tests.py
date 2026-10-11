@@ -45,6 +45,7 @@ from __future__ import annotations
 import argparse
 import ast
 import sys
+from itertools import chain
 from pathlib import Path
 
 EFFECT = ('exists', 'is_file', 'is_dir', 'stdout', 'stderr', 'read_text', 'iterdir', 'listdir')
@@ -75,7 +76,7 @@ def claims(test: ast.expr) -> list[ast.expr]:
     `BoolOp` is neither a `UnaryOp` nor a `Compare` and reads as positive.
     """
     if isinstance(test, ast.BoolOp):
-        return [claim for value in test.values for claim in claims(value)]
+        return list(chain.from_iterable(claims(value) for value in test.values))
     return [test]
 
 
@@ -127,7 +128,9 @@ def undiscriminating(path: Path) -> list[tuple[int, str, list[str]]]:
         checks = [child for child in ast.walk(node) if isinstance(child, ast.Assert)]
         if not checks:
             continue
-        parts = [claim for check in checks for claim in claims(check.test)]
+        parts = []
+        for check in checks:
+            parts.extend(claims(check.test))
         if not all(negative(part) and external(part) for part in parts):
             continue
         if any(marker in code(node) for marker in STATUS):

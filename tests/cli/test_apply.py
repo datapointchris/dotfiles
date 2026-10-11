@@ -14,6 +14,7 @@ import dataclasses as dc
 import datetime as dt
 import json
 from collections import Counter
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -62,7 +63,8 @@ def busiest_owner() -> str:
     entries behind it, not a particular one.
     """
     declaration = catalog.load()
-    owners = Counter(entry.owner for section in catalog.SECTIONS for entry in declaration.section(section) if entry.owner)
+    entries = chain.from_iterable(declaration.section(section) for section in catalog.SECTIONS)
+    owners = Counter(entry.owner for entry in entries if entry.owner)
     assert owners, 'no entry declares an owner, so --owner narrowing cannot be asserted'
     return owners.most_common(1)[0][0]
 

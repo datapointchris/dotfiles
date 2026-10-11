@@ -36,6 +36,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from enum import StrEnum
+from itertools import chain
 from pathlib import Path
 
 SCROLLBACK_LINES = 50
@@ -492,7 +493,8 @@ def validate(grouping: dict, panes: list[Pane]) -> None:
     it stranded in a half-dissolved session; one that invented an id would
     abort the script partway, having already moved real work.
     """
-    seen = [p for s in grouping.get('sessions', []) for w in s.get('windows', []) for p in w.get('panes', [])]
+    windows = chain.from_iterable(s.get('windows', []) for s in grouping.get('sessions', []))
+    seen = list(chain.from_iterable(w.get('panes', []) for w in windows))
     have = {p.pane_id for p in panes}
     if len(seen) != len(set(seen)):
         dupes = sorted({p for p in seen if seen.count(p) > 1})
@@ -560,7 +562,10 @@ def render(grouping: dict, panes: list[Pane], windows: list[Window]) -> list[str
     up front goes stale mid-script.
     """
     home = {p.pane_id: p for p in panes}
-    source_of = {pid: w for w in windows for pid in w.pane_ids}
+    source_of = {}
+    for w in windows:
+        for pid in w.pane_ids:
+            source_of[pid] = w
     lines = [
         '#!/usr/bin/env bash',
         '# Written by tmux-rearrange. Read before running.',

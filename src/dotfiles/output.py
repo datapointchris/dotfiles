@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from enum import StrEnum
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -445,7 +446,7 @@ def _listed(result: ResourceResult) -> tuple[tuple[Change, ...], tuple[Examined,
     for row in result.examined:
         grouped.setdefault(row.group, []).append(row)
 
-    kept = [row for rows in grouped.values() if _fits(len(rows)) for row in rows]
+    kept = list(chain.from_iterable(rows for rows in grouped.values() if _fits(len(rows))))
     # The other verb's findings are changes, so they carry no group and are weighed
     # as one — which is right, since a resource never splits *what differs* into
     # kinds the way it splits what it merely holds.

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -652,7 +653,7 @@ def test_every_declared_precondition_names_a_value_the_repo_declares() -> None:
     machine declares resolves as not applicable everywhere."""
     flags = yaml.safe_load((REPO_ROOT / 'install' / 'flags.yml').read_text())
     declared = {entry['name'] for entry in flags.get('required') or ()}
-    named = {name for entry in flags.get('required_files') or () for name in entry.get('requires_values') or ()}
+    named = set(chain.from_iterable(entry.get('requires_values') or () for entry in flags.get('required_files') or ()))
 
     assert named <= declared
 

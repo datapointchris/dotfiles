@@ -28,6 +28,7 @@ import re
 import shutil
 import signal
 import tempfile
+from itertools import chain
 from pathlib import Path
 
 from dotfiles.effects import Output
@@ -81,7 +82,8 @@ def configs(home: Path) -> tuple[Path, ...]:
     those files source in turn.
     """
     base = (Path('/etc/tmux.conf'), user_config(home))
-    sourced = tuple(_expand(target, home) for path in base for target in _matches(SOURCE_LINE, path))
+    targets = chain.from_iterable(_matches(SOURCE_LINE, path) for path in base)
+    sourced = tuple(_expand(target, home) for target in targets)
     return tuple(path for path in base + sourced if path.is_file())
 
 

@@ -44,6 +44,7 @@ import tempfile
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Sequence
+from itertools import chain
 from pathlib import Path
 
 from dotfiles import paths
@@ -242,7 +243,7 @@ def unmeasured_by(run: score.Run) -> frozenset[str]:
     A survivor carries them too, and it is the survivor that would go unnoticed: a mutant nothing killed blocks nobody, so a test
     whose node id it renamed would be judged on a measurement that never included it.
     """
-    return frozenset(name for result in run.results for name in result.unmeasured)
+    return frozenset(chain.from_iterable(result.unmeasured for result in run.results))
 
 
 @dc.dataclass(frozen=True)
@@ -313,7 +314,7 @@ def together(planted: Sequence[Mutant], pool: Iterable[str], room: Iterable[str]
     keepers = set(room) - pool
     uncovered = [mutant for mutant in planted if mutant.killers and not mutant.killers & keepers]
     while uncovered:
-        counted = collections.Counter(name for mutant in uncovered for name in mutant.killers & pool)
+        counted = collections.Counter(chain.from_iterable(mutant.killers & pool for mutant in uncovered))
         if not counted:
             break
         best = min(counted.items(), key=lambda item: (-item[1], item[0]))[0]
@@ -336,7 +337,7 @@ def _cover(killed: Sequence[Mutant], test: str) -> tuple[str, ...]:
     remaining = list(others)
     chosen: list[str] = []
     while remaining:
-        counted = collections.Counter(name for group in remaining for name in group)
+        counted = collections.Counter(chain.from_iterable(remaining))
         best = min(counted.items(), key=lambda item: (-item[1], item[0]))[0]
         chosen.append(best)
         remaining = [group for group in remaining if best not in group]
@@ -390,7 +391,7 @@ def prove(
 
     # Every test the run saw kill something is in the room whether or not the caller listed it, and leaving one out would hold a
     # pool member back to cover a mutant something else already covers.
-    room = set(run_set) | set(proving) | {name for mutant in planted for name in mutant.killers}
+    room = set(run_set) | set(proving) | set(chain.from_iterable(mutant.killers for mutant in planted))
     joint = together(planted, [proof.test for proof in redundant], room)
     redundant = [dc.replace(proof, together=proof.test in joint) for proof in redundant]
 

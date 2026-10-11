@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import io
 import tarfile
+from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -115,7 +116,7 @@ class Root:
         return Completed(argv, 0, '')
 
     def ran(self, fragment: str) -> bool:
-        return any(fragment in part for argv in self.calls for part in argv)
+        return any(fragment in part for part in chain.from_iterable(self.calls))
 
 
 @pytest.fixture
