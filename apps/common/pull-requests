@@ -416,6 +416,7 @@ EXAMPLES = (
     ('pull-requests', 'the whole backlog, oldest first'),
     ("pull-requests | jq -r '.[].url'", 'just the links, to open or paste'),
     ('pull-requests --registry ~/work/repos.json', 'a registry other than this one'),
+    ('prs list', 'the same rows, as a table to read'),
     ('prs', 'the same rows, as a picker'),
 )
 
@@ -427,7 +428,8 @@ OPTIONS = (
 BLURB = (
     'Every open pull request on a repo the registry names, whoever opened it, as',
     'JSON on stdout. Oldest first, because a backlog is a gauge and age is what',
-    'it measures.',
+    'it measures. This is the machine view, every body included. To read the',
+    'backlog, `prs list` prints the same rows as a table.',
     '',
     'The registry is the file `repos-registry` names. It says which repos exist',
     'and which provider hosts each one, so the same command answers on a machine',
