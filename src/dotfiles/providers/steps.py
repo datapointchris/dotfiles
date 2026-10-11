@@ -566,29 +566,29 @@ Applier = Callable[[Escalates, 'MachineContext'], Result]
 is. The adapters below hand each row only what it reads."""
 
 
-def anywhere(observe: Callable[[], State]) -> Observer:
+def anywhere(observe_row: Callable[[], State]) -> Observer:
     """A row whose state reads the same whichever run asks."""
 
     def observe_it(_session: MachineContext) -> State:
-        return observe()
+        return observe_row()
 
     return observe_it
 
 
-def unprivileged(apply: Callable[[], Result]) -> Applier:
+def unprivileged(repair_row: Callable[[], Result]) -> Applier:
     """A row that needs neither root nor the run to converge."""
 
     def run_it(_privilege: Escalates, _session: MachineContext) -> Result:
-        return apply()
+        return repair_row()
 
     return run_it
 
 
-def escalating(apply: Callable[[Escalates], Result]) -> Applier:
+def escalating(repair_row: Callable[[Escalates], Result]) -> Applier:
     """A row that needs root and not the run."""
 
     def run_it(privilege: Escalates, _session: MachineContext) -> Result:
-        return apply(privilege)
+        return repair_row(privilege)
 
     return run_it
 
