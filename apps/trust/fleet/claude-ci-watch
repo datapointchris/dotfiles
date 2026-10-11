@@ -18,8 +18,11 @@
 # deploy failure in front of whichever repo hosts the runbooks, because every
 # alert carries a runbook URL naming that repo.
 #
-# Reads the token from the hand-managed ntfy client config rather than carrying
-# one, so no secret enters this repo.
+# Carries no token, so no secret enters this repo. It reads the one the
+# machine already holds: NTFY_TOKEN in the environment, which is ntfy's own
+# variable, then ~/.config/ntfy/token.env, the file install/flags.yml declares
+# for the desktop subscriber, then a hand-managed client config's
+# default-token. The tracked client.yml carries none.
 #
 # Under trust/fleet rather than common/ because of what it does when it runs
 # somewhere else. The host is a private address on the machine's own network, the
@@ -43,6 +46,7 @@ set -euo pipefail
 
 NTFY_TOPICS="${CLAUDE_CI_WATCH_TOPICS:-ci-failures,homelab-alerts}"
 NTFY_CONFIG="${CLAUDE_CI_WATCH_CONFIG:-$HOME/.config/ntfy/client.yml}"
+NTFY_TOKEN_FILE="$HOME/.config/ntfy/token.env"
 
 die() {
   echo "claude-ci-watch: $1" >&2
@@ -68,7 +72,13 @@ Environment:
                               machine declares it; there is no default.
   CLAUDE_CI_WATCH_SINCE       replay a window first, e.g. 12h. The way to see
                               the filter work without waiting for a failure.
-  CLAUDE_CI_WATCH_TOPICS, CLAUDE_CI_WATCH_CONFIG
+  CLAUDE_CI_WATCH_TOPICS      the topics to subscribe to, comma-separated.
+  CLAUDE_CI_WATCH_CONFIG      an ntfy client config whose default-token is
+                              read when no other source holds one.
+
+The token is NTFY_TOKEN in the environment, else the NTFY_TOKEN line of
+~/.config/ntfy/token.env, which the desktop subscriber reads too, else the
+default-token in CLAUDE_CI_WATCH_CONFIG.
 EOF
 }
 
@@ -86,9 +96,14 @@ esac
 
 NTFY_HOST="${CLAUDE_CI_WATCH_NTFY_HOST:?set it in ~/.env; install/flags.yml declares it}"
 
-[ -r "$NTFY_CONFIG" ] || die "no readable ntfy config at $NTFY_CONFIG"
-token=$(rg -o 'default-token:\s*(\S+)' -r '$1' "$NTFY_CONFIG" || true)
-[ -n "$token" ] || die "no default-token in $NTFY_CONFIG"
+token="${NTFY_TOKEN:-}"
+if [ -z "$token" ] && [ -r "$NTFY_TOKEN_FILE" ]; then
+  token=$(rg -o '^NTFY_TOKEN=(\S+)' -r '$1' "$NTFY_TOKEN_FILE" || true)
+fi
+if [ -z "$token" ] && [ -r "$NTFY_CONFIG" ]; then
+  token=$(rg -o 'default-token:\s*(\S+)' -r '$1' "$NTFY_CONFIG" || true)
+fi
+[ -n "$token" ] || die "no ntfy token: NTFY_TOKEN is unset, $NTFY_TOKEN_FILE holds no NTFY_TOKEN line, and $NTFY_CONFIG has no default-token"
 
 # stderr, not stdout: a Monitor watching this treats every stdout line as an
 # alert, and status is not one.
