@@ -1299,6 +1299,22 @@ cargo_packages:
     binary_pattern: "abtop-{target}.tar.xz"
     tags: [cli, tui, development]
 
+  # conform.nvim formats Lua with it on save, reading the .stylua.toml deployed
+  # beside the Neovim and Hyprland configs. binstall finds no prebuilt binary and
+  # builds it from source online. The release assets are named for the OS word
+  # and the CPU, like fnm's, so both targets are overridden and {arch} carries
+  # the CPU: stylua-linux-x86_64.zip needs glibc 2.34, which every Linux
+  # workstation manifest here clears.
+  - name: stylua
+    command: stylua
+    description: Lua formatter, run by conform.nvim on save
+    github_repo: JohnnyMorganz/StyLua
+    binary_pattern: "stylua-{target}-{arch}.zip"
+    linux_target: linux
+    darwin_target: macos
+    checksum: unpublished
+    tags: [cli, development]
+
 
 # ================================================================
 # WINGET PACKAGES (Windows)
