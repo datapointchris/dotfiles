@@ -1,0 +1,9 @@
+[Unit]
+Description=indy: rebuild the index from every target
+
+# No OnFailure. Every indy read prints the age of the last run that finished without an
+# error, so a night that failed shows on the next search as an index more than a day old.
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/indy index
+Nice=10

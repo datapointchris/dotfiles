@@ -1,0 +1,10 @@
+[Unit]
+Description=indy: index every save into the live overlay
+
+[Service]
+ExecStart=%h/.local/bin/indy watch
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
