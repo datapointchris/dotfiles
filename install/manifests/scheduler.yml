@@ -26,7 +26,7 @@ go_tools:
   - fleet     # the sweep, the schedule, and the timer that fires them
   - task      # Taskfile runner used across the repos
   - gdu       # the clones fill a disk, and this is how that gets diagnosed
-  # `fleet problems fix run` commits through the repo's own hooks, and a Go
+  # The scheduled fix agent commits through the repo's own hooks, and a Go
   # repo's hooks call these two by name.
   - gofumpt
   - golangci-lint
