@@ -113,7 +113,7 @@ class Helper:
         `/mnt/c/Program\\ Files/...` names one file whose name has a space in it.
         Taking the value as written looks for a directory called `Program\\`,
         reports a helper git runs perfectly well as missing, and — because
-        `_asked` stops at the first fault — never reaches the interpreter question
+        `asked` stops at the first fault — never reaches the interpreter question
         this resource was built to ask. A real login failure then sits hidden
         behind a fault that is not real.
 
@@ -124,9 +124,9 @@ class Helper:
         """
         value = self.value.strip()
         if self.shell_form:
-            return tuple(_split(value[1:].strip()))
+            return tuple(split(value[1:].strip()))
         if '/' in value or '\\' in value:
-            return tuple(_split(value))
+            return tuple(split(value))
         return (f'git-credential-{value}',)
 
     @property
@@ -215,7 +215,7 @@ class CredentialsResource:
     help = 'the git credential helpers this machine is configured with'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
-        return Observed(tuple(_asked(helper) for helper in helpers()))
+        return Observed(tuple(asked(helper) for helper in helpers()))
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         """One row per helper that will not run.
@@ -271,7 +271,7 @@ def helpers(scope: str = '--global') -> tuple[Helper, ...]:
     return tuple(helper for helper in found if not helper.resets)
 
 
-def _asked(helper: Helper) -> Found:
+def asked(helper: Helper) -> Found:
     """The three questions, in the order that makes each answer actionable.
 
     Present-but-unrunnable is `STALE` rather than `MISSING`, and the distinction is
@@ -283,7 +283,7 @@ def _asked(helper: Helper) -> Found:
     if not program:
         return Found(helper, Verdict.STALE, 'the value starts with `!` and names no command', advice='set a helper, or remove the line')
 
-    located = Path(program) if ('/' in program or '\\' in program) else _on_path(program)
+    located = Path(program) if ('/' in program or '\\' in program) else on_path(program)
     if located is None:
         return Found(
             helper,
@@ -311,12 +311,12 @@ def _asked(helper: Helper) -> Found:
             helper,
             Verdict.STALE,
             f'{located} exists but the kernel would not start it: {answer.transcript.strip() or "no reason given"}',
-            advice=INTERPRETER_HINT if _is_windows_binary(located) else 'check the file is executable and built for this architecture',
+            advice=INTERPRETER_HINT if is_windows_binary(located) else 'check the file is executable and built for this architecture',
         )
     return Found(helper, Verdict.MATCHED, f'{located} runs')
 
 
-def _split(command: str) -> list[str]:
+def split(command: str) -> list[str]:
     """A command line as a shell would split it, leaving an unclosed quote alone.
 
     `shlex` raises on a value that ends mid-quote. That is a fault in the config
@@ -330,12 +330,12 @@ def _split(command: str) -> list[str]:
         return [command]
 
 
-def _on_path(program: str) -> Path | None:
+def on_path(program: str) -> Path | None:
     found = shutil.which(program)
     return Path(found) if found else None
 
 
-def _is_windows_binary(path: Path) -> bool:
+def is_windows_binary(path: Path) -> bool:
     """Whether the advice about binfmt applies, decided by the two things that
     make it apply: a PE extension, or a path into a mounted Windows drive."""
     return path.suffix.lower() == '.exe' or str(path).startswith('/mnt/')

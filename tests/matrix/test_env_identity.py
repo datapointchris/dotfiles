@@ -617,8 +617,8 @@ def unparseable_flag_below_the_marker(sandbox: Sandbox) -> None:
 
 def test_an_unparseable_flag_below_the_marker_is_reported_and_not_planned(sandbox: Sandbox, cli: Run) -> None:
     """The value the shell reads is the one below the marker, so the section `apply`
-    owns is not where the wrong value is. `_flags` asks which half wrote it, the way
-    `_identity` does, and a value `apply` cannot reach counts as attention rather
+    owns is not where the wrong value is. `flags` asks which half wrote it, the way
+    `identity` does, and a value `apply` cannot reach counts as attention rather
     than as work the run intends to do."""
     unparseable_flag_below_the_marker(sandbox)
 
@@ -732,7 +732,7 @@ def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(san
     `Session.machine` is lazy precisely so a run that never asks about a machine
     pays nothing, and that once put the first read of the manifest inside the walk
     rather than at `Session.resolve`. `assess` evaluates `session.plan` outside the
-    `try` that `_measure` wraps each resource in, so the declaration failing to
+    `try` that `measure` wraps each resource in, so the declaration failing to
     load was not the refusal the walk turns every exception into — it escaped as a
     traceback. `Session.resolve` now reads the manifest itself, which is what puts
     the failure back in front of the handler.
@@ -811,7 +811,7 @@ def test_a_generated_line_the_declaration_no_longer_writes_is_drift(sandbox: San
     The managed half is regenerated from `render` in full, so a line nothing
     declares is one rewrite from gone.
 
-    The name here is deliberately not flag-shaped. `_undeclared` identifies a
+    The name here is deliberately not flag-shaped. `undeclared` identifies a
     stray by whether it ends `_ENABLED` or `_DEBUG`, which is a convention rather
     than the declaration, so a variable named anything else is invisible to it.
     """

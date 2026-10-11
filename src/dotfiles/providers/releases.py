@@ -98,7 +98,7 @@ class LaunchAgent:
     """What follows the binary in `ProgramArguments`.
 
     The binary itself is not here: it is wherever the install placed it, which is
-    the same fact `_exec_at` rewrites into the systemd unit for the same reason.
+    the same fact `exec_at` rewrites into the systemd unit for the same reason.
     """
 
 
@@ -149,7 +149,7 @@ class ReleaseArtifact:
     """
 
 
-def _bare(tag: str) -> str:
+def bare(tag: str) -> str:
     """The version without its leading `v`.
 
     Most publishers name the asset after the bare version while tagging with the
@@ -217,7 +217,7 @@ def duckdb(tag: str, target: Target) -> ReleaseArtifact:
 
 def duf(tag: str, target: Target) -> ReleaseArtifact:
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_x86_64') if target.is_darwin else 'linux_x86_64'
-    return ReleaseArtifact(f'duf_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='duf')
+    return ReleaseArtifact(f'duf_{bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='duf')
 
 
 def fzf(tag: str, target: Target) -> ReleaseArtifact:
@@ -227,12 +227,12 @@ def fzf(tag: str, target: Target) -> ReleaseArtifact:
     it is not part of the release this names.
     """
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_amd64') if target.is_darwin else 'linux_amd64'
-    return ReleaseArtifact(f'fzf-{_bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf')
+    return ReleaseArtifact(f'fzf-{bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf')
 
 
 def gh_dash(tag: str, target: Target) -> ReleaseArtifact:
     """The tag whole, `v` included, which is unusual enough to be the reason this
-    docstring exists — `_bare` appears in most of the functions here and would
+    docstring exists — `bare` appears in most of the functions here and would
     name an asset the release does not publish."""
     suffix = ('darwin-arm64' if target.is_arm else 'darwin-amd64') if target.is_darwin else 'linux-amd64'
     return ReleaseArtifact(f'gh-dash_{tag}_{suffix}', Archive.RAW)
@@ -248,7 +248,7 @@ def glow(tag: str, target: Target) -> ReleaseArtifact:
     the release publishes the asset, not what is inside it.
     """
     suffix = ('Darwin_arm64' if target.is_arm else 'Darwin_x86_64') if target.is_darwin else 'Linux_x86_64'
-    stem = f'glow_{_bare(tag)}_{suffix}'
+    stem = f'glow_{bare(tag)}_{suffix}'
     return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/glow')
 
 
@@ -275,7 +275,7 @@ def lazygit(tag: str, target: Target) -> ReleaseArtifact:
     downloaded fine, because GitHub resolves asset paths case-insensitively —
     which then missed the checksum entry recorded under the real name."""
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_x86_64') if target.is_darwin else 'linux_x86_64'
-    return ReleaseArtifact(f'lazygit_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='lazygit')
+    return ReleaseArtifact(f'lazygit_{bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='lazygit')
 
 
 def neovim(tag: str, target: Target) -> ReleaseArtifact:
@@ -293,7 +293,7 @@ def ntfy(tag: str, target: Target) -> ReleaseArtifact:
     file. Linux still splits, and the binary sits under a stem directory.
     """
     suffix = 'darwin_all' if target.is_darwin else ('linux_arm64' if target.is_arm else 'linux_amd64')
-    stem = f'ntfy_{_bare(tag)}_{suffix}'
+    stem = f'ntfy_{bare(tag)}_{suffix}'
     return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/ntfy')
 
 
@@ -358,7 +358,7 @@ def terraformer(tag: str, target: Target) -> ReleaseArtifact:
 def terrascan(tag: str, target: Target) -> ReleaseArtifact:
     arch = ('arm64' if target.is_arm else 'x86_64') if target.is_darwin else 'x86_64'
     platform_name = 'Darwin' if target.is_darwin else 'Linux'
-    return ReleaseArtifact(f'terrascan_{_bare(tag)}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='terrascan')
+    return ReleaseArtifact(f'terrascan_{bare(tag)}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='terrascan')
 
 
 def tflint(tag: str, target: Target) -> ReleaseArtifact:
@@ -382,7 +382,7 @@ def trivy(tag: str, target: Target) -> ReleaseArtifact:
         suffix = 'macOS-ARM64' if target.is_arm else 'macOS-64bit'
     else:
         suffix = 'Linux-64bit'
-    return ReleaseArtifact(f'trivy_{_bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='trivy')
+    return ReleaseArtifact(f'trivy_{bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='trivy')
 
 
 def win32yank(tag: str, target: Target) -> ReleaseArtifact:
@@ -424,7 +424,7 @@ def zk(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'zk-{tag}-{platform_name}-{arch}.tar.gz', Archive.TARBALL, path='zk')
 
 
-def _go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
+def go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
     """The four private data CLIs, which are goreleaser builds in monorepos.
 
     Their tag carries a `cli/` prefix because the same repo releases an API and a
@@ -433,7 +433,7 @@ def _go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
     """
 
     def build(tag: str, target: Target) -> ReleaseArtifact:
-        version = _bare(tag.rsplit('/', 1)[-1])
+        version = bare(tag.rsplit('/', 1)[-1])
         os_name = 'darwin' if target.is_darwin else 'linux'
         arch = 'arm64' if target.is_arm else 'amd64'
         return ReleaseArtifact(f'{binary}_{version}_{os_name}_{arch}.tar.gz', Archive.TARBALL, path=binary)
@@ -449,18 +449,18 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'gh-dash': gh_dash,
     'glow': glow,
     'hadolint': hadolint,
-    'icb': _go_release_cli('icb'),
+    'icb': go_release_cli('icb'),
     'just': just,
     'lazygit': lazygit,
-    'learning': _go_release_cli('learning'),
-    'meso': _go_release_cli('meso'),
+    'learning': go_release_cli('learning'),
+    'meso': go_release_cli('meso'),
     'neovim': neovim,
-    'nomad': _go_release_cli('nomad'),
+    'nomad': go_release_cli('nomad'),
     'ntfy': ntfy,
     'shellcheck': shellcheck,
     'syncthing': syncthing,
     'tenv': tenv,
-    'ypl': _go_release_cli('ypl'),
+    'ypl': go_release_cli('ypl'),
     'terraformer': terraformer,
     'terrascan': terrascan,
     'tflint': tflint,

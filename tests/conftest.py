@@ -267,13 +267,13 @@ def would_change_this_machine(argv: tuple[str, ...], env: dict[str, str] | None 
     """Whether a denylisted pair is really the form that writes to the machine."""
     if argv[:2] not in INSTALLING:
         return False
-    if argv[:3] == ('uv', 'tool', 'install') and _uv_writes_only_under_tmp(dict(os.environ) if env is None else env):
+    if argv[:3] == ('uv', 'tool', 'install') and uv_writes_only_under_tmp(dict(os.environ) if env is None else env):
         return False
     redirected = any(part.startswith(REDIRECTED_STATE) for part in argv)
     return not (redirected and argv[:2] in REDIRECTABLE)
 
 
-def _uv_writes_only_under_tmp(env: dict[str, str]) -> bool:
+def uv_writes_only_under_tmp(env: dict[str, str]) -> bool:
     scratch = Path(tempfile.gettempdir()).resolve()
     redirected = all(env.get(name) and Path(env[name]).resolve().is_relative_to(scratch) for name in UV_TOOL_SCRATCH)
     return redirected and env.get('UV_OFFLINE') == '1'
@@ -694,7 +694,7 @@ def fake_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return directory
 
 
-def _executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
+def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
     """Local to this file on purpose. `tests/conftest.py` and `tests/e2e/conftest.py`
     are both the module `conftest` to an importer, so a `from conftest import ...`
     resolves to whichever one the tool looked at first — which typechecks as the
@@ -772,5 +772,5 @@ def granted(fake_bin: Path) -> Privilege:
     Nothing calls `authorize` any more: root is acquired at the first write, so the
     fake answers `sudo -v` and then execs whatever it was handed.
     """
-    _executable(fake_bin, 'sudo', '#!/bin/sh\n[ "$1" = "-v" ] && exit 0\nexec "$@"\n')
+    executable(fake_bin, 'sudo', '#!/bin/sh\n[ "$1" = "-v" ] && exit 0\nexec "$@"\n')
     return Privilege()

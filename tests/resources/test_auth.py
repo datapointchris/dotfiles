@@ -32,7 +32,7 @@ KEYCHAIN_CLIS = ('homelab', 'icb', 'learning', 'meso', 'nomad', 'ypl')
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -269,7 +269,7 @@ def test_an_unreadable_credential_path_costs_one_row_rather_than_the_resource(
 
 def test_nothing_here_is_ever_written(xdg: Path, fake_bin: Path, unprivileged: Privilege) -> None:
     """The `identity.py` invariant, and the one `apply` depends on: no change is
-    actionable, so `_in_stage_order` never hands one to `perform` at all."""
+    actionable, so `in_stage_order` never hands one to `perform` at all."""
     executable(fake_bin, 'nomad', '#!/bin/sh\nexit 1\n')
     session = build(xdg, 'nomad')
 
@@ -478,7 +478,7 @@ def test_a_credential_file_that_does_not_decode_costs_no_row_at_all(xdg: Path, f
     """One stray byte took the whole resource's measurement, not one row.
 
     `read_text` raises `UnicodeDecodeError`, which is a `ValueError` and so walks
-    straight through the `OSError` guard in `_asked`, out of `observe` and into
+    straight through the `OSError` guard in `asked`, out of `observe` and into
     `auth could not be examined` — nine measured tools lost to a file nothing here
     interprets. `apply` then exits 3 on a machine whose only fault is that file.
     Reading bytes answers the question actually being asked, and the file counts

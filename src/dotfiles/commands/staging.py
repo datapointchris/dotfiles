@@ -84,7 +84,7 @@ singleton is what its message asks for and what every other option here already
 is."""
 
 
-def _asking(interactive: bool | None) -> bool:
+def asking(interactive: bool | None) -> bool:
     """Whether there is somebody to put a question to.
 
     Injected rather than detected, and never monkeypatched. A test patching the
@@ -98,7 +98,7 @@ def _asking(interactive: bool | None) -> bool:
     return sys.stdin.isatty() if interactive is None else interactive
 
 
-def _pointed_at(
+def pointed_at(
     value: str | None, flag: str, options: Sequence[str], question: str, *, no_input: bool, interactive: bool | None = None
 ) -> str:
     """The value a flag carries, or the one a person points at in a list.
@@ -121,7 +121,7 @@ def _pointed_at(
     """
     if value is not None:
         return value
-    if no_input or not _asking(interactive):
+    if no_input or not asking(interactive):
         raise typer.BadParameter(f'{flag} is required without a terminal to ask. Valid: {", ".join(options)}')
 
     for index, option in enumerate(options, start=1):
@@ -179,15 +179,15 @@ def create(
     file a path names.
     """
     verbosity(verbose, quiet)
-    chosen_machine = _pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for', no_input=no_input)
+    chosen_machine = pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for', no_input=no_input)
     offered = [str(value) for value in axes.Arch]
-    chosen_arch = _pointed_at(str(arch) if arch else None, '--arch', offered, "That machine's CPU", no_input=no_input)
+    chosen_arch = pointed_at(str(arch) if arch else None, '--arch', offered, "That machine's CPU", no_input=no_input)
     # The one sentence this tool has for a name nothing declares, rather than a
     # second one worded here. It names where it looked and lists what exists, and
     # `NoSuchMachine` carries USAGE, so it travels to the boundary as exit 2.
     machines.manifest_path(chosen_machine)
 
-    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=not no_cache, against=_status_for(against, chosen_machine))
+    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=not no_cache, against=status_for(against, chosen_machine))
 
     if print_path:
         print(built)
@@ -197,7 +197,7 @@ def create(
 LATEST = 'latest'
 
 
-def _status_for(named: str | None, machine: str) -> Path | None:
+def status_for(named: str | None, machine: str) -> Path | None:
     """The status document a sparse build is planned against, or None for a full one.
 
     `latest` reaches the remote and everything else is a path. Resolved here rather
@@ -356,11 +356,11 @@ def upload(
         transport.push(where, sidecar, directory)
 
     success(f'uploaded {found.name} to {landed.rsplit("/", 1)[0]}')
-    _report_retention(where, machine)
+    report_retention(where, machine)
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-def _report_retention(where: transport.Remote, machine: str) -> None:
+def report_retention(where: transport.Remote, machine: str) -> None:
     """Say what has accumulated, and never remove it.
 
     Reported rather than swept, so nothing this tool does as a side effect of an
@@ -425,17 +425,17 @@ def list_bundles(
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-def _age_of(name: str) -> str:
+def age_of(name: str) -> str:
     """How long ago a bundle was built, as the sentence a nudge carries.
 
     The stamp is read by `publishing.age_of`, which `bundle list` renders the other
     way; this is one of its two renderings rather than a second parse.
     """
     since = publishing.age_of(name)
-    return f'built {_elapsed(since)} ago' if since is not None else 'built at an unrecorded time'
+    return f'built {elapsed(since)} ago' if since is not None else 'built at an unrecorded time'
 
 
-def _elapsed(since: dt.timedelta) -> str:
+def elapsed(since: dt.timedelta) -> str:
     """A duration in the largest unit that keeps it a small number.
 
     Rounded, and deliberately: the question is whether a bundle is fresh, and
@@ -498,8 +498,8 @@ def download(
 
     directory = transport.bundles_for(where, named)
     record = offline_bundle.record_on_remote(where, directory, wanted)
-    _describe(wanted, record, len(listed))
-    if not _confirmed('Download this bundle?', f'fetched {wanted}', yes=yes, no_input=no_input):
+    describe(wanted, record, len(listed))
+    if not confirmed('Download this bundle?', f'fetched {wanted}', yes=yes, no_input=no_input):
         error('nothing was downloaded')
         raise typer.Exit(ExitCode.ISSUE)
 
@@ -512,7 +512,7 @@ def download(
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-def _describe(name: str, record: offline_bundle.Record, held: int) -> None:
+def describe(name: str, record: offline_bundle.Record, held: int) -> None:
     """The block a person decides from: what this is, when, and how big.
 
     Nudge density rather than browse density — identity, urgency and the command.
@@ -520,7 +520,7 @@ def _describe(name: str, record: offline_bundle.Record, held: int) -> None:
     """
     described = record.description
     err_console.print(f'[bold]{name}[/]')
-    render_note(_age_of(name))
+    render_note(age_of(name))
     if described.platform or described.machine:
         render_note(f'{described.platform or "platform unrecorded"} · for {described.machine or "an unrecorded machine"}')
     if described.sparse:
@@ -533,7 +533,7 @@ def _describe(name: str, record: offline_bundle.Record, held: int) -> None:
     render_note(f'{held} bundle(s) on the remote for this machine')
 
 
-def _confirmed(question: str, would_have: str, *, yes: bool, no_input: bool, interactive: bool | None = None) -> bool:
+def confirmed(question: str, would_have: str, *, yes: bool, no_input: bool, interactive: bool | None = None) -> bool:
     """Whether to go ahead, asked the way every prompt here is asked.
 
     **One helper for all three prompts.** Written out at each site they drift into
@@ -548,7 +548,7 @@ def _confirmed(question: str, would_have: str, *, yes: bool, no_input: bool, int
     """
     if yes:
         return True
-    if no_input or not _asking(interactive):
+    if no_input or not asking(interactive):
         raise typer.BadParameter(f'--yes is required without a terminal to ask. Would have {would_have}')
     return typer.confirm(question, default=False, err=True)
 
@@ -714,28 +714,28 @@ def prune(
         )
     # Neither value needs a floor: `remote.read` refuses a declared limit below
     # one, and the flag is refused above. One place decides, and it says so.
-    retained = keep if keep is not None else _configured_keep()
-    sweep = _superseded_locally(retained, machine)
+    retained = keep if keep is not None else configured_keep()
+    sweep = superseded_locally(retained, machine)
     superseded = sweep.superseded
 
     if superseded or sweep.pinned:
         for name in superseded:
-            render_row('superseded', name, _age_of(name), 'yellow')
+            render_row('superseded', name, age_of(name), 'yellow')
         for name in sweep.pinned:
             render_row('pinned', name, 'the newest full bundle, which the sparse bundles above it read through')
         # Asked only where something goes. A run whose only candidate was the base
         # has nothing to confirm, and the pinned row above already said why.
-        if superseded and not _confirmed(
+        if superseded and not confirmed(
             f'Remove {len(superseded)} local bundle(s)?', f'removed {len(superseded)} locally', yes=yes, no_input=no_input
         ):
             error('nothing was removed locally')
             raise typer.Exit(ExitCode.ISSUE)
 
-    swept = _prune_local(superseded)
+    swept = prune_local(superseded)
     for name in swept:
         render_row('removed', name, 'past the retention limit', 'yellow')
 
-    remotely = _prune_remote(machine, retained, yes=yes, no_input=no_input) if remote_too else ()
+    remotely = prune_remote(machine, retained, yes=yes, no_input=no_input) if remote_too else ()
 
     if as_json:
         emit_json(
@@ -754,13 +754,13 @@ def prune(
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-def _configured_keep() -> int:
+def configured_keep() -> int:
     """The machine's own limit, or this tool's default where it declares none."""
     found = transport.read()
     return found.remote.keep_bundles if found.remote else transport.DEFAULT_KEEP
 
 
-def _superseded_locally(keep: int, machine: str | None) -> offline_bundle.Sweep:
+def superseded_locally(keep: int, machine: str | None) -> offline_bundle.Sweep:
     """What a local sweep would remove, counted per machine and named, removing nothing.
 
     Separate from the removal so the confirmation has something to show. A prompt
@@ -779,8 +779,8 @@ def _superseded_locally(keep: int, machine: str | None) -> offline_bundle.Sweep:
     return offline_bundle.swept(narrowed, keep)
 
 
-def _prune_local(superseded: tuple[str, ...]) -> tuple[str, ...]:
-    """Remove what `_superseded_locally` named, by stem, and say what went.
+def prune_local(superseded: tuple[str, ...]) -> tuple[str, ...]:
+    """Remove what `superseded_locally` named, by stem, and say what went.
 
     All three shapes are removed for every stem — the archive, its record, and the
     directory it unpacked into — because a stem names one bundle however many of
@@ -799,7 +799,7 @@ def _prune_local(superseded: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(removed)
 
 
-def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) -> tuple[str, ...]:
+def prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) -> tuple[str, ...]:
     """Remove what is past the limit on a machine's shelf, having said what first.
 
     Answers what it removed, so the caller's `--json` reports the remote half
@@ -825,9 +825,9 @@ def _prune_remote(machine: str | None, keep: int, *, yes: bool, no_input: bool) 
         return ()
 
     for name in superseded:
-        render_row('superseded', name, _age_of(name), 'yellow')
+        render_row('superseded', name, age_of(name), 'yellow')
     question = f'Remove {len(superseded)} bundle(s) from {directory}?'
-    if not _confirmed(question, f'removed {len(superseded)} from {directory}', yes=yes, no_input=no_input):
+    if not confirmed(question, f'removed {len(superseded)} from {directory}', yes=yes, no_input=no_input):
         error(f'nothing was removed from {directory}')
         raise typer.Exit(ExitCode.ISSUE)
 

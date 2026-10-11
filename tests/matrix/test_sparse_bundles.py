@@ -74,7 +74,7 @@ class TestReadingAStatus:
         assert found == {'ghrelease/lazygit': '0.45.0', 'ghrelease/fd': '10.2.0'}
 
     def test_a_changed_row_answers_where_examined_is_empty(self) -> None:
-        """The case that made every sparse build a full one. `_unreported` drops an
+        """The case that made every sparse build a full one. `unreported` drops an
         item that produced a change, and offline every tool with no bundle row is
         UNKNOWN — so on a target with nothing staged `examined` is empty and the
         versions are all in `others`."""

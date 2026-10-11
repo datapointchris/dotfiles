@@ -19,21 +19,21 @@ from pathlib import Path
 WHERE = 'MUTATION_FAILURES'
 """The environment variable naming the file to write. An env var rather than a flag, because pytest owns the argument list."""
 
-_failed: set[str] = set()
+failed: set[str] = set()
 
 
 def pytest_runtest_logreport(report: object) -> None:
     if getattr(report, 'failed', False):
-        _failed.add(report.nodeid)  # type: ignore[attr-defined]
+        failed.add(report.nodeid)  # type: ignore[attr-defined]
 
 
 def pytest_collectreport(report: object) -> None:
     if getattr(report, 'failed', False):
-        _failed.add(report.nodeid)  # type: ignore[attr-defined]
+        failed.add(report.nodeid)  # type: ignore[attr-defined]
 
 
 def pytest_sessionfinish() -> None:
-    Path(os.environ[WHERE]).write_text(json.dumps(sorted(_failed)))
+    Path(os.environ[WHERE]).write_text(json.dumps(sorted(failed)))
 
 
 def read(where: Path) -> tuple[str, ...]:

@@ -155,54 +155,54 @@ def sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...
     Empty when this platform installs the tool from somewhere else or not at all,
     which is not a failure — probing then reports a block that does not exist.
     """
-    return SOURCES.get(entry.name, _no_sources)(entry, target)
+    return SOURCES.get(entry.name, no_sources)(entry, target)
 
 
-def _no_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
+def no_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
     return ()
 
 
-def _script_and_clone(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
+def script_and_clone(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
     """A vendor script that clones the repo it came from — both hosts matter."""
     return (Source(entry.install_url), Source(f'https://github.com/{entry.repo}.git', Reach.CLONE))
 
 
-def _claude_code_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
+def claude_code_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
     return (Source(entry.install_url),)
 
 
-def _bats_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
-    return tuple(Source(url, Reach.CLONE) for url in _bats_repos(entry))
+def bats_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
+    return tuple(Source(url, Reach.CLONE) for url in bats_repos(entry))
 
 
-def _awscli_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
-    url = _awscli_zip(entry, target)
+def awscli_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
+    url = awscli_zip(entry, target)
     return (Source(url),) if url else ()
 
 
-def _mount_s3_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
-    tarball = _mount_s3_tarball(entry, target)
+def mount_s3_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
+    tarball = mount_s3_tarball(entry, target)
     # The tarball, never the bucket root: listing it 403s, so probing the root
     # reports a block that is really S3 refusing to enumerate.
     return (Source(tarball), Source(f'{entry.url}/public_keys/KEYS')) if tarball else ()
 
 
-def _terraform_ls_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
+def terraform_ls_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
     # The project directory, because the file name carries a version that is not
     # known until the release API answers — which the probe must not depend on.
     return (Source(f'{HASHICORP}/{entry.name}/'),)
 
 
 SOURCES: dict[str, Callable[[catalog.CustomInstaller, Target], tuple[Source, ...]]] = {
-    'theme': _script_and_clone,
-    'font': _script_and_clone,
-    'zmk': _script_and_clone,
-    'bashselfupdate': _script_and_clone,
-    'claude-code': _claude_code_sources,
-    'bats': _bats_sources,
-    'awscli': _awscli_sources,
-    'mount-s3': _mount_s3_sources,
-    'terraform-ls': _terraform_ls_sources,
+    'theme': script_and_clone,
+    'font': script_and_clone,
+    'zmk': script_and_clone,
+    'bashselfupdate': script_and_clone,
+    'claude-code': claude_code_sources,
+    'bats': bats_sources,
+    'awscli': awscli_sources,
+    'mount-s3': mount_s3_sources,
+    'terraform-ls': terraform_ls_sources,
 }
 
 
@@ -211,25 +211,25 @@ SOURCES: dict[str, Callable[[catalog.CustomInstaller, Target], tuple[Source, ...
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _staged_script(request: Request, url: str, into: Path) -> script.Script:
+def staged_script(request: Request, url: str, into: Path) -> script.Script:
     return script.staged(request.entry.name, url, into, offline=request.offline)
 
 
-def _run_vendor_script(request: Request, url: str) -> Result:
+def run_vendor_script(request: Request, url: str) -> Result:
     """Fetch and run one vendor install script.
 
     Shared with the language runtimes, which converge the same way: `providers/
     script.py` holds it, and an empty detail on success is its rule as much as
-    `_delegate_update`'s below.
+    `delegate_update`'s below.
     """
     return script.run(request.entry.name, url, offline=request.offline)
 
 
-def _unstaged(request: Request, url: str, reason: str = '') -> str:
+def unstaged(request: Request, url: str, reason: str = '') -> str:
     return script.unstaged(request.entry.name, url, offline=request.offline, reason=reason)
 
 
-def _present_and_offline(request: Request, installed: bool) -> Result | None:
+def present_and_offline(request: Request, installed: bool) -> Result | None:
     """Offline is a reason to leave a working tool alone, not to fail.
 
     Every one of these updates from the network — a clone, a vendor script, a
@@ -247,7 +247,7 @@ def _present_and_offline(request: Request, installed: bool) -> Result | None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _checkout_tool(request: Request) -> Result:
+def checkout_tool(request: Request) -> Result:
     """theme, font and zmk: install once, then delegate to the tool.
 
     Each clones itself into `~/.local/share/<name>` and ships its own `update`,
@@ -259,14 +259,14 @@ def _checkout_tool(request: Request) -> Result:
     checkout = local_dir() / 'share' / name
     installed = (checkout / '.git').is_dir()
 
-    if offline := _present_and_offline(request, installed):
+    if offline := present_and_offline(request, installed):
         return offline
     if installed:
-        return _delegate_update(name, checkout)
-    return _run_vendor_script(request, request.entry.install_url)
+        return delegate_update(name, checkout)
+    return run_vendor_script(request, request.entry.install_url)
 
 
-def _delegate_update(name: str, checkout: Path) -> Result:
+def delegate_update(name: str, checkout: Path) -> Result:
     if not shutil.which(name):
         return Result(False, f'{name} is checked out at {checkout} but is not on PATH — is {bin_dir()} in it?', kind=Kind.NOT_ON_PATH)
     completed = effects.run([name, 'update'])
@@ -277,7 +277,7 @@ def _delegate_update(name: str, checkout: Path) -> Result:
     )
 
 
-def _bashselfupdate(request: Request) -> Result:
+def bashselfupdate(request: Request) -> Result:
     """A sourced library, so there is no command to delegate to.
 
     Its install script *is* its update — it fetches and re-checks-out onto the
@@ -286,12 +286,12 @@ def _bashselfupdate(request: Request) -> Result:
     is installed, which is why the entry declares `installed_path`.
     """
     checkout = Path(request.entry.installed_path).expanduser()
-    if offline := _present_and_offline(request, checkout.exists()):
+    if offline := present_and_offline(request, checkout.exists()):
         return offline
-    return _run_vendor_script(request, request.entry.install_url)
+    return run_vendor_script(request, request.entry.install_url)
 
 
-def _claude_code(request: Request) -> Result:
+def claude_code(request: Request) -> Result:
     """Anthropic's install script, which is the upgrade as well as the install.
 
     Claude Code updates itself in the background on a desk, and a machine that
@@ -309,7 +309,7 @@ def _claude_code(request: Request) -> Result:
     the next run measures whether the release arrived.
     """
     installed = evidence.reported_version(request.entry.executable) is not None
-    if offline := _present_and_offline(request, installed):
+    if offline := present_and_offline(request, installed):
         return offline
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-claude-code-') as scratch:
@@ -319,7 +319,7 @@ def _claude_code(request: Request) -> Result:
         # machine that is the single most useful line, because the host is what a
         # person has to get unblocked.
         err_console.print(f'claude-code: {request.entry.install_url}', soft_wrap=True)
-        staged = _staged_script(request, request.entry.install_url, Path(scratch))
+        staged = staged_script(request, request.entry.install_url, Path(scratch))
         if not staged:
             # `refused` where the bundle simply does not carry it, matching every
             # other installer: an offline machine that was never given this script is
@@ -328,7 +328,7 @@ def _claude_code(request: Request) -> Result:
             # unstaged script counted as a broken install.
             return Result(
                 False,
-                _unstaged(request, request.entry.install_url, staged.reason),
+                unstaged(request, request.entry.install_url, staged.reason),
                 kind=Kind.NOT_IN_BUNDLE if request.offline else Kind.DOWNLOAD_FAILED,
                 refused=request.offline,
             )
@@ -351,14 +351,14 @@ BUSY_INSTALLING = re.compile(r'another process is currently installing|claude.*r
 AWSCLI_ZIPS = {'x86_64': 'awscli-exe-linux-x86_64.zip', 'arm64': 'awscli-exe-linux-aarch64.zip'}
 
 
-def _awscli_zip(entry: catalog.CustomInstaller, target: Target) -> str:
+def awscli_zip(entry: catalog.CustomInstaller, target: Target) -> str:
     """'' on macOS, where awscli is a Homebrew package and this installs nothing."""
     if target.is_darwin:
         return ''
     return f'{entry.url}/{AWSCLI_ZIPS[target.arch]}'
 
 
-def _awscli(request: Request) -> Result:
+def awscli(request: Request) -> Result:
     """AWS's own installer, which is idempotent and expensive — so it is measured first.
 
     `aws/install --update` converges by itself, so the ideal is to run it every
@@ -367,7 +367,7 @@ def _awscli(request: Request) -> Result:
 
     `aws/aws-cli` publishes no GitHub *release* — `releases/latest` answers 404 —
     but it tags every build, and the entry declares
-    `version_source: tags` so `_has_currency` can compare against them. Reaching
+    `version_source: tags` so `has_currency` can compare against them. Reaching
     here therefore means the machine is missing it or behind, and the 73MB is
     being spent on a difference someone measured.
 
@@ -376,7 +376,7 @@ def _awscli(request: Request) -> Result:
     was a branch here returning success without installing anything, which left
     a Mac with nothing wrong printing a line about awscli on every run.
     """
-    if offline := _present_and_offline(request, evidence.reported_version(request.entry.executable) is not None):
+    if offline := present_and_offline(request, evidence.reported_version(request.entry.executable) is not None):
         return offline
     if request.offline:
         return Result(
@@ -386,7 +386,7 @@ def _awscli(request: Request) -> Result:
             refused=True,
         )
 
-    url = _awscli_zip(request.entry, request.target)
+    url = awscli_zip(request.entry, request.target)
     with tempfile.TemporaryDirectory(prefix='dotfiles-awscli-') as scratch:
         staging = Path(scratch)
         archive = staging / 'awscliv2.zip'
@@ -405,7 +405,7 @@ def _awscli(request: Request) -> Result:
 
     if not completed.ok:
         return Result(False, f"aws's own installer exited {completed.returncode}", kind=Kind.COMMAND_FAILED)
-    return _confirm('awscli', request.entry.executable)
+    return confirm_on_path('awscli', request.entry.executable)
 
 
 MOUNT_S3_ARCHES = {'x86_64': 'x86_64', 'arm64': 'arm64'}
@@ -423,14 +423,14 @@ expired 2026-07-31 and stays for signatures made before then.
 """
 
 
-def _mount_s3_tarball(entry: catalog.CustomInstaller, target: Target) -> str:
+def mount_s3_tarball(entry: catalog.CustomInstaller, target: Target) -> str:
     """'' where there is no build: AWS ships mountpoint-s3 for Linux only."""
     if target.is_darwin:
         return ''
     return f'{entry.url}/latest/{MOUNT_S3_ARCHES[target.arch]}/mount-s3.tar.gz'
 
 
-def _mount_s3(request: Request) -> Result:
+def mount_s3(request: Request) -> Result:
     """A tarball from AWS's bucket, verified against a pinned signing key.
 
     The bucket serves only `latest/`, so the download URL carries no version — but
@@ -439,12 +439,12 @@ def _mount_s3(request: Request) -> Result:
     possible at all: comparing against the release API costs one request, where
     the alternative is fetching the tarball to find out what is in it.
     """
-    tarball_url = _mount_s3_tarball(request.entry, request.target)
+    tarball_url = mount_s3_tarball(request.entry, request.target)
     if not tarball_url:
         return Result(True, 'mount-s3 has no macOS build, so nothing is installed here', kind=Kind.UNSUPPORTED_HERE)
 
     installed = evidence.reported_version(request.entry.executable)
-    if offline := _present_and_offline(request, installed is not None):
+    if offline := present_and_offline(request, installed is not None):
         return offline
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-mount-s3-') as scratch:
@@ -455,7 +455,7 @@ def _mount_s3(request: Request) -> Result:
         if not arrived:
             return Result(False, f'could not download {tarball_url}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
 
-        refused = _verify_signature(archive, tarball_url, f'{request.entry.url}/public_keys/KEYS', staging)
+        refused = verify_signature(archive, tarball_url, f'{request.entry.url}/public_keys/KEYS', staging)
         if refused:
             return Result(False, refused, kind=Kind.UNVERIFIED)
 
@@ -464,14 +464,14 @@ def _mount_s3(request: Request) -> Result:
         binary = staging / 'unpacked' / 'bin' / 'mount-s3'
         if not binary.is_file():
             return Result(False, 'the mount-s3 tarball contains no bin/mount-s3', kind=Kind.ARCHIVE_INCOMPLETE)
-        _place(binary, request.entry.executable)
+        place(binary, request.entry.executable)
 
-    if not _have_fuse():
+    if not have_fuse():
         warn('libfuse2 is not installed, so mount-s3 can run but cannot mount (apt: libfuse2, pacman: fuse2)')
-    return _confirm('mount-s3', request.entry.executable)
+    return confirm_on_path('mount-s3', request.entry.executable)
 
 
-def _verify_signature(archive: Path, tarball_url: str, keys_url: str, staging: Path) -> str:
+def verify_signature(archive: Path, tarball_url: str, keys_url: str, staging: Path) -> str:
     """'' when the tarball's detached signature checks out, else why it does not.
 
     Fails closed on a bad signature or an unpinned key, and warns without refusing
@@ -503,7 +503,7 @@ def _verify_signature(archive: Path, tarball_url: str, keys_url: str, staging: P
     return '' if verified.ok else 'the mount-s3 GPG signature did not verify'
 
 
-def _have_fuse() -> bool:
+def have_fuse() -> bool:
     listed = effects.run(['ldconfig', '-p'], output=Output.QUIET)
     return listed.ok and 'libfuse.so.2' in listed.transcript
 
@@ -513,7 +513,7 @@ HASHICORP = 'https://releases.hashicorp.com'
 TERRAFORM_LS_ARCHES = {'x86_64': 'amd64', 'arm64': 'arm64'}
 
 
-def _terraform_ls(request: Request) -> Result:
+def terraform_ls(request: Request) -> Result:
     """Released on GitHub, distributed from HashiCorp's own mirror.
 
     Which is the whole reason it is not a `github_releases` entry: the version
@@ -554,7 +554,7 @@ def _terraform_ls(request: Request) -> Result:
         if not arrived:
             return Result(False, f'could not download {release}/{asset}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
 
-        refused = _verify_checksum(archive, asset, f'{release}/terraform-ls_{version}_SHA256SUMS', staging)
+        refused = verify_checksum(archive, asset, f'{release}/terraform-ls_{version}_SHA256SUMS', staging)
         if refused:
             return Result(False, refused, kind=Kind.UNVERIFIED)
 
@@ -563,12 +563,12 @@ def _terraform_ls(request: Request) -> Result:
         binary = staging / 'unpacked' / 'terraform-ls'
         if not binary.is_file():
             return Result(False, 'the terraform-ls zip contains no terraform-ls', kind=Kind.ARCHIVE_INCOMPLETE)
-        _place(binary, entry.executable)
+        place(binary, entry.executable)
 
-    return _confirm(f'terraform-ls {latest}', entry.executable)
+    return confirm_on_path(f'terraform-ls {latest}', entry.executable)
 
 
-def _verify_checksum(archive: Path, asset_name: str, checksums_url: str, staging: Path) -> str:
+def verify_checksum(archive: Path, asset_name: str, checksums_url: str, staging: Path) -> str:
     """'' when the download matches the published digest, else why it does not.
 
     Refuses rather than warns when the checksums file cannot be read: HashiCorp
@@ -598,11 +598,11 @@ def _verify_checksum(archive: Path, asset_name: str, checksums_url: str, staging
 BATS_HELPERS = ('support', 'assert')
 
 
-def _bats_repos(entry: catalog.CustomInstaller) -> tuple[str, ...]:
+def bats_repos(entry: catalog.CustomInstaller) -> tuple[str, ...]:
     return tuple(f'https://github.com/{slug}.git' for slug in (entry.repo, entry.support_repo, entry.assert_repo))
 
 
-def _bats(request: Request) -> Result:
+def bats(request: Request) -> Result:
     """Three repos: the test runner, and the two assertion libraries it loads.
 
     The runner is cloned at a tag and installs itself with its own `install.sh`.
@@ -617,7 +617,7 @@ def _bats(request: Request) -> Result:
     """
     entry = request.entry
     installed = evidence.reported_version(entry.executable)
-    if offline := _present_and_offline(request, installed is not None):
+    if offline := present_and_offline(request, installed is not None):
         return offline
 
     try:
@@ -627,7 +627,7 @@ def _bats(request: Request) -> Result:
     if latest is None:
         return Result(False, f'{entry.repo} publishes no release', kind=Kind.VERSION_UNRESOLVED)
 
-    core = _bats_repos(entry)[0]
+    core = bats_repos(entry)[0]
     with tempfile.TemporaryDirectory(prefix='dotfiles-bats-') as scratch:
         checkout = Path(scratch) / 'bats-core'
         err_console.print(f'bats {latest}: {core}', soft_wrap=True)
@@ -639,11 +639,11 @@ def _bats(request: Request) -> Result:
         if not completed.ok:
             return Result(False, f"bats-core's own install.sh exited {completed.returncode}", kind=Kind.COMMAND_FAILED)
 
-    _install_bats_helpers(entry)
-    return _confirm(f'bats {latest}', entry.executable)
+    install_bats_helpers(entry)
+    return confirm_on_path(f'bats {latest}', entry.executable)
 
 
-def _install_bats_helpers(entry: catalog.CustomInstaller) -> None:
+def install_bats_helpers(entry: catalog.CustomInstaller) -> None:
     """The two assertion libraries, refreshed alongside the runner.
 
     Always both, never only the absent ones: reaching here means the runner is
@@ -651,12 +651,12 @@ def _install_bats_helpers(entry: catalog.CustomInstaller) -> None:
     is *missing* is `missing_parts`, and it is a question for the observation rather
     than for this.
     """
-    _, support, assertions = _bats_repos(entry)
+    _, support, assertions = bats_repos(entry)
     for url, helper in zip((support, assertions), BATS_HELPERS, strict=True):
-        _clone_bats_helper(url, helper)
+        clone_bats_helper(url, helper)
 
 
-def _clone_bats_helper(url: str, helper: str) -> None:
+def clone_bats_helper(url: str, helper: str) -> None:
     destination = local_dir() / 'lib' / f'bats-{helper}'
 
     with tempfile.TemporaryDirectory(prefix=f'dotfiles-bats-{helper}-') as scratch:
@@ -673,7 +673,7 @@ def _clone_bats_helper(url: str, helper: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _place(binary: Path, executable: str) -> None:
+def place(binary: Path, executable: str) -> None:
     """Move one unpacked binary into `~/.local/bin` under the name it is called by."""
     destination = bin_dir() / executable
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -681,7 +681,7 @@ def _place(binary: Path, executable: str) -> None:
     effects.make_executable(destination)
 
 
-def _confirm(what: str, executable: str) -> Result:
+def confirm_on_path(what: str, executable: str) -> Result:
     """Everything above ends here: installed is a claim PATH has to agree with."""
     if not shutil.which(executable):
         return Result(False, f'{executable} installed but is not on PATH — is {bin_dir()} in it?', kind=Kind.NOT_ON_PATH)
@@ -689,15 +689,15 @@ def _confirm(what: str, executable: str) -> Result:
 
 
 INSTALLERS: dict[str, Installer] = {
-    'theme': _checkout_tool,
-    'font': _checkout_tool,
-    'zmk': _checkout_tool,
-    'bashselfupdate': _bashselfupdate,
-    'claude-code': _claude_code,
-    'awscli': _awscli,
-    'mount-s3': _mount_s3,
-    'terraform-ls': _terraform_ls,
-    'bats': _bats,
+    'theme': checkout_tool,
+    'font': checkout_tool,
+    'zmk': checkout_tool,
+    'bashselfupdate': bashselfupdate,
+    'claude-code': claude_code,
+    'awscli': awscli,
+    'mount-s3': mount_s3,
+    'terraform-ls': terraform_ls,
+    'bats': bats,
 }
 """Which function installs which entry.
 

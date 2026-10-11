@@ -335,7 +335,7 @@ class TestLatestVersion:
         `/releases`, which returns every one — so the two endpoints answer
         differently unless this filters.
 
-        `_version_key` reads `-rc1` as a fourth component, so `cli/v0.26.1-rc1`
+        `version_key` reads `-rc1` as a fourth component, so `cli/v0.26.1-rc1`
         sorted above `cli/v0.26.0` and a machine on the release was told it was
         behind. An install would then put the candidate on it.
         """
@@ -375,7 +375,7 @@ class TestLatestVersion:
         `releases?per_page=100` answers `200 []` for that same repo, so a 404
         there is renamed, deleted, or invisible to the credential in hand.
 
-        Both endpoints, because `_version_url` picks between them on the prefix
+        Both endpoints, because `version_url` picks between them on the prefix
         and a test asserting one leaves the other free to answer either way.
         Five declared entries take the prefixed path.
         """
@@ -683,7 +683,7 @@ class TestNewestInVersionFile:
 class TestTokenLookup:
     """Asked on every request, so it has to cost once per run and not once per repo.
 
-    `_headers` calls it for each request and a refresh makes one per declared
+    `headers` calls it for each request and a refresh makes one per declared
     release, which had `gh auth token` spawning dozens of subprocesses in a single
     `plan` to answer a question whose answer cannot change while that plan runs.
     """

@@ -82,8 +82,8 @@ def configs(home: Path) -> tuple[Path, ...]:
     those files source in turn.
     """
     base = (Path('/etc/tmux.conf'), user_config(home))
-    targets = chain.from_iterable(_matches(SOURCE_LINE, path) for path in base)
-    sourced = tuple(_expand(target, home) for target in targets)
+    targets = chain.from_iterable(matches(SOURCE_LINE, path) for path in base)
+    sourced = tuple(expand(target, home) for target in targets)
     return tuple(path for path in base + sourced if path.is_file())
 
 
@@ -97,7 +97,7 @@ def declared(home: Path) -> tuple[str, ...]:
     """
     names: list[str] = []
     for path in configs(home):
-        for plugin in _matches(PLUGIN_LINE, path):
+        for plugin in matches(PLUGIN_LINE, path):
             name = plugin.rsplit('/', 1)[-1].removesuffix('.git')
             if name and name not in names:
                 names.append(name)
@@ -155,7 +155,7 @@ def blocked(home: Path, plugins_dir: Path) -> str:
     )
 
 
-def _reap(socket: Path, environment: dict[str, str], detached: tuple[str, ...]) -> None:
+def reap(socket: Path, environment: dict[str, str], detached: tuple[str, ...]) -> None:
     """Take the throwaway by signal where `kill-server` did not take it at all.
 
     `kill-server` is processed on the same command queue a blocking `run-shell`
@@ -199,7 +199,7 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
     """
     config = user_config(home)
     if reason := blocked(home, plugins_dir):
-        return Result(False, f'{reason}. {_diagnostics(config, plugins_dir)}', kind=Kind.PREREQUISITE_MISSING)
+        return Result(False, f'{reason}. {diagnostics(config, plugins_dir)}', kind=Kind.PREREQUISITE_MISSING)
 
     installer = plugins_dir / 'tpm' / 'bin' / 'install_plugins'
     with tempfile.TemporaryDirectory(prefix='dotfiles-tpm-') as scratch:
@@ -213,7 +213,7 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
             reason = started.transcript.strip()
             return Result(
                 False,
-                f'could not start a tmux server to install into: {reason}. {_diagnostics(config, plugins_dir)}',
+                f'could not start a tmux server to install into: {reason}. {diagnostics(config, plugins_dir)}',
                 kind=Kind.COMMAND_FAILED,
             )
 
@@ -224,7 +224,7 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
                 unset=detached,
                 output=Output.QUIET,
             )
-            installed = run([str(installer)], env=environment, unset=detached, show=_tpm_line)
+            installed = run([str(installer)], env=environment, unset=detached, show=tpm_line)
         finally:
             run(
                 ['tmux', '-S', str(socket), 'kill-server'],
@@ -233,19 +233,19 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
                 output=Output.QUIET,
                 timeout=REAP_TIMEOUT,
             )
-            _reap(socket, environment, detached)
+            reap(socket, environment, detached)
 
     if not installed.ok:
         said = installed.transcript.strip() or f'TPM exited {installed.returncode}'
         return Result(
             False,
-            f'TPM plugin installation failed (exit {installed.returncode}): {said}. {_diagnostics(config, plugins_dir)}',
+            f'TPM plugin installation failed (exit {installed.returncode}): {said}. {diagnostics(config, plugins_dir)}',
             kind=Kind.COMMAND_FAILED,
         )
     return Result(True, f'TPM installed the plugins {config.name} declares', kind=Kind.APPLIED)
 
 
-def _diagnostics(config: Path, plugins_dir: Path) -> str:
+def diagnostics(config: Path, plugins_dir: Path) -> str:
     """The three facts every TPM failure turns out to need.
 
     Read on another machine days later, "TPM failed" is undiagnosable without
@@ -257,7 +257,7 @@ def _diagnostics(config: Path, plugins_dir: Path) -> str:
     return f'tmux: {reported}; config: {config} ({"present" if config.is_file() else "MISSING"}); plugins: {plugins_dir}'
 
 
-def _tpm_line(line: str) -> str | None:
+def tpm_line(line: str) -> str | None:
     """What TPM says, minus its own bootstrap.
 
     TPM reports on every plugin it considered, including itself — and tpm.sh has
@@ -313,13 +313,13 @@ def sync_nvim() -> Result:
             kind=Kind.PREREQUISITE_MISSING,
         )
 
-    synced = run(['nvim', '--headless', '-c', 'Lazy! sync', '-c', 'qa'], show=_lazy_line)
+    synced = run(['nvim', '--headless', '-c', 'Lazy! sync', '-c', 'qa'], show=lazy_line)
     if not synced.ok:
         return Result(False, synced.transcript.strip() or f'lazy exited {synced.returncode}', kind=Kind.COMMAND_FAILED)
     return Result(True, 'lazy synced the plugins the Neovim config declares', kind=Kind.APPLIED)
 
 
-def _lazy_line(line: str) -> str | None:
+def lazy_line(line: str) -> str | None:
     """The one line lazy prints as each plugin's task starts, and nothing else.
 
     Its headless output is every plugin's raw git and build spew, which is far too
@@ -345,7 +345,7 @@ def listed(names: tuple[str, ...], limit: int = 4) -> str:
     return shown if len(names) <= limit else f'{shown} and {len(names) - limit} more'
 
 
-def _matches(pattern: re.Pattern[str], path: Path) -> tuple[str, ...]:
+def matches(pattern: re.Pattern[str], path: Path) -> tuple[str, ...]:
     """Every capture of `pattern` in a file that may not be there.
 
     Missing is the ordinary case rather than an error: `/etc/tmux.conf` exists on
@@ -359,7 +359,7 @@ def _matches(pattern: re.Pattern[str], path: Path) -> tuple[str, ...]:
     return tuple(found.group(1) for line in lines if (found := pattern.match(line)))
 
 
-def _expand(target: str, home: Path) -> Path:
+def expand(target: str, home: Path) -> Path:
     """A sourced path as tmux resolves it, which is `~` and `$HOME` and nothing else.
 
     `_manual_expansion` in TPM does exactly these two, and does them by hand for

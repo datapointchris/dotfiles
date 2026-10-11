@@ -173,9 +173,9 @@ class IdentityResource:
 
     def observe(self, session: Session, plan: Plan) -> Observed:
         return Observed(
-            {field: _global(field) for field in FIELDS},
-            {field: _effective(field, session.repo) for field in FIELDS},
-            {field: _override(field, session.repo) for field in FIELDS},
+            {field: global_git_config(field) for field in FIELDS},
+            {field: effective(field, session.repo) for field in FIELDS},
+            {field: override(field, session.repo) for field in FIELDS},
             layering=gitconfig.read(),
             masked=gitconfig.masking(session.home) is not None,
             linked_entry_point=gitconfig.entry_point(session.home).is_symlink(),
@@ -212,7 +212,7 @@ class IdentityResource:
             for field in FIELDS
             if observed.values[field] and observed.override[field] and observed.override[field] != observed.values[field]
         )
-        return missing + overridden + _layering_changes(observed)
+        return missing + overridden + layering_changes(observed)
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Never reached — every change here is BY_HAND, so `actionable` is false.
@@ -224,7 +224,7 @@ class IdentityResource:
         return Outcome(change, OutcomeStatus.REFUSED, 'a git identity is personal; the repo has nothing to write here')
 
 
-def _layering_changes(observed: Observed) -> tuple[Change, ...]:
+def layering_changes(observed: Observed) -> tuple[Change, ...]:
     """What is wrong with the arrangement, as distinct from what is wrong with the
     identity it produces.
 
@@ -291,17 +291,17 @@ def _layering_changes(observed: Observed) -> tuple[Change, ...]:
     return tuple(found)
 
 
-def _global(field: str) -> str:
+def global_git_config(field: str) -> str:
     result = run(['git', 'config', '--global', '--includes', '--get', field], output=Output.QUIET)
     return result.stdout.strip() if result.ok else ''
 
 
-def _effective(field: str, repo: Path) -> str:
+def effective(field: str, repo: Path) -> str:
     result = run(['git', '-C', str(repo), 'config', '--includes', '--get', field], output=Output.QUIET)
     return result.stdout.strip() if result.ok else ''
 
 
-def _override(field: str, repo: Path) -> str:
+def override(field: str, repo: Path) -> str:
     """What this checkout sets for itself, and nothing it merely inherits.
 
     `--local` is the whole point: it reads `.git/config` alone, so a conditional

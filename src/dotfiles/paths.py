@@ -14,11 +14,11 @@ REPO_MARKER = Path('install') / 'packages.yml'
 """What distinguishes the checkout from any other directory the search may land in."""
 
 
-def _looks_like_repo(candidate: Path) -> bool:
+def looks_like_repo(candidate: Path) -> bool:
     return (candidate / REPO_MARKER).is_file()
 
 
-def _repo_root() -> Path:
+def repo_root() -> Path:
     """The checkout this package belongs to.
 
     `DOTFILES_DIR` wins unconditionally, including over an incomplete synthetic
@@ -33,7 +33,7 @@ def _repo_root() -> Path:
         return Path(declared).resolve()
 
     walked = Path(__file__).resolve().parents[2]
-    return walked if _looks_like_repo(walked) else (Path.home() / 'dotfiles').resolve()
+    return walked if looks_like_repo(walked) else (Path.home() / 'dotfiles').resolve()
 
 
 def xdg_home(variable: str, fallback: str) -> Path:
@@ -56,7 +56,7 @@ def under_home(path: Path, home: Path | None = None) -> str:
         return str(path)
 
 
-REPO_ROOT = _repo_root()
+REPO_ROOT = repo_root()
 
 PYPROJECT_FILE = REPO_ROOT / 'pyproject.toml'
 PRE_COMMIT_CONFIG = REPO_ROOT / '.pre-commit-config.yaml'

@@ -82,7 +82,7 @@ app.add_typer(status_commands.app, name='status', rich_help_panel='Staging')
 app.add_typer(manage.repo_app, name='repo', rich_help_panel='Manage')
 
 
-def _version(value: bool) -> None:
+def version(value: bool) -> None:
     if not value:
         return
     # Read here rather than at module scope: the package resolves it through
@@ -94,7 +94,7 @@ def _version(value: bool) -> None:
 
 @app.callback()
 def root(
-    version: bool = typer.Option(False, '--version', '-V', callback=_version, is_eager=True, help='Show the version'),
+    version: bool = typer.Option(False, '--version', '-V', callback=version, is_eager=True, help='Show the version'),
 ) -> None:
     """Nothing but `--version` belongs here — see the module docstring."""
     # Except this, which is not a knob: unconfigured structlog logs through a
@@ -121,7 +121,7 @@ VerboseOption = commands.VerboseOption
 QuietOption = commands.QuietOption
 
 
-def _skipped(addresses: list[str] | None) -> frozenset[str]:
+def skipped_addresses(addresses: list[str] | None) -> frozenset[str]:
     """Every address to leave alone, validated against the grammar.
 
     `--skip plugins/tpm` now leaves exactly TPM alone rather than all of
@@ -199,7 +199,7 @@ def plan(
     if not as_json:
         banner.show()
     refreshing = commands.currency(refresh, offline=offline)
-    skipped = _skipped(skip)
+    skipped = skipped_addresses(skip)
     named = Session.resolve(machine).machine_name
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
@@ -268,7 +268,7 @@ def check(
     if not as_json:
         banner.show()
     refreshing = commands.currency(refresh, offline=offline)
-    skipped = _skipped(skip)
+    skipped = skipped_addresses(skip)
     checked_machine = Session.resolve(machine).machine_name
     identity = runs.begin(checked_machine, 'check')
     when = identity.started
@@ -346,9 +346,9 @@ def apply_command(
     except engine.UnknownAddress as unknown:
         raise typer.BadParameter(str(unknown)) from unknown
 
-    skipped = _skipped(skip)
+    skipped = skipped_addresses(skip)
     raise typer.Exit(
-        _converged(
+        converged(
             engine.Selection.excluding(skipped).capped_at(ceiling),
             machine=machine,
             offline=offline,
@@ -376,7 +376,7 @@ def apply_command(
     )
 
 
-def _converged(
+def converged(
     selection: engine.Selection,
     *,
     machine: str | None,

@@ -91,7 +91,7 @@ def outstanding(record: runs.RunRecord) -> dict[str, list[str]]:
     Data, not a sentence. A consumer asking which items on a box need a person has
     to be able to read them off the row, and rebuilding them means reimplementing
     this fold, the dedupe below and the `UNREPAIRABLE` split — the fan-out
-    `_listed` exists to stop.
+    `listed` exists to stop.
 
     **Drift is absent on purpose.** An item `apply` would repair is not a fault,
     so carrying it here would make every machine between two applies read as
@@ -157,7 +157,7 @@ def clause(named: Sequence[str], word: str) -> str:
     return f'{len(named)} {word}: {", ".join(named[:NAMES_SHOWN])}'
 
 
-def _readable(found: Iterable[Path]) -> Iterator[tuple[Path, runs.RunRecord]]:
+def readable(found: Iterable[Path]) -> Iterator[tuple[Path, runs.RunRecord]]:
     """Every record in a set that parses, saying on stderr which ones did not.
 
     The split `runs.Unreadable` exists for. A verb answering about the whole
@@ -176,7 +176,7 @@ def _readable(found: Iterable[Path]) -> Iterator[tuple[Path, runs.RunRecord]]:
             warn(str(unreadable))
 
 
-def _listed(path: Path) -> dict[str, object]:
+def listed(path: Path) -> dict[str, object]:
     """One listing row: what the filename says, plus what the record concluded.
 
     A record that will not parse still gets its row. The alternative drops a run
@@ -223,7 +223,7 @@ def _listed(path: Path) -> dict[str, object]:
     }
 
 
-def _find(identifier: str | None) -> Path:
+def find(identifier: str | None) -> Path:
     """Resolve a run id to its record, or the newest run when none is given."""
     if identifier is None:
         if found := runs.latest():
@@ -237,7 +237,7 @@ def _find(identifier: str | None) -> Path:
         # in the filename the stem match reads — so the one identifier a reader has
         # in front of them was the only one that did not resolve. Second, because
         # this reads every record and the stem match reads none.
-        matches = [path for path, record in _readable(runs.list_runs()) if record.id.startswith(identifier)]
+        matches = [path for path, record in readable(runs.list_runs()) if record.id.startswith(identifier)]
     if not matches:
         raise typer.BadParameter(f'no run matching {identifier!r}')
     if len(matches) > 1:
@@ -255,7 +255,7 @@ one worth comparing against the run that was not.
 """
 
 
-def _slow_commands(record_path: Path) -> list[tuple[float, str]]:
+def slow_commands(record_path: Path) -> list[tuple[float, str]]:
     """The commands a run spent longest in, from the event log beside its record.
 
     Read here rather than accumulated into the record, because it already exists:
@@ -284,7 +284,7 @@ def _slow_commands(record_path: Path) -> list[tuple[float, str]]:
     return sorted(found, reverse=True)[:SLOW_COMMANDS_SHOWN]
 
 
-def _render(path: Path, record: runs.RunRecord) -> None:
+def render(path: Path, record: runs.RunRecord) -> None:
     # `[{verdict}]` reads as a Rich style tag, so the word this line exists to say
     # was parsed as markup and dropped — every header printed a trailing blank.
     verdict = str(record.verdict)
@@ -310,7 +310,7 @@ def _render(path: Path, record: runs.RunRecord) -> None:
             table.add_row(outcome.address, outcome.verdict, outcome.action, f'{outcome.timing.duration_seconds:.2f}')
         console.print(table)
 
-    if slow := _slow_commands(path):
+    if slow := slow_commands(path):
         console.print()
         console.print('[bold]slowest commands[/]')
         commands = Table(box=None, pad_edge=False)
@@ -338,7 +338,7 @@ def _render(path: Path, record: runs.RunRecord) -> None:
         console.print(f'[red]{issue.kind}[/] {issue.address}: {issue.message}')
 
 
-def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
+def emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
     """The record itself for a machine, and a reading of it for a person.
 
     **`--json` is the record and nothing else**, which is why the slowest
@@ -350,7 +350,7 @@ def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
     which is the arrangement that property exists to refuse.
 
     The asymmetry is between a derived view and its source rather than between a
-    person and a machine. What `_slow_commands` reads is the run's own `.jsonl`,
+    person and a machine. What `slow_commands` reads is the run's own `.jsonl`,
     which is machine-readable, sits beside this file, and holds one line per
     command with its duration. `dotfiles logs` is the noun that owns it:
 
@@ -360,14 +360,14 @@ def _emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
     if as_json:
         emit_json(dc.asdict(record))
     else:
-        _render(path, record)
+        render(path, record)
 
 
 @app.command('latest')
 def latest(as_json: bool = JsonOption) -> None:
     """Show the most recent run."""
-    found = _find(None)
-    _emit(found, runs.read(found), as_json)
+    found = find(None)
+    emit(found, runs.read(found), as_json)
 
 
 @app.command('list')
@@ -387,12 +387,12 @@ def list_runs(
         # cannot drift into disagreeing about what a run concluded.
         #
         # Every record gets a row, including one that will not parse — which is why
-        # this reads each path itself rather than through `_readable`, whose whole
+        # this reads each path itself rather than through `readable`, whose whole
         # job is to drop those. A listing is the answer to "what is here", and a
         # fleet-shared `runs/` is where a truncated file is least surprising and
         # least acceptable to silently omit. The unreadable row carries the run and
         # says so, and the fields it cannot know are empty rather than guessed.
-        emit_json([_listed(path) for path in found])
+        emit_json([listed(path) for path in found])
         return
     if not found:
         return
@@ -402,7 +402,7 @@ def list_runs(
     table = Table(box=None, pad_edge=False)
     table.add_column('run')
     table.add_column('outcome')
-    for path, record in _readable(found):
+    for path, record in readable(found):
         wrong = outstanding_line(outstanding(record))
         color = 'red' if wrong else 'green'
         table.add_row(path.stem, f'[{color}]{wrong or "ok"}[/]')
@@ -412,14 +412,14 @@ def list_runs(
 @app.command('show')
 def show(identifier: str = typer.Argument(..., help='Run id, or a unique prefix'), as_json: bool = JsonOption) -> None:
     """Show one run in full."""
-    found = _find(identifier)
-    _emit(found, runs.read(found), as_json)
+    found = find(identifier)
+    emit(found, runs.read(found), as_json)
 
 
 @app.command('path')
 def path(identifier: str = typer.Argument(None, help='Run id (default: the newest)')) -> None:
     """Print a run record's path, for piping into another command."""
-    print(_find(identifier))
+    print(find(identifier))
 
 
 @app.command('upload')
@@ -447,7 +447,7 @@ def upload(
     everything" would put a peer's records on this machine's shelf.
     """
     verbosity(verbose, quiet)
-    directory, sent = _send(identifier)
+    directory, sent = send(identifier)
     if not sent:
         render_note(f'{directory} already has every record for this machine')
         raise typer.Exit(ExitCode.CONVERGED)
@@ -516,7 +516,7 @@ def download(
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-def _send(identifier: str | None) -> tuple[str, int]:
+def send(identifier: str | None) -> tuple[str, int]:
     """The shelf written to, and how many files reached it.
 
     Its own function because `publish_after_apply` needs the same act without the
@@ -537,7 +537,7 @@ def _send(identifier: str | None) -> tuple[str, int]:
     trust = session.machine.coordinates.network_trust
 
     directory = transport.reports_for(where, session.machine_name)
-    chosen = [_find(identifier)] if identifier else runs.list_runs(machine=paths.MACHINE_ID)
+    chosen = [find(identifier)] if identifier else runs.list_runs(machine=paths.MACHINE_ID)
     if not chosen:
         error(f'no runs recorded for {paths.MACHINE_ID}')
         raise typer.Exit(ExitCode.ISSUE)
@@ -553,12 +553,12 @@ def _send(identifier: str | None) -> tuple[str, int]:
             for local in (record, record.with_suffix('.jsonl')):
                 if not local.is_file() or local.name in already:
                     continue
-                transport.push(where, _masked_copy(local, identities, Path(staging)), directory)
+                transport.push(where, masked_copy(local, identities, Path(staging)), directory)
                 sent += 1
     return directory, sent
 
 
-def _screened(payload: object, identities: Mapping[str, str]) -> object:
+def screened(payload: object, identities: Mapping[str, str]) -> object:
     """Rooted first, then masked, and the order is what keeps the file readable.
 
     `rooted` turns every path under this home into `~/…`, which is both how a
@@ -574,7 +574,7 @@ def _screened(payload: object, identities: Mapping[str, str]) -> object:
     return publishing.masked(publishing.rooted(payload, str(Path.home())), identities)
 
 
-def _masked_copy(local: Path, identities: Mapping[str, str], into: Path) -> Path:
+def masked_copy(local: Path, identities: Mapping[str, str], into: Path) -> Path:
     """The same file with every identifying name taken out, written into `into`.
 
     A copy rather than a rewrite, because the record on this machine is the
@@ -597,10 +597,10 @@ def _masked_copy(local: Path, identities: Mapping[str, str], into: Path) -> Path
         raise ValueError(f'{into} is where the record already lives, so staging there would overwrite it')
     staged = into / local.name
     if local.suffix == '.jsonl':
-        lines = (_screened(json.loads(line), identities) for line in local.read_text().splitlines() if line.strip())
+        lines = (screened(json.loads(line), identities) for line in local.read_text().splitlines() if line.strip())
         staged.write_text(''.join(json.dumps(line) + '\n' for line in lines))
         return staged
-    staged.write_text(json.dumps(_screened(json.loads(local.read_text()), identities), indent=2) + '\n')
+    staged.write_text(json.dumps(screened(json.loads(local.read_text()), identities), indent=2) + '\n')
     return staged
 
 
@@ -624,7 +624,7 @@ def publish_after_apply() -> None:
     if found.remote is None or not found.remote.publish_reports_after_apply:
         return
     try:
-        directory, sent = _send(None)
+        directory, sent = send(None)
     except typer.Exit:
         return
     except Exception as failed:
@@ -643,7 +643,7 @@ def stats(as_json: bool = JsonOption) -> None:
     than a flag on `show`.
     """
     durations: defaultdict[str, list[float]] = defaultdict(list)
-    records = [record for _, record in _readable(runs.list_runs())]
+    records = [record for _, record in readable(runs.list_runs())]
     for record in records:
         for outcome in record.outcomes:
             durations[outcome.address].append(outcome.timing.duration_seconds)
@@ -662,7 +662,7 @@ def stats(as_json: bool = JsonOption) -> None:
         for address, seconds in sorted(durations.items(), key=lambda item: -sum(item[1]))
     }
 
-    unconverged = _never_converged(records)
+    unconverged = never_converged(records)
 
     if as_json:
         emit_json({'durations': summary, 'unconverged': [dc.asdict(entry) for entry in unconverged]})
@@ -707,7 +707,7 @@ class Unconverged:
     applies: int
 
 
-def _never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
+def never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
     """Items an apply acts on every time, which no amount of applying settles.
 
     The failure mode this exists to name: `brew install pkg-config` succeeds,
@@ -716,7 +716,7 @@ def _never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
     reports success, the run reports converged, and the item is reinstalled
     forever. Nothing sees the repetition until the fleet shares its run history.
 
-    A registry package does not reach here at all. `_transact` re-observes what it
+    A registry package does not reach here at all. `transact` re-observes what it
     installed and records `absent` rather than `done`, so the streak this counts
     never starts and the first run says it outright instead of the third. What
     reaches here is everything that cannot be re-measured that cheaply, which is

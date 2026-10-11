@@ -58,7 +58,7 @@ def serialize(job: dict[str, Any]) -> bytes:
 
 def loaded(label: str) -> bool:
     """Whether launchd currently holds this job."""
-    return effects.run(['launchctl', 'print', f'{_domain()}/{label}'], output=Output.QUIET).ok
+    return effects.run(['launchctl', 'print', f'{domain()}/{label}'], output=Output.QUIET).ok
 
 
 def bootout(label: str) -> Completed:
@@ -69,7 +69,7 @@ def bootout(label: str) -> Completed:
     hold is the ordinary case and the bootstrap after it is the verdict, while
     here it is the whole act and the caller reports what it said.
     """
-    return effects.run(['launchctl', 'bootout', f'{_domain()}/{label}'], output=Output.QUIET)
+    return effects.run(['launchctl', 'bootout', f'{domain()}/{label}'], output=Output.QUIET)
 
 
 def reload(label: str) -> Completed:
@@ -79,9 +79,9 @@ def reload(label: str) -> Completed:
     already holds and the command reports success — so an interval or an argument
     that moved in this repo never takes.
     """
-    effects.run(['launchctl', 'bootout', f'{_domain()}/{label}'], output=Output.QUIET)
-    return effects.run(['launchctl', 'bootstrap', _domain(), str(agent_path(label))], output=Output.QUIET)
+    effects.run(['launchctl', 'bootout', f'{domain()}/{label}'], output=Output.QUIET)
+    return effects.run(['launchctl', 'bootstrap', domain(), str(agent_path(label))], output=Output.QUIET)
 
 
-def _domain() -> str:
+def domain() -> str:
     return f'gui/{os.getuid()}'

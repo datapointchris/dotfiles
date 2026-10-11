@@ -51,7 +51,7 @@ def test_a_machine_that_needs_nothing_says_so_rather_than_printing_a_bare_name(m
     so the empty register has no machine to be asserted against — and the
     rendering still has to be right the first time one does."""
     empty = dc.replace(machines.load('linux-lxc-server'), requirements=())
-    monkeypatch.setattr(commands, '_loaded', lambda _: empty)
+    monkeypatch.setattr(commands, 'loaded', lambda _: empty)
 
     printed = run('linux-lxc-server')
 

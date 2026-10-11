@@ -125,7 +125,7 @@ ACCOUNT = 'boxuser'
 PRIMARY_GID = 4242
 """The synthetic account's own group, and deliberately not a plausible one.
 
-`_observe_group` matches on `pw_gid == gr_gid` as well as on membership, so a
+`observe_group` matches on `pw_gid == gr_gid` as well as on membership, so a
 group built for a STALE case would read MATCHED if its gid collided with the
 account's primary one. Every group below uses `OTHER_GID`.
 """
@@ -149,7 +149,7 @@ def synthetic_account(monkeypatch: pytest.MonkeyPatch, shell: str = '/bin/bash')
     """One passwd entry, answering both lookups, so no row is about whoever ran the suite.
 
     `pwd` has no seam: `current_user` reads `getpwuid(os.getuid())` and
-    `_observe_group` reads `getpwnam(user)`, and both go to the machine's own
+    `observe_group` reads `getpwnam(user)`, and both go to the machine's own
     database. Patched together rather than separately, because a group's verdict
     depends on the same entry the login shell's does.
     """
@@ -650,7 +650,7 @@ def test_narrowing_to_the_package_section_drops_the_manager_row_beside_it(sandbo
 def test_narrowing_the_write_to_the_package_section_leaves_the_configuration_alone(
     sandbox: Sandbox, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The same `_selected` decides the read and the write, so a preview and the
+    """The same `selected` decides the read and the write, so a preview and the
     write it rehearses cannot disagree about what a section covers."""
     sandbox.declare(packages=CURL, manifest=LINUX)
     sandbox.shadow('dpkg-query', '#!/bin/sh\nprintf "curl\\n"\n')
@@ -891,7 +891,7 @@ def test_the_package_summary_does_not_claim_an_install_the_counts_contradict(san
 def test_the_configuration_summary_counts_only_the_rows_that_match(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """One declared row, MISSING, and the count says none matched.
 
-    The count was `len(self.config)`, which is every row `_observe_config`
+    The count was `len(self.config)`, which is every row `observe_config`
     answered for whatever that answer turned out to be — so a machine with nine
     rows and three of them drifted said nine match.
     """
@@ -966,7 +966,7 @@ def test_a_timer_the_manifest_declines_is_reported_as_left_behind(
     `enabled = true` stands, and the row reads the timer as differing from what
     this repo declares rather than as declined.
     """
-    monkeypatch.setattr(schedule, '_is_darwin', lambda: False)
+    monkeypatch.setattr(schedule, 'is_darwin', lambda: False)
     sandbox.declare(manifest={**LINUX, 'check_schedule': False})
     declare_system(sandbox, SCHEDULE_STEP)
     (sandbox.config / 'dotfiles').mkdir(parents=True, exist_ok=True)
@@ -995,7 +995,7 @@ def test_a_first_apply_installs_the_timer_its_own_symlink_pass_turned_on(
     `$XDG_CONFIG_HOME` names the sandbox's `~/.config` because that is where the
     symlink pass deploys, and on a real machine the two are one directory.
     """
-    monkeypatch.setattr(schedule, '_is_darwin', lambda: False)
+    monkeypatch.setattr(schedule, 'is_darwin', lambda: False)
     monkeypatch.setenv('XDG_CONFIG_HOME', str(sandbox.home / '.config'))
     declare_system(sandbox, SCHEDULE_STEP)
     write(sandbox.repo / 'configs' / 'trust' / 'fleet' / '.config' / 'dotfiles' / 'config.toml', '[schedule]\nenabled = true\n')
@@ -1029,7 +1029,7 @@ VERBS: list[tuple[str, Verb]] = [
 
 @pytest.mark.parametrize('verb', [row[1] for row in VERBS], ids=[row[0] for row in VERBS])
 def test_only_the_write_verb_leaves_a_run_record(sandbox: Sandbox, cli: Callable[..., Invocation], verb: Verb) -> None:
-    """A resource-scoped read goes through `_survey`, which begins no run — the
+    """A resource-scoped read goes through `survey`, which begins no run — the
     record belongs to the whole-machine verbs and to every apply.
 
     Asserted here because the two read verbs are what a shell prompt and a timer

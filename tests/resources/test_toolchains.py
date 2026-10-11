@@ -56,7 +56,7 @@ def bin_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return directory
 
 
-def _relocated(provider: registry.Provider, directory: Path) -> registry.Provider:
+def relocated(provider: registry.Provider, directory: Path) -> registry.Provider:
     """A toolchain with a fixed home, moved into `directory` under its executable's
     name, and every other provider as it was.
 
@@ -75,7 +75,7 @@ def relocate_homes(monkeypatch: pytest.MonkeyPatch, directory: Path) -> tuple[re
     and the three lookups are rebuilt together because `resolve` walks `PROVIDERS`
     while the resources reach through `BY_NAME`.
     """
-    swapped = tuple(_relocated(provider, directory) for provider in registry.PROVIDERS)
+    swapped = tuple(relocated(provider, directory) for provider in registry.PROVIDERS)
     monkeypatch.setattr(registry, 'PROVIDERS', swapped)
     monkeypatch.setattr(registry, 'BY_NAME', {provider.name: provider for provider in swapped})
     monkeypatch.setattr(registry, 'BY_SECTION', {provider.section: provider for provider in swapped if provider.section})

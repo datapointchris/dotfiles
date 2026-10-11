@@ -133,11 +133,11 @@ def install(
         # inserts real newlines, and a download URL is the first thing anyone
         # copies out of a failed install.
         err_console.print(f'{entry.name} {tag}: {url}', soft_wrap=True)
-        staged = _stage(download, url, entry.repo, tag, asset.name, offline=offline)
+        staged = stage(download, url, entry.repo, tag, asset.name, offline=offline)
         if staged is None:
             return Result(False, f'could not download {asset.name}', kind=Kind.DOWNLOAD_FAILED)
 
-        refused = _verify(download, asset.name, entry, tag, from_bundle=staged is Staged.BUNDLE, offline=offline)
+        refused = verify(download, asset.name, entry, tag, from_bundle=staged is Staged.BUNDLE, offline=offline)
         if refused:
             return Result(False, refused, kind=Kind.UNVERIFIED)
 
@@ -146,11 +146,11 @@ def install(
             if not cleared.ok:
                 return cleared
 
-        placed = _place(asset, entry.executable, download, staging)
+        placed = place(asset, entry.executable, download, staging)
         if not placed.ok:
             return placed
 
-    missing = _companions(entry.name, tag, locate(f'{BUNDLE_BINARIES}/{asset.name}'), offline=offline)
+    missing = companions(entry.name, tag, locate(f'{BUNDLE_BINARIES}/{asset.name}'), offline=offline)
     if missing:
         return Result(False, missing, kind=Kind.NOT_IN_BUNDLE if offline else Kind.DOWNLOAD_FAILED)
 
@@ -247,7 +247,7 @@ class Staged(enum.StrEnum):
     NETWORK = 'network'
 
 
-def _stage(download: Path, url: str, repo: str, tag: str, asset_name: str, *, offline: bool) -> Staged | None:
+def stage(download: Path, url: str, repo: str, tag: str, asset_name: str, *, offline: bool) -> Staged | None:
     """Get the asset onto disk, or None if it could not be got.
 
     The bundle is preferred over the network whenever it holds the asset, not only
@@ -265,7 +265,7 @@ def _stage(download: Path, url: str, repo: str, tag: str, asset_name: str, *, of
     return Staged.NETWORK if effects.fetch(url, download, repo=repo, tag=tag, asset_name=asset_name) else None
 
 
-def _verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: str, *, from_bundle: bool, offline: bool) -> str:
+def verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: str, *, from_bundle: bool, offline: bool) -> str:
     """'' when the asset may be installed, else why it may not.
 
     `required` is the default and the only state that installs on proof. The two
@@ -295,7 +295,7 @@ def _verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: 
             # *not* excused is `required`, where a missing digest means the
             # bundle failed at the one job it exists for.
             because = f'the offline bundle records no digest for {asset_name}'
-            return _permitted(entry, because, catalog.CHECKSUM_UNPUBLISHED, catalog.CHECKSUM_UNLISTED)
+            return permitted(entry, because, catalog.CHECKSUM_UNPUBLISHED, catalog.CHECKSUM_UNLISTED)
         return '' if outcome is github_release.Verification.VERIFIED else f'checksum mismatch against the offline bundle for {asset_name}'
 
     outcome = github_release.verify_release_checksum(
@@ -315,13 +315,13 @@ def _verify(download: Path, asset_name: str, entry: catalog.GithubRelease, tag: 
         # author saying upstream publishes nothing, which is a claim about the
         # release; this is not knowing what the release holds, and the bytes are
         # unverified either way.
-        return _permitted(entry, f'the release {tag} of {entry.repo} could not be read, so its checksums are unknown')
+        return permitted(entry, f'the release {tag} of {entry.repo} could not be read, so its checksums are unknown')
     if outcome is github_release.Verification.UNPUBLISHED:
-        return _permitted(entry, f'{entry.repo} publishes no checksum file for {tag}', catalog.CHECKSUM_UNPUBLISHED)
-    return _permitted(entry, f"{entry.repo}'s checksums file for {tag} does not name {asset_name}", catalog.CHECKSUM_UNLISTED)
+        return permitted(entry, f'{entry.repo} publishes no checksum file for {tag}', catalog.CHECKSUM_UNPUBLISHED)
+    return permitted(entry, f"{entry.repo}'s checksums file for {tag} does not name {asset_name}", catalog.CHECKSUM_UNLISTED)
 
 
-def _permitted(entry: catalog.GithubRelease, because: str, *excused_by: str) -> str:
+def permitted(entry: catalog.GithubRelease, because: str, *excused_by: str) -> str:
     """Whether the entry's declaration excuses an unverified install of it.
 
     Anything the declaration does not name is refused, and `required` is never in
@@ -355,14 +355,14 @@ def installed_at(executable: str) -> Path:
     return bin_dir() / executable
 
 
-def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Path) -> Result:
+def place(asset: ReleaseArtifact, executable: str, download: Path, staging: Path) -> Result:
     """Get binaries out of what was downloaded and into `~/.local/bin`."""
     target = installed_at(executable)
     target.parent.mkdir(parents=True, exist_ok=True)
 
     if asset.archive is Archive.RAW:
         if not effects.install(download, target):
-            return Result(False, _unplaceable(executable, target), kind=Kind.WRITE_FAILED)
+            return Result(False, unplaceable(executable, target), kind=Kind.WRITE_FAILED)
         return Result(True, str(target), kind=Kind.APPLIED)
 
     if asset.archive is Archive.GZIP:
@@ -373,11 +373,11 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
         if not effects.gunzip(download, plain):
             return Result(False, f'{asset.name} did not decompress', kind=Kind.ARCHIVE_UNREADABLE)
         if not effects.install(plain, target):
-            return Result(False, _unplaceable(executable, target), kind=Kind.WRITE_FAILED)
+            return Result(False, unplaceable(executable, target), kind=Kind.WRITE_FAILED)
         return Result(True, str(target), kind=Kind.APPLIED)
 
     if asset.tree:
-        return _place_tree(asset, download, target)
+        return place_tree(asset, download, target)
 
     unpacked = staging / 'unpacked'
     if not effects.unpack(download, unpacked):
@@ -387,7 +387,7 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
     if not source.is_file():
         return Result(False, f'{asset.name} contains no {asset.path}', kind=Kind.ARCHIVE_INCOMPLETE)
     if not effects.install(source, target):
-        return Result(False, _unplaceable(executable, target), kind=Kind.WRITE_FAILED)
+        return Result(False, unplaceable(executable, target), kind=Kind.WRITE_FAILED)
 
     for extra in asset.extras:
         beside = unpacked / extra
@@ -395,21 +395,21 @@ def _place(asset: ReleaseArtifact, executable: str, download: Path, staging: Pat
             continue
         placed = bin_dir() / Path(extra).name
         if not effects.install(beside, placed):
-            return Result(False, _unplaceable(Path(extra).name, placed), kind=Kind.WRITE_FAILED)
+            return Result(False, unplaceable(Path(extra).name, placed), kind=Kind.WRITE_FAILED)
 
     if asset.unit:
         source = unpacked / asset.unit
         if not source.is_file():
             return Result(False, f'{asset.name} contains no {asset.unit}', kind=Kind.ARCHIVE_INCOMPLETE)
-        source.write_text(_exec_at(source.read_text(), target))
+        source.write_text(exec_at(source.read_text(), target))
         placed = unit_dir() / Path(asset.unit).name
         if not effects.install(source, placed, executable=False):
-            return Result(False, _unplaceable(Path(asset.unit).name, placed), kind=Kind.WRITE_FAILED)
+            return Result(False, unplaceable(Path(asset.unit).name, placed), kind=Kind.WRITE_FAILED)
 
     return Result(True, str(target), kind=Kind.APPLIED)
 
 
-def _exec_at(unit: str, binary: Path) -> str:
+def exec_at(unit: str, binary: Path) -> str:
     """Upstream's unit, pointed at where this actually installed the binary.
 
     A published unit names the path its distro package uses — syncthing ships
@@ -482,9 +482,9 @@ def supervise(entry: catalog.GithubRelease, target: Target) -> Result:
     stopping is a daemon that never runs, and the enable is part of the install.
     """
     if target.is_darwin:
-        return _supervise_launchd(entry) if entry.name in AGENTS else Result(True, '', kind=Kind.UNCHANGED)
+        return supervise_launchd(entry) if entry.name in AGENTS else Result(True, '', kind=Kind.UNCHANGED)
     if systemd.available() and declared_unit(entry.name):
-        return _supervise_systemd(entry)
+        return supervise_systemd(entry)
     return Result(True, '', kind=Kind.UNCHANGED)
 
 
@@ -508,9 +508,9 @@ def unsupervised(name: str, executable: str) -> str:
     `sysconfig._observe_unit` opens with the same guard for the same reason.
     """
     if launchd.available() and name in AGENTS:
-        return _unsupervised_launchd(name, executable)
+        return unsupervised_launchd(name, executable)
     if systemd.available() and declared_unit(name):
-        return _unsupervised_systemd(name, executable)
+        return unsupervised_systemd(name, executable)
     return ''
 
 
@@ -529,7 +529,7 @@ def declared_unit(name: str) -> str:
     return Path(asset.unit).name if asset.unit else ''
 
 
-def _supervise_launchd(entry: catalog.GithubRelease) -> Result:
+def supervise_launchd(entry: catalog.GithubRelease) -> Result:
     """Write the plist and load it, failing only on the write.
 
     The agent is on disk and the next login loads it, so failing on a refused
@@ -552,8 +552,8 @@ def _supervise_launchd(entry: catalog.GithubRelease) -> Result:
     return Result(True, str(plist), kind=Kind.APPLIED)
 
 
-def _supervise_systemd(entry: catalog.GithubRelease) -> Result:
-    """Reload the manager and enable the unit `_place` wrote.
+def supervise_systemd(entry: catalog.GithubRelease) -> Result:
+    """Reload the manager and enable the unit `place` wrote.
 
     A failure here fails the install, which is the opposite call to launchd's above
     and is decided by the same question: what does the file buy on its own. Nothing,
@@ -570,7 +570,7 @@ def _supervise_systemd(entry: catalog.GithubRelease) -> Result:
     return Result(True, str(placed), kind=Kind.APPLIED)
 
 
-def _unsupervised_launchd(name: str, executable: str) -> str:
+def unsupervised_launchd(name: str, executable: str) -> str:
     agent = AGENTS[name]
     plist = launchd.agent_path(agent.label)
     if not plist.is_file():
@@ -582,11 +582,11 @@ def _unsupervised_launchd(name: str, executable: str) -> str:
     return ''
 
 
-def _unsupervised_systemd(name: str, executable: str) -> str:
+def unsupervised_systemd(name: str, executable: str) -> str:
     """The three states, with the middle one narrowed to what is knowable offline.
 
     The unit's body comes out of the release archive rather than from this repo, so
-    there is nothing here to compare it against without a download. What `_place`
+    there is nothing here to compare it against without a download. What `place`
     *does* author is the `ExecStart` path, and that is the half that goes wrong —
     a unit still naming `/usr/bin` after the package it came from was removed is
     exec-not-found on every start.
@@ -594,14 +594,14 @@ def _unsupervised_systemd(name: str, executable: str) -> str:
     placed = unit_dir() / declared_unit(name)
     if not placed.is_file():
         return f'{placed} does not exist, so nothing keeps {executable} running'
-    if _exec_at(placed.read_text(), installed_at(executable)) != placed.read_text():
+    if exec_at(placed.read_text(), installed_at(executable)) != placed.read_text():
         return f'{placed} does not start {installed_at(executable)}'
     if not systemd.enabled(placed.name):
         return f'{placed.name} is installed and systemd has not enabled it'
     return ''
 
 
-def _unplaceable(executable: str, target: Path) -> str:
+def unplaceable(executable: str, target: Path) -> str:
     """Why a replace failed, given that a running target is no longer a reason.
 
     Naming the directory rather than guessing: `install` replaces rather than
@@ -611,7 +611,7 @@ def _unplaceable(executable: str, target: Path) -> str:
     return f'{executable} downloaded but could not be placed in {target.parent}'
 
 
-def _place_tree(asset: ReleaseArtifact, download: Path, target: Path) -> Result:
+def place_tree(asset: ReleaseArtifact, download: Path, target: Path) -> Result:
     """Unpack under `~/.local` and link the binary out of the tree.
 
     The old tree is removed first rather than unpacked over: an upgrade that
@@ -648,7 +648,7 @@ def missing_companions(name: str) -> tuple[str, ...]:
     return tuple(companion.name for companion in COMPANIONS.get(name, ()) if not (bin_dir() / companion.name).exists())
 
 
-def _companions(name: str, tag: str, staged_asset: Located | None, *, offline: bool) -> str:
+def companions(name: str, tag: str, staged_asset: Located | None, *, offline: bool) -> str:
     """Fetch the files that ship with a tool without being in its release.
 
     '' when there is nothing to do or it was done. A companion is not optional,
@@ -660,7 +660,7 @@ def _companions(name: str, tag: str, staged_asset: Located | None, *, offline: b
     observation rather than to this.
 
     `staged_asset` is the bundle the binary came out of, and the companion is
-    taken from beside it — the same pinning `_verify` does for a checksum, for the
+    taken from beside it — the same pinning `verify` does for a checksum, for the
     same reason. A companion filename carries no version, so an unpinned lookup
     returns whichever staged bundle is newest: a binary from an older full bundle
     would take `fzf-tmux` from a newer sparse one, which is the mismatched pair

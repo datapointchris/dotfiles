@@ -46,7 +46,7 @@ class Fake:
     def observe(self, session: Session, plan: Plan) -> object:
         if self._raises is not None:
             raise self._raises
-        return _Observed(f'{self.name} examined')
+        return Observed(f'{self.name} examined')
 
     def diff(self, plan: Plan, observed: object) -> tuple[Change, ...]:
         return self._changes
@@ -55,7 +55,7 @@ class Fake:
         raise AssertionError('assess must not write')
 
 
-class _Observed:
+class Observed:
     def __init__(self, summary: str, inventory: tuple[Examined, ...] = ()) -> None:
         self.summary = summary
         self.inventory = inventory
@@ -556,7 +556,7 @@ def test_the_transaction_is_timed_once_rather_than_per_item(session: Session, mo
 
 
 def test_every_resource_can_name_what_it_examined() -> None:
-    """`_measure` reads `observed.inventory` off whatever a resource returns, so a
+    """`measure` reads `observed.inventory` off whatever a resource returns, so a
     resource that never grew one raises `AttributeError` mid-walk and takes down
     the whole of its own report — as a `Refusal`, which reads as a checker that
     crashed rather than as a missing property.

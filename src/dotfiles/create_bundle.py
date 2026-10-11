@@ -1324,7 +1324,7 @@ def version_the_script_installs(entry: catalog.CustomInstaller) -> str:
     Info rather than a warning for the repo-less case, because it is the permanent
     and correct state of a vendor script rather than a fault. A warning that fires
     on every build for something no commit can fix is what teaches a reader to skip
-    the warnings that mean something. `_has_currency` asks a repo-less entry only
+    the warnings that mean something. `has_currency` asks a repo-less entry only
     online, through its vendor's version file, so no offline run reads this row
     for a verdict.
     """

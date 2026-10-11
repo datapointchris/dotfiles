@@ -372,7 +372,7 @@ class TestBashselfupdate:
         assert runs.ran('install.sh')
 
     def test_its_evidence_is_the_checkout_and_not_a_binary(self, declared, home, bundle, effected):
-        """Nothing lands on PATH, so `_confirm` would report it missing forever."""
+        """Nothing lands on PATH, so `confirm_on_path` would report it missing forever."""
         entry = declared.find('custom_installers', 'bashselfupdate')
         runs, _ = effected()
 
@@ -565,7 +565,7 @@ class TestMountS3:
         """A machine with no gnupg has not been shown a bad signature, it has been
         unable to look."""
         reports(monkeypatch, **{'mount-s3': None})
-        tarball = _tarball({'bin/mount-s3': SCRIPT})
+        tarball = gzipped_tarball({'bin/mount-s3': SCRIPT})
         url = 'https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.tar.gz'
         effected(fetches=Fetches({url: tarball}))
 
@@ -600,7 +600,7 @@ class TestTerraformLs:
         reports(monkeypatch, **{'terraform-ls': '0.38.0'})
         latest(monkeypatch, 'v0.39.0')
         stub_binary(home, 'terraform-ls')
-        archive, digest = _zip_with_digest({'terraform-ls': SCRIPT})
+        archive, digest = zip_with_digest({'terraform-ls': SCRIPT})
         release = 'https://releases.hashicorp.com/terraform-ls/0.39.0'
         asset = 'terraform-ls_0.39.0_linux_amd64.zip'
         effected(
@@ -620,7 +620,7 @@ class TestTerraformLs:
     def test_a_checksum_mismatch_refuses(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, **{'terraform-ls': None})
         latest(monkeypatch, 'v0.39.0')
-        archive, _ = _zip_with_digest({'terraform-ls': SCRIPT})
+        archive, _ = zip_with_digest({'terraform-ls': SCRIPT})
         release = 'https://releases.hashicorp.com/terraform-ls/0.39.0'
         asset = 'terraform-ls_0.39.0_linux_amd64.zip'
         effected(fetches=Fetches({f'{release}/{asset}': archive, f'{release}/terraform-ls_0.39.0_SHA256SUMS': f'0000  {asset}\n'.encode()}))
@@ -636,7 +636,7 @@ class TestTerraformLs:
         something is wrong with the download path — which is when it matters."""
         reports(monkeypatch, **{'terraform-ls': None})
         latest(monkeypatch, 'v0.39.0')
-        archive, _ = _zip_with_digest({'terraform-ls': SCRIPT})
+        archive, _ = zip_with_digest({'terraform-ls': SCRIPT})
         release = 'https://releases.hashicorp.com/terraform-ls/0.39.0'
         effected(fetches=Fetches({f'{release}/terraform-ls_0.39.0_linux_amd64.zip': archive}, refuse=('SHA256SUMS',)))
 
@@ -746,7 +746,7 @@ def test_a_transport_that_delivered_nothing_is_not_reported_as_a_version_problem
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _tarball(members: dict[str, bytes]) -> bytes:
+def gzipped_tarball(members: dict[str, bytes]) -> bytes:
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode='w:gz') as archive:
         for name, payload in members.items():
@@ -757,7 +757,7 @@ def _tarball(members: dict[str, bytes]) -> bytes:
     return buffer.getvalue()
 
 
-def _zip_with_digest(members: dict[str, bytes]) -> tuple[bytes, str]:
+def zip_with_digest(members: dict[str, bytes]) -> tuple[bytes, str]:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w') as archive:
         for name, payload in members.items():

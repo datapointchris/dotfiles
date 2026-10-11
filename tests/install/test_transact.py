@@ -1,7 +1,7 @@
 """A zero exit code is not evidence that a package arrived.
 
 The install is stubbed and the inventory is real. That split is the point: the
-subject is what `_transact` concludes when a manager reports success and its own
+subject is what `transact` concludes when a manager reports success and its own
 inventory disagrees, so the success is the premise and the disagreement is what
 is under test. The harness refuses a real `yay -S` anyway, per `INSTALLING` in
 tests/conftest.py, and a fake yay on PATH is still `yay -S` to that guard.
@@ -41,7 +41,7 @@ PACKAGE = 'sioyek-git'
 
 
 def executable(directory: Path, name: str, script: str) -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -64,7 +64,7 @@ def install_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def transact(privilege: Privilege) -> Outcome:
     change = Change('packages', Stage.TOOLS, ITEM, Verdict.MISSING, repair=Repair.AUTOMATIC)
-    return registry._transact('aur', [(change, PACKAGE)], privilege)[ITEM]
+    return registry.transact('aur', [(change, PACKAGE)], privilege)[ITEM]
 
 
 @pytest.mark.usefixtures('install_succeeds')
@@ -81,7 +81,7 @@ def test_a_manager_that_exits_zero_and_installs_nothing_is_not_done(fake_bin: Pa
 
 @pytest.mark.usefixtures('install_succeeds')
 def test_an_absent_install_is_not_ok_so_the_run_reports_it(fake_bin: Path, unprivileged: Privilege) -> None:
-    """`ok` is what decides the tick and what `_standing` collects. An outcome
+    """`ok` is what decides the tick and what `runs.WRITE_FAILED` is derived from. An outcome
     that reads as success here is the original defect with a new name on it."""
     pacman_holding(fake_bin, 'curl')
 

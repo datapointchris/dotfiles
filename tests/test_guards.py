@@ -185,7 +185,7 @@ def test_every_write_verb_is_refused_on_each_owned_root_and_under_it() -> None:
     """
     targets = list(chain.from_iterable((root, root / PROBE) for root in guards.OWNED))
     expected = list(product(targets, ATTEMPTS))
-    refused = [(target, verb) for target, verb in expected if _is_refused(target, verb)]
+    refused = [(target, verb) for target, verb in expected if is_refused(target, verb)]
 
     assert len(expected) == 2 * len(guards.OWNED) * len(ATTEMPTS)
     assert refused == expected
@@ -241,7 +241,7 @@ def test_uv_tool_update_shell_is_refused_wherever_the_tool_directories_point(tmp
         subprocess.run(['uv', 'tool', 'update-shell'], env=environment, capture_output=True, check=False)
 
 
-def _is_refused(target: Path, verb: str) -> bool:
+def is_refused(target: Path, verb: str) -> bool:
     try:
         getattr(target, verb)(**ATTEMPTS[verb])
     except WroteOntoThisMachine:

@@ -55,7 +55,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     # worth running in is one where ~/.env answered nothing, and resolving a
     # machine first would exit before printing why.
     described = settings.describe(config, Path.home() / '.env')
-    machine, unread = _this_machine()
+    machine, unread = this_machine()
     decided = schedule.answer(machine, config)
 
     if as_json:
@@ -105,15 +105,15 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
         console.print(f'  {"":<{width}}  from {entry.source}')
 
     console.print()
-    console.print(f'  {"REMOTE":<{width}}  {_remote(remote)}')
+    console.print(f'  {"REMOTE":<{width}}  {remote_line(remote)}')
     if remote.remote:
         console.print(f'  {"":<{width}}  via {remote.remote.transport.program}, keeping {remote.remote.keep_bundles}')
-        console.print(f'  {"":<{width}}  {_kept_from(remote.remote)}')
+        console.print(f'  {"":<{width}}  {kept_from(remote.remote)}')
         # Every setting in the table, read from the one list that names them.
         # These decide whether a document leaves the machine unasked, which is at
         # least as worth seeing as a retention count.
         for name in transport.FLAGS:
-            console.print(f'  {"":<{width}}  {name} {"on" if getattr(remote.remote, name) else "off"} ({_layer(remote.remote, name)})')
+            console.print(f'  {"":<{width}}  {name} {"on" if getattr(remote.remote, name) else "off"} ({layer(remote.remote, name)})')
 
     console.print()
     console.print(f'  {"SCHEDULE":<{width}}  {"a check every " + schedule.cadence() if decided.wanted else "no periodic check"}')
@@ -122,7 +122,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
         console.print(f'  {"":<{width}}  [yellow]the manifest could not be read[/] — {unread}')
 
 
-def _this_machine() -> tuple[machines.Machine | None, str]:
+def this_machine() -> tuple[machines.Machine | None, str]:
     """The manifest this machine resolves to, or None and the reason it would not load.
 
     `session.resolve_machine` names the machine, as it does for every other verb.
@@ -140,7 +140,7 @@ def _this_machine() -> tuple[machines.Machine | None, str]:
         return None, str(failure)
 
 
-def _layer(found: transport.Remote, key: str) -> str:
+def layer(found: transport.Remote, key: str) -> str:
     """Which layer decided one setting, the way the registers above say it.
 
     A resolved value reports which layer set it, and the failure this prevents is a
@@ -152,11 +152,11 @@ def _layer(found: transport.Remote, key: str) -> str:
     return f'from {transport.TABLE}.{key}' if key in found.from_table else 'this tool’s default'
 
 
-def _kept_from(found: transport.Remote) -> str:
-    return _layer(found, 'keep_bundles')
+def kept_from(found: transport.Remote) -> str:
+    return layer(found, 'keep_bundles')
 
 
-def _remote(found: transport.Configured) -> str:
+def remote_line(found: transport.Configured) -> str:
     """One line for the remote, saying which of its three states this machine is in."""
     if found.problem:
         return f'[red]cannot be read[/] — {found.problem.splitlines()[0]}'

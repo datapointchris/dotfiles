@@ -49,7 +49,7 @@ def color_choice() -> str:
 QUIET_LEVEL = 'WARNING'
 VERBOSE_LEVEL = 'DEBUG'
 
-_CONSOLE_CHOICE: tuple[str, bool] | None = None
+CONSOLE_CHOICE: tuple[str, bool] | None = None
 """What the flags asked for, as (level, http_noise), or None to leave LOG_LEVEL
 in charge. Module state rather than an argument threaded through `sinks.open_log`
 and `reconcile.apply_machine`: `configure` runs twice in a recording verb — once
@@ -72,19 +72,19 @@ def choose_console(verbose: int = 0, quiet: bool = False) -> None:
     Called with neither flag it clears the choice, so the default restores
     `LOG_LEVEL` instead of leaving a previous verb's answer in place.
     """
-    global _CONSOLE_CHOICE
+    global CONSOLE_CHOICE
     if quiet:
-        _CONSOLE_CHOICE = (QUIET_LEVEL, False)
+        CONSOLE_CHOICE = (QUIET_LEVEL, False)
     elif verbose:
-        _CONSOLE_CHOICE = (VERBOSE_LEVEL, verbose >= 2)
+        CONSOLE_CHOICE = (VERBOSE_LEVEL, verbose >= 2)
     else:
-        _CONSOLE_CHOICE = None
+        CONSOLE_CHOICE = None
 
 
 def resolved_console() -> tuple[str, bool]:
     """The console level and whether the HTTP client may speak. Flag beats env."""
-    if _CONSOLE_CHOICE is not None:
-        return _CONSOLE_CHOICE
+    if CONSOLE_CHOICE is not None:
+        return CONSOLE_CHOICE
     return console_level(), False
 
 
@@ -149,7 +149,7 @@ field in the stream makes visible.
 """
 
 
-def _http_client_level(noisy: bool) -> None:
+def http_client_level(noisy: bool) -> None:
     """WARNING, or NOTSET when a second `-v` asked for the request lines.
 
     Set both ways rather than only pinned, because `configure` runs more than
@@ -168,7 +168,7 @@ def configure(event_log: Path | None = None) -> None:
     """
     logging.basicConfig(format='%(message)s', stream=sys.stderr, level=logging.DEBUG, force=True)
     level, http_noise = resolved_console()
-    _http_client_level(http_noise)
+    http_client_level(http_noise)
 
     console = logging.root.handlers[0]
     # Through the name mapping rather than `getattr(logging, ...)`, which answers

@@ -446,7 +446,7 @@ def test_offline_the_bundle_is_the_upstream_and_the_record_says_what_was_done(
     decision survives.
 
     The install then fails locally, and deliberately so: the manifest names a
-    version but no asset was staged beside it, and `_stage` returns None rather
+    version but no asset was staged beside it, and `stage` returns None rather
     than reaching for the network when offline. That failure is the proof the run
     stayed local.
     """
@@ -485,7 +485,7 @@ def test_offline_an_unmeasurable_row_is_filed_and_named(sandbox: Sandbox, cli: C
 def test_offline_needs_a_bundle_before_it_measures_anything(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """With nothing staged there is no upstream, so the run stops before the walk.
 
-    `_stage_bundle` runs ahead of `engine.assess`, which is why this is an exit
+    `stage_bundle` runs ahead of `engine.assess`, which is why this is an exit
     rather than a machine full of unmeasurable rows: an offline run with no bundle
     could install nothing whatever it found.
     """

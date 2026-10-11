@@ -178,7 +178,7 @@ which tags every build and publishes no release.
 """
 
 
-def _repo_segments(value: str) -> list[str]:
+def repo_segments(value: str) -> list[str]:
     """A `repo`, `github_repo` or `package` field reduced to its path segments.
 
     The shapes disagree: `owner/name`, a clone URL, and a Go import path all
@@ -199,7 +199,7 @@ def owner_of(value: str) -> str | None:
     filters on, and it caught an entry
     the four hand-written tags had missed.
     """
-    segments = _repo_segments(value)
+    segments = repo_segments(value)
     return segments[0] if segments else None
 
 
@@ -208,9 +208,9 @@ def repo_slug_of(value: str) -> str:
 
     Empty when the value names no repository. A caller cannot ask GitHub about a
     Go import path that carries only a host and an owner, and an empty answer is
-    already how `_has_currency` reads "not a question this entry can be asked".
+    already how `has_currency` reads "not a question this entry can be asked".
     """
-    segments = _repo_segments(value)
+    segments = repo_segments(value)
     return '/'.join(segments[:2]) if len(segments) >= 2 else ''
 
 
@@ -363,11 +363,11 @@ class Entry:
             named = ', '.join(f'{key} ({UNREAD_KEYS[key]})' if key in UNREAD_KEYS else key for key in unknown)
             raise EntryError(f'declares {named}, which no reader consumes')
 
-        if missing := sorted(name for name, field in fields.items() if _is_required(field) and name not in raw):
+        if missing := sorted(name for name, field in fields.items() if is_required(field) and name not in raw):
             raise EntryError(f'is missing required field(s) {", ".join(missing)}')
 
-        hints = _hints(cls)
-        return cls(**{key: _typed(key, hints[key], value) for key, value in raw.items()})
+        hints = resolved_hints(cls)
+        return cls(**{key: typed(key, hints[key], value) for key, value in raw.items()})
 
     def problems(self) -> tuple[str, ...]:
         """Cross-field rules a single field cannot express."""
@@ -1182,7 +1182,7 @@ class Catalog:
             yield from self.entries[section]
 
 
-def _parsed(source: Path) -> dict[str, Any]:
+def parsed(source: Path) -> dict[str, Any]:
     """One declaration file as a mapping, or a refusal naming where it broke.
 
     A file that will not parse as YAML is the same kind of answer as one that
@@ -1213,15 +1213,15 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
     source = path or paths.PACKAGES_FILE
     system_source = system or (source.parent / 'system.yml')
     declared = {
-        source: _parsed(source),
-        system_source: _parsed(system_source) if system_source.is_file() else {},
+        source: parsed(source),
+        system_source: parsed(system_source) if system_source.is_file() else {},
     }
 
     issues: list[DeclarationIssue] = []
     entries: dict[str, tuple[Entry, ...]] = {}
 
     for section, cls in ALL_SECTIONS.items():
-        rows, section_issues = _build(declared[_file_for(cls, source, system_source)].get(section), cls)
+        rows, section_issues = build(declared[file_for(cls, source, system_source)].get(section), cls)
         entries[section] = rows
         issues.extend(section_issues)
 
@@ -1260,21 +1260,21 @@ def raw_sections(path: Path) -> dict[str, Any]:
     return yaml.safe_load(path.read_text()) or {}
 
 
-def _file_for(cls: type[Entry], packages: Path, system: Path) -> Path:
+def file_for(cls: type[Entry], packages: Path, system: Path) -> Path:
     return system if cls.declared_in == 'system.yml' else packages
 
 
-def _build(declared: Any, cls: type[Entry]) -> tuple[tuple[Entry, ...], list[DeclarationIssue]]:
+def build(declared: Any, cls: type[Entry]) -> tuple[tuple[Entry, ...], list[DeclarationIssue]]:
     """One section's rows, plus everything wrong with them."""
     issues: list[DeclarationIssue] = []
     rows: list[Entry] = []
     seen: set[str] = set()
 
-    if declared is not None and not isinstance(declared, _CONTAINER[cls.structure]):
+    if declared is not None and not isinstance(declared, CONTAINER[cls.structure]):
         wanted = 'a list of entries' if cls.structure is Structure.LIST else 'a mapping'
         return (), [DeclarationIssue(cls.section, f'is a {type(declared).__name__} where every reader expects {wanted}')]
 
-    for label, raw in _raw_rows(declared, cls):
+    for label, raw in raw_rows(declared, cls):
         if not isinstance(raw, Mapping):
             issues.append(DeclarationIssue(cls.section, f'{label} is {type(raw).__name__}, not a mapping'))
             continue
@@ -1295,10 +1295,10 @@ def _build(declared: Any, cls: type[Entry]) -> tuple[tuple[Entry, ...], list[Dec
     return tuple(rows), issues
 
 
-_CONTAINER: dict[Structure, type] = {Structure.LIST: list, Structure.GROUPED: dict, Structure.KEYED: dict}
+CONTAINER: dict[Structure, type] = {Structure.LIST: list, Structure.GROUPED: dict, Structure.KEYED: dict}
 
 
-def _raw_rows(declared: Any, cls: type[Entry]) -> Iterator[tuple[str, Any]]:
+def raw_rows(declared: Any, cls: type[Entry]) -> Iterator[tuple[str, Any]]:
     """Yield `(label, mapping)` for each row, flattening whichever shape the section uses.
 
     The label is what a DeclarationIssue names the row by before it is known to have a
@@ -1321,22 +1321,22 @@ def _raw_rows(declared: Any, cls: type[Entry]) -> Iterator[tuple[str, Any]]:
             yield key, {'name': key, **raw} if isinstance(raw, Mapping) else raw
 
 
-_HINTS: dict[type, dict[str, Any]] = {}
+HINTS: dict[type, dict[str, Any]] = {}
 
 
-def _hints(cls: type[Entry]) -> dict[str, Any]:
+def resolved_hints(cls: type[Entry]) -> dict[str, Any]:
     """Resolved annotations, cached — `from __future__ import annotations` makes
     the raw ones strings, and every row of a section would otherwise re-resolve."""
-    if cls not in _HINTS:
-        _HINTS[cls] = typing.get_type_hints(cls)
-    return _HINTS[cls]
+    if cls not in HINTS:
+        HINTS[cls] = typing.get_type_hints(cls)
+    return HINTS[cls]
 
 
-def _is_required(field: dc.Field) -> bool:
+def is_required(field: dc.Field) -> bool:
     return field.default is dc.MISSING and field.default_factory is dc.MISSING
 
 
-def _typed(key: str, annotation: Any, value: Any) -> Any:
+def typed(key: str, annotation: Any, value: Any) -> Any:
     """Check one value against its declared type, converting only lists to tuples.
 
     Nothing is coerced. An unquoted `min_version: 0.11` is a float, and silently
@@ -1357,8 +1357,8 @@ def _typed(key: str, annotation: Any, value: Any) -> Any:
     if annotation is not bool and annotation is not int and isinstance(value, list) and all(isinstance(row, str) for row in value):
         return tuple(value)
 
-    raise EntryError(f"declares '{key}' as {value!r}, which is not the {_spelled(annotation)} this section reads")
+    raise EntryError(f"declares '{key}' as {value!r}, which is not the {spelled(annotation)} this section reads")
 
 
-def _spelled(annotation: Any) -> str:
+def spelled(annotation: Any) -> str:
     return getattr(annotation, '__name__', None) or 'list of strings'

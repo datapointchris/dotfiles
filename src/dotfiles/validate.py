@@ -90,17 +90,17 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
         except machines.MachineError as refused:
             findings.extend(Finding('manifest', Severity.ERROR, f'{name}: {issue.message}') for issue in refused.issues)
 
-    findings.extend(_unresolved_names(declared, manifests))
-    findings.extend(_uninstallable(declared))
-    findings.extend(_unprobeable(manifests))
-    findings.extend(_unbuildable_assets(declared))
-    findings.extend(_unreferenced(declared, manifests))
-    findings.extend(_git_variants(root))
-    findings.extend(_colliding_variants(root))
-    findings.extend(_templates(root, manifests))
-    findings.extend(_registry_paths(root))
-    findings.extend(_remote_tables(root))
-    findings.extend(_schedule_declared(root))
+    findings.extend(unresolved_names(declared, manifests))
+    findings.extend(uninstallable(declared))
+    findings.extend(unprobeable(manifests))
+    findings.extend(unbuildable_assets(declared))
+    findings.extend(unreferenced(declared, manifests))
+    findings.extend(git_variants(root))
+    findings.extend(colliding_variants(root))
+    findings.extend(templates(root, manifests))
+    findings.extend(registry_paths(root))
+    findings.extend(remote_tables(root))
+    findings.extend(schedule_declared(root))
     return tuple(findings)
 
 
@@ -108,7 +108,7 @@ def errors(findings: tuple[Finding, ...]) -> tuple[Finding, ...]:
     return tuple(finding for finding in findings if finding.severity is Severity.ERROR)
 
 
-def _named_sections() -> tuple[str, ...]:
+def named_sections() -> tuple[str, ...]:
     """The sections a manifest subscribes to by naming entries.
 
     Derived from `SUBSCRIPTIONS` rather than listed, because a hand-written copy
@@ -118,7 +118,7 @@ def _named_sections() -> tuple[str, ...]:
     return tuple(section for section, (spelling, _) in machines.SUBSCRIPTIONS.items() if spelling is machines.Spelling.NAMES)
 
 
-def _unresolved_names(declared: catalogs.Catalog, manifests: dict[str, machines.Machine]) -> list[Finding]:
+def unresolved_names(declared: catalogs.Catalog, manifests: dict[str, machines.Machine]) -> list[Finding]:
     """A manifest naming an entry that does not exist.
 
     The check the whole command was written for, and the one the resolver cannot
@@ -128,7 +128,7 @@ def _unresolved_names(declared: catalogs.Catalog, manifests: dict[str, machines.
     nothing on the Mac until that server is rebuilt.
     """
     findings: list[Finding] = []
-    for section in _named_sections():
+    for section in named_sections():
         available = {entry.name for entry in declared.section(section)}
         for name, manifest in manifests.items():
             missing = manifest.subscription(section).names - available
@@ -139,7 +139,7 @@ def _unresolved_names(declared: catalogs.Catalog, manifests: dict[str, machines.
     return findings
 
 
-def _uninstallable(declared: catalogs.Catalog) -> list[Finding]:
+def uninstallable(declared: catalogs.Catalog) -> list[Finding]:
     """An entry in a code-installed section that nothing knows how to install.
 
     One direction only. The other half — a function naming a tool nothing declares
@@ -162,10 +162,10 @@ def _uninstallable(declared: catalogs.Catalog) -> list[Finding]:
     return findings
 
 
-def _unprobeable(manifests: dict[str, machines.Machine]) -> list[Finding]:
+def unprobeable(manifests: dict[str, machines.Machine]) -> list[Finding]:
     """A manifest naming a login nothing knows how to ask about.
 
-    The same shape as `_uninstallable` and the same one direction: a synthetic tree
+    The same shape as `uninstallable` and the same one direction: a synthetic tree
     can replace the manifests while the probe functions are code and are always the
     real ones, so "a probe no manifest declares" belongs in `tests/resources/`.
 
@@ -181,7 +181,7 @@ def _unprobeable(manifests: dict[str, machines.Machine]) -> list[Finding]:
     return findings
 
 
-def _unbuildable_assets(declared: catalogs.Catalog) -> list[Finding]:
+def unbuildable_assets(declared: catalogs.Catalog) -> list[Finding]:
     """Half a release coordinate: one of the pair named without the other.
 
     The fields are one fact wearing two names, so with only one of them there is
@@ -218,7 +218,7 @@ def _unbuildable_assets(declared: catalogs.Catalog) -> list[Finding]:
     return findings
 
 
-def _unreferenced(declared: catalogs.Catalog, manifests: dict[str, machines.Machine]) -> list[Finding]:
+def unreferenced(declared: catalogs.Catalog, manifests: dict[str, machines.Machine]) -> list[Finding]:
     """An entry no manifest subscribes to: declared, and rolled out nowhere.
 
     A warning rather than an error, and the reason is `packages.yml`'s own: an
@@ -230,7 +230,7 @@ def _unreferenced(declared: catalogs.Catalog, manifests: dict[str, machines.Mach
     referenced by construction, and reporting them all would bury the real ones.
     """
     findings = []
-    for section in _named_sections():
+    for section in named_sections():
         subscriptions = [manifest.subscription(section) for manifest in manifests.values()]
         if any(subscription.coverage is machines.Coverage.ALL for subscription in subscriptions):
             continue
@@ -255,7 +255,7 @@ Derived from `TREES` rather than listed, so a fourth tree is covered by whicheve
 half it declares itself to be."""
 
 
-def _coselectable(first: str, second: str) -> bool:
+def coselectable(first: str, second: str) -> bool:
     """Whether one machine can select both of these directories.
 
     `common` is on every machine, so it collides with anything. Two values of the
@@ -269,7 +269,7 @@ def _coselectable(first: str, second: str) -> bool:
     return first.split('/')[0] != second.split('/')[0]
 
 
-def _colliding_variants(root: Path) -> list[Finding]:
+def colliding_variants(root: Path) -> list[Finding]:
     """Two directories declaring one destination, which no machine can resolve.
 
     Deployment is ordered and appends without deduplicating, so a collision does
@@ -317,7 +317,7 @@ def _colliding_variants(root: Path) -> list[Finding]:
                 if len(files) > 1
             )
             sources = sorted(files_by_directory)
-            clash = sorted({(a, b) for a, b in combinations(sources, 2) if _coselectable(a, b)})
+            clash = sorted({(a, b) for a, b in combinations(sources, 2) if coselectable(a, b)})
             for first, second in clash:
                 findings.append(
                     Finding(
@@ -330,7 +330,7 @@ def _colliding_variants(root: Path) -> list[Finding]:
     return findings
 
 
-def _templates(root: Path, manifests: dict[str, machines.Machine]) -> list[Finding]:
+def templates(root: Path, manifests: dict[str, machines.Machine]) -> list[Finding]:
     """A template no machine can render, or one a machine renders with a value it is never asked for.
 
     On the machine, the second is named by the template's own row alone. The env
@@ -367,7 +367,7 @@ def _templates(root: Path, manifests: dict[str, machines.Machine]) -> list[Findi
     return findings
 
 
-def _git_variants(root: Path) -> list[Finding]:
+def git_variants(root: Path) -> list[Finding]:
     """The two rules holding the git include scheme together, neither of which git
     can enforce.
 
@@ -433,7 +433,7 @@ def _git_variants(root: Path) -> list[Finding]:
     return findings
 
 
-def _yaml_mapping(text: str) -> dict[str, Any]:
+def yaml_mapping(text: str) -> dict[str, Any]:
     """A YAML config as a mapping, empty for anything that is not one.
 
     An empty document parses to None and a list parses to a list; neither declares
@@ -446,12 +446,12 @@ def _yaml_mapping(text: str) -> dict[str, Any]:
 REGISTRY_KEY = 'repos_registry'
 PARSEABLE_CONFIGS: dict[str, Callable[[str], dict[str, Any]]] = {
     '.toml': tomllib.loads,
-    '.yml': _yaml_mapping,
-    '.yaml': _yaml_mapping,
+    '.yml': yaml_mapping,
+    '.yaml': yaml_mapping,
 }
 
 
-def _registry_paths(root: Path) -> list[Finding]:
+def registry_paths(root: Path) -> list[Finding]:
     """Every deployed config naming the repo registry has to name the same file.
 
     The deploy model is symlinks, so the deployed file *is* the repo file and there
@@ -513,7 +513,7 @@ REMOTE_TABLE = 'remote'
 DOTFILES_CONFIG = '.config/dotfiles/config.toml'
 
 
-def _remote_tables(root: Path) -> list[Finding]:
+def remote_tables(root: Path) -> list[Finding]:
     """Every variant of this tool's own config declares the same remote, or none does.
 
     A bundle is built on one machine and collected on another, and the two are on
@@ -563,7 +563,7 @@ def _remote_tables(root: Path) -> list[Finding]:
 SCHEDULE_TABLE = 'schedule'
 
 
-def _schedule_declared(root: Path) -> list[Finding]:
+def schedule_declared(root: Path) -> list[Finding]:
     """Every variant of this tool's own config says whether it wants the timer.
 
     Unlike the remote, the two variants are *expected* to disagree — that is the
@@ -579,7 +579,7 @@ def _schedule_declared(root: Path) -> list[Finding]:
         try:
             table = tomllib.loads(config.read_text()).get(SCHEDULE_TABLE)
         except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
-            # Already reported by `_remote_tables`, which reads the same file.
+            # Already reported by `remote_tables`, which reads the same file.
             continue
         if not isinstance(table, dict) or not isinstance(table.get('enabled'), bool):
             findings.append(

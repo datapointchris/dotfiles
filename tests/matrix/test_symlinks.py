@@ -666,7 +666,7 @@ def test_an_apply_deploys_a_link_declared_since_the_last_one_in_this_process(san
 
     `observe` re-reads the repo every run, so the change is planned correctly.
     `perform` is handed a `Change` rather than the observation and looks the link up
-    in `_index`, whose cache key is the Session — equal by value across the two
+    in `index`, whose cache key is the Session — equal by value across the two
     runs. Cached, the second run gets the first's answer, finds no link at that
     address, and falls into the branch for pruning an orphan: exit 0, converged,
     nothing deployed.

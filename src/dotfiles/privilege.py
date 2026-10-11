@@ -25,7 +25,7 @@ part-way through. `plan` says in advance how many writes will need one.
 **Passwordless is not the same question as prompting, and asking the wrong one
 declined root on every headless machine.** `acquire` checks `sudo -n true` before
 it considers prompting, because a box with `NOPASSWD` needs no terminal and no
-password. `_already_granted` carries what that probe has to get right.
+password. `already_granted` carries what that probe has to get right.
 
 `DECLINED` and `UNAVAILABLE` are not fatal. A privileged
 action is refused and reported, and the unprivileged rest of the run still lands —
@@ -124,7 +124,7 @@ class Privilege:
             self._state = Authorization.ALREADY_ROOT
         elif shutil.which('sudo') is None:
             self._state = Authorization.UNAVAILABLE
-        elif _already_granted():
+        elif already_granted():
             self._state = Authorization.GRANTED
         elif not self._offer:
             self._state = Authorization.DECLINED
@@ -151,7 +151,7 @@ class Privilege:
         return Authorization.GRANTED if run(['sudo', '-v'], output=Output.DATA).ok else Authorization.DECLINED
 
 
-def _already_granted() -> bool:
+def already_granted() -> bool:
     """Whether sudo would run right now without asking anyone anything.
 
     **`sudo -n true`, and never `sudo -v`.** The two look interchangeable and are

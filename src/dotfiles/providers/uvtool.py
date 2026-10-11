@@ -73,7 +73,7 @@ def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Res
     tools — so refusing would install none of them on the box the offline path
     exists for.
     """
-    return _uv_tool_install(entry.name, entry.name, offline=offline, again=again)
+    return uv_tool_install(entry.name, entry.name, offline=offline, again=again)
 
 
 def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False) -> Result:
@@ -86,7 +86,7 @@ def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False)
 
     **Offline reaches this on every entry that pins**, because resolving a tag is
     the one thing here that leaves the machine. So the sentence carries the
-    clause `_uv_tool_install` would have carried: the refusal was going to happen
+    clause `uv_tool_install` would have carried: the refusal was going to happen
     either way, and a reader told only that an API could not be read would go
     looking for a network they already know is absent.
     """
@@ -102,7 +102,7 @@ def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False)
         except LockUnreadable as unreadable:
             return Result(False, f'{entry.name}: {unreadable}{stranded}', kind=unreadable.kind)
         held = pins.arguments(Path(scratch)) if pins is not None else []
-        return _uv_tool_install(entry.name, requirement(entry, tag), offline=offline, again=again, held=held)
+        return uv_tool_install(entry.name, requirement(entry, tag), offline=offline, again=again, held=held)
 
 
 def release_tag(entry: catalog.GitUvTool) -> str | None:
@@ -174,7 +174,7 @@ def latest_release(repo: str) -> str | None:
     return github_release.latest_version(found.group(1)) if found else None
 
 
-def _uv_tool_install(name: str, target: str, *, offline: bool, again: bool, held: Sequence[str] = ()) -> Result:
+def uv_tool_install(name: str, target: str, *, offline: bool, again: bool, held: Sequence[str] = ()) -> Result:
     """`again` is what makes a repair of an already-present tool do anything.
 
     uv compares the requirement against its receipt and exits 0 printing

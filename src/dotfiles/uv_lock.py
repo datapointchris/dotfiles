@@ -91,7 +91,7 @@ def parse(exported: str, extras: Mapping[str, Collection[str]]) -> Pins:
         requirement = line.split(';', 1)[0]
         if ' @ ' in requirement:
             name, pinned = line.split(' @ ', 1)
-            wanted = extras.get(_normalized(name))
+            wanted = extras.get(normalized(name))
             overrides.append(f'{name}[{",".join(sorted(wanted))}] @ {pinned}' if wanted else line)
         elif '==' in requirement:
             constraints.append(line)
@@ -109,7 +109,7 @@ def requested_extras(lock: Mapping[str, Any]) -> dict[str, frozenset[str]]:
     """
     packages: dict[str, list[Mapping[str, Any]]] = {}
     for package in lock.get('package', ()):
-        packages.setdefault(_normalized(package['name']), []).append(package)
+        packages.setdefault(normalized(package['name']), []).append(package)
     reached: dict[str, set[str]] = {
         name: set() for name, found in packages.items() if any(p.get('source') in ({'editable': '.'}, {'virtual': '.'}) for p in found)
     }
@@ -121,7 +121,7 @@ def requested_extras(lock: Mapping[str, Any]) -> dict[str, frozenset[str]]:
             for extra in reached[name]:
                 edges += package.get('optional-dependencies', {}).get(extra, ())
             for edge in edges:
-                target = _normalized(edge['name'])
+                target = normalized(edge['name'])
                 asked = set(edge.get('extra', ()))
                 if target not in reached or not asked <= reached[target]:
                     reached.setdefault(target, set()).update(asked)
@@ -129,5 +129,5 @@ def requested_extras(lock: Mapping[str, Any]) -> dict[str, frozenset[str]]:
     return {name: frozenset(extras) for name, extras in reached.items() if extras}
 
 
-def _normalized(name: str) -> str:
+def normalized(name: str) -> str:
     return re.sub(r'[-_.]+', '-', name).lower()

@@ -402,7 +402,7 @@ def fetch(where: transport.Remote, machine: str, name: str, record: Record) -> P
             advice='run it again: dotfiles bundle download',
         )
     # Kept beside the archive, which is what `paths.archive_dir` describes and
-    # what `_prune_local` removes. It is the record of what arrived — size, digest
+    # what `prune_local` removes. It is the record of what arrived — size, digest
     # and what the bundle says it is — for an archive that outlives the listing it
     # came from. Nothing re-checks the digest at stage time today; `verified` runs
     # here, against this record, at the moment the bytes land.

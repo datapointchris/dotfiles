@@ -122,7 +122,7 @@ def check(
             }
         )
     else:
-        _render(measurement, blocked, seconds)
+        render(measurement, blocked, seconds)
 
     if output is not None:
         written = network.render(
@@ -138,7 +138,7 @@ def check(
     raise typer.Exit(ExitCode.ISSUE if blocked else ExitCode.CONVERGED)
 
 
-def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeResult], seconds: float) -> None:
+def render(measurement: network.Measurement, blocked: Sequence[network.ProbeResult], seconds: float) -> None:
     """The probe run as a section, its refusals as rows, and one closing verdict.
 
     This is a `check`, so it reads beside the reconcile verbs and is written in
@@ -194,7 +194,7 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
         render_row(Phrase.UNPROBED, '', reason, 'magenta', width)
 
     console.print()
-    render_verdict(verdict_word, _closing(len(blocked), len(intercepted)), console)
+    render_verdict(verdict_word, closing(len(blocked), len(intercepted)), console)
     if intercepted:
         # Said once at the end as well as per row, because this is the one
         # refusal whose fix is a single act covering every row that shows it —
@@ -202,7 +202,7 @@ def _render(measurement: network.Measurement, blocked: Sequence[network.ProbeRes
         hint('install the proxy CA and re-run: dotfiles network check')
 
 
-def _closing(blocked: int, intercepted: int) -> str:
+def closing(blocked: int, intercepted: int) -> str:
     """What a blocked network means for installing here, and the command that answers it.
 
     **The bundle is built elsewhere, so the command is named for the machine that

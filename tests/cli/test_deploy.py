@@ -49,7 +49,7 @@ def home_gitconfig(entry_point: Path) -> Path:
 
 def test_absent_entry_point_is_created(entry_point: Path) -> None:
     """Including its parent, which on a fresh machine does not exist yet."""
-    deploy._ensure_git_config_entry(NONFLEET)
+    deploy.ensure_git_config_entry(NONFLEET)
     assert entry_point.read_text() == deploy.GIT_CONFIG_STUB
 
 
@@ -58,7 +58,7 @@ def test_an_existing_entry_point_is_left_alone(entry_point: Path) -> None:
     entry_point.parent.mkdir(parents=True)
     entry_point.write_text(IDENTITY)
 
-    deploy._ensure_git_config_entry(NONFLEET)
+    deploy.ensure_git_config_entry(NONFLEET)
 
     assert 'someone@example.com' in entry_point.read_text()
 
@@ -77,7 +77,7 @@ def test_a_linked_entry_point_is_replaced_rather_than_written_through(entry_poin
     entry_point.parent.mkdir(parents=True)
     entry_point.symlink_to(repo_file)
 
-    deploy._ensure_git_config_entry(NONFLEET)
+    deploy.ensure_git_config_entry(NONFLEET)
 
     assert not entry_point.is_symlink()
     assert entry_point.read_text() == deploy.GIT_CONFIG_STUB
@@ -89,7 +89,7 @@ def test_home_gitconfig_carrying_no_identity_is_removed(entry_point: Path, home_
     reads and writes, so it silently out-ranks the entire include chain."""
     home_gitconfig.write_text('# placeholder, no [user]\n')
 
-    deploy._ensure_git_config_entry(NONFLEET)
+    deploy.ensure_git_config_entry(NONFLEET)
 
     assert entry_point.read_text() == deploy.GIT_CONFIG_STUB, 'the chain it clears the way for was written'
     assert not home_gitconfig.exists()
@@ -101,7 +101,7 @@ def test_home_gitconfig_holding_an_identity_is_kept(entry_point: Path, home_gitc
     tidying up after itself."""
     home_gitconfig.write_text(IDENTITY)
 
-    deploy._ensure_git_config_entry(NONFLEET)
+    deploy.ensure_git_config_entry(NONFLEET)
 
     assert 'someone@example.com' in home_gitconfig.read_text()
 
@@ -111,7 +111,7 @@ def test_a_dangling_home_gitconfig_link_is_removed(entry_point: Path, home_gitco
     being the path git writes through."""
     home_gitconfig.symlink_to(tmp_path / 'configs' / 'archlinux' / '.gitconfig')
 
-    deploy._ensure_git_config_entry(NONFLEET)
+    deploy.ensure_git_config_entry(NONFLEET)
 
     assert not home_gitconfig.is_symlink()
 
@@ -124,7 +124,7 @@ def test_a_linked_home_gitconfig_holding_an_identity_is_kept(entry_point: Path, 
     elsewhere.write_text(IDENTITY)
     home_gitconfig.symlink_to(elsewhere)
 
-    deploy._ensure_git_config_entry(NONFLEET)
+    deploy.ensure_git_config_entry(NONFLEET)
 
     assert home_gitconfig.is_symlink()
     assert 'someone@example.com' in elsewhere.read_text()
@@ -139,7 +139,7 @@ def test_a_fleet_machine_is_offered_no_rescue_file(entry_point: Path, home_gitco
     destination its trust variant never includes."""
     home_gitconfig.write_text(IDENTITY)
 
-    rescue = deploy._retire_home_gitconfig(FLEET)
+    rescue = deploy.retire_home_gitconfig(FLEET)
 
     assert rescue is None
     assert home_gitconfig.exists(), 'the identity is never deleted, whichever answer it gets'
@@ -150,7 +150,7 @@ def test_off_the_fleet_it_is_told_where_to_move_it(entry_point: Path, home_gitco
     does not hold, so it needs somewhere to go before ~/.gitconfig is deleted."""
     home_gitconfig.write_text(IDENTITY)
 
-    rescue = deploy._retire_home_gitconfig(NONFLEET)
+    rescue = deploy.retire_home_gitconfig(NONFLEET)
 
     assert rescue == deploy.LOCAL_IDENTITY
     assert home_gitconfig.exists()

@@ -215,20 +215,20 @@ def compare(newest: Run, previous: Run) -> Comparison:
     rendering mutant that dies where one did not die before is a test newly asserting on a sentence.
     """
     shared = tuple(sorted(set(newest.targets) & set(previous.targets)))
-    was = {_key(result) for result in previous.survivors() if result.file in shared}
-    now = {_key(result) for result in newest.survivors() if result.file in shared}
-    pinned_before = {_key(result) for result in pinned(previous) if result.file in shared}
+    was = {key(result) for result in previous.survivors() if result.file in shared}
+    now = {key(result) for result in newest.survivors() if result.file in shared}
+    pinned_before = {key(result) for result in pinned(previous) if result.file in shared}
     return Comparison(
         shared_targets=shared,
-        new_survivors=tuple(result for result in newest.survivors() if result.file in shared and _key(result) not in was),
-        fixed=tuple(result for result in previous.survivors() if result.file in shared and _key(result) not in now),
-        new_prose_pinned=tuple(result for result in pinned(newest) if result.file in shared and _key(result) not in pinned_before),
+        new_survivors=tuple(result for result in newest.survivors() if result.file in shared and key(result) not in was),
+        fixed=tuple(result for result in previous.survivors() if result.file in shared and key(result) not in now),
+        new_prose_pinned=tuple(result for result in pinned(newest) if result.file in shared and key(result) not in pinned_before),
         score_before=tally([result for result in previous.results if result.file in shared]).score,
         score_after=tally([result for result in newest.results if result.file in shared]).score,
     )
 
 
-def _key(result: SiteResult) -> tuple[str, int, str]:
+def key(result: SiteResult) -> tuple[str, int, str]:
     return result.file, result.line, result.description
 
 

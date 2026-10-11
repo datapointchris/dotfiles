@@ -134,8 +134,8 @@ def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, floor
     binstall as an install of a version it already has, which it skips.
     """
     if offline:
-        carried = _carried(entry)
-        installed = _from_bundle(entry, *carried) if carried else None
+        carried = bundled_archive(entry)
+        installed = from_bundle(entry, *carried) if carried else None
         return installed or Result(
             False,
             f'{entry.name} is not in a bundle staged at {paths.staging_dir()}, and offline cannot reach crates.io',
@@ -144,15 +144,15 @@ def install(entry: catalog.CargoPackage, target: Target, *, offline: bool, floor
 
     ready = binstall(target, offline=offline)
     if not ready.ok:
-        return _from_bundle_unless_behind(entry, ready, floor)
+        return from_bundle_unless_behind(entry, ready, floor)
 
-    built = _from_binstall(entry, target, reinstall=reinstall)
+    built = from_binstall(entry, target, reinstall=reinstall)
     if built.ok:
         return built
-    return _from_bundle_unless_behind(entry, built, floor)
+    return from_bundle_unless_behind(entry, built, floor)
 
 
-def _carried(entry: catalog.CargoPackage) -> tuple[bundle.Staged, Path] | None:
+def bundled_archive(entry: catalog.CargoPackage) -> tuple[bundle.Staged, Path] | None:
     """The row and the archive it names, out of one bundle, or None where no bundle has both.
 
     Walked per root rather than asking `bundle.staged` for the row and
@@ -166,7 +166,7 @@ def _carried(entry: catalog.CargoPackage) -> tuple[bundle.Staged, Path] | None:
     run reported `applied` at a version the machine did not have.
 
     A root carrying the row and not the archive is skipped rather than refused,
-    which is the same reading `_from_bundle` already gave a manifest naming a file
+    which is the same reading `from_bundle` already gave a manifest naming a file
     the bundle lacks: half a bundle is no bundle, not a broken one.
     """
     for root in staged_bundles():
@@ -179,7 +179,7 @@ def _carried(entry: catalog.CargoPackage) -> tuple[bundle.Staged, Path] | None:
     return None
 
 
-def _from_bundle_unless_behind(entry: catalog.CargoPackage, failure: Result, floor: str) -> Result:
+def from_bundle_unless_behind(entry: catalog.CargoPackage, failure: Result, floor: str) -> Result:
     """The bundle, on a run that had a network and could not install through it.
 
     Worth reaching at all because "online" means a network rather than a reachable
@@ -188,18 +188,18 @@ def _from_bundle_unless_behind(entry: catalog.CargoPackage, failure: Result, flo
     sits unused on disk.
 
     Worth declining where the staged version is what is already installed, for the
-    reason `bundle.behind_refusal` records. One `_carried` answers both halves, so
+    reason `bundle.behind_refusal` records. One `bundled_archive` answers both halves, so
     the version ranked and the bytes written come out of one bundle by
     construction rather than by two searches agreeing.
     """
-    carried = _carried(entry)
+    carried = bundled_archive(entry)
     if carried is None:
         return failure
     row, archive = carried
-    return bundle.behind_refusal(row, floor, failure) or _from_bundle(entry, row, archive) or failure
+    return bundle.behind_refusal(row, floor, failure) or from_bundle(entry, row, archive) or failure
 
 
-def _from_binstall(entry: catalog.CargoPackage, target: Target, *, reinstall: bool) -> Result:
+def from_binstall(entry: catalog.CargoPackage, target: Target, *, reinstall: bool) -> Result:
     """`cargo binstall`, pointed at the declared release asset, keeping what it said.
 
     Invoked as a cargo subcommand rather than as the `cargo-binstall` binary
@@ -214,7 +214,7 @@ def _from_binstall(entry: catalog.CargoPackage, target: Target, *, reinstall: bo
         error: binary `oxker` already exists in destination
         Add --force to overwrite
 
-    `_from_bundle` is what produces an unowned one. It goes through `place`,
+    `from_bundle` is what produces an unowned one. It goes through `place`,
     which copies the file into `~/.cargo/bin` and writes no row in
     `.crates.toml`, so cargo has no record of it. The machine that most needs the
     compile strategy is therefore the one where it cannot run — a firewalled box
@@ -325,12 +325,12 @@ def placed_without_a_cargo_receipt(entry: catalog.CargoPackage) -> bool:
     return (cargo_bin() / entry.executable).exists() and not cargo_owns(entry.executable)
 
 
-def _from_bundle(entry: catalog.CargoPackage, row: bundle.Staged, archive: Path) -> Result | None:
+def from_bundle(entry: catalog.CargoPackage, row: bundle.Staged, archive: Path) -> Result | None:
     """Install one staged release archive, or None where it will not yield a binary.
 
     Handed the row and the archive rather than resolving them, so the version a
     caller ranked and the bytes written here cannot come from two bundles —
-    `_carried` records what that costs when they do.
+    `bundled_archive` records what that costs when they do.
 
     None rather than a failed Result where the archive holds nothing usable, so a
     caller can tell "the bundle does not have this" from "the bundle has it and it
@@ -341,7 +341,7 @@ def _from_bundle(entry: catalog.CargoPackage, row: bundle.Staged, archive: Path)
         if not effects.unpack(archive, unpacked):
             return Result(False, f'{row.filename} is neither a tar nor a zip this could open', kind=Kind.ARCHIVE_UNREADABLE)
 
-        binary = _inside(unpacked, entry.executable)
+        binary = inside(unpacked, entry.executable)
         if binary is None:
             return Result(False, f'{row.filename} carries no {entry.executable}', kind=Kind.ARCHIVE_INCOMPLETE)
         try:
@@ -352,7 +352,7 @@ def _from_bundle(entry: catalog.CargoPackage, row: bundle.Staged, archive: Path)
     return Result(True, f'{entry.executable} {row.version} installed from the bundle at {archive}', kind=Kind.APPLIED)
 
 
-def _inside(unpacked: Path, executable: str) -> Path | None:
+def inside(unpacked: Path, executable: str) -> Path | None:
     """The binary somewhere in what was extracted.
 
     Searched rather than addressed by path: a release archive puts the binary at
@@ -400,7 +400,7 @@ def binstall(target: Target, *, offline: bool) -> Result:
             kind=Kind.NOT_IN_BUNDLE,
         )
 
-    placed = _binstall_from_release(target)
+    placed = binstall_from_release(target)
     if placed.ok:
         toolchain.put_on_path(cargo_bin())
         return placed
@@ -427,7 +427,7 @@ def binstall(target: Target, *, offline: bool) -> Result:
     return Result(True, 'cargo-binstall built from source', kind=Kind.APPLIED)
 
 
-def _binstall_from_release(target: Target) -> Result:
+def binstall_from_release(target: Target) -> Result:
     """The published binary, from the `latest` redirect rather than a resolved tag.
 
     Nothing here compares versions of cargo-binstall — it is present or it is not
@@ -448,7 +448,7 @@ def _binstall_from_release(target: Target) -> Result:
         if not effects.unpack(download, unpacked):
             return Result(False, f'{archive_name} is neither a tar nor a zip this could open', kind=Kind.ARCHIVE_UNREADABLE)
 
-        binary = _inside(unpacked, 'cargo-binstall')
+        binary = inside(unpacked, 'cargo-binstall')
         if binary is None:
             return Result(False, f'{archive_name} carries no cargo-binstall', kind=Kind.ARCHIVE_INCOMPLETE)
         try:

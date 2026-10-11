@@ -86,7 +86,7 @@ said — and this file already carries a rule about `--refresh`.
 """
 
 
-def _branches_on_refresh(resource: str) -> bool:
+def branches_on_refresh(resource: str) -> bool:
     """Whether this resource's own module reads `session.refresh`.
 
     `packages` and `plugins` do. `system` does not and still depends on it, which
@@ -98,7 +98,7 @@ def _branches_on_refresh(resource: str) -> bool:
 
 CURRENCY_RESOURCES = frozenset(
     {provider.resource for provider in registry.PROVIDERS if isinstance(provider, registry.ManagerProvider)}
-    | {resource for resource in {provider.resource for provider in registry.PROVIDERS} if _branches_on_refresh(resource)}
+    | {resource for resource in {provider.resource for provider in registry.PROVIDERS} if branches_on_refresh(resource)}
 )
 """Every resource whose answer changes with whether the run measured upstream.
 
@@ -534,7 +534,7 @@ def functions_naming(*names: str) -> set[str]:
 #
 # A wording typed where a builder is *called* is refused by the annotation, not
 # by anything here. `counted_phrase(count, phrase: Phrase)`, `tally(*counts:
-# tuple[int, Phrase])` and `_clause(subjects, phrase: Phrase)` each make a literal
+# tuple[int, Phrase])` and `clause(subjects, phrase: Phrase)` each make a literal
 # an argument-type error, and `uv run mypy .` is a whole-repo pre-commit hook and
 # a CI step. The annotation is also wider than a walk of the call sites: it
 # refuses a wording arriving through a variable or a return value, which no AST
@@ -645,11 +645,11 @@ def test_only_the_two_heading_builders_name_the_heading_widths() -> None:
 
 
 def test_one_function_asks_a_yes_or_no_question() -> None:
-    """That `_confirmed` works and that nothing bypasses `_confirmed` are
+    """That `confirmed` works and that nothing bypasses `confirmed` are
     independent claims, and the tests for the first are satisfied by a fourth
     prompt written out longhand. Three copies is where this started: three
     different declines, one of them printing nothing at all."""
-    assert functions_naming('confirm') == {'_confirmed'}
+    assert functions_naming('confirm') == {'confirmed'}
 
 
 def test_one_function_composes_the_retention_rule() -> None:
@@ -660,10 +660,10 @@ def test_one_function_composes_the_retention_rule() -> None:
     assert functions_naming('base_of', 'superseded') == {'retention'}
 
 
-NOT_A_REPORT_LINE = {'_fetched_bundle'}
+NOT_A_REPORT_LINE = {'fetched_bundle'}
 """Counted lines in the two modules that no report renders.
 
-`_fetched_bundle` warns that the remote would not answer, and its count and its
+`fetched_bundle` warns that the remote would not answer, and its count and its
 prose are one sentence — `could not reach the remote after 2 attempt(s), so
 nothing was fetched`. A comma follows the plural marker, which `counted_phrase`
 cannot put there, and the sentence appears on no report row.
@@ -679,7 +679,7 @@ def test_one_builder_composes_every_report_line_that_carries_a_count() -> None:
 
     Refused at the f-string rather than at the argument, because a site that
     composes the whole line hands nothing to a builder — the annotation on
-    `counted_phrase`, `tally` and `_clause` never sees it. That is the door a type
+    `counted_phrase`, `tally` and `clause` never sees it. That is the door a type
     refuses nothing at, and it is the one a new render site goes through: writing
     the sentence out is easier than finding the builder.
     """
@@ -1020,7 +1020,7 @@ def rendered_lines(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     counting = ResourceResult(address='auth', verdict=ResourceVerdict.CONVERGED, detail='', lens=Lens.CHECK, pending=1, unmeasured=1)
     drifted = reconcile.from_changes('packages', [drifting], '', Lens.CHECK)
 
-    reconcile._report_untouched([declined], [blind])
+    reconcile.report_untouched([declined], [blind])
 
     return {
         "a plan row's tally": output.tallies(tallied),
@@ -1102,7 +1102,7 @@ def test_a_section_name_renders_the_singular_spelling(monkeypatch: pytest.Monkey
     rebind(monkeypatch, TABLE, stand_ins)
     buffer = capture(monkeypatch)
 
-    reconcile._report_untouched([a_declined_change()], [a_change(verdict=Verdict.UNKNOWN, repair=Repair.NONE)])
+    reconcile.report_untouched([a_declined_change()], [a_change(verdict=Verdict.UNKNOWN, repair=Repair.NONE)])
 
     written = buffer.getvalue()
     for member in (stand_ins.NEED_ATTENTION, stand_ins.NOT_MEASURABLE):
@@ -1121,7 +1121,7 @@ def test_a_question_nobody_can_answer_names_the_flag_and_the_effect(interactive:
 
     Three prompts written out longhand drift into three different declines, and the
     one that drifts furthest prints nothing at all — a non-zero status with no
-    reason on screen for somebody who answered `n`. What `_confirmed` guarantees is
+    reason on screen for somebody who answered `n`. What `confirmed` guarantees is
     the decline, so the decline is what is asserted.
 
     `BadParameter` and not `Abort`, which is the reason click's own `prompt=` is
@@ -1129,7 +1129,7 @@ def test_a_question_nobody_can_answer_names_the_flag_and_the_effect(interactive:
     flag would report a machine that differs from its declaration.
     """
     with pytest.raises(click.BadParameter) as refused:
-        staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=no_input, interactive=interactive)
+        staging.confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=no_input, interactive=interactive)
 
     assert refused.value.exit_code == vocabulary.ExitCode.USAGE
     assert '--yes' in str(refused.value)
@@ -1149,7 +1149,7 @@ def test_a_question_that_can_be_asked_defaults_to_no_and_asks_on_stderr(
     terminal that is not there.
     """
     monkeypatch.setattr(sys, 'stdin', io.StringIO('\n'))
-    assert staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=False, interactive=True) is False
+    assert staging.confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=False, no_input=False, interactive=True) is False
 
     asked = capsys.readouterr()
     assert '[y/N]' in asked.err, f'the prompt does not default to no: {asked.err!r}'
@@ -1157,13 +1157,13 @@ def test_a_question_that_can_be_asked_defaults_to_no_and_asks_on_stderr(
     # ahead of the read, as its own workaround for readline eating a backspace.
     assert 'Remove 3 bundle(s)?' not in asked.out
 
-    assert staging._confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=True, no_input=False, interactive=False) is True
+    assert staging.confirmed('Remove 3 bundle(s)?', 'removed 3 locally', yes=True, no_input=False, interactive=False) is True
 
 
 def test_every_leaf_that_takes_yes_also_takes_no_input() -> None:
     """The surface half of one helper, which nothing else pins.
 
-    `_confirmed` takes both, so a leaf reaching it declares both. A prompt written
+    `confirmed` takes both, so a leaf reaching it declares both. A prompt written
     longhand declares whatever its author thought of, and the flag it leaves out is
     `--no-input` — the one nobody types by hand and a scheduled run needs.
 
@@ -1218,7 +1218,7 @@ def test_no_sweep_removes_the_bundle_the_sparse_ones_fall_back_to(tmp_path: Path
     stopped agreeing before.
 
     **Two machines' stacks, and the local sweep is asked for both.** One machine's
-    is the shape where `swept` and `_superseded_locally` cannot differ from
+    is the shape where `swept` and `superseded_locally` cannot differ from
     `retention`, since both reduce to it — so the two extra doors would be asserted
     and neither exercised. The limit counts per machine, and a peer's downloads
     aging out the only bundle on a box that cannot re-fetch one is the loss the
@@ -1245,12 +1245,12 @@ def test_no_sweep_removes_the_bundle_the_sparse_ones_fall_back_to(tmp_path: Path
     monkeypatch.setattr(staging.paths, 'archive_dir', lambda: tmp_path)
     monkeypatch.setattr(staging.providers, 'staged_bundles', lambda: ())
 
-    narrowed = staging._superseded_locally(KEEP, mine)
+    narrowed = staging.superseded_locally(KEEP, mine)
     assert narrowed.superseded and bases[0] not in narrowed.superseded
     assert narrowed.pinned == (bases[0],)
     assert not [name for name in narrowed.superseded if peer in name], f"a peer's bundles were swept by --machine {mine}"
 
-    whole = staging._superseded_locally(KEEP, None)
+    whole = staging.superseded_locally(KEEP, None)
     assert whole.superseded and not set(bases) & set(whole.superseded)
     assert set(whole.pinned) == set(bases)
     assert len(whole.superseded) == 2, f'the cache sweep is not counted per machine: {whole.superseded}'

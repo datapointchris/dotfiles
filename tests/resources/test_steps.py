@@ -30,7 +30,7 @@ ANY_RUN = Session(machine_name='archlinux-personal-workstation')
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -325,7 +325,7 @@ def test_a_differing_wslconfig_is_stale_and_kept_beside_its_replacement(profile:
 
 def test_a_converged_wslconfig_never_asks_windows_for_the_profile(profile: Path, fake_bin: Path, tmp_path: Path) -> None:
     """The observe runs on the check timer, where forking `cmd.exe` on every tick
-    is the pattern `_windows_fonts` avoids."""
+    is the pattern `windows_fonts` avoids."""
     assert steps.apply('wslconfig', Privilege(), ANY_RUN).ok
     asked = tmp_path / 'cmd-was-called'
     executable(fake_bin, 'cmd.exe', f'#!/bin/sh\ntouch {asked}\n')
@@ -525,5 +525,5 @@ def test_the_step_module_never_imports_the_environment_for_a_home(home: Path) ->
     """Every path here goes through `Path.home()`, which honors `$HOME` — which
     is why these tests can run without a Mac and why a systemd timer running
     `check` reads the same files an interactive shell would."""
-    assert steps._screenshot_directory() == home / 'Desktop' / 'screenshots'
+    assert steps.screenshot_directory() == home / 'Desktop' / 'screenshots'
     assert os.environ['HOME'] == str(home)

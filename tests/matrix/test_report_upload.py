@@ -2,7 +2,7 @@
 
 The verb its two siblings already had. `status upload` and `bundle upload` are
 each driven end to end here against a relay on PATH; `report upload` shipped with
-four tests, all of them on `_masked_copy`, and none of them reaching the function
+four tests, all of them on `masked_copy`, and none of them reaching the function
 that decides which records go. That function selected on the wrong identity for
 its whole life and every one of those tests stayed green.
 

@@ -437,7 +437,7 @@ def test_an_offline_apply_with_no_staged_bundle_says_so_and_stops(
     sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch, cli: Callable[..., Invocation]
 ) -> None:
     """The bundle directory is deliberately absent until a test stages one, because
-    `_stage_bundle` reads an existing directory as already-staged."""
+    `stage_bundle` reads an existing directory as already-staged."""
     only_the_sandbox_on_path(sandbox, monkeypatch)
     sandbox.declare(packages=RUNTIMES, manifest={**BARE, 'cargo_packages': ['ripgrep']})
 

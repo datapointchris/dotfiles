@@ -56,11 +56,11 @@ def resolve(
         items.extend(planned)
 
     if entries is not None:
-        items = _named(items, entries)
+        items = named(items, entries)
     return planning.Plan(machine=machine, items=tuple(sorted(items, key=lambda item: (item.stage, item.provider, item.name))))
 
 
-def _named(items: list[planning.DesiredItem], entries: frozenset[str]) -> list[planning.DesiredItem]:
+def named(items: list[planning.DesiredItem], entries: frozenset[str]) -> list[planning.DesiredItem]:
     """The entries `--entry` named, plus whatever those entries need to install.
 
     The prerequisite is kept rather than dropped, because a narrowing flag reaches

@@ -169,7 +169,7 @@ def dotted(node: ast.AST, table: dict[str, str]) -> str:
     return '.'.join([table.get(parts[0], parts[0]), *parts[1:]])
 
 
-def _bound_by(tree: ast.AST, table: dict[str, str], wanted: frozenset[str]) -> set[str]:
+def bound_by(tree: ast.AST, table: dict[str, str], wanted: frozenset[str]) -> set[str]:
     """Local names assigned the result of one of `wanted`."""
     found: set[str] = set()
     for node in ast.walk(tree):
@@ -205,7 +205,7 @@ def is_style(value: str) -> bool:
     return bool(words) and words != ['on'] and all(word in STYLE_WORDS for word in words)
 
 
-def _call_contexts(node: ast.Call, table: dict[str, str], receivers: set[str], loggers: set[str]) -> tuple[Verdict | None, Verdict | None]:
+def call_contexts(node: ast.Call, table: dict[str, str], receivers: set[str], loggers: set[str]) -> tuple[Verdict | None, Verdict | None]:
     """What this call's arguments inherit, as `(first positional, everything else)`.
 
     They differ for one caller. A structlog event name is compared against a literal by `sinks` and by `report._slow_commands`, so
@@ -217,23 +217,23 @@ def _call_contexts(node: ast.Call, table: dict[str, str], receivers: set[str], l
     if name in EXCEPTION_MESSAGES:
         message = Verdict(RENDERING, RULE_EXCEPTION_MESSAGE)
         return message, message
-    if _is_logger_call(node.func, loggers):
+    if is_logger_call(node.func, loggers):
         return Verdict(LOGIC, RULE_EVENT_NAME), Verdict(RENDERING, RULE_RENDER_CALL)
-    if name.startswith(RENDER_PREFIXES) or _is_receiver_call(node.func, receivers):
+    if name.startswith(RENDER_PREFIXES) or is_receiver_call(node.func, receivers):
         rendering = Verdict(RENDERING, RULE_RENDER_CALL)
         return rendering, rendering
     return None, None
 
 
-def _is_receiver_call(func: ast.AST, receivers: set[str]) -> bool:
+def is_receiver_call(func: ast.AST, receivers: set[str]) -> bool:
     return isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name) and func.value.id in receivers
 
 
-def _is_logger_call(func: ast.AST, loggers: set[str]) -> bool:
+def is_logger_call(func: ast.AST, loggers: set[str]) -> bool:
     return isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name) and func.value.id in loggers
 
 
-def _children(
+def children(
     node: ast.AST, inherited: Verdict | None, table: dict[str, str], receivers: set[str], loggers: set[str]
 ) -> Iterator[tuple[ast.AST, Verdict | None]]:
     if isinstance(node, ast.keyword):
@@ -252,7 +252,7 @@ def _children(
         yield node.target, inherited
         return
     if isinstance(node, ast.Call):
-        first, rest = _call_contexts(node, table, receivers, loggers)
+        first, rest = call_contexts(node, table, receivers, loggers)
         yield node.func, inherited
         for position, argument in enumerate(node.args):
             yield argument, (first if position == 0 else rest) if first is not None or rest is not None else inherited
@@ -262,7 +262,7 @@ def _children(
     yield from ((child, inherited) for child in ast.iter_child_nodes(node))
 
 
-def _constant_verdict(node: ast.Constant, inherited: Verdict | None, docstrings: dict[int, str], whole_file: bool) -> Verdict:
+def constant_verdict(node: ast.Constant, inherited: Verdict | None, docstrings: dict[int, str], whole_file: bool) -> Verdict:
     if whole_file:
         return Verdict(RENDERING, RULE_RENDER_MODULE)
     if id(node) in docstrings:
@@ -280,18 +280,18 @@ def annotate(tree: ast.AST, path: Path) -> dict[int, Verdict]:
     Keyed by identity because the caller holds this exact tree — `planter.mutable` walks the same object — rather than a re-parse of it.
     """
     table = import_table(tree, path)
-    receivers = _bound_by(tree, table, RENDER_CONSTRUCTORS)
-    loggers = _bound_by(tree, table, STRUCTLOG_FACTORIES)
+    receivers = bound_by(tree, table, RENDER_CONSTRUCTORS)
+    loggers = bound_by(tree, table, STRUCTLOG_FACTORIES)
     docstrings = docstring_rules(tree)
     whole_file = renders_everything(path)
     verdicts: dict[int, Verdict] = {}
 
     def descend(node: ast.AST, inherited: Verdict | None) -> None:
         if isinstance(node, ast.Constant):
-            verdicts[id(node)] = _constant_verdict(node, inherited, docstrings, whole_file)
+            verdicts[id(node)] = constant_verdict(node, inherited, docstrings, whole_file)
         elif isinstance(node, ast.Compare | ast.BoolOp | ast.UnaryOp):
             verdicts[id(node)] = CONTROL_FLOW
-        for child, context in _children(node, inherited, table, receivers, loggers):
+        for child, context in children(node, inherited, table, receivers, loggers):
             descend(child, context)
 
     descend(tree, None)

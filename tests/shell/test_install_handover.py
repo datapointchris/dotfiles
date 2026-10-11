@@ -68,7 +68,7 @@ def test_the_bootstrap_and_the_cli_agree_on_what_windows_looks_like(reported: st
     out here is a Windows box nobody else in the fleet can reach.
 
     Asserted through both implementations rather than by comparing the two lists
-    as text: `case` takes globs and `_os_family` takes prefixes, so equal strings
+    as text: `case` takes globs and `os_family` takes prefixes, so equal strings
     were never the property. Whether each answers *Windows* is.
     """
     patterns = SHELL_CASE.search(BOOTSTRAP.read_text())

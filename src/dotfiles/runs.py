@@ -139,11 +139,11 @@ one is added, and it names which two are deliberately outside a verdict.
 """
 
 
-def _now() -> dt.datetime:
+def now() -> dt.datetime:
     return dt.datetime.now(dt.UTC)
 
 
-def _stamp(moment: dt.datetime) -> str:
+def stamp(moment: dt.datetime) -> str:
     return moment.isoformat().replace('+00:00', 'Z')
 
 
@@ -211,7 +211,7 @@ def begin(machine: str, verb: str, started: dt.datetime | None = None, host: str
         id=uuid.uuid4().hex[:12],
         machine=machine,
         verb=verb,
-        started=started or _now(),
+        started=started or now(),
         host=paths.MACHINE_ID if host is None else host,
     )
 
@@ -351,7 +351,7 @@ class Stopwatch:
     """
 
     def __init__(self) -> None:
-        self.started = _now()
+        self.started = now()
         self._began = time.perf_counter()
         self.steps: dict[str, float] = {}
 
@@ -367,7 +367,7 @@ class Stopwatch:
 
     def finish(self) -> Timing:
         return Timing(
-            started_at=_stamp(self.started),
+            started_at=stamp(self.started),
             duration_seconds=time.perf_counter() - self._began,
             steps=dict(self.steps),
         )
@@ -386,14 +386,14 @@ def start(identity: Identity, flags: dict | None = None) -> RunRecord:
         machine=identity.machine,
         verb=identity.verb,
         flags=flags or {},
-        started_at=_stamp(identity.started),
+        started_at=stamp(identity.started),
         host=identity.host,
     )
 
 
 def finish(record: RunRecord) -> RunRecord:
-    ended = _now()
-    record.finished_at = _stamp(ended)
+    ended = now()
+    record.finished_at = stamp(ended)
     record.duration_seconds = (ended - dt.datetime.fromisoformat(record.started_at.replace('Z', '+00:00'))).total_seconds()
     return record
 

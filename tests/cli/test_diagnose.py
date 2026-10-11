@@ -317,7 +317,7 @@ def test_a_full_filesystem_names_its_mount_point_through_the_front_door(monkeypa
     """The third `WRITE_FAILURES` marker, driven the way the other two already are.
 
     `explain` matches the strerror text rather than the errno, because the number
-    is not always in what a provider caught. What `_no_space` does with each shape
+    is not always in what a provider caught. What `no_space` does with each shape
     of `df` answer is
     `tests/install/test_provider_seams.py::test_a_full_filesystem_is_named_when_df_answers_in_the_shape_it_was_asked_for`.
     """

@@ -18,7 +18,7 @@ cost is paid only once the batch has already failed.
 
 Nothing about this is a brew problem. `apt-get install a b c` exiting 1 says just as
 little about which of the three broke, which is why the isolation belongs to every
-manager rather than to the one script that first needed it. `_transact` in
+manager rather than to the one script that first needed it. `transact` in
 `src/dotfiles/registry.py` is where it lives, and registering taps runs before the batch
 for the same reason an unresolvable formula aborts one.
 
@@ -50,7 +50,7 @@ Which stream an error lands on is the failing tool's choice, not the installer's
 Capturing one stream for the record and letting the other through therefore loses causes
 at random. A failure is a returned value here rather than parsed text, so stdout and
 stderr stay free to be merged and teed, live and whole. The isolation that makes this
-work sits in `_act` and `_measure` in `src/dotfiles/engine.py` — one place, rather than
+work sits in `act` and `measure` in `src/dotfiles/engine.py` — one place, rather than
 one call site per installer — and `dotfiles report latest` is where a failed install is
 read.
 

@@ -102,18 +102,18 @@ class Selection:
     @classmethod
     def of(cls, *addresses: str) -> Selection:
         """Exactly these addresses, each a resource or one provider inside one."""
-        named = frozenset(_valid(address) for address in addresses)
+        named = frozenset(valid(address) for address in addresses)
         parsed = {address: vocabulary.parse_address(address) for address in named}
         resources = tuple(name for name in vocabulary.RESOURCES if name in {resource for resource, _ in parsed.values()})
         wanted = {provider for _, provider in parsed.values() if provider is not None}
         if not wanted:
             return cls(resources)
-        return cls(resources, frozenset(wanted) | _providers_of(named))
+        return cls(resources, frozenset(wanted) | providers_of(named))
 
     @classmethod
     def excluding(cls, skip: Iterable[str]) -> Selection:
         """Everything but these, which is what `--skip` means."""
-        dropped = frozenset(_valid(address) for address in skip)
+        dropped = frozenset(valid(address) for address in skip)
         resources = tuple(name for name in vocabulary.RESOURCES if name not in dropped)
         narrowed = {provider for provider in (vocabulary.parse_address(address)[1] for address in dropped) if provider is not None}
         if not narrowed:
@@ -207,7 +207,7 @@ def validate(addresses: Iterable[str]) -> tuple[str, ...]:
     Exposed because the CLI validates before it selects: `--skip` is checked once
     and the set is then read by the walk, the fold and the run record's flags.
     """
-    return tuple(_valid(address) for address in addresses)
+    return tuple(valid(address) for address in addresses)
 
 
 def stage_named(name: str) -> Stage:
@@ -231,7 +231,7 @@ def stage_named(name: str) -> Stage:
     raise UnknownAddress(f'unknown stage {name}. Valid: {known}')
 
 
-def _valid(address: str) -> str:
+def valid(address: str) -> str:
     """One address, or a refusal naming what was expected.
 
     Refusing an unknown address is the important half. A run that accepted a
@@ -255,7 +255,7 @@ def _valid(address: str) -> str:
     return address
 
 
-def _providers_of(addresses: frozenset[str]) -> frozenset[str]:
+def providers_of(addresses: frozenset[str]) -> frozenset[str]:
     """Every provider of a resource named without one, so `packages` and
     `packages/go` in the same selection do not narrow each other away."""
     whole = {address for address in addresses if vocabulary.parse_address(address)[1] is None}
@@ -266,7 +266,7 @@ def resources() -> dict[str, Resource]:
     """Every resource, keyed by address and ordered as `vocabulary.RESOURCES` is.
 
     Measuring and printing order, not the order work happens in: that is
-    `_in_stage_order`, and the two differ because the convergence chain
+    `in_stage_order`, and the two differ because the convergence chain
     interleaves these names.
 
     Imported here rather than at module scope because `resources/packages.py`
@@ -303,7 +303,7 @@ def assess(session: Session, selection: Selection | None = None) -> Iterator[Eve
     # which sorts by stage.
     for address, resource in known.items():
         if address in covered.resources:
-            yield from _measure(session, address, resource, covered.plan_for(address, session.plan))
+            yield from measure(session, address, resource, covered.plan_for(address, session.plan))
 
 
 UNPROVIDED_STAGES: dict[str, Stage] = {
@@ -362,7 +362,7 @@ def remeasure(session: Session, selection: Selection, stage: Stage, planned: Seq
 
     found = [
         event
-        for event in _measure(session, address, resources()[address], plan)
+        for event in measure(session, address, resources()[address], plan)
         if isinstance(event.payload, Refusal)
         or (
             isinstance(event.payload, Change)
@@ -393,7 +393,7 @@ def execute(session: Session, planned: Iterable[Event], privilege: Escalates) ->
     """
     known = resources()
     for group in batches(planned):
-        yield from _act(session, known[group[0].resource], group, privilege)
+        yield from act(session, known[group[0].resource], group, privilege)
 
 
 def batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
@@ -407,10 +407,10 @@ def batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
     install. `execute` is safe to call with one group at a time — it re-sorts and
     re-groups what it is given, and one group is already both.
     """
-    return _batches(_in_stage_order(planned))
+    return provider_batches(in_stage_order(planned))
 
 
-def _in_stage_order(planned: Iterable[Event]) -> list[Event]:
+def in_stage_order(planned: Iterable[Event]) -> list[Event]:
     """The actionable events, ordered as the machine converges.
 
     `assess` walks resource by resource, because that is how a reader wants the
@@ -432,7 +432,7 @@ def _in_stage_order(planned: Iterable[Event]) -> list[Event]:
     return [event for _, event in sorted(staged, key=lambda pair: pair[0])]
 
 
-def _batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
+def provider_batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
     """Runs of one resource and one provider, in the order they were handed over.
 
     Consecutive rather than gathered, so a run breaks only where the work genuinely
@@ -444,7 +444,7 @@ def _batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
     """
     batch: list[Event] = []
     for event in planned:
-        if batch and _owner(batch[-1]) != _owner(event):
+        if batch and owner(batch[-1]) != owner(event):
             yield batch
             batch = []
         batch.append(event)
@@ -452,13 +452,13 @@ def _batches(planned: Iterable[Event]) -> Iterator[list[Event]]:
         yield batch
 
 
-def _owner(event: Event) -> tuple[str, str]:
+def owner(event: Event) -> tuple[str, str]:
     change = event.payload
     desired = change.desired if isinstance(change, Change) else None
     return (event.resource, desired.provider if desired else '')
 
 
-def _act(session: Session, resource: Resource, group: list[Event], privilege: Escalates) -> Iterator[Event]:
+def act(session: Session, resource: Resource, group: list[Event], privilege: Escalates) -> Iterator[Event]:
     """One group's repairs, isolated at the granularity the resource acts at.
 
     Item by item unless the resource declares itself `Batched` and there is more
@@ -467,7 +467,7 @@ def _act(session: Session, resource: Resource, group: list[Event], privilege: Es
     """
     changes = [event.payload for event in group if isinstance(event.payload, Change)]
     if isinstance(resource, Batched) and len(changes) > 1:
-        yield from _act_together(session, resource, group, changes, privilege)
+        yield from act_together(session, resource, group, changes, privilege)
         return
 
     for event, change in zip(group, changes, strict=True):
@@ -481,7 +481,7 @@ def _act(session: Session, resource: Resource, group: list[Event], privilege: Es
             yield Event(event.resource, outcome, stage=change.stage, timing=clock.finish())
 
 
-def _act_together(session: Session, resource: Batched, group: list[Event], changes: list[Change], privilege: Escalates) -> Iterator[Event]:
+def act_together(session: Session, resource: Batched, group: list[Event], changes: list[Change], privilege: Escalates) -> Iterator[Event]:
     """One transaction, and the isolation that is honest about being one.
 
     A raising batch takes its whole group down, unlike the item-by-item path. That
@@ -507,7 +507,7 @@ def _act_together(session: Session, resource: Batched, group: list[Event], chang
         yield Event(event.resource, outcome, stage=outcome.change.stage, timing=timing if index == 0 else None)
 
 
-def _measure(session: Session, address: str, resource: Resource, plan: Plan) -> Iterator[Event]:
+def measure(session: Session, address: str, resource: Resource, plan: Plan) -> Iterator[Event]:
     # Before the clock starts, and before anything reaches the world. A reader
     # that only ever hears from a resource once it has finished cannot say which
     # one a long silence belongs to, and the silence is where the question gets

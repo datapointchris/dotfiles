@@ -329,11 +329,11 @@ def detect(root: Path = Path('/')) -> Detected:
     `root` exists for the tests: every probe is a file or a binary, so pointing
     them at a fixture is the whole seam and nothing in this module is patched.
     """
-    family = _os_family()
-    return Detected(os_family=family, package_manager=_package_manager(family), host=_host(root))
+    family = os_family()
+    return Detected(os_family=family, package_manager=package_manager(family), host=host(root))
 
 
-def _os_family() -> OSFamily:
+def os_family() -> OSFamily:
     """Which OS this interpreter is running on, by the name its build reports.
 
     `Windows` is the live answer, and the rest is a guard rather than a branch
@@ -361,7 +361,7 @@ def _os_family() -> OSFamily:
     return OSFamily.LINUX
 
 
-def _package_manager(family: OSFamily) -> PackageManager | None:
+def package_manager(family: OSFamily) -> PackageManager | None:
     """The manager on PATH, asked of the family rather than tried in turn.
 
     Winget is looked up under both spellings because `shutil.which` consults
@@ -379,7 +379,7 @@ def _package_manager(family: OSFamily) -> PackageManager | None:
     return None
 
 
-def _host(root: Path) -> Host:
+def host(root: Path) -> Host:
     """WSL, by the two signals that survive a container and a systemd unit.
 
     `$WSL_DISTRO_NAME` is absent under any process WSL did not start, which is

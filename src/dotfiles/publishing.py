@@ -281,18 +281,18 @@ def masked(value: Any, identities: Mapping[str, str]) -> Any:
     resource chose to write.
     """
     named = sorted(((value, placeholder(what)) for what, value in identities.items() if value), key=lambda pair: len(pair[0]), reverse=True)
-    return _masking(value, named)
+    return masking(value, named)
 
 
-def _masking(value: Any, named: list[tuple[str, str]]) -> Any:
+def masking(value: Any, named: list[tuple[str, str]]) -> Any:
     if isinstance(value, str):
         for name, token in named:
             value = re.sub(re.escape(name), token, value, flags=re.IGNORECASE)
         return value
     if isinstance(value, dict):
-        return {key: _masking(item, named) for key, item in value.items()}
+        return {key: masking(item, named) for key, item in value.items()}
     if isinstance(value, list):
-        return [_masking(item, named) for item in value]
+        return [masking(item, named) for item in value]
     return value
 
 
@@ -425,21 +425,21 @@ def screened(document: Any, identities: Mapping[str, str]) -> Screened:
             allowed: list[Any] = []
             refused: list[Any] = []
             for row in rows:
-                (refused if _names_the_machine(row, identities) else allowed).append(row)
+                (refused if names_the_machine(row, identities) else allowed).append(row)
             kept[key] = allowed
-            withheld.extend(_named(row) for row in refused)
+            withheld.extend(named(row) for row in refused)
         resources.append(kept)
 
     remaining = {**document, 'resources': resources}
     return Screened(remaining, tuple(withheld), redacted(remaining, identities))
 
 
-def _names_the_machine(row: Any, identities: Mapping[str, str]) -> bool:
+def names_the_machine(row: Any, identities: Mapping[str, str]) -> bool:
     lowered = json.dumps(row).lower()
     return any(value and value.lower() in lowered for value in identities.values())
 
 
-def _named(row: Any) -> str:
+def named(row: Any) -> str:
     """What to call a withheld row, which is the address a reader would look it up by.
 
     `item` on the three lists that carry one and `section` on `invalid`, which is

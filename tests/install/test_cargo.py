@@ -425,7 +425,7 @@ def test_the_refusal_carries_its_remedy_as_a_field(home, staged, ready, crates) 
 
 
 def test_the_refusal_leads_with_itself_and_the_transcript_follows(home, staged, ready, crates) -> None:
-    """`_from_binstall` puts binstall's whole transcript in the detail, which runs to
+    """`from_binstall` puts binstall's whole transcript in the detail, which runs to
     dozens of lines behind a firewall. Appended to the tail of that, the only
     actionable half is the part a reader has already stopped at."""
     stage(staged, 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz')

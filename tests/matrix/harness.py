@@ -579,7 +579,7 @@ def build(root: Path, monkeypatch: pytest.MonkeyPatch) -> Sandbox:
         uv_tools=root / 'uv-tools',
         bundle=root / 'staged' / STAGED_BUNDLE,
     )
-    # `bundle` is deliberately absent from this list. `_stage_bundle` treats an
+    # `bundle` is deliberately absent from this list. `stage_bundle` treats an
     # existing directory as an already-staged bundle, so creating it would make
     # `--offline` skip the staging path a matrix row is there to measure.
     for directory in (box.home, box.repo, box.bin, box.user_bin, box.cache, box.config, box.data, box.state, box.runs, box.uv_tools):
@@ -589,8 +589,8 @@ def build(root: Path, monkeypatch: pytest.MonkeyPatch) -> Sandbox:
     # under pytest that is the checkout — so a tarball left beside the repo would
     # be staged into a test that never asked for one.
     monkeypatch.chdir(box.root)
-    _name_the_directories(box, monkeypatch)
-    _silence_the_ambient_environment(monkeypatch)
+    name_the_directories(box, monkeypatch)
+    silence_the_ambient_environment(monkeypatch)
     write_declaration(box.repo, machine=box.machine)
     rebind(box, monkeypatch)
     # An absolute path, so an offline run would otherwise accept this desk's `/usr/bin/node`.
@@ -604,7 +604,7 @@ def build(root: Path, monkeypatch: pytest.MonkeyPatch) -> Sandbox:
     return box
 
 
-def _name_the_directories(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
+def name_the_directories(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None:
     """Every variable the package resolves a path through, pointed at this sandbox.
 
     `PATH` keeps `/usr/bin:/bin` behind the sandbox bin, for the reason
@@ -627,7 +627,7 @@ def _name_the_directories(box: Sandbox, monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv('PATH', f'{box.bin}{os.pathsep}{box.user_bin}{os.pathsep}/usr/bin{os.pathsep}/bin')
 
 
-def _silence_the_ambient_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+def silence_the_ambient_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Drop what the developer's shell exports and a CI runner does not.
 
     `$GITHUB_TOKEN` alone flips a private-repo entry from `BY_HAND` to `AUTOMATIC`,
@@ -744,7 +744,7 @@ class Invocation:
 
 def addresses(ran: Invocation) -> list[str]:
     """Which resources a read verb's document says it walked, in walk order."""
-    return [found['address'] for found in _rows(ran)]
+    return [found['address'] for found in resource_rows(ran)]
 
 
 def resource(ran: Invocation, address: str) -> dict[str, Any]:
@@ -760,13 +760,13 @@ def resource(ran: Invocation, address: str) -> dict[str, Any]:
     A test asking about a resource the run never walked is asserting against a
     machine it did not build, and `None['pending']` names the wrong thing.
     """
-    rows = {found['address']: found for found in _rows(ran)}
+    rows = {found['address']: found for found in resource_rows(ran)}
     if address not in rows:
         raise AssertionError(f'{" ".join(ran.argv)} walked {sorted(rows)}, which does not include {address}')
     return rows[address]
 
 
-def _rows(ran: Invocation) -> list[dict[str, Any]]:
+def resource_rows(ran: Invocation) -> list[dict[str, Any]]:
     """The resource rows of a read verb's document, or a failure naming the run.
 
     `document` is None wherever stdout carried none, so indexing it directly
@@ -797,11 +797,11 @@ def invoke(*argv: str, catch_exceptions: bool = False) -> Invocation:
         exit_code=result.exit_code,
         stdout=result.stdout,
         stderr=result.stderr,
-        document=_parsed(result.stdout),
+        document=parsed(result.stdout),
     )
 
 
-def _parsed(stdout: str) -> Any | None:
+def parsed(stdout: str) -> Any | None:
     """The document on stdout, or None when stdout is not one.
 
     Tested rather than gated on `--json` being in the argv: `repo path` and

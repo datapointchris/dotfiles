@@ -45,7 +45,7 @@ BOX = dc.replace(machines.load('archlinux-personal-workstation'), check_schedule
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -164,7 +164,7 @@ def want_schedule(*, enabled: bool) -> Path:
 def linux(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
     monkeypatch.setattr(schedule, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
-    monkeypatch.setattr(schedule, '_is_darwin', lambda: False)
+    monkeypatch.setattr(schedule, 'is_darwin', lambda: False)
     want_schedule(enabled=True)
     return tmp_path / 'config' / 'systemd' / 'user'
 
@@ -350,7 +350,7 @@ def darwin(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> P
     monkeypatch.setenv('HOME', str(tmp_path))
     monkeypatch.delenv('XDG_CONFIG_HOME', raising=False)
     monkeypatch.setattr(schedule, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
-    monkeypatch.setattr(schedule, '_is_darwin', lambda: True)
+    monkeypatch.setattr(schedule, 'is_darwin', lambda: True)
     want_schedule(enabled=True)
     return tmp_path / 'Library' / 'LaunchAgents' / f'{schedule.LABEL}.plist'
 
@@ -386,7 +386,7 @@ def test_the_unit_declares_the_directories_this_repo_installs_into() -> None:
     a desk carried a login session's — so one machine reported twelve installed
     tools missing and the other reported one difference, with nothing declaring
     the difference."""
-    unit = schedule._service_content()
+    unit = schedule.service_content()
     declared = next(line for line in unit.splitlines() if line.startswith('Environment=PATH='))
 
     entries = declared.removeprefix('Environment=PATH=').split(':')
@@ -398,10 +398,10 @@ def test_the_unit_declares_the_directories_this_repo_installs_into() -> None:
 def test_the_unit_path_is_declared_rather_than_inherited(monkeypatch: pytest.MonkeyPatch) -> None:
     """The installing shell's PATH carries a uv venv and an fnm directory named
     after a pid. A unit built from it pins the schedule to directories that
-    outlive nothing, which is the trap `_executable` records for the binary."""
+    outlive nothing, which is the trap `executable` records for the binary."""
     monkeypatch.setenv('PATH', '/tmp/some-venv/bin:/tmp/fnm_multishells/123/bin')
 
-    assert '/tmp/some-venv/bin' not in schedule._service_content()
+    assert '/tmp/some-venv/bin' not in schedule.service_content()
 
 
 def test_the_agent_declares_the_same_directories_as_the_unit() -> None:
@@ -410,7 +410,7 @@ def test_the_agent_declares_the_same_directories_as_the_unit() -> None:
     scheduled run spent 26 requests of the 60-per-hour anonymous GitHub quota and
     zero authenticated ones, because `github_token` gates on `shutil.which('gh')`
     and degrades to an unauthenticated request instead of failing."""
-    job = plistlib.loads(schedule._agent_content())
+    job = plistlib.loads(schedule.agent_content())
 
     entries = job['EnvironmentVariables']['PATH'].split(':')
     assert str(providers.bin_dir()) in entries
@@ -423,4 +423,4 @@ def test_the_agent_path_is_declared_rather_than_inherited(monkeypatch: pytest.Mo
     pins the schedule to a venv that outlives nothing."""
     monkeypatch.setenv('PATH', '/tmp/some-venv/bin:/tmp/fnm_multishells/123/bin')
 
-    assert '/tmp/some-venv/bin' not in plistlib.loads(schedule._agent_content())['EnvironmentVariables']['PATH']
+    assert '/tmp/some-venv/bin' not in plistlib.loads(schedule.agent_content())['EnvironmentVariables']['PATH']

@@ -691,7 +691,7 @@ class TestResolvingLatestForASparseBuild:
         self.published(server, '20260909T120000Z', wrote='99887766')
 
         with pytest.raises(typer.BadParameter) as refused:
-            staging._status_for('latest', MACHINE)
+            staging.status_for('latest', MACHINE)
 
         assert '2 machines share' in str(refused.value)
         assert 'status download' in str(refused.value)
@@ -706,7 +706,7 @@ class TestResolvingLatestForASparseBuild:
         self.published(server, '20260909T120000Z', wrote='99887766')
 
         with pytest.raises(typer.BadParameter) as refused:
-            staging._status_for('latest', MACHINE)
+            staging.status_for('latest', MACHINE)
 
         said = str(refused.value)
         assert 'abcd1234' in said
@@ -723,7 +723,7 @@ class TestResolvingLatestForASparseBuild:
         deny_listing(server)
 
         with pytest.raises(transport.RemoteError):
-            staging._status_for('latest', MACHINE)
+            staging.status_for('latest', MACHINE)
 
     def test_one_machine_publishing_twice_is_not_ambiguous(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """Paired with the refusal above, because a check that fired on every
@@ -731,7 +731,7 @@ class TestResolvingLatestForASparseBuild:
         self.published(server, '20260101T010000Z')
         newest = self.published(server, '20260909T120000Z')
 
-        assert staging._status_for('latest', MACHINE) is not None
+        assert staging.status_for('latest', MACHINE) is not None
         assert newest.name.endswith('.json')
 
     def test_the_newest_status_lands_in_the_cache_and_is_what_the_build_is_handed(
@@ -740,7 +740,7 @@ class TestResolvingLatestForASparseBuild:
         self.published(server, '20260101T010000Z')
         newest = self.published(server, '20260909T120000Z')
 
-        found = staging._status_for('latest', MACHINE)
+        found = staging.status_for('latest', MACHINE)
 
         assert found is not None
         assert found.name == newest.name
@@ -753,11 +753,11 @@ class TestResolvingLatestForASparseBuild:
         named = tmp_path / 'a-status.json'
         named.write_text('{}')
 
-        assert staging._status_for(str(named), MACHINE) == named
+        assert staging.status_for(str(named), MACHINE) == named
 
     def test_a_path_that_is_not_a_file_is_a_usage_error_naming_the_fetch(self, sandbox: Sandbox, server: Path, tmp_path: Path) -> None:
         with pytest.raises(typer.BadParameter, match='status download'):
-            staging._status_for(str(tmp_path / 'never-written.json'), MACHINE)
+            staging.status_for(str(tmp_path / 'never-written.json'), MACHINE)
 
     def test_an_empty_shelf_builds_a_full_bundle_and_says_so(self, sandbox: Sandbox, server: Path, capsys: pytest.CaptureFixture) -> None:
         """`latest` means "whatever the remote has", and nothing is a legitimate
@@ -769,7 +769,7 @@ class TestResolvingLatestForASparseBuild:
         The failure the feature exists to avoid is a bundle carrying everything
         while reporting itself sparse, and this path cannot produce one.
         """
-        assert staging._status_for('latest', MACHINE) is None
+        assert staging.status_for('latest', MACHINE) is None
 
         said = capsys.readouterr().err.replace('\n', '')
         assert 'full bundle' in said
@@ -782,19 +782,19 @@ class TestResolvingLatestForASparseBuild:
         declare(sandbox.config, program='nothing-installed-here')
 
         with pytest.raises(transport.RemoteError):
-            staging._status_for('latest', MACHINE)
+            staging.status_for('latest', MACHINE)
 
     def test_no_status_is_fetched_for_a_full_build(self, sandbox: Sandbox, server: Path) -> None:
         """Paired with the cases above: `--against` absent must reach nothing at
         all, which a remote that answered would otherwise hide."""
         self.published(server, '20260909T120000Z')
 
-        assert staging._status_for(None, MACHINE) is None
+        assert staging.status_for(None, MACHINE) is None
         assert not paths.status_cache().exists()
 
 
 class TestReportingHowOldABundleIs:
-    """`_age_of` is the first line of the `bundle download` confirmation, so it is
+    """`age_of` is the first line of the `bundle download` confirmation, so it is
     the one fact that prompt exists to convey."""
 
     def test_a_future_stamp_reads_as_no_time_at_all(self) -> None:
@@ -803,11 +803,11 @@ class TestReportingHowOldABundleIs:
         stamps the name and the offline box renders it, so skew between two clocks
         is ordinary — and it misreported in the direction that argues against
         downloading."""
-        assert staging._elapsed(dt.timedelta(minutes=-5)) == '0 minute(s)'
+        assert staging.elapsed(dt.timedelta(minutes=-5)) == '0 minute(s)'
 
     def test_an_ordinary_age_is_unchanged(self) -> None:
-        assert staging._elapsed(dt.timedelta(days=3)) == '3 day(s)'
-        assert staging._elapsed(dt.timedelta(hours=5)) == '5 hour(s)'
+        assert staging.elapsed(dt.timedelta(days=3)) == '3 day(s)'
+        assert staging.elapsed(dt.timedelta(hours=5)) == '5 hour(s)'
 
 
 SPARSE_NEWEST = 'dotfiles-offline-v20260909T120000Z-box-linux-x86_64-sparse'

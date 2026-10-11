@@ -58,7 +58,7 @@ def manifest_names() -> list[str]:
     return sorted(path.stem for path in paths.MANIFESTS_DIR.glob('*.yml'))
 
 
-def _resolve_machine(name: str | None) -> str:
+def resolve_machine(name: str | None) -> str:
     """Fall back to $MACHINE, which `~/.env` sets and every install path reads."""
     resolved = name or os.environ.get('MACHINE')
     if resolved:
@@ -69,7 +69,7 @@ def _resolve_machine(name: str | None) -> str:
     raise typer.Exit(ExitCode.USAGE)
 
 
-def _manifest_path(name: str) -> Path:
+def manifest_path(name: str) -> Path:
     """The path, with a name nothing declares refused the way every door refuses it.
 
     The sentence is `machine.manifest_path`'s, so this is the conversion to a usage
@@ -79,11 +79,11 @@ def _manifest_path(name: str) -> Path:
     return machines.manifest_path(name)
 
 
-def _loaded(name: str) -> machines.Machine:
+def loaded(name: str) -> machines.Machine:
     """One manifest, with both ways of not getting one answered as they are elsewhere.
 
     A name nothing declares is a usage error. A manifest that exists and will not
-    parse is an Issue, with every reason printed — the same split `_plan` makes,
+    parse is an Issue, with every reason printed — the same split `resolved_plan` makes,
     and the same one `Session.resolve` makes for the verbs that want a Session.
 
     A caller wanting only the exception should reach for this rather than calling
@@ -118,25 +118,25 @@ def show_machine(
     is a different question: the manifest says `system_packages: core` and the
     resolution says which 25 packages that is on this machine's package manager.
     """
-    resolved = _resolve_machine(name)
+    resolved = resolve_machine(name)
     # Before resolving, so a typo stays a usage error naming the machines that do
     # exist rather than a report that this one's declaration cannot be read.
-    path = _manifest_path(resolved)
+    path = manifest_path(resolved)
 
     if raw:
         emit_text(path.read_text())
         return
 
-    plan = _plan(resolved, owner)
+    plan = resolved_plan(resolved, owner)
 
     if as_json:
         emit_json({**plan.machine.as_dict(), 'items': [item.as_dict() for item in plan.items]})
         return
 
-    _render(plan)
+    render(plan)
 
 
-def _plan(name: str, owner: str | None = None) -> planning.Plan:
+def resolved_plan(name: str, owner: str | None = None) -> planning.Plan:
     """Resolve, turning either loader's refusal into the report it is.
 
     A traceback would be the wrong shape for both: an invalid declaration is a
@@ -145,7 +145,7 @@ def _plan(name: str, owner: str | None = None) -> planning.Plan:
     return resolver.resolve(catalog.load(), machines.load(name), owner=owner)
 
 
-def _section(name: str, detail: str) -> None:
+def section(name: str, detail: str) -> None:
     """One group of the resolution, in the columns every report's sections use.
 
     No mark, and that is the honest answer rather than a gap: this command resolves
@@ -163,20 +163,20 @@ def _section(name: str, detail: str) -> None:
     console.print(section_line(' ', name, detail))
 
 
-def _render(plan: planning.Plan) -> None:
+def render(plan: planning.Plan) -> None:
     machine = plan.machine
     console.print(f'[bold]{machine.name}[/]  {machine.platform_label}')
 
-    _section('coordinates', 'where this machine sits on each axis')
+    section('coordinates', 'where this machine sits on each axis')
     for axis, value in machine.coordinates.as_dict().items():
         console.print(f'{EVIDENCE_INDENT}{axis:<16} {value}')
 
-    _section('flags', f'{len(machine.flags)} feature switch(es) written to ~/.env')
+    section('flags', f'{len(machine.flags)} feature switch(es) written to ~/.env')
     for flag, value in machine.flags.items():
         console.print(f'{EVIDENCE_INDENT}{flag:<26} {value}')
 
     if machine.requirements:
-        _section('by hand', f'{len(machine.requirements)} thing(s) apply will never supply')
+        section('by hand', f'{len(machine.requirements)} thing(s) apply will never supply')
         for requirement in machine.requirements:
             console.print(f'{EVIDENCE_INDENT}{requirement.path or requirement.name} — {requirement.description}')
 
@@ -184,7 +184,7 @@ def _render(plan: planning.Plan) -> None:
         items = plan.for_stage(stage)
         if not items:
             continue
-        _section(stage.name.lower(), f'{len(items)} item(s)')
+        section(stage.name.lower(), f'{len(items)} item(s)')
         for item in items:
             console.print(
                 f'{EVIDENCE_INDENT}{item.provider:<14} {item.name:<28} {item.reason.selector}{precondition_note(item.precondition)}'
@@ -195,7 +195,7 @@ def _render(plan: planning.Plan) -> None:
     # column, so it lines up with none of the groups it sums. `total` is the honest
     # name — this command resolves a declaration and measures nothing, so there is
     # no verdict to put in front of it.
-    _section('total', f'{len(plan.items)} item(s) this machine declares')
+    section('total', f'{len(plan.items)} item(s) this machine declares')
 
 
 @app.command('requirements')
@@ -218,17 +218,17 @@ def machine_requirements(
     if as_json and as_safekeep:
         raise typer.BadParameter('--json and --safekeep are two formats of one answer; pick one')
 
-    machine = _loaded(_resolve_machine(name))
+    machine = loaded(resolve_machine(name))
 
     if as_json:
-        emit_json([_requirement_dict(entry) for entry in machine.requirements])
+        emit_json([requirement_dict(entry) for entry in machine.requirements])
     elif as_safekeep:
-        emit_text(_safekeep_block(machine))
+        emit_text(safekeep_block(machine))
     else:
-        _render_requirements(machine)
+        render_requirements(machine)
 
 
-def _requirement_dict(entry: machines.Requirement) -> dict[str, object]:
+def requirement_dict(entry: machines.Requirement) -> dict[str, object]:
     return {
         'name': entry.name,
         'kind': 'file' if entry.is_file else 'value',
@@ -243,11 +243,11 @@ def _requirement_dict(entry: machines.Requirement) -> dict[str, object]:
     }
 
 
-def _render_requirements(machine: machines.Machine) -> None:
+def render_requirements(machine: machines.Machine) -> None:
     console.print(f'[bold]{machine.name}[/]')
 
     if values := machine.required_values:
-        _section('values', f'{len(values)} set by hand below the OVERRIDES marker in ~/.env')
+        section('values', f'{len(values)} set by hand below the OVERRIDES marker in ~/.env')
         width = max(len(entry.name) for entry in values)
         for entry in values:
             console.print(f'{EVIDENCE_INDENT}{entry.name:<{width}}  {entry.description}', markup=False, highlight=False)
@@ -258,7 +258,7 @@ def _render_requirements(machine: machines.Machine) -> None:
                 console.print(f'{EVIDENCE_INDENT}{"":<{width}}  the file it names has to be there too', markup=False, highlight=False)
 
     if files := machine.required_files:
-        _section('files', f'{len(files)} restored by hand, never written by apply')
+        section('files', f'{len(files)} restored by hand, never written by apply')
         width = max(len(entry.path) for entry in files)
         for entry in files:
             console.print(f'{EVIDENCE_INDENT}{entry.path:<{width}}  {entry.description}', markup=False, highlight=False)
@@ -277,7 +277,7 @@ def _render_requirements(machine: machines.Machine) -> None:
         # sentence at a two-space indent of its own. An empty register is an answer
         # to the same question `values` and `files` answer, and a reader scanning
         # the name column for it finds nothing where a heading should be.
-        _section('by hand', 'nothing')
+        section('by hand', 'nothing')
         console.print(f'{EVIDENCE_INDENT}every file and value this machine needs is written by an apply')
 
 
@@ -285,7 +285,7 @@ SAFEKEEP_TAG = 'dotfiles'
 """So `safekeep restore --tag dotfiles` is exactly this register and nothing else."""
 
 
-def _safekeep_block(machine: machines.Machine) -> str:
+def safekeep_block(machine: machines.Machine) -> str:
     """The register as safekeep's own `[[back_up_paths]]` syntax.
 
     A block to paste rather than a whole config, and the distinction is not
@@ -343,18 +343,18 @@ def check_machines(
     """
     verbosity(verbose, quiet)
     if name:
-        _manifest_path(name)
+        manifest_path(name)
         hint(f'checking every manifest, not only {name}: packages.yml is shared by all of them')
 
     found = validate.declaration()
     if as_json:
         emit_json([finding.as_dict() for finding in found])
     else:
-        _render_findings(found)
+        render_findings(found)
     raise typer.Exit(ExitCode.ISSUE if validate.errors(found) else ExitCode.CONVERGED)
 
 
-def _render_findings(findings: tuple[validate.Finding, ...]) -> None:
+def render_findings(findings: tuple[validate.Finding, ...]) -> None:
     """Grouped by section, because that is the file a reader has to open next."""
     by_section: dict[str, list[validate.Finding]] = {}
     for finding in findings:
@@ -374,5 +374,5 @@ def _render_findings(findings: tuple[validate.Finding, ...]) -> None:
 @app.command('edit')
 def edit_machine(name: str = typer.Argument(None, help='Machine name (default: $MACHINE)')) -> None:
     """Open a machine's manifest in $EDITOR."""
-    path = _manifest_path(_resolve_machine(name))
+    path = manifest_path(resolve_machine(name))
     os.execvp(editor := os.environ.get('EDITOR', 'nvim'), [editor, str(path)])

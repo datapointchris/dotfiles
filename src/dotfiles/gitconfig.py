@@ -91,7 +91,7 @@ reads and why a condition cannot be believed from its presence.
 """
 
 
-def _is_include(key: str) -> bool:
+def is_include(key: str) -> bool:
     return key == INCLUDE_KEY or (key.startswith(CONDITIONAL_PREFIX) and key.endswith('.path'))
 
 
@@ -127,7 +127,7 @@ the key and leaves a subsection's case alone — `credential.https://GitHub.com.
 """
 
 
-def _accumulates(key: str) -> bool:
+def accumulates(key: str) -> bool:
     return any(fnmatch.fnmatchcase(key.lower(), pattern) for pattern in ACCUMULATING)
 
 
@@ -230,9 +230,9 @@ class Layering:
         contributed = {setting.origin for setting in self.settings}
         found = []
         for setting in self.settings:
-            if not _is_include(setting.key):
+            if not is_include(setting.key):
                 continue
-            target = _resolved(setting.value, setting.origin)
+            target = resolved(setting.value, setting.origin)
             condition = setting.key.removeprefix(CONDITIONAL_PREFIX).removesuffix('.path') if setting.key != INCLUDE_KEY else ''
             found.append(Include(setting.origin, target, condition, taken=target in contributed))
         return tuple(found)
@@ -261,7 +261,7 @@ class Layering:
         """
         by_key: dict[str, list[Setting]] = {}
         for setting in self.settings:
-            if not _is_include(setting.key) and not _accumulates(setting.key):
+            if not is_include(setting.key) and not accumulates(setting.key):
                 by_key.setdefault(setting.key, []).append(setting)
 
         found = []
@@ -278,7 +278,7 @@ class Layering:
         return tuple(found)
 
 
-def _resolved(value: str, origin: Path) -> Path:
+def resolved(value: str, origin: Path) -> Path:
     """An include path as git resolves it: `~` at home, relative to its includer."""
     named = Path(value).expanduser()
     return named if named.is_absolute() else (origin.parent / named)
@@ -299,7 +299,7 @@ def read(scope: str = '--global') -> Layering:
     result = run(['git', 'config', scope, '--list', '--show-origin', '--includes', '-z'], output=Output.QUIET)
     if not result.ok:
         return Layering((), read=False)
-    return Layering(tuple(_parse(result.stdout)))
+    return Layering(tuple(parse(result.stdout)))
 
 
 def document(layering: Layering, masked_by: Path | None) -> dict:
@@ -363,8 +363,8 @@ def render(layering: Layering, console) -> None:  # noqa: ANN001 — a rich Cons
 
     roots = [path for path in layering.files if path not in {include.target for include in layering.includes}]
     for root in roots:
-        console.print(f'[bold]{root.name}[/]  {_state(root, contributed)}')
-        _branch(root, edges, contributed, console, prefix='')
+        console.print(f'[bold]{root.name}[/]  {state(root, contributed)}')
+        branch(root, edges, contributed, console, prefix='')
 
     if not layering.conflicts:
         return
@@ -381,7 +381,7 @@ def render(layering: Layering, console) -> None:  # noqa: ANN001 — a rich Cons
         console.print(f'    [green]{conflict.winner.origin.name:<22} {quoted(conflict.winner.value)}[/]  wins')
 
 
-def _state(path: Path, contributed: dict[Path, int]) -> str:
+def state(path: Path, contributed: dict[Path, int]) -> str:
     """What one file is doing, in the three states worth telling apart.
 
     Absent is a normal state rather than a fault. Each variant gitconfig is named
@@ -402,7 +402,7 @@ def _state(path: Path, contributed: dict[Path, int]) -> str:
     return 'no settings'
 
 
-def _branch(path: Path, edges: dict[Path, list[Include]], contributed: dict[Path, int], console, prefix: str) -> None:  # noqa: ANN001
+def branch(path: Path, edges: dict[Path, list[Include]], contributed: dict[Path, int], console, prefix: str) -> None:  # noqa: ANN001
     """Everything one file pulls in, depth first. The caller prints the file."""
     children = edges.get(path, [])
     for index, include in enumerate(children):
@@ -415,12 +415,12 @@ def _branch(path: Path, edges: dict[Path, list[Include]], contributed: dict[Path
         else:
             skipped = '  [yellow]— condition did not hold here[/]'
         console.print(
-            f'{prefix}{"└─ " if last else "├─ "}[bold]{include.target.name}[/]  {_state(include.target, contributed)}{condition}{skipped}'
+            f'{prefix}{"└─ " if last else "├─ "}[bold]{include.target.name}[/]  {state(include.target, contributed)}{condition}{skipped}'
         )
-        _branch(include.target, edges, contributed, console, prefix=f'{prefix}{"   " if last else "│  "}')
+        branch(include.target, edges, contributed, console, prefix=f'{prefix}{"   " if last else "│  "}')
 
 
-def _parse(payload: str) -> list[Setting]:
+def parse(payload: str) -> list[Setting]:
     """Split git's NUL-delimited listing into settings.
 
     `-z` rather than the line format, because a value is free to contain both a

@@ -240,7 +240,7 @@ def test_an_offline_refusal_names_the_bundle_that_stages_no_python_tools(uv, unr
     """Offline reaches this on all ten declared git tools that pin, because
     resolving a tag is the one thing here that leaves the machine.
 
-    `_uv_tool_install` carries this clause for exactly that case and no longer
+    `uv_tool_install` carries this clause for exactly that case and no longer
     runs for those ten, so the refusal that replaced it owes the same sentence —
     otherwise a reader is sent after a network they already know is absent.
     """

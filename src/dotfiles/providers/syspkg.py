@@ -211,7 +211,7 @@ would have refused.
 """
 
 
-def _answers(binary: str) -> bool:
+def answers(binary: str) -> bool:
     """Whether a package manager is here and will run.
 
     **The cache is keyed on the resolved path, never on the name.** PATH changes
@@ -224,11 +224,11 @@ def _answers(binary: str) -> bool:
     here and different answers to `which`.
     """
     found = shutil.which(binary)
-    return bool(found) and _probe(found)
+    return bool(found) and probe(found)
 
 
 @functools.cache
-def _probe(path: str) -> bool:
+def probe(path: str) -> bool:
     return effects.run([path, '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok
 
 
@@ -236,7 +236,7 @@ def unchosen() -> frozenset[str]:
     """Every package installed as a dependency rather than asked for by name."""
     found: set[str] = set()
     for manager, command in UNCHOSEN.items():
-        if not _answers(INSTALL[manager][0]):
+        if not answers(INSTALL[manager][0]):
             continue
         listed = effects.run(list(command), output=Output.QUIET, timeout=PROBE_SECONDS)
         if listed.ok:
@@ -268,7 +268,7 @@ def requested(manager: str) -> frozenset[str] | None:
     short form would be reported undeclared against the long one on every run.
     """
     command = REQUESTED.get(manager)
-    if command is None or not _answers(command[0]):
+    if command is None or not answers(command[0]):
         return None
     # `PROBE_SECONDS`, not `CURRENCY_SECONDS`. This reads bookkeeping the manager
     # already holds and touches no network, which is what the currency bound is for
@@ -293,7 +293,7 @@ def owner_of(path: str) -> str:
     The first manager that answers wins, and no machine here has two of them.
     """
     for manager, command in OWNER.items():
-        if not _answers(command[0]):
+        if not answers(command[0]):
             continue
         found = effects.run([*command, path], output=Output.QUIET, timeout=PROBE_SECONDS)
         if not found.ok or not found.stdout.strip():
@@ -433,10 +433,10 @@ last synced.** `pacman -Qu` reports what was behind at the last `-Sy` and nothin
 since. `checkupdates` cures it by refreshing a private copy under `fakeroot`;
 refreshing the real one is not an option, because `pacman -Sy` without the `-u` is
 the partial-upgrade state Arch does not support. apt has the same defect and no
-equivalent, which is what `_apt_outdated` does by hand.
+equivalent, which is what `apt_outdated` does by hand.
 
 `--nocolor` because `Color` in `pacman.conf` puts escape codes in front of the
-first field, which `_names` reads.
+first field, which `names` reads.
 
 `yay -Qu --aur` rather than a bare `-Qu`: only yay knows an AUR package's upstream
 version, and `--aur` stops the two Arch rows counting the same repo package twice.
@@ -513,7 +513,7 @@ update` as root, which a read verb does not get to be.
 """
 
 
-def _apt_redirect(scratch: Path) -> tuple[str, ...]:
+def apt_redirect(scratch: Path) -> tuple[str, ...]:
     """Where an unprivileged apt keeps the state it would otherwise need root for.
 
     Both options are needed. `Dir::State::lists` is the index itself, and
@@ -524,7 +524,7 @@ def _apt_redirect(scratch: Path) -> tuple[str, ...]:
     return ('-o', f'Dir::State::lists={scratch / "lists"}', '-o', f'Dir::Cache={scratch / "cache"}')
 
 
-def _apt_outdated() -> frozenset[str] | None:
+def apt_outdated() -> frozenset[str] | None:
     """apt's currency, measured against an index this run refreshed itself.
 
     `apt list --upgradable` reads `/var/lib/apt/lists`, so it answers from whenever
@@ -551,12 +551,12 @@ def _apt_outdated() -> frozenset[str] | None:
         # read costs the files under it and not the other forty megabytes.
         with contextlib.suppress(OSError, shutil.Error):
             shutil.copytree(APT_LISTS, scratch / 'lists', dirs_exist_ok=True)
-        redirect = _apt_redirect(scratch)
+        redirect = apt_redirect(scratch)
         refreshed = effects.run(['apt-get', 'update', '-qq', *redirect], output=Output.QUIET, timeout=CURRENCY_SECONDS)
         if not refreshed.ok:
             return None
         listed = effects.run([*OUTDATED['apt'], *redirect], output=Output.QUIET, timeout=CURRENCY_SECONDS)
-    return _names(listed.stdout) if listed.ok else None
+    return names(listed.stdout) if listed.ok else None
 
 
 def outdated(manager: str) -> frozenset[str] | None:
@@ -575,10 +575,10 @@ def outdated(manager: str) -> frozenset[str] | None:
     if command is None or not effects.run([command[0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
         return None
     if manager == 'apt':
-        return _apt_outdated()
+        return apt_outdated()
     listed = effects.run(list(command), output=Output.QUIET, timeout=CURRENCY_SECONDS)
     if listed.ok:
-        return _names(listed.stdout)
+        return names(listed.stdout)
     # A timeout is not the "exited non-zero having printed nothing" that
     # `EMPTY_IS_NONZERO` decodes as *nothing behind*. `effects.run` names the
     # expiry in the transcript, so the silence test already separates them — and
@@ -587,7 +587,7 @@ def outdated(manager: str) -> frozenset[str] | None:
     return frozenset() if manager in EMPTY_IS_NONZERO and silent else None
 
 
-def _names(transcript: str) -> frozenset[str]:
+def names(transcript: str) -> frozenset[str]:
     """The package each line names, ignoring the lines that name none.
 
     Field one, since every one of these prints `<name> <versions…>` or a bare

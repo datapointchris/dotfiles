@@ -73,7 +73,7 @@ kept indefinitely in a directory the fleet shares, so the ones already on disk
 carry the box under the other word and would start rendering as detail."""
 
 
-def _resolve(identifier: str | None) -> Path:
+def resolve(identifier: str | None) -> Path:
     """One run's stream, by id or filename prefix, or the newest on this box.
 
     Both spellings, because the two identifiers a reader has in front of them
@@ -90,7 +90,7 @@ def _resolve(identifier: str | None) -> Path:
     available = runs.list_event_logs()
     matches = [path for path in available if path.stem.startswith(identifier)]
     if not matches:
-        matches = [path for path in available if _run_id(path).startswith(identifier)]
+        matches = [path for path in available if run_id(path).startswith(identifier)]
     if not matches:
         raise typer.BadParameter(f'no run stream matching {identifier!r}')
     if len(matches) > 1:
@@ -98,7 +98,7 @@ def _resolve(identifier: str | None) -> Path:
     return matches[0]
 
 
-def _run_id(path: Path) -> str:
+def run_id(path: Path) -> str:
     """The run a stream belongs to, off its first line, or '' where it has none.
 
     Every line carries `run_id` — `sinks.open_log` binds it before anything can
@@ -117,7 +117,7 @@ def _run_id(path: Path) -> str:
         return ''
 
 
-def _clock(entry: dict) -> str:
+def clock(entry: dict) -> str:
     """The wall time alone. A pane is read beside a running command, so the date
     is the one field every row would spend width on and no reader would use."""
     stamp = str(entry.get('timestamp', ''))
@@ -125,7 +125,7 @@ def _clock(entry: dict) -> str:
     return clock.rstrip('Z')[:12] or stamp
 
 
-def _detail(entry: dict) -> str:
+def detail(entry: dict) -> str:
     """What this event is about, in the words the emitter used.
 
     `argv` is spelled as the command line it was, because it is 93% of a real
@@ -139,11 +139,11 @@ def _detail(entry: dict) -> str:
     return ' '.join(f'{key}={value}' for key, value in entry.items() if key not in RENDERED_ELSEWHERE and value not in (None, ''))
 
 
-def _failed(entry: dict) -> bool:
+def failed(entry: dict) -> bool:
     return bool(entry.get('returncode')) or entry.get('ok') is False
 
 
-def _row(entry: dict) -> Text:
+def row(entry: dict) -> Text:
     """One event as a line, built as styled spans rather than markup.
 
     `Text.append` and never a marked-up string: this renders arbitrary command
@@ -152,15 +152,15 @@ def _row(entry: dict) -> Text:
     row that names a version or an array.
     """
     line = Text()
-    line.append(f'{_clock(entry):<12} ', style='blue')
+    line.append(f'{clock(entry):<12} ', style='blue')
     line.append(f'{str(entry.get("resource") or entry.get("logger", "")):<11} ', style='cyan')
 
     event = str(entry.get('event', ''))
-    line.append(f'{event:<10} ', style='red' if _failed(entry) else 'bold')
+    line.append(f'{event:<10} ', style='red' if failed(entry) else 'bold')
 
     if item := entry.get('item'):
         line.append(f'{item} ', style='magenta')
-    line.append(_detail(entry))
+    line.append(detail(entry))
 
     if (seconds := entry.get('seconds')) is not None:
         elapsed = float(seconds)
@@ -170,7 +170,7 @@ def _row(entry: dict) -> Text:
     return line
 
 
-def _emit(line: str, as_json: bool) -> None:
+def emit(line: str, as_json: bool) -> None:
     """One raw line, rendered or passed straight through.
 
     A line that will not parse is printed as it stands rather than skipped. The
@@ -193,7 +193,7 @@ def _emit(line: str, as_json: bool) -> None:
     except ValueError:
         console.print(Text(stripped))
         return
-    console.print(_row(entry))
+    console.print(row(entry))
 
 
 @app.command('show')
@@ -223,16 +223,16 @@ def show(
     reads JSON lines.
     """
     if follow:
-        _follow(None if identifier is None else _resolve(identifier), as_json, limit)
+        follow_logs(None if identifier is None else resolve(identifier), as_json, limit)
         return
 
-    path = _resolve(identifier)
+    path = resolve(identifier)
     # A stream is written one line at a time, so its newest are at the end.
     for line in kept(path.read_text(errors='replace').splitlines(), limit, newest_at='end'):
-        _emit(line, as_json)
+        emit(line, as_json)
 
 
-def _follow(start: Path | None, as_json: bool, limit: int | None) -> None:
+def follow_logs(start: Path | None, as_json: bool, limit: int | None) -> None:
     """Stream lines until interrupted, moving on when a newer run opens a log.
 
     A missing `start` means wait for one, so the pane can be opened on a machine
@@ -242,12 +242,12 @@ def _follow(start: Path | None, as_json: bool, limit: int | None) -> None:
     was asked to run until stopped and stopping it is the caller doing that.
     """
     try:
-        _stream(start, as_json, limit)
+        stream(start, as_json, limit)
     except KeyboardInterrupt:
         console.print()
 
 
-def _stream(start: Path | None, as_json: bool, limit: int | None) -> None:
+def stream(start: Path | None, as_json: bool, limit: int | None) -> None:
     current = start
     handle = None
     opening = True
@@ -260,17 +260,17 @@ def _stream(start: Path | None, as_json: bool, limit: int | None) -> None:
                     continue
             if handle is None:
                 handle = current.open(errors='replace')
-                _announce(current, as_json)
+                announce(current, as_json)
                 if opening:
-                    _seed(handle, as_json, limit)
+                    seed(handle, as_json, limit)
                     opening = False
 
             if line := handle.readline():
-                _emit(line, as_json)
+                emit(line, as_json)
                 continue
 
             time.sleep(POLL_SECONDS)
-            if (newer := _newer_than(current)) is not None:
+            if (newer := newer_than(current)) is not None:
                 handle.close()
                 handle = None
                 current = newer
@@ -279,7 +279,7 @@ def _stream(start: Path | None, as_json: bool, limit: int | None) -> None:
             handle.close()
 
 
-def _seed(handle: TextIO, as_json: bool, limit: int | None) -> None:
+def seed(handle: TextIO, as_json: bool, limit: int | None) -> None:
     """Print the newest lines a pane opens on, and leave the handle past them.
 
     Unbounded this returns without reading, and the loop then reads the file from
@@ -297,10 +297,10 @@ def _seed(handle: TextIO, as_json: bool, limit: int | None) -> None:
         return
     # A stream is written one line at a time, so its newest are at the end.
     for line in kept(handle.read().splitlines(), limit, newest_at='end'):
-        _emit(line, as_json)
+        emit(line, as_json)
 
 
-def _newer_than(current: Path) -> Path | None:
+def newer_than(current: Path) -> Path | None:
     """The next run's stream, once one exists.
 
     Compared by name rather than by mtime: `Identity.stem` leads with a
@@ -313,7 +313,7 @@ def _newer_than(current: Path) -> Path | None:
     return newest if newest is not None and newest.name > current.name else None
 
 
-def _announce(path: Path, as_json: bool) -> None:
+def announce(path: Path, as_json: bool) -> None:
     """Name the run a follower has just moved to.
 
     Skipped under `--json`, where the contract is one parseable object per line
@@ -345,12 +345,12 @@ def list_logs(limit: int | None = RunsOption, as_json: bool = ListingJsonOption)
     found = kept(recorded, limit, newest_at='start')
 
     if as_json:
-        emit_json([{'stem': path.stem, 'run_id': _run_id(path), 'bytes': path.stat().st_size, 'path': str(path)} for path in found])
+        emit_json([{'stem': path.stem, 'run_id': run_id(path), 'bytes': path.stat().st_size, 'path': str(path)} for path in found])
         return
 
     for path in found:
         row = Text()
-        row.append(f'{_run_id(path) or "-":<14}', style='bold')
+        row.append(f'{run_id(path) or "-":<14}', style='bold')
         row.append(f'{path.stem}  ', style='cyan')
         row.append(f'{path.stat().st_size / 1024:.0f}K')
         console.print(row)
@@ -364,4 +364,4 @@ def path(identifier: str = IdentifierArgument) -> None:
     bare path on stdout is what gets substituted into another command, as in
     `lnav "$(dotfiles logs path)"`.
     """
-    print(_resolve(identifier))
+    print(resolve(identifier))

@@ -168,7 +168,7 @@ drag the other with it.
 """
 
 
-def _fetched(present: tuple[DesiredItem, ...], home: Path) -> tuple[frozenset[str], frozenset[str]]:
+def fetched(present: tuple[DesiredItem, ...], home: Path) -> tuple[frozenset[str], frozenset[str]]:
     """Which of these clones is behind its branch, and which could not be asked.
 
     `clone.behind` is a `git fetch` — a read that shares nothing with the next one,
@@ -201,8 +201,8 @@ class PluginsResource:
     help = 'shell, tmux and yazi plugins, and the managers that own their own lists'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
-        clones = tuple(item for item, provider in _units(plan) if not isinstance(provider, PluginSyncProvider))
-        syncs = tuple((item, provider) for item, provider in _units(plan) if isinstance(provider, PluginSyncProvider))
+        clones = tuple(item for item, provider in units(plan) if not isinstance(provider, PluginSyncProvider))
+        syncs = tuple((item, provider) for item, provider in units(plan) if isinstance(provider, PluginSyncProvider))
 
         present = frozenset(item.address for item in clones if clone.destination(item, session.home).is_dir())
         unmanaged = {
@@ -220,7 +220,7 @@ class PluginsResource:
         # so excluding it would save no round trip, and `diff` reaches its more
         # specific row first either way.
         asked = tuple(item for item in clones if item.address in present and not clone.subdirectory(item))
-        behind, unaskable = _fetched(asked, session.home) if session.refresh else (frozenset(), frozenset())
+        behind, unaskable = fetched(asked, session.home) if session.refresh else (frozenset(), frozenset())
         return Observed(
             present=present,
             met=session.preconditions,
@@ -229,7 +229,7 @@ class PluginsResource:
             managers=tuple((item.address, item.name) for item, _ in syncs),
             unsynced=tuple((item.address, pending) for item, provider in syncs if (pending := provider.pending(session))),
             unmanaged=unmanaged,
-            origins={item.address: _origin(item, item.address in unmanaged) for item in clones},
+            origins={item.address: origin(item, item.address in unmanaged) for item in clones},
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -241,18 +241,18 @@ class PluginsResource:
         """
         pending = dict(observed.unsynced)
         changes = []
-        for item, provider in _units(plan):
+        for item, provider in units(plan):
             if isinstance(provider, PluginSyncProvider):
                 if outstanding := pending.get(item.address, ''):
-                    changes.append(_change(item, Verdict.MISSING, outstanding, observed.met))
+                    changes.append(change(item, Verdict.MISSING, outstanding, observed.met))
             elif item.address not in observed.present:
-                changes.append(_change(item, Verdict.MISSING, f'not cloned from {_short(clone.repository(item))}', observed.met))
+                changes.append(change(item, Verdict.MISSING, f'not cloned from {short(clone.repository(item))}', observed.met))
             elif directory := observed.unmanaged.get(item.address, ''):
-                changes.append(_unmanaged(item, directory))
+                changes.append(unmanaged(item, directory))
             elif item.address in observed.behind:
-                changes.append(_change(item, Verdict.STALE, f'behind {_short(clone.repository(item))}', observed.met))
+                changes.append(change(item, Verdict.STALE, f'behind {short(clone.repository(item))}', observed.met))
             elif item.address in observed.unaskable:
-                changes.append(_unaskable(item))
+                changes.append(unaskable(item))
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
@@ -260,7 +260,7 @@ class PluginsResource:
         return registry.install(session, change, privilege)
 
 
-def _origin(item: DesiredItem, unmanaged: bool) -> str:
+def origin(item: DesiredItem, unmanaged: bool) -> str:
     """Where this plugin's directory came from, said the way it actually happened.
 
     A subdirectory plugin is not a clone and must not claim to be. `clone.py`
@@ -268,13 +268,13 @@ def _origin(item: DesiredItem, unmanaged: bool) -> str:
     there is no `.git` to pull and `clone.tracked` returns None — which is the
     same fact this sentence carries to a reader.
     """
-    repository = _short(clone.repository(item))
+    repository = short(clone.repository(item))
     if subdirectory := clone.subdirectory(item):
         return f'copied from {repository}/{subdirectory}'
     return f'no checkout, so {repository} cannot be pulled' if unmanaged else f'cloned from {repository}'
 
 
-def _short(repo: str) -> str:
+def short(repo: str) -> str:
     """`wfxr/forgit`, from the URL the declaration carries.
 
     The host is the same on every entry and costs nineteen characters a row in the
@@ -285,7 +285,7 @@ def _short(repo: str) -> str:
     return repo.removeprefix('https://github.com/').removesuffix('.git')
 
 
-def _unaskable(item: DesiredItem) -> Change:
+def unaskable(item: DesiredItem) -> Change:
     """A checkout whose remote did not answer, so nothing knows whether it is behind.
 
     UNKNOWN rather than MATCHED, which is the same call `evidence.by_currency`
@@ -302,13 +302,13 @@ def _unaskable(item: DesiredItem) -> Change:
         item.address,
         Verdict.UNKNOWN,
         repair=Repair.NONE,
-        detail=f'{_short(clone.repository(item))} did not answer, so nothing knows whether this is behind',
+        detail=f'{short(clone.repository(item))} did not answer, so nothing knows whether this is behind',
         advice='check the route to the remote, or that this account can read it',
         desired=item,
     )
 
 
-def _unmanaged(item: DesiredItem, directory: str) -> Change:
+def unmanaged(item: DesiredItem, directory: str) -> Change:
     """A declared plugin that is there and is not a checkout of what declares it.
 
     `BY_HAND`, because the repair is a deletion. `clone.install` runs `git clone`
@@ -333,7 +333,7 @@ def _unmanaged(item: DesiredItem, directory: str) -> Change:
     )
 
 
-def _change(item: DesiredItem, verdict: Verdict, detail: str, met: Preconditions) -> Change:
+def change(item: DesiredItem, verdict: Verdict, detail: str, met: Preconditions) -> Change:
     """A finding about a planned item, so `repair_for` decides who can fix it.
 
     `Repair.AUTOMATIC` is the right answer for every plugin declared today, and
@@ -351,7 +351,7 @@ def _change(item: DesiredItem, verdict: Verdict, detail: str, met: Preconditions
     return Change(NAME, item.stage, item.address, verdict, repair=repair, detail=detail, advice=advice_for(item, repair), desired=item)
 
 
-def _units(plan: Plan) -> tuple[tuple[DesiredItem, Provider], ...]:
+def units(plan: Plan) -> tuple[tuple[DesiredItem, Provider], ...]:
     """Every planned item with the provider that planned it, in plan order.
 
     Paired here rather than sorted into two lists by name, because which kind an

@@ -101,7 +101,7 @@ def declaration_row(findings: Sequence[validate.Finding], broken: Sequence[valid
     Two arguments rather than one measurement, because the two callers draw the
     fatal line in different places. `check` reports every error; an `apply`
     narrowed to one resource reports the errors that concern what it was asked to
-    converge and lets the rest through, which is `_gating`'s split.
+    converge and lets the rest through, which is `gating`'s split.
 
     Composed here for both, so the write verb cannot word a finding differently
     from the read one. The gate that stops an `apply` *is* the `machines` verdict,
@@ -176,7 +176,7 @@ def from_changes(
         lens=lens,
         findings=tuple(kept),
         others=tuple(others),
-        examined=_unreported(examined, changes),
+        examined=unreported(examined, changes),
         pending=len(pending),
         attention=len(attention),
         unmeasured=len(unmeasured),
@@ -198,7 +198,7 @@ def from_changes(
     return row(verdict=ResourceVerdict.ISSUE, detail=f'{counted_phrase(len(kept), Phrase.NEED_ATTENTION)}{lead(kept)}')
 
 
-def _unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
+def unreported(examined: Sequence[Examined], changes: Sequence[Change]) -> tuple[Examined, ...]:
     """The listed items that no finding already covers.
 
     **Keyed on `item`, so a resource's `inventory` must address a thing the way its
@@ -356,7 +356,7 @@ def confirm_reachable(session: Session, selection: engine.Selection) -> None:
         return
     plan = session.plan
     if undeclared := session.entries - {item.name for item in plan.items}:
-        raise Unreachable(_undeclared(undeclared, session.plan_before_entry_narrowing, selection))
+        raise Unreachable(undeclared_finding(undeclared, session.plan_before_entry_narrowing, selection))
     if unreached := session.entries - {item.name for item in plan.items if selection.covers(item)}:
         carries = sorted({addressed(item.resource, item.provider) for item in plan.items if item.name in unreached})
         raise Unreachable(
@@ -365,7 +365,7 @@ def confirm_reachable(session: Session, selection: engine.Selection) -> None:
         )
 
 
-def _undeclared(names: frozenset[str], candidates: Plan, selection: engine.Selection) -> str:
+def undeclared_finding(names: frozenset[str], candidates: Plan, selection: engine.Selection) -> str:
     """The finding, a close match where one exists, then every name the run reaches.
 
     Listed rather than pointed at `packages list`, which prints the declaration.
@@ -513,7 +513,7 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     Each verb carries the other's half — drift is `check`'s, attention is `plan`'s
     — because a verdict omitting it reads as a machine with nothing else to say.
     """
-    blind = _clause([result.address for result in results if _refused(result)], Phrase.COULD_NOT_BE_MEASURED, 'resource')
+    blind = clause([result.address for result in results if refused(result)], Phrase.COULD_NOT_BE_MEASURED, 'resource')
     # Read off the changes rather than off the counts beside them, and asked with
     # the same properties `sift` classifies by. A verb's own half is `findings` and
     # the other verb's is `others`, so the two are gathered from opposite fields
@@ -523,10 +523,10 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
 
     if lens is Lens.PLAN:
         if own:
-            return _sentence(_clause(own, Phrase.TO_CHANGE), blind)
-        attention = _clause([change.item for change in others if change.declined], Phrase.NEED_ATTENTION)
+            return sentence(clause(own, Phrase.TO_CHANGE), blind)
+        attention = clause([change.item for change in others if change.declined], Phrase.NEED_ATTENTION)
         head = Phrase.NOTHING_FOR_APPLY_TO_CHANGE if attention or blind else Phrase.NOTHING_TO_CHANGE
-        return _sentence(head, attention, blind)
+        return sentence(head, attention, blind)
 
     # A declaration finding has no Change to carry it and is the same kind of thing
     # as one: `machines` is the resource nobody but a person can put right.
@@ -536,11 +536,11 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     # rather than a filler. The verdict word beside it is green, because drift is
     # not this verb's subject and does not move it — so a line that opened on the
     # drift alone would read as a contradiction of the word to its left.
-    answered = _sentence(_clause(troubled, Phrase.NEED_ATTENTION), blind) or Phrase.NOTHING_WRONG
-    return _sentence(answered, _clause(drift, Phrase.DIFFER_FROM_DECLARED))
+    answered = sentence(clause(troubled, Phrase.NEED_ATTENTION), blind) or Phrase.NOTHING_WRONG
+    return sentence(answered, clause(drift, Phrase.DIFFER_FROM_DECLARED))
 
 
-def _refused(result: ResourceResult) -> bool:
+def refused(result: ResourceResult) -> bool:
     """Whether this resource produced no evidence at all and still failed.
 
     A checker that could not run, which `fold` turns into an Issue carrying its
@@ -551,10 +551,10 @@ def _refused(result: ResourceResult) -> bool:
     return result.verdict is ResourceVerdict.ISSUE and not result.findings and not result.invalid
 
 
-def _clause(subjects: Sequence[str], phrase: Phrase, noun: str = 'item') -> str:
+def clause(subjects: Sequence[str], phrase: Phrase, noun: str = 'item') -> str:
     """How many, what about them, and which ones — or nothing at all.
 
-    Empty for an empty set, so `_sentence` decides the punctuation rather than
+    Empty for an empty set, so `sentence` decides the punctuation rather than
     every caller deciding whether its clause needs a leading separator.
 
     The count and the wording come from `output.counted_phrase`, which is the same shape
@@ -564,7 +564,7 @@ def _clause(subjects: Sequence[str], phrase: Phrase, noun: str = 'item') -> str:
     return f'{counted_phrase(len(subjects), phrase, noun)}: {named(subjects)}' if subjects else ''
 
 
-def _sentence(*clauses: str) -> str:
+def sentence(*clauses: str) -> str:
     return '; '.join(clause for clause in clauses if clause)
 
 
@@ -625,7 +625,7 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _stage_bundle(machine: str, box: str) -> ExitCode | None:
+def stage_bundle(machine: str, box: str) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
 
     **Both identities are passed in, never resolved from the ambient environment.**
@@ -658,7 +658,7 @@ def _stage_bundle(machine: str, box: str) -> ExitCode | None:
     # one nothing is staged on top of a stack that already works.
     archive = offline_bundle.newest(machine=machine) if machine or not already else None
     if archive is None and not already:
-        archive = _fetched_bundle(machine)
+        archive = fetched_bundle(machine)
 
     if archive is None and not already:
         # Two different findings, and the second is the one a person cannot
@@ -710,7 +710,7 @@ def _stage_bundle(machine: str, box: str) -> ExitCode | None:
     return None
 
 
-def _fetched_bundle(machine: str) -> Path | None:
+def fetched_bundle(machine: str) -> Path | None:
     """The newest bundle the remote holds, where this machine asked to be sent one.
 
     Off unless `remote.fetch_bundle_when_none_is_staged` says otherwise, and the
@@ -774,10 +774,10 @@ def report_bundle(staged: offline_bundle.Staging, machine: str) -> None:
         render_note(breakdown)
     else:
         render_note(f'{bundle.MANIFEST} lists no files, so every tool will report its own miss')
-    _report_newer_archive(staged, machine)
+    report_newer_archive(staged, machine)
 
 
-def _report_newer_archive(staged: offline_bundle.Staging, machine: str) -> None:
+def report_newer_archive(staged: offline_bundle.Staging, machine: str) -> None:
     """Say when an archive on disk is newer than anything staged, and name it.
 
     A read verb stages nothing, so a bundle downloaded a minute ago answers every
@@ -809,7 +809,7 @@ def unstaged_newer(staged: offline_bundle.Staging, machine: str) -> Path | None:
     return archive
 
 
-def _gating(broken: tuple[validate.Finding, ...], selection: engine.Selection) -> tuple[validate.Finding, ...]:
+def gating(broken: tuple[validate.Finding, ...], selection: engine.Selection) -> tuple[validate.Finding, ...]:
     """Which declaration errors stop this run.
 
     A finding names either a `packages.yml` section or a resource. The
@@ -872,7 +872,7 @@ def apply_machine(
     checkout.report_stray_branch()
 
     found = validate.declaration()
-    if broken := _gating(validate.errors(found), selection):
+    if broken := gating(validate.errors(found), selection):
         # The row decides all three: `declaration_row` already carries the verdict,
         # `exit_code` is the one mapping from a verdict to a status, and spelling
         # either out again here is a second opinion that can disagree with it.
@@ -922,7 +922,7 @@ def apply_machine(
 
     if offline:
         box = publishing.discriminator(session.machine.coordinates.network_trust)
-        if unstaged := _stage_bundle(session.machine_name, box):
+        if unstaged := stage_bundle(session.machine_name, box):
             return unstaged
 
     # Streamed rather than collected, for the reason `survey` is: an `apply`
@@ -947,11 +947,11 @@ def apply_machine(
     for unexamined in fold([event for event in planned if isinstance(event.payload, Refusal)], Lens.CHECK):
         render_result(unexamined, err_console)
 
-    planned, performed = _perform(session, selection, planned)
+    planned, performed = perform(session, selection, planned)
 
     changes = [event.payload for event in planned if isinstance(event.payload, Change)]
     _, deferred, unmeasured = sift(changes)
-    _report_untouched(deferred, unmeasured)
+    report_untouched(deferred, unmeasured)
 
     # After the walk rather than inside it: the three jobs are consequences of a
     # deployment rather than measured drift, and nothing between the symlink stage
@@ -984,14 +984,14 @@ def apply_machine(
     if as_json and recorded:
         emit_json(dc.asdict(runs.read(recorded)))
 
-    unsuccessful = _unsuccessful(planned) + _unsuccessful(performed)
+    unsuccessful = unsuccessful_items(planned) + unsuccessful_items(performed)
     changed = len([event for event in performed if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE])
     render_verdict(
         str(ResourceVerdict.ISSUE if unsuccessful else ResourceVerdict.CONVERGED),
         applied_line(changed, unsuccessful, deferred, unmeasured, matched_under_entries(planned, entries)),
         err_console,
     )
-    _name_the_shared_fix(unmeasured)
+    name_the_shared_fix(unmeasured)
     if unsuccessful and recorded:
         # The path, not the command that would print it. What a person does with a
         # failed offline install is send the record to the fleet, and naming
@@ -1044,14 +1044,14 @@ def applied_line(
     already prints for the same entry at the same instant.
     """
     repaired = counted_phrase(changed, Phrase.CHANGED) if changed else ''
-    failed = _clause(unsuccessful, Phrase.DID_NOT_CONVERGE)
-    idle = _sentence(Phrase.NOTHING_TO_CHANGE, _clause(matched, Phrase.MATCHED))
-    head = _sentence(repaired, failed) or idle
+    failed = clause(unsuccessful, Phrase.DID_NOT_CONVERGE)
+    idle = sentence(Phrase.NOTHING_TO_CHANGE, clause(matched, Phrase.MATCHED))
+    head = sentence(repaired, failed) or idle
     attention = counted_phrase(len(deferred), Phrase.NEED_ATTENTION) if deferred else ''
-    return _sentence(head, attention, _clause([change.item for change in unmeasured], Phrase.COULD_NOT_BE_MEASURED))
+    return sentence(head, attention, clause([change.item for change in unmeasured], Phrase.COULD_NOT_BE_MEASURED))
 
 
-def _name_the_shared_fix(changes: Sequence[Change]) -> None:
+def name_the_shared_fix(changes: Sequence[Change]) -> None:
     """The one command, where every item agrees on it.
 
     Which offline is the case for: a bundle carrying nothing to compare against is
@@ -1064,7 +1064,7 @@ def _name_the_shared_fix(changes: Sequence[Change]) -> None:
         hint(next(iter(fixes)))
 
 
-def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) -> None:
+def report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) -> None:
     """The two sets `apply` walked past, each as a section saying which it is.
 
     Reported, never counted into the exit status: `apply` answers whether the work
@@ -1089,7 +1089,7 @@ def _report_untouched(deferred: Sequence[Change], unmeasured: Sequence[Change]) 
             render_change(change, min(width, SUBJECT_CEILING))
 
 
-def _perform(session: Session, selection: engine.Selection, planned: Sequence[Event]) -> tuple[list[Event], list[Event]]:
+def perform(session: Session, selection: engine.Selection, planned: Sequence[Event]) -> tuple[list[Event], list[Event]]:
     """Act stage by stage, announcing each group of work before it happens.
 
     Returns what the run decided and what it did. The first is `planned` with
@@ -1129,14 +1129,14 @@ def _perform(session: Session, selection: engine.Selection, planned: Sequence[Ev
             found = engine.remeasure(remeasuring, selection, stage, decided)
             for unexamined in fold([event for event in found if isinstance(event.payload, Refusal)], Lens.CHECK):
                 render_result(unexamined, err_console)
-        earlier = _without(decided, found)
+        earlier = without(decided, found)
         decided = [*earlier, *found]
 
-        for group in engine.batches(_joined(_at(earlier, stage), _at(found, stage))):
+        for group in engine.batches(joined(at(earlier, stage), at(found, stage))):
             changes = [event.payload for event in group if isinstance(event.payload, Change)]
-            render_section(_address(group[0]), converging_line(changes), mark=PROGRESS_MARK, color='blue')
+            render_section(address(group[0]), converging_line(changes), mark=PROGRESS_MARK, color='blue')
             for event in engine.execute(session, group, privilege):
-                _render(event)
+                render(event)
                 performed.append(event)
                 if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE:
                     changed = True
@@ -1144,17 +1144,17 @@ def _perform(session: Session, selection: engine.Selection, planned: Sequence[Ev
     return decided, performed
 
 
-def _without(decided: Sequence[Event], found: Sequence[Event]) -> list[Event]:
+def without(decided: Sequence[Event], found: Sequence[Event]) -> list[Event]:
     """`decided`, less every row a re-measurement found again, which it supersedes."""
     again = {(event.resource, event.payload.item) for event in found if isinstance(event.payload, Change)}
     return [event for event in decided if not (isinstance(event.payload, Change) and (event.resource, event.payload.item) in again)]
 
 
-def _at(events: Sequence[Event], stage: Stage) -> list[Event]:
+def at(events: Sequence[Event], stage: Stage) -> list[Event]:
     return [event for event in events if isinstance(event.payload, Change) and event.payload.stage is stage]
 
 
-def _joined(first: Sequence[Event], found: Sequence[Event]) -> list[Event]:
+def joined(first: Sequence[Event], found: Sequence[Event]) -> list[Event]:
     """One stage's rows, with each re-measured row placed after its own provider's.
 
     `engine.batches` groups consecutive rows of one provider, so a row appended at
@@ -1165,7 +1165,7 @@ def _joined(first: Sequence[Event], found: Sequence[Event]) -> list[Event]:
     """
     joined = list(first)
     for event in found:
-        same = [index for index, existing in enumerate(joined) if _address(existing) == _address(event)]
+        same = [index for index, existing in enumerate(joined) if address(existing) == address(event)]
         joined.insert(same[-1] + 1 if same else len(joined), event)
     return joined
 
@@ -1182,14 +1182,14 @@ def converging_line(changes: Sequence[Change]) -> str:
     return f'{counted_phrase(len(changes), Phrase.TO_CONVERGE)}{tally((len(privileged(changes)), Phrase.NEED_A_PASSWORD))}'
 
 
-def _address(event: Event) -> str:
+def address(event: Event) -> str:
     """`packages/ghrelease`, or the bare resource for a change nothing declares."""
     change = event.payload.change if isinstance(event.payload, Outcome) else event.payload
     desired = change.desired if isinstance(change, Change) else None
     return addressed(event.resource, desired.provider if desired else None)
 
 
-def _render(event: Event) -> None:
+def render(event: Event) -> None:
     """Three marks for three outcomes.
 
     A refusal is `ok` — it wrote nothing and must not read as a failure — but it
@@ -1236,7 +1236,7 @@ and an offline machine skipping a source the bundle was never built to stage mus
 not read as a broken install."""
 
 
-def _unsuccessful(events: Iterable[Event]) -> list[str]:
+def unsuccessful_items(events: Iterable[Event]) -> list[str]:
     """Every item this run tried and could not do, plus anything it could not measure.
 
     A resource that refused to be examined counts: it was in the selection, so

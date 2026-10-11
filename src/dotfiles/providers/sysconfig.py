@@ -148,13 +148,13 @@ class AsThisUser:
 
 def observe(entry: catalog.SystemConfig) -> State:
     if isinstance(entry, catalog.GroupMembership):
-        return _observe_group(entry)
+        return observe_group(entry)
     if isinstance(entry, catalog.SystemdUnit):
-        return _observe_unit(entry)
+        return observe_unit(entry)
     if isinstance(entry, catalog.ManagedFile):
-        return _observe_file(entry)
+        return observe_file(entry)
     assert isinstance(entry, catalog.LoginShell)
-    return _observe_login_shell(entry)
+    return observe_login_shell(entry)
 
 
 def apply(entry: catalog.SystemConfig, privilege: Escalates) -> Result:
@@ -168,13 +168,13 @@ def apply(entry: catalog.SystemConfig, privilege: Escalates) -> Result:
     escalation: Escalation = AsRoot(privilege) if entry.needs_root else AsThisUser()
     try:
         if isinstance(entry, catalog.GroupMembership):
-            return _apply_group(entry, escalation)
+            return apply_group(entry, escalation)
         if isinstance(entry, catalog.SystemdUnit):
-            return _apply_unit(entry, escalation)
+            return apply_unit(entry, escalation)
         if isinstance(entry, catalog.ManagedFile):
-            return _apply_file(entry, escalation)
+            return apply_file(entry, escalation)
         assert isinstance(entry, catalog.LoginShell)
-        return _apply_login_shell(entry, escalation)
+        return apply_login_shell(entry, escalation)
     except PrivilegeUnavailable:
         return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
 
@@ -184,7 +184,7 @@ def apply(entry: catalog.SystemConfig, privilege: Escalates) -> Result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _observe_group(entry: catalog.GroupMembership) -> State:
+def observe_group(entry: catalog.GroupMembership) -> State:
     """The group database, not `id -nG`.
 
     `id` reports the groups of the *running session*, which do not change until
@@ -204,7 +204,7 @@ def _observe_group(entry: catalog.GroupMembership) -> State:
     return State(Verdict.STALE, f'{user} is not in {entry.name}')
 
 
-def _apply_group(entry: catalog.GroupMembership, escalation: Escalation) -> Result:
+def apply_group(entry: catalog.GroupMembership, escalation: Escalation) -> Result:
     user = current_user()
     try:
         grp.getgrnam(entry.name)
@@ -226,12 +226,12 @@ def _apply_group(entry: catalog.GroupMembership, escalation: Escalation) -> Resu
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _systemctl(entry: catalog.SystemdUnit) -> list[str]:
+def systemctl(entry: catalog.SystemdUnit) -> list[str]:
     """The manager that owns this row. Each is blind to the other's units."""
     return ['systemctl', '--user'] if entry.scope == 'user' else ['systemctl']
 
 
-def _manager_answered(reading: Completed) -> bool:
+def manager_answered(reading: Completed) -> bool:
     """Whether the reply came from a manager rather than from a failure to reach one.
 
     `systemctl --user` talks over the session bus, and with no bus it exits 1 with
@@ -248,12 +248,12 @@ def _manager_answered(reading: Completed) -> bool:
     return bool(reading.stdout.strip())
 
 
-def _observe_unit(entry: catalog.SystemdUnit) -> State:
+def observe_unit(entry: catalog.SystemdUnit) -> State:
     if shutil.which('systemctl') is None:
         return State(Verdict.UNKNOWN, 'no systemctl on this machine', repair=Repair.NONE)
 
-    reading = run([*_systemctl(entry), 'is-enabled', entry.name], output=Output.QUIET)
-    if entry.scope == 'user' and not _manager_answered(reading):
+    reading = run([*systemctl(entry), 'is-enabled', entry.name], output=Output.QUIET)
+    if entry.scope == 'user' and not manager_answered(reading):
         return State(Verdict.UNKNOWN, f"no user manager answered, so {entry.name}'s enablement is unmeasurable", repair=Repair.NONE)
 
     if reading.ok is not entry.enabled:
@@ -265,19 +265,19 @@ def _observe_unit(entry: catalog.SystemdUnit) -> State:
     # systemd rather than diffing the file: it already tracks whether what is on
     # disk is newer than what is loaded, and a deployed symlink's content always
     # matches the repo by construction, so a diff would answer the wrong question.
-    if _needs_reload(entry):
+    if needs_reload(entry):
         return State(Verdict.STALE, f'{entry.name} on disk is newer than the manager has loaded')
 
     if not (entry.enabled and entry.active):
         return State(Verdict.MATCHED)
     if not SYSTEMD_RUNTIME.is_dir():
         return State(Verdict.MATCHED, f'{entry.name} is enabled; whether it is running is unmeasurable without a running systemd')
-    if run([*_systemctl(entry), 'is-active', entry.name], output=Output.QUIET).ok:
+    if run([*systemctl(entry), 'is-active', entry.name], output=Output.QUIET).ok:
         return State(Verdict.MATCHED)
     return State(Verdict.STALE, f'{entry.name} is enabled but not running')
 
 
-def _needs_reload(entry: catalog.SystemdUnit) -> bool:
+def needs_reload(entry: catalog.SystemdUnit) -> bool:
     """Whether the manager is still running an older copy of this unit's file.
 
     Only asked of user scope, because that is the only scope whose unit *file*
@@ -287,7 +287,7 @@ def _needs_reload(entry: catalog.SystemdUnit) -> bool:
     """
     if entry.scope != 'user' or not entry.enabled:
         return False
-    reading = run([*_systemctl(entry), 'show', '-p', 'NeedDaemonReload', '--value', entry.name], output=Output.QUIET)
+    reading = run([*systemctl(entry), 'show', '-p', 'NeedDaemonReload', '--value', entry.name], output=Output.QUIET)
     return reading.stdout.strip() == 'yes'
 
 
@@ -296,7 +296,7 @@ UNRELOADED = ', though the manager did not reload, so it is enabled for the next
 
 `enable` writes a symlink and `daemon-reload` needs a session bus, so an account
 can have the second unavailable and the first working — which is not the same
-machine `_manager_answered` describes. There, `is-enabled` could not answer at all;
+machine `manager_answered` describes. There, `is-enabled` could not answer at all;
 here it answers off the disk while the bus is missing.
 
 Measured 2026-08-22 in the Arch e2e container: `systemctl --user is-enabled`
@@ -310,7 +310,7 @@ defaulting: a fallback taken silently is one nobody can diagnose. A
 unit file systemd will not parse and a polkit refusal both fail this call, and
 without the transcript they read identically to the missing bus this exists for.
 
-Not decided by a directory check. `_manager_answered` records the 2026-08-16
+Not decided by a directory check. `manager_answered` records the 2026-08-16
 measurement that one cannot: `/run/user/<uid>/systemd` exists on a box where
 `systemctl --user` still fails, because reachability belongs to the calling
 process's environment rather than to a path. Attempting the call is what answers.
@@ -321,7 +321,7 @@ apart, and a change to this policy is a change to both.
 """
 
 
-def _unit_applied(done: str, unreloaded: str) -> Result:
+def unit_applied(done: str, unreloaded: str) -> Result:
     """One place the caveat is rendered and the condition becomes a value.
 
     Both success returns below go through here, so a third added later cannot
@@ -333,13 +333,13 @@ def _unit_applied(done: str, unreloaded: str) -> Result:
     return Result(True, f'{done}{unreloaded}', kind=Kind.PARTIALLY_APPLIED if unreloaded else Kind.APPLIED)
 
 
-def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
+def apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
     # Through the escalation like every other write here, rather than reading
     # first and deciding: a read issued before the privilege gate runs on a
     # machine that has already refused the repair.
     unreloaded = ''
     if entry.scope == 'user':
-        reloaded = escalation.run([*_systemctl(entry), 'daemon-reload'], reason=f'reload the manager before enabling {entry.name}')
+        reloaded = escalation.run([*systemctl(entry), 'daemon-reload'], reason=f'reload the manager before enabling {entry.name}')
         if not reloaded.ok:
             # A manager that answers `NeedDaemonReload` is a manager that is
             # reachable and holding an older copy of this file, which is the case
@@ -348,16 +348,16 @@ def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
             # one. Answering nothing means there is no loaded copy to be stale, and
             # refusing there wrote nothing at all.
             #
-            # This also keeps `apply` and `observe` agreeing. `_observe_unit` turns
+            # This also keeps `apply` and `observe` agreeing. `observe_unit` turns
             # the same `yes` into STALE, so a tolerated failure here would report
             # `ok=True` about a row the next `check` calls drift — on a machine
             # whose bus is not coming back, that is every run, forever.
-            if _needs_reload(entry):
+            if needs_reload(entry):
                 return Result(False, f'systemctl daemon-reload failed: {reloaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
             unreloaded = UNRELOADED.format(cause=reloaded.transcript.strip())
 
     verb = 'enable' if entry.enabled else 'disable'
-    changed = escalation.run([*_systemctl(entry), verb, entry.name], reason=f'{verb} {entry.name}')
+    changed = escalation.run([*systemctl(entry), verb, entry.name], reason=f'{verb} {entry.name}')
     if not changed.ok:
         return Result(False, f'systemctl {verb} {entry.name} failed: {changed.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
@@ -370,15 +370,15 @@ def _apply_unit(entry: catalog.SystemdUnit, escalation: Escalation) -> Result:
     # that is the shape that ships. The reload is the reachability probe; a start
     # after it failed cannot work.
     if unreloaded or not (entry.enabled and entry.active and SYSTEMD_RUNTIME.is_dir()):
-        return _unit_applied(f'{entry.name} {verb}d', unreloaded)
+        return unit_applied(f'{entry.name} {verb}d', unreloaded)
 
     # `restart` rather than `start`: a reload replaces the definition without
     # touching the running process, so a unit that was already up would keep the
     # old one and `start` on a running unit does nothing.
-    started = escalation.run([*_systemctl(entry), 'restart', entry.name], reason=f'restart {entry.name}')
+    started = escalation.run([*systemctl(entry), 'restart', entry.name], reason=f'restart {entry.name}')
     if not started.ok:
         return Result(False, f'systemctl restart {entry.name} failed: {started.transcript.strip()}', kind=Kind.COMMAND_FAILED)
-    return _unit_applied(f'{entry.name} enabled and started', unreloaded)
+    return unit_applied(f'{entry.name} enabled and started', unreloaded)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -405,7 +405,7 @@ def rendered(entry: catalog.ManagedFile) -> str:
     return entry.content.replace('{user}', current_user())
 
 
-def _observe_file(entry: catalog.ManagedFile) -> State:
+def observe_file(entry: catalog.ManagedFile) -> State:
     path = target_path(entry)
     if not path.is_file():
         return State(Verdict.MISSING, f'{path} does not exist')
@@ -425,17 +425,17 @@ def _observe_file(entry: catalog.ManagedFile) -> State:
     return State(Verdict.STALE, f'{path} differs from what this repo declares')
 
 
-def _apply_file(entry: catalog.ManagedFile, escalation: Escalation) -> Result:
+def apply_file(entry: catalog.ManagedFile, escalation: Escalation) -> Result:
     """The declared content at the declared path, however this row is written.
 
     Which of the two ways is the escalation's, not this function's: a root-owned
     file is staged and installed, and one this account owns is simply written.
     """
     path = target_path(entry)
-    return escalation.write(path, _wanted_content(entry, path), entry.mode)
+    return escalation.write(path, wanted_content(entry, path), entry.mode)
 
 
-def _wanted_content(entry: catalog.ManagedFile, path: Path) -> str:
+def wanted_content(entry: catalog.ManagedFile, path: Path) -> str:
     if not entry.append_line:
         return rendered(entry)
     existing = path.read_text() if path.is_file() else ''
@@ -449,7 +449,7 @@ def _wanted_content(entry: catalog.ManagedFile, path: Path) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _observe_login_shell(entry: catalog.LoginShell) -> State:
+def observe_login_shell(entry: catalog.LoginShell) -> State:
     """Which shell the passwd entry names, and nothing about whether it exists yet.
 
     Deliberately not asked here. zsh is a system package at `SYSTEM` and this row
@@ -465,7 +465,7 @@ def _observe_login_shell(entry: catalog.LoginShell) -> State:
     return State(Verdict.STALE, f'login shell is {current or "unset"}')
 
 
-def _apply_login_shell(entry: catalog.LoginShell, escalation: Escalation) -> Result:
+def apply_login_shell(entry: catalog.LoginShell, escalation: Escalation) -> Result:
     shell = shutil.which(entry.name)
     if shell is None:
         return Result(

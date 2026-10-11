@@ -54,9 +54,9 @@ from nothing else."""
 
 ENTRIES = tuple(sorted(providers.ASSETS))
 
-_ROWS = catalog.load().section('github_releases')
+ROWS = catalog.load().section('github_releases')
 
-DECLARED = {entry.name: entry for entry in _ROWS if isinstance(entry, catalog.GithubRelease)}
+DECLARED = {entry.name: entry for entry in ROWS if isinstance(entry, catalog.GithubRelease)}
 """Name → the declared release row, narrowed to the class the section builds.
 
 `section` answers `Entry`, so without the narrowing every read of `repo` here is
@@ -65,7 +65,7 @@ being a silent filter: a row the loader built as something else drops out of the
 dict and every case parametrized from it would simply not run.
 """
 
-assert len(DECLARED) == len(_ROWS), 'every github_releases row loads as a GithubRelease'
+assert len(DECLARED) == len(ROWS), 'every github_releases row loads as a GithubRelease'
 
 CORPUS = tuple(product(ENTRIES, TARGETS))
 
@@ -189,7 +189,7 @@ def test_an_asset_name_is_one_segment_of_a_download_url(entry: str, target: Targ
 
 @pytest.mark.parametrize(('entry', 'target'), CORPUS, ids=case_id)
 def test_the_archive_kind_agrees_with_the_extension_it_names(entry: str, target: Target) -> None:
-    """`_place` dispatches on the kind and never looks at the name.
+    """`place` dispatches on the kind and never looks at the name.
 
     Two of the four decide what runs: a `.zip` declared `GZIP` is handed to gunzip
     and a tarball declared `RAW` is installed as the binary. The other two are
@@ -223,7 +223,7 @@ def test_everything_taken_out_of_an_archive_is_addressed_from_inside_it(entry: s
     """One archive is unpacked once, and every member is named relative to that.
 
     A unit or an extra that walks out of the binary's own directory is a member
-    the archive does not hold, which `_place` reports as `ARCHIVE_INCOMPLETE` for
+    the archive does not hold, which `place` reports as `ARCHIVE_INCOMPLETE` for
     the unit and passes over in silence for the extra.
     """
     asset = artifact(entry, target)

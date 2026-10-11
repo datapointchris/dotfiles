@@ -55,13 +55,13 @@ path = ~/.config/git/common.gitconfig
 """
 
 
-def _identity_in(path: Path) -> str:
+def identity_in(path: Path) -> str:
     """What git reads out of one file, rather than this guessing at config syntax."""
     result = run(['git', 'config', '--file', str(path), '--get', 'user.email'], output=Output.QUIET)
     return result.stdout.strip() if result.ok else ''
 
 
-def _ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
+def ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
     """Give `git config --global` somewhere to write that is not this repo.
 
     git writes to `~/.config/git/config` only while `~/.gitconfig` is absent, and
@@ -80,10 +80,10 @@ def _ensure_git_config_entry(coordinates: axes.Coordinates) -> None:
         GIT_CONFIG_ENTRY.parent.mkdir(parents=True, exist_ok=True)
         GIT_CONFIG_ENTRY.write_text(GIT_CONFIG_STUB)
         hint(f'created {GIT_CONFIG_ENTRY}')
-    _retire_home_gitconfig(coordinates)
+    retire_home_gitconfig(coordinates)
 
 
-def _retire_home_gitconfig(coordinates: axes.Coordinates) -> Path | None:
+def retire_home_gitconfig(coordinates: axes.Coordinates) -> Path | None:
     """Remove any `~/.gitconfig`, and answer where an identity in it should go.
 
     git prefers it over `~/.config/git/config` for reads and writes both, so one
@@ -109,7 +109,7 @@ def _retire_home_gitconfig(coordinates: axes.Coordinates) -> Path | None:
         if HOME_GITCONFIG.is_symlink():
             HOME_GITCONFIG.unlink()
         return None
-    if identity := _identity_in(HOME_GITCONFIG):
+    if identity := identity_in(HOME_GITCONFIG):
         err_console.print(f'  [red]✗[/] ~/.gitconfig holds {identity} and out-ranks ~/.config/git/config')
         rescue = None if coordinates.network_trust is axes.NetworkTrust.FLEET else LOCAL_IDENTITY
         already = f'this machine already has that identity from {PERSONAL_IDENTITY.name}, so'
@@ -131,8 +131,8 @@ def epilogue(session: Session) -> None:
     the walk — carrying it would mean a second observe/diff/perform loop beside the
     resource's.
     """
-    _ensure_git_config_entry(session.machine.coordinates)
-    _reload_compositor(session.machine.coordinates)
+    ensure_git_config_entry(session.machine.coordinates)
+    reload_compositor(session.machine.coordinates)
 
 
 def unlink(session: Session) -> bool:
@@ -204,7 +204,7 @@ def show(session: Session) -> None:
     err_console.print(f'\n{len(observed.links)} declared, {undeployed} not deployed as declared')
 
 
-def _reload_compositor(coordinates: axes.Coordinates) -> None:
+def reload_compositor(coordinates: axes.Coordinates) -> None:
     """Hyprland reads the config files the pass above just deployed, so the reload
     belongs with the deployment rather than at the end of a run.
 

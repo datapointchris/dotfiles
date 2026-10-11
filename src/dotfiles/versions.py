@@ -55,7 +55,7 @@ def at_least(current: str, floor: str) -> bool | None:
     have, want = parse(current), parse(floor)
     if have is None or want is None:
         return None
-    return _padded(have, want) >= _padded(want, have)
+    return padded(have, want) >= padded(want, have)
 
 
 def exceeds(current: str, ceiling: str) -> bool:
@@ -69,7 +69,7 @@ def exceeds(current: str, ceiling: str) -> bool:
     have, want = parse(current), parse(ceiling)
     if have is None or want is None:
         return False
-    return _padded(have, want) > _padded(want, have)
+    return padded(have, want) > padded(want, have)
 
 
 def exactly(current: str, pinned: str) -> bool | None:
@@ -81,10 +81,10 @@ def exactly(current: str, pinned: str) -> bool | None:
     have, want = parse(current), parse(pinned)
     if have is None or want is None:
         return None
-    return _padded(have, want) == _padded(want, have)
+    return padded(have, want) == padded(want, have)
 
 
-def _padded(value: tuple[int, ...], against: tuple[int, ...]) -> tuple[int, ...]:
+def padded(value: tuple[int, ...], against: tuple[int, ...]) -> tuple[int, ...]:
     """Zero-fill to the longer length, so `1.23` and `1.23.0` compare equal.
 
     A declared floor is usually written to two components and the tool reports

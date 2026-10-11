@@ -256,7 +256,7 @@ def sha256_of(path: Path) -> str:
 def github_token() -> str | None:
     """Private repos need one for both the API and the download; public ones do not.
 
-    **Memoized because `_headers` asks on every request.** A refresh makes one
+    **Memoized because `headers` asks on every request.** A refresh makes one
     request per declared release, so this ran `gh auth token` once per repo — a
     subprocess at roughly 35ms, spawned dozens of times in a run, to answer a
     question whose answer cannot change while that run is going.
@@ -323,12 +323,12 @@ def request(url: str, accept: str | None = None) -> bytes:
     are *not* followed by default, and the default timeout is 5s — which a 200MB
     neovim tarball would meet as a failure.
     """
-    response = httpx2.get(url, headers=_headers(url, accept=accept), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+    response = httpx2.get(url, headers=headers(url, accept=accept), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.content
 
 
-def _headers(url: str, accept: str | None = None, etag: str = '') -> dict[str, str]:
+def headers(url: str, accept: str | None = None, etag: str = '') -> dict[str, str]:
     """What every request this module makes carries, built in one place.
 
     Shared so the credential rule `request` argues is decided once. A second
@@ -398,7 +398,7 @@ def revalidate(url: str, etag: str = '') -> Conditional:
     An empty `etag` sends no `If-None-Match`, so a cold entry is an ordinary fetch
     and pays an ordinary request.
     """
-    response = httpx2.get(url, headers=_headers(url, etag=etag), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+    response = httpx2.get(url, headers=headers(url, etag=etag), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == NOT_MODIFIED:
         return Conditional(payload=None, etag=etag)
     response.raise_for_status()
@@ -415,7 +415,7 @@ def carries(repo: str, ref: str, path: str) -> bool | None:
     """
     url = f'https://api.github.com/repos/{repo}/contents/{urllib.parse.quote(path)}?ref={urllib.parse.quote(ref, safe="")}'
     try:
-        response = httpx2.head(url, headers=_headers(url), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+        response = httpx2.head(url, headers=headers(url), follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
     except httpx2.HTTPError:
         return None
     if response.status_code == NOT_FOUND:
@@ -463,24 +463,24 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     `newest_version`, which keeps the two apart in its own `Newest`.
 
     **A 404 is None on the unprefixed endpoint and `Unreadable` on the other**,
-    for the reason `NOT_FOUND` states. `_version_url` routes a prefix to the
+    for the reason `NOT_FOUND` states. `version_url` routes a prefix to the
     listing endpoint, which answers `200 []` for a repo publishing nothing — so a
     404 there is a repo that cannot be read, and five declared entries take that
     path.
     """
     said = f'could not read the releases of {repo}, so its published versions are unknown'
     try:
-        payload = json.loads(request(_version_url(repo, tag_prefix)))
+        payload = json.loads(request(version_url(repo, tag_prefix)))
     except httpx2.HTTPStatusError as refused:
         if refused.response.status_code == NOT_FOUND and not tag_prefix:
             return None
         raise Unreadable.because(said, refused) from refused
     except (httpx2.HTTPError, json.JSONDecodeError) as unreachable:
         raise Unreadable.because(said, unreachable) from unreachable
-    return _version_from(payload, tag_prefix)
+    return version_from(payload, tag_prefix)
 
 
-def _version_url(repo: str, tag_prefix: str) -> str:
+def version_url(repo: str, tag_prefix: str) -> str:
     """Which endpoint holds this repo's newest version.
 
     Shared by the unconditional and the revalidating lookup, because choosing the
@@ -493,13 +493,13 @@ def _version_url(repo: str, tag_prefix: str) -> str:
     return f'https://api.github.com/repos/{repo}/releases/latest'
 
 
-def _version_from(payload: object, tag_prefix: str) -> str | None:
-    """The newest tag in a decoded payload, ranked by `_version_key` where a prefix narrows it.
+def version_from(payload: object, tag_prefix: str) -> str | None:
+    """The newest tag in a decoded payload, ranked by `version_key` where a prefix narrows it.
 
     **Pre-releases are excluded, which the unprefixed sibling gets for free.**
     `/releases/latest` never returns one; this reads `/releases`, which returns
     every one. Filtering `draft` and not `prerelease` let `cli/v0.26.1-rc1` outrank
-    `cli/v0.26.0`, because `_version_key` reads the suffix as a fourth component —
+    `cli/v0.26.0`, because `version_key` reads the suffix as a fourth component —
     so a machine would be told it was behind, and an install would put a release
     candidate on it. Pre-releases are excluded by default everywhere, and the two
     endpoints agreeing is the point.
@@ -512,7 +512,7 @@ def _version_from(payload: object, tag_prefix: str) -> str | None:
     candidates = [tag for release in published if (tag := release.get('tag_name') or '').startswith(tag_prefix)]
     if not candidates:
         return None
-    return max(candidates, key=lambda tag: _version_key(tag, tag_prefix))
+    return max(candidates, key=lambda tag: version_key(tag, tag_prefix))
 
 
 @dataclass(frozen=True, slots=True)
@@ -541,7 +541,7 @@ def newest_version(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
     and both of them revalidate: a monorepo's `releases?per_page=100` is the larger
     payload and therefore the one a 304 saves most.
     """
-    answer = _revalidated(_version_url(repo, tag_prefix), etag)
+    answer = revalidated(version_url(repo, tag_prefix), etag)
     if answer is None:
         return Newest()
     if answer.payload is None:
@@ -550,10 +550,10 @@ def newest_version(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
         payload = json.loads(answer.payload)
     except json.JSONDecodeError:
         return Newest()
-    return Newest(version=_version_from(payload, tag_prefix), etag=answer.etag)
+    return Newest(version=version_from(payload, tag_prefix), etag=answer.etag)
 
 
-def _revalidated(url: str, etag: str) -> Conditional | None:
+def revalidated(url: str, etag: str) -> Conditional | None:
     """`revalidate`, answering None where it could not be reached at all.
 
     The two are told apart by every caller here: a transport failure keeps what the
@@ -567,7 +567,7 @@ def _revalidated(url: str, etag: str) -> Conditional | None:
         return None
 
 
-def _version_key(tag: str, tag_prefix: str) -> tuple[int, ...]:
+def version_key(tag: str, tag_prefix: str) -> tuple[int, ...]:
     """Rank a tag by its numbers, so 0.10.0 outranks 0.9.1 where a string sort does not."""
     return tuple(int(number) for number in re.findall(r'\d+', tag.removeprefix(tag_prefix)))
 
@@ -597,17 +597,17 @@ def latest_tag(repo: str, tag_prefix: str = '') -> str | None:
     `versions.parse` states.
     """
     try:
-        payload = json.loads(request(_tag_url(repo)))
+        payload = json.loads(request(tag_url(repo)))
     except (httpx2.HTTPError, json.JSONDecodeError):
         return None
-    return _tag_from(payload, tag_prefix)
+    return tag_from(payload, tag_prefix)
 
 
-def _tag_url(repo: str) -> str:
+def tag_url(repo: str) -> str:
     return f'https://api.github.com/repos/{repo}/tags?per_page={TAG_PAGE}'
 
 
-def _tag_from(payload: object, tag_prefix: str) -> str | None:
+def tag_from(payload: object, tag_prefix: str) -> str | None:
     """The greatest tag by version in a decoded page, never the first in it."""
     if not isinstance(payload, list):
         return None
@@ -625,7 +625,7 @@ def _tag_from(payload: object, tag_prefix: str) -> str | None:
 
 def newest_tag(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
     """`latest_tag`, plus the `ETag` that makes asking again cheap."""
-    answer = _revalidated(_tag_url(repo), etag)
+    answer = revalidated(tag_url(repo), etag)
     if answer is None:
         return Newest()
     if answer.payload is None:
@@ -634,7 +634,7 @@ def newest_tag(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
         payload = json.loads(answer.payload)
     except json.JSONDecodeError:
         return Newest()
-    return Newest(version=_tag_from(payload, tag_prefix), etag=answer.etag)
+    return Newest(version=tag_from(payload, tag_prefix), etag=answer.etag)
 
 
 VERSION_FILE_BODY = re.compile(r'\d+\.\d+\.\d+\S*')
@@ -649,12 +649,12 @@ page that happens to contain a version is still not one.
 def newest_in_version_file(url: str, etag: str = '') -> Newest:
     """A vendor's own file whose body is its newest version, revalidated like a release.
 
-    Beside `newest_version` because it shares `revalidate`, whose `_headers` is
+    Beside `newest_version` because it shares `revalidate`, whose `headers` is
     what keeps a GitHub credential off another host. The bucket behind
     downloads.claude.ai answers `ETag` and 304 the way GitHub does, so a cached
     answer costs one revalidation.
     """
-    answer = _revalidated(url, etag)
+    answer = revalidated(url, etag)
     if answer is None:
         return Newest()
     if answer.payload is None:

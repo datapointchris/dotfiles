@@ -380,13 +380,13 @@ class TestGithubCredential:
     def test_the_environment_wins_over_gh(self, monkeypatch) -> None:
         """How a caller points a run at a different account without logging out."""
         monkeypatch.setenv('GITHUB_TOKEN', 'ghp_from_the_environment')
-        monkeypatch.setattr(harness.subprocess, 'run', _never_called)
+        monkeypatch.setattr(harness.subprocess, 'run', never_called)
 
         assert harness.github_token() == 'ghp_from_the_environment'
 
     def test_gh_answers_when_the_environment_does_not(self, monkeypatch) -> None:
         monkeypatch.delenv('GITHUB_TOKEN', raising=False)
-        monkeypatch.setattr(harness.subprocess, 'run', _answering('ghp_from_gh\n'))
+        monkeypatch.setattr(harness.subprocess, 'run', answering('ghp_from_gh\n'))
 
         assert harness.github_token() == 'ghp_from_gh'
 
@@ -394,7 +394,7 @@ class TestGithubCredential:
         """An anonymous run is worth having — it is the rate limit that is not worth
         mistaking for a broken installer, which the session header names instead."""
         monkeypatch.delenv('GITHUB_TOKEN', raising=False)
-        monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=1))
+        monkeypatch.setattr(harness.subprocess, 'run', answering('', returncode=1))
 
         assert harness.github_token() == ''
         assert harness.github_token_args() == []
@@ -458,11 +458,11 @@ class TestBaseImage:
             assert environment.name not in harness.base_tag(environment)
 
 
-def _never_called(*args: object, **kwargs: object) -> object:
+def never_called(*args: object, **kwargs: object) -> object:
     raise AssertionError('gh was asked for a token the environment already had')
 
 
-def _answering(stdout: str, returncode: int = 0):
+def answering(stdout: str, returncode: int = 0):
     return lambda *args, **kwargs: subprocess.CompletedProcess(args, returncode, stdout, '')
 
 
@@ -490,7 +490,7 @@ class TestGitCredential:
 
     def test_no_credential_configures_nothing(self, monkeypatch) -> None:
         monkeypatch.delenv('GITHUB_TOKEN', raising=False)
-        monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=1))
+        monkeypatch.setattr(harness.subprocess, 'run', answering('', returncode=1))
         ran: list[str] = []
         monkeypatch.setattr(harness.Machine, 'exec', lambda self, command, **kwargs: ran.append(command))
 
@@ -566,19 +566,19 @@ class TestContainerName:
         assert harness.container_name('wsl') == 'dotfiles-e2e-wsl-feature-wsl-scripts'
 
     def test_the_main_worktree_is_recognized_by_git_rather_than_by_path(self, monkeypatch) -> None:
-        monkeypatch.setattr(harness.subprocess, 'run', _answering('.git\n'))
+        monkeypatch.setattr(harness.subprocess, 'run', answering('.git\n'))
 
         assert harness.linked_worktree(Path('/anywhere')) is None
 
     def test_a_linked_worktree_is_named_by_its_git_dir(self, monkeypatch) -> None:
-        monkeypatch.setattr(harness.subprocess, 'run', _answering('/home/c/dotfiles/.git/worktrees/some-branch\n'))
+        monkeypatch.setattr(harness.subprocess, 'run', answering('/home/c/dotfiles/.git/worktrees/some-branch\n'))
 
         assert harness.linked_worktree(Path('/anywhere')) == 'some-branch'
 
     def test_no_git_at_all_is_the_main_checkout(self, monkeypatch) -> None:
         """An unpacked tarball is one checkout on the box, which is the case the
         bare name is for — not a reason to fail collection."""
-        monkeypatch.setattr(harness.subprocess, 'run', _answering('', returncode=128))
+        monkeypatch.setattr(harness.subprocess, 'run', answering('', returncode=128))
 
         assert harness.linked_worktree(Path('/anywhere')) is None
 

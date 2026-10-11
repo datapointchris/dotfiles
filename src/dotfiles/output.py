@@ -393,8 +393,8 @@ def render_result(result: ResourceResult, stream: Console) -> None:
     for position, line in enumerate(lines[1:], start=2):
         stream.print(f'  {"":<{ADDRESS_COLUMN}} {line}{trailer if position == len(lines) else ""}')
 
-    deferred, listed = _listed(result)
-    width = _width([change.item for change in result.findings] + [change.item for change in deferred] + [row.item for row in listed])
+    deferred, listed = section_listing(result)
+    width = subject_width([change.item for change in result.findings] + [change.item for change in deferred] + [row.item for row in listed])
     for section, message in result.invalid:
         render_finding(section, message)
     for change in [*result.findings, *deferred]:
@@ -433,7 +433,7 @@ def render_verdict(word: str, sentence: str, stream: Console) -> None:
     stream.print(f'[{VERDICT_COLORS[word]}]{word:<{VERDICT_WIDTH}}[/] {sentence}')
 
 
-def _listed(result: ResourceResult) -> tuple[tuple[Change, ...], tuple[Examined, ...]]:
+def section_listing(result: ResourceResult) -> tuple[tuple[Change, ...], tuple[Examined, ...]]:
     """What this section lists beyond its own findings, after the size threshold.
 
     The threshold is per group, not per resource: `system` measures a hundred
@@ -447,18 +447,18 @@ def _listed(result: ResourceResult) -> tuple[tuple[Change, ...], tuple[Examined,
     for row in result.examined:
         grouped.setdefault(row.group, []).append(row)
 
-    kept = list(chain.from_iterable(rows for rows in grouped.values() if _fits(len(rows))))
+    kept = list(chain.from_iterable(rows for rows in grouped.values() if fits(len(rows))))
     # The other verb's findings are changes, so they carry no group and are weighed
     # as one — which is right, since a resource never splits *what differs* into
     # kinds the way it splits what it merely holds.
-    return (result.others if _fits(len(result.others)) else ()), tuple(kept)
+    return (result.others if fits(len(result.others)) else ()), tuple(kept)
 
 
-def _fits(count: int) -> bool:
+def fits(count: int) -> bool:
     return listing_everything() or count <= LISTED_MAX
 
 
-def _width(items: list[str]) -> int:
+def subject_width(items: list[str]) -> int:
     """How wide this section's subject column is, from the longest thing in it."""
     return min(max([SUBJECT_COLUMN, *(len(item) for item in items)]), SUBJECT_CEILING)
 

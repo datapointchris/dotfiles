@@ -275,7 +275,7 @@ class Configured:
         return self.remote is not None or bool(self.problem)
 
 
-def _template(operation: Operation, value: Any) -> tuple[tuple[str, ...], str]:
+def template(operation: Operation, value: Any) -> tuple[tuple[str, ...], str]:
     """One operation's argv, or the sentence saying why it is not usable."""
     if not isinstance(value, list) or not all(isinstance(part, str) for part in value):
         return (), f'{TABLE}.transport.{operation} must be a list of strings'
@@ -283,7 +283,7 @@ def _template(operation: Operation, value: Any) -> tuple[tuple[str, ...], str]:
     named: set[str] = set()
     for part in value:
         try:
-            fields = _fields(part)
+            fields = format_fields(part)
         except ValueError as malformed:
             return (), f'{TABLE}.transport.{operation} is not a usable template: {malformed}'
         # An unnamed field is `{}`, which `str.format` fills from a positional
@@ -297,11 +297,11 @@ def _template(operation: Operation, value: Any) -> tuple[tuple[str, ...], str]:
     wanted = PLACEHOLDERS[operation]
     if named != wanted:
         listed = ', '.join(f'{{{name}}}' for name in sorted(wanted))
-        return (), f'{TABLE}.transport.{operation} must substitute exactly {listed}, and substitutes {_named(named)}'
+        return (), f'{TABLE}.transport.{operation} must substitute exactly {listed}, and substitutes {named_fields(named)}'
     return tuple(value), ''
 
 
-def _fields(part: str) -> list[tuple[str, str | None, str | None, str | None]]:
+def format_fields(part: str) -> list[tuple[str, str | None, str | None, str | None]]:
     """Every replacement field in one argv fragment, as `str.format` sees them.
 
     Asked of the formatter rather than matched with a regex, so a template that
@@ -315,11 +315,11 @@ def _fields(part: str) -> list[tuple[str, str | None, str | None, str | None]]:
     return list(string.Formatter().parse(part))
 
 
-def _named(names: set[str]) -> str:
+def named_fields(names: set[str]) -> str:
     return ', '.join(f'{{{name}}}' for name in sorted(names)) if names else 'nothing'
 
 
-def _transport(table: Any) -> tuple[Transport | None, tuple[str, ...]]:
+def declared_transport(table: Any) -> tuple[Transport | None, tuple[str, ...]]:
     """The declared transport, or every reason it could not be built."""
     if not isinstance(table, dict):
         return None, (f'{TABLE}.transport must be a table',)
@@ -335,7 +335,7 @@ def _transport(table: Any) -> tuple[Transport | None, tuple[str, ...]]:
             if operation in REQUIRED:
                 problems.append(f'{TABLE}.transport.{operation} is not declared')
             continue
-        argv, problem = _template(operation, table[operation])
+        argv, problem = template(operation, table[operation])
         if problem:
             problems.append(problem)
         else:
@@ -346,7 +346,7 @@ def _transport(table: Any) -> tuple[Transport | None, tuple[str, ...]]:
     return Transport(program=str(program), commands=commands), ()
 
 
-def _flag(table: dict[str, Any], key: str) -> tuple[bool, str]:
+def flag(table: dict[str, Any], key: str) -> tuple[bool, str]:
     value = table.get(key, False)
     if not isinstance(value, bool):
         return False, f'{TABLE}.{key} must be true or false'
@@ -385,14 +385,14 @@ def read(config: settings.Config | None = None) -> Configured:
     if not isinstance(keep_bundles, int) or isinstance(keep_bundles, bool) or keep_bundles < 1:
         problems.append(f'{TABLE}.keep_bundles must be at least 1')
 
-    fetch, problem = _flag(table, 'fetch_bundle_when_none_is_staged')
+    fetch, problem = flag(table, 'fetch_bundle_when_none_is_staged')
     problems.extend([problem] if problem else [])
-    publish, problem = _flag(table, 'publish_status_after_offline_apply')
+    publish, problem = flag(table, 'publish_status_after_offline_apply')
     problems.extend([problem] if problem else [])
-    reports, problem = _flag(table, 'publish_reports_after_apply')
+    reports, problem = flag(table, 'publish_reports_after_apply')
     problems.extend([problem] if problem else [])
 
-    transport, faults = _transport(table.get('transport'))
+    transport, faults = declared_transport(table.get('transport'))
     problems.extend(faults)
 
     if problems or transport is None:
@@ -469,10 +469,10 @@ def answered(remote: Remote, *, attempts: int | None = None, backoff: float | No
     backoff = PROBE_BACKOFF_SECONDS if backoff is None else backoff
     spoken = ''
     for attempt in range(1, attempts + 1):
-        ran = _ran(remote, Operation.PROBE, effects.Output.QUIET, {})
+        ran = run_transport(remote, Operation.PROBE, effects.Output.QUIET, {})
         if ran.ok:
             return Answer(True, attempts=attempt)
-        spoken = _why(ran, remote.transport.program)
+        spoken = why(ran, remote.transport.program)
         if attempt < attempts:
             time.sleep(backoff * attempt)
     return Answer(False, spoken, attempts)
@@ -502,7 +502,7 @@ def reachable() -> Remote:
     return where
 
 
-def _ran(remote: Remote, operation: Operation, output: effects.Output, substitutions: Mapping[str, str]) -> effects.Completed:
+def run_transport(remote: Remote, operation: Operation, output: effects.Output, substitutions: Mapping[str, str]) -> effects.Completed:
     """One transport invocation, with the substitutions as a mapping.
 
     A mapping for the same reason `Transport.argv` takes one: `remote` is both a
@@ -526,7 +526,7 @@ def names(remote: Remote, directory: str) -> tuple[str, ...]:
     reads the second as "everything was deleted". A narrowing default reads as a
     deletion to anything that reconciles by sweep.
     """
-    ran = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory})
+    ran = run_transport(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory})
     if not ran.ok:
         raise RemoteError(f'{remote.transport.program} could not list {directory}\n{ran.transcript.strip()}', code=ExitCode.ISSUE)
     return tuple(line.strip() for line in ran.stdout.splitlines() if line.strip())
@@ -567,10 +567,10 @@ def listed(remote: Remote, directory: str) -> tuple[str, ...] | None:
     Extra round trips happen only on the failure path. A directory that lists
     answers in one call, which is every ordinary run.
     """
-    ran = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory})
+    ran = run_transport(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory})
     if ran.ok:
         return tuple(line.strip() for line in ran.stdout.splitlines() if line.strip())
-    if _lists_above(remote, directory):
+    if lists_above(remote, directory):
         return None
     raise RemoteError(
         f'{remote.transport.program} could not list {directory}, and nothing under {remote.root} would list either\n'
@@ -580,13 +580,13 @@ def listed(remote: Remote, directory: str) -> tuple[str, ...] | None:
     )
 
 
-def _lists_above(remote: Remote, directory: str) -> bool:
+def lists_above(remote: Remote, directory: str) -> bool:
     """Whether any ancestor lists, up to and including the configured root."""
     root = remote.root.rstrip('/')
     walking = directory.rstrip('/')
     while '/' in walking and walking != root:
         walking = walking.rsplit('/', 1)[0]
-        if _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': walking}).ok:
+        if run_transport(remote, Operation.LIST, effects.Output.QUIET, {'dir': walking}).ok:
             return True
     return False
 
@@ -599,7 +599,7 @@ def exists(remote: Remote, directory: str) -> bool:
     that path does not have to draw for itself. Every caller that *reads* a shelf
     goes through `listed`, where guessing costs a wrong bundle.
     """
-    return _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory}).ok
+    return run_transport(remote, Operation.LIST, effects.Output.QUIET, {'dir': directory}).ok
 
 
 def push(remote: Remote, local: Path, directory: str) -> str:
@@ -622,11 +622,11 @@ def push(remote: Remote, local: Path, directory: str) -> str:
                 code=ExitCode.ISSUE,
                 advice=f'create it once by hand, or declare mkdir in {settings.config_file()}',
             )
-        made = _ran(remote, Operation.MKDIR, effects.Output.QUIET, {'dir': directory})
+        made = run_transport(remote, Operation.MKDIR, effects.Output.QUIET, {'dir': directory})
         if not made.ok:
             raise RemoteError(f'{remote.transport.program} could not create {directory}\n{made.transcript.strip()}', code=ExitCode.ISSUE)
 
-    ran = _ran(remote, Operation.UPLOAD, effects.Output.STREAM, {'local': str(local), 'dir': directory})
+    ran = run_transport(remote, Operation.UPLOAD, effects.Output.STREAM, {'local': str(local), 'dir': directory})
     if not ran.ok:
         raise RemoteError(f'{remote.transport.program} could not upload {local.name} to {directory}', code=ExitCode.ISSUE)
     return f'{directory.rstrip("/")}/{local.name}'
@@ -646,7 +646,7 @@ def pull(remote: Remote, path: str, local: Path) -> Path:
     command that caused it.
     """
     local.parent.mkdir(parents=True, exist_ok=True)
-    ran = _ran(remote, Operation.DOWNLOAD, effects.Output.STREAM, {'remote': path, 'local': str(local)})
+    ran = run_transport(remote, Operation.DOWNLOAD, effects.Output.STREAM, {'remote': path, 'local': str(local)})
     if not ran.ok:
         raise RemoteError(f'{remote.transport.program} could not download {path}', code=ExitCode.ISSUE)
     if not local.is_file():
@@ -667,7 +667,7 @@ def remove(remote: Remote, path: str) -> None:
             code=ExitCode.ISSUE,
             advice=f'declare delete in {settings.config_file()}, or remove it by hand',
         )
-    ran = _ran(remote, Operation.DELETE, effects.Output.QUIET, {'remote': path})
+    ran = run_transport(remote, Operation.DELETE, effects.Output.QUIET, {'remote': path})
     if not ran.ok:
         raise RemoteError(f'{remote.transport.program} could not delete {path}\n{ran.transcript.strip()}', code=ExitCode.ISSUE)
 
@@ -763,9 +763,9 @@ def measure(found: Configured) -> tuple[Reach, ...]:
     if not answer.ok:
         return tuple(measured)
 
-    measured.append(_root(remote))
-    measured.append(_declares(remote, Operation.MKDIR, 'a new directory is created by hand'))
-    measured.append(_declares(remote, Operation.DELETE, 'retention is reported and never performed'))
+    measured.append(root(remote))
+    measured.append(declares(remote, Operation.MKDIR, 'a new directory is created by hand'))
+    measured.append(declares(remote, Operation.DELETE, 'retention is reported and never performed'))
     return tuple(measured)
 
 
@@ -792,11 +792,11 @@ class RootState(StrEnum):
     """Nothing here can tell `ABSENT` from `REFUSED`, because the parent could not be asked."""
 
 
-def _entries(ran: effects.Completed) -> tuple[str, ...]:
+def entries(ran: effects.Completed) -> tuple[str, ...]:
     return tuple(line.strip() for line in ran.stdout.splitlines() if line.strip())
 
 
-def _root(remote: Remote) -> Reach:
+def root(remote: Remote) -> Reach:
     """Which of `RootState`'s four the configured root is in.
 
     **The parent's listing is the evidence, and its contents are the half that
@@ -817,9 +817,9 @@ def _root(remote: Remote) -> Reach:
     permission boundary from a transient fault, and every other refusal in this
     module already carries them.
     """
-    listing = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': remote.root})
+    listing = run_transport(remote, Operation.LIST, effects.Output.QUIET, {'dir': remote.root})
     if listing.ok:
-        found = _entries(listing)
+        found = entries(listing)
         return Reach(
             'root',
             True,
@@ -828,21 +828,23 @@ def _root(remote: Remote) -> Reach:
             facts={'state': RootState.LISTED, 'entries': len(found)},
         )
 
-    spoken = _why(listing, remote.transport.program)
+    spoken = why(listing, remote.transport.program)
     above = remote.above()
     if above is None:
-        return _unproven(remote, f'{remote.root} would not list, and it has no parent to ask: {spoken}')
+        return unproven(remote, f'{remote.root} would not list, and it has no parent to ask: {spoken}')
 
-    asked = _ran(remote, Operation.LIST, effects.Output.QUIET, {'dir': above})
+    asked = run_transport(remote, Operation.LIST, effects.Output.QUIET, {'dir': above})
     if not asked.ok:
-        return _unproven(remote, f'{remote.root} would not list, and neither would {above}: {spoken}')
-    if remote.root.rstrip('/').rsplit('/', 1)[-1] in _entries(asked):
+        return unproven(remote, f'{remote.root} would not list, and neither would {above}: {spoken}')
+    if remote.root.rstrip('/').rsplit('/', 1)[-1] in entries(asked):
         return Reach(
             'root',
             False,
             f'{remote.root} is on the remote and would not list: {spoken}',
             facts={'state': RootState.REFUSED},
-            advice=f'the root is there and the transport would not read it; check the credential, then: {_listing(remote, remote.root)}',
+            advice=(
+                f'the root is there and the transport would not read it; check the credential, then: {listing_command(remote, remote.root)}'
+            ),
         )
     return Reach(
         'root',
@@ -853,7 +855,7 @@ def _root(remote: Remote) -> Reach:
     )
 
 
-def _unproven(remote: Remote, detail: str) -> Reach:
+def unproven(remote: Remote, detail: str) -> Reach:
     """The root failed to list and nothing here can say why.
 
     `listed` refuses on this state and names this verb as the way to tell a shelf
@@ -867,11 +869,11 @@ def _unproven(remote: Remote, detail: str) -> Reach:
         False,
         detail,
         facts={'state': RootState.UNPROVEN},
-        advice=f'a root nobody has published to yet answers this way too; tell them apart with: {_listing(remote, remote.root)}',
+        advice=f'a root nobody has published to yet answers this way too; tell them apart with: {listing_command(remote, remote.root)}',
     )
 
 
-def _listing(remote: Remote, directory: str) -> str:
+def listing_command(remote: Remote, directory: str) -> str:
     """The listing command as a person would type it, built from the declared template.
 
     Read off `Transport.argv` rather than written out, so the advice names the
@@ -882,13 +884,13 @@ def _listing(remote: Remote, directory: str) -> str:
     return ' '.join(remote.transport.argv(Operation.LIST, {'dir': directory}))
 
 
-def _why(ran: effects.Completed, program: str) -> str:
+def why(ran: effects.Completed, program: str) -> str:
     """The last line of a failure, which is where every CLI puts its reason."""
     spoken = ran.transcript.strip().splitlines()
     return spoken[-1] if spoken else f'{program} exited {ran.returncode}'
 
 
-def _declares(remote: Remote, operation: Operation, consequence: str) -> Reach:
+def declares(remote: Remote, operation: Operation, consequence: str) -> Reach:
     """One optional operation, reported as a fact rather than as a verdict."""
     declared = remote.transport.declares(operation)
     return Reach(str(operation), declared, 'declared' if declared else f'not declared, so {consequence}', required=False)

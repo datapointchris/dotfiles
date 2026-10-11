@@ -232,7 +232,7 @@ def test_apply_stages_the_archive_it_finds(tmp_path, home, staging, monkeypatch)
     monkeypatch.chdir(tmp_path)
     archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz', files={'bin/uv': 'uv'})
 
-    assert reconcile._stage_bundle('', '') is None
+    assert reconcile.stage_bundle('', '') is None
     assert providers.bundle_file('bin/uv').read_text() == 'uv'
 
 
@@ -244,14 +244,14 @@ def test_apply_leaves_a_staged_bundle_alone(tmp_path, home, staged, monkeypatch)
     (staged / bundle.MANIFEST).write_text('what the interrupted run staged\n')
     archive(tmp_path, 'dotfiles-offline-v20260810-wsl-linux-x86_64.tar.gz')
 
-    assert reconcile._stage_bundle('', '') is None
+    assert reconcile.stage_bundle('', '') is None
     assert (staged / bundle.MANIFEST).read_text() == 'what the interrupted run staged\n'
 
 
 def test_apply_refuses_with_no_archive_to_stage(tmp_path, home, staged, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
 
-    assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
+    assert reconcile.stage_bundle('', '') is ExitCode.ISSUE
 
 
 def test_apply_skips_a_peer_s_archive_and_stages_this_machine_s(tmp_path, home, staging, monkeypatch) -> None:
@@ -261,7 +261,7 @@ def test_apply_skips_a_peer_s_archive_and_stages_this_machine_s(tmp_path, home, 
     archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'mine'})
     archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-other-box-linux-x86_64.tar.gz', files={'bin/uv': 'theirs'})
 
-    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert reconcile.stage_bundle(MACHINE_NAME, '') is None
     assert providers.bundle_file('bin/uv').read_text() == 'mine'
 
 
@@ -275,7 +275,7 @@ def test_apply_refuses_a_peer_s_bundle_already_in_the_stack(tmp_path, home, stag
     (theirs / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
     (theirs / bundle.DOCUMENT).write_text('{"machine": "other-box", "completeness": "full"}\n')
 
-    assert reconcile._stage_bundle(MACHINE_NAME, '') is ExitCode.ISSUE
+    assert reconcile.stage_bundle(MACHINE_NAME, '') is ExitCode.ISSUE
 
 
 def test_apply_stages_a_newer_archive_over_one_already_staged(tmp_path, home, staging, monkeypatch) -> None:
@@ -290,7 +290,7 @@ def test_apply_stages_a_newer_archive_over_one_already_staged(tmp_path, home, st
     (older / 'bin' / 'uv').write_text('a fortnight old')
     archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'just downloaded'})
 
-    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert reconcile.stage_bundle(MACHINE_NAME, '') is None
     assert providers.bundle_file('bin/uv').read_text() == 'just downloaded'
     assert len(providers.staged_bundles()) == 2, 'the older one stays, because a sparse bundle reads through it'
 
@@ -306,7 +306,7 @@ def test_apply_leaves_an_archive_older_than_the_stack_in_its_tarball(tmp_path, h
     (newer / 'bin' / 'uv').write_text('what the stack answers with')
     archive(tmp_path, 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64.tar.gz', files={'bin/uv': 'older'})
 
-    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert reconcile.stage_bundle(MACHINE_NAME, '') is None
     assert providers.bundle_file('bin/uv').read_text() == 'what the stack answers with'
     assert len(providers.staged_bundles()) == 1, 'the older archive stayed in its tarball'
 
@@ -321,7 +321,7 @@ def test_apply_does_not_re_unpack_the_archive_it_already_staged(tmp_path, home, 
     (unpacked / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\n')
     (unpacked / 'bin' / 'uv').write_text('left alone')
 
-    assert reconcile._stage_bundle(MACHINE_NAME, '') is None
+    assert reconcile.stage_bundle(MACHINE_NAME, '') is None
     assert providers.bundle_file('bin/uv').read_text() == 'left alone'
 
 
@@ -336,7 +336,7 @@ def test_apply_leaves_a_working_stack_alone_when_the_machine_is_unresolved(tmp_p
     (unpacked / 'bin' / 'uv').write_text('mine')
     archive(tmp_path, 'dotfiles-offline-v20260810T010000Z-other-box-linux-x86_64.tar.gz', files={'bin/uv': 'theirs'})
 
-    assert reconcile._stage_bundle('', '') is None
+    assert reconcile.stage_bundle('', '') is None
     assert providers.bundle_file('bin/uv').read_text() == 'mine'
 
 
@@ -346,7 +346,7 @@ def test_apply_refuses_the_archive_it_cannot_stage(tmp_path, home, staging, monk
     monkeypatch.chdir(tmp_path)
     (tmp_path / 'dotfiles-offline-v20260810T010000Z-wsl-linux-x86_64.tar.gz').write_text('not a tarball')
 
-    assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
+    assert reconcile.stage_bundle('', '') is ExitCode.ISSUE
     assert providers.staged_bundles() == ()
 
 
@@ -364,7 +364,7 @@ class TestSayingWhichBundle:
         staged.mkdir(parents=True)
         (staged / bundle.MANIFEST).write_text('binary|fd|10.2.0|fd\ncargo|ripgrep|15.2.0|rg.tar.gz\n')
 
-        assert reconcile._stage_bundle('', '') is None
+        assert reconcile.stage_bundle('', '') is None
 
         # Newlines stripped before matching: Rich wraps a long path across lines, and
         # the assertion is about what the line says rather than where it breaks.
@@ -378,7 +378,7 @@ class TestSayingWhichBundle:
         staged.mkdir(parents=True)
         (staged / bundle.MANIFEST).write_text('wheel|rich|14.0.0|rich.whl\nbinary|fd|10.2.0|fd\n')
 
-        reconcile._stage_bundle('', '')
+        reconcile.stage_bundle('', '')
 
         assert 'binary 1, wheel 1' in capsys.readouterr().err
 
@@ -386,7 +386,7 @@ class TestSayingWhichBundle:
         monkeypatch.chdir(tmp_path)
         archive(tmp_path, 'dotfiles-offline-v20260813-wsl-linux-x86_64.tar.gz')
 
-        assert reconcile._stage_bundle('', '') is None
+        assert reconcile.stage_bundle('', '') is None
 
         # Whitespace-normalized: the row carries an absolute staging path, so where
         # the renderer folds the line moves with the terminal width and with the
@@ -397,7 +397,7 @@ class TestSayingWhichBundle:
     def test_a_newer_archive_nobody_staged_is_named_as_the_one_not_measured(self, tmp_path, home, staging, monkeypatch) -> None:
         """A read verb stages nothing, so a bundle downloaded a minute ago answers
         every version from the old one — a machine reported up to date against a
-        bundle nobody meant to consult. `_stage_bundle` cannot reach this, because
+        bundle nobody meant to consult. `stage_bundle` cannot reach this, because
         it stages the newer archive rather than warning about it."""
         monkeypatch.chdir(tmp_path)
         older = staging / 'dotfiles-offline-v20260101T010000Z-box-linux-x86_64'
@@ -436,7 +436,7 @@ class TestSayingWhichBundle:
         monkeypatch.chdir(tmp_path)
         staged.mkdir(parents=True)
 
-        assert reconcile._stage_bundle('', '') is ExitCode.ISSUE
+        assert reconcile.stage_bundle('', '') is ExitCode.ISSUE
         said = capsys.readouterr().err.replace('\n', '')
         assert providers.MANIFEST in said
         assert staged.name in said

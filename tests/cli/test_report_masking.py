@@ -32,7 +32,7 @@ NAMES = {'the Windows account': 'zz00000', 'this machine name': 'hostzz00'}
 def staging(tmp_path: Path) -> Path:
     """Where the masked copy lands, which is never where the record lives.
 
-    `_send` owns a directory for the whole send and removes it afterwards. The
+    `send` owns a directory for the whole send and removes it afterwards. The
     copy keeps the record's filename, so a staging directory that is also the
     record's directory would write the screened copy over the original.
     """
@@ -52,7 +52,7 @@ def test_a_record_is_masked_without_its_shape_changing(tmp_path: Path, staging: 
         )
     )
 
-    staged = report._masked_copy(local, NAMES, staging)
+    staged = report.masked_copy(local, NAMES, staging)
     written = json.loads(staged.read_text())
 
     assert staged.parent == staging, 'the caller chooses where a copy lands, and this asserts it rather than assuming it'
@@ -72,7 +72,7 @@ def test_a_stream_stays_line_delimited(tmp_path: Path, staging: Path) -> None:
         + '\n'
     )
 
-    staged = report._masked_copy(local, NAMES, staging)
+    staged = report.masked_copy(local, NAMES, staging)
     lines = [json.loads(line) for line in staged.read_text().splitlines()]
 
     assert len(lines) == 2, 'one line in, one line out'
@@ -90,7 +90,7 @@ def test_a_path_under_this_home_reads_as_a_person_writes_it(tmp_path: Path, stag
     local = tmp_path / '20260817T131536Z-hostzz00-apply.jsonl'
     local.write_text(json.dumps({'argv': ['/home/chris/.local/bin/dotfiles', '--version']}) + '\n')
 
-    staged = report._masked_copy(local, {'the account this runs as': 'chris'}, staging)
+    staged = report.masked_copy(local, {'the account this runs as': 'chris'}, staging)
     line = json.loads(staged.read_text())
 
     assert line['argv'] == ['~/.local/bin/dotfiles', '--version']
@@ -109,11 +109,11 @@ def test_the_record_on_this_machine_is_not_rewritten(tmp_path: Path, staging: Pa
     original = json.dumps({'outcomes': [{'message': '/mnt/c/Users/zz00000'}]})
     local.write_text(original)
 
-    staged = report._masked_copy(local, NAMES, staging)
+    staged = report.masked_copy(local, NAMES, staging)
 
     assert local.read_text() == original
     assert staged != local
 
     with pytest.raises(ValueError, match='already lives'):
-        report._masked_copy(local, NAMES, local.parent)
+        report.masked_copy(local, NAMES, local.parent)
     assert local.read_text() == original, 'and the refusal left the record alone'

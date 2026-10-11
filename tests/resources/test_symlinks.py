@@ -568,7 +568,7 @@ def test_the_source_trees_are_walked_once_however_many_links_are_missing(
     for index in range(12):
         declare(repo, f'configs/common/.config/app/file{index}.conf')
 
-    symlinks._index.cache_clear()
+    symlinks.index.cache_clear()
     walks = 0
     original = symlinks.declared
 
@@ -585,7 +585,7 @@ def test_the_source_trees_are_walked_once_however_many_links_are_missing(
         symlinks.RESOURCE.perform(session, change, Privilege())
 
     assert walks == 2, 'one walk for observe, one for the index every perform shares'
-    symlinks._index.cache_clear()
+    symlinks.index.cache_clear()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

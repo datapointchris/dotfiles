@@ -72,11 +72,11 @@ class Position:
 
     def _standing(self) -> str:
         if self.ahead and self.behind:
-            return f'{_commits(self.ahead)} ahead of and {_commits(self.behind)} behind {self.upstream}'
+            return f'{commits(self.ahead)} ahead of and {commits(self.behind)} behind {self.upstream}'
         if self.behind:
-            return f'{_commits(self.behind)} behind {self.upstream}'
+            return f'{commits(self.behind)} behind {self.upstream}'
         if self.ahead:
-            return f'{_commits(self.ahead)} ahead of {self.upstream}, unpushed'
+            return f'{commits(self.ahead)} ahead of {self.upstream}, unpushed'
         # "level with", never "up to date". Nothing here fetches, so the only
         # thing measured is the distance to a remote-tracking ref that moves on
         # fetch alone. "Up to date" asserts currency this cannot observe, and it
@@ -86,7 +86,7 @@ class Position:
     def _measured(self, now: dt.datetime) -> str:
         if self.fetched is None:
             return '(nothing has fetched since the clone)'
-        return f'(fetched {_ago((now - self.fetched).total_seconds())})'
+        return f'(fetched {ago((now - self.fetched).total_seconds())})'
 
 
 def read(repo: Path = paths.REPO_ROOT) -> Position | None:
@@ -97,7 +97,7 @@ def read(repo: Path = paths.REPO_ROOT) -> Position | None:
     upstream to be behind. Saying nothing is what keeps this out of the way of
     someone who is deliberately somewhere else.
     """
-    upstream = _git(repo, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}')
+    upstream = git(repo, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}')
     if not upstream.ok:
         return None
 
@@ -105,12 +105,12 @@ def read(repo: Path = paths.REPO_ROOT) -> Position | None:
     # side of the merge base separately, which is the only spelling that can
     # report ahead and behind at once. `HEAD..<upstream>` collapses to one number
     # and reads a diverged branch as merely behind.
-    counts = _git(repo, 'rev-list', '--left-right', '--count', 'HEAD...@{upstream}')
+    counts = git(repo, 'rev-list', '--left-right', '--count', 'HEAD...@{upstream}')
     if not counts.ok:
         return None
 
     ahead, behind = (int(count) for count in counts.stdout.split())
-    return Position(upstream.stdout.strip(), ahead, behind, _last_fetch(repo))
+    return Position(upstream.stdout.strip(), ahead, behind, last_fetch(repo))
 
 
 def standing(now: dt.datetime, repo: Path = paths.REPO_ROOT) -> tuple[str, bool]:
@@ -147,7 +147,7 @@ def stray_branch(repo: Path = paths.REPO_ROOT) -> str | None:
     A detached HEAD answers `None` rather than its sha. Someone mid-bisect knows
     where they are, and `read` already treats that state as deliberate.
     """
-    branch = _git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')
+    branch = git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')
     if not branch.ok:
         return None
     name = branch.stdout.strip()
@@ -176,14 +176,14 @@ def report_stray_branch() -> None:
 
 def fetch(repo: Path = paths.REPO_ROOT) -> bool:
     """Refresh what `read` measures against. The only function here that uses the network."""
-    return _git(repo, 'fetch', '--quiet', output=Output.STREAM).ok
+    return git(repo, 'fetch', '--quiet', output=Output.STREAM).ok
 
 
-def _git(repo: Path, *args: str, output: Output = Output.QUIET) -> Completed:
+def git(repo: Path, *args: str, output: Output = Output.QUIET) -> Completed:
     return run(['git', '-C', str(repo), *args], output=output)
 
 
-def _last_fetch(repo: Path) -> dt.datetime | None:
+def last_fetch(repo: Path) -> dt.datetime | None:
     """When something last fetched, taken from `FETCH_HEAD`'s mtime.
 
     Git records no fetch timestamp of its own, and the remote-tracking refs are
@@ -191,7 +191,7 @@ def _last_fetch(repo: Path) -> dt.datetime | None:
     their mtime dates the last *change* rather than the last *look*. `FETCH_HEAD`
     is rewritten by every fetch and pull whether or not anything moved.
     """
-    located = _git(repo, 'rev-parse', '--git-dir')
+    located = git(repo, 'rev-parse', '--git-dir')
     if not located.ok:
         return None
 
@@ -202,11 +202,11 @@ def _last_fetch(repo: Path) -> dt.datetime | None:
         return None
 
 
-def _commits(count: int) -> str:
+def commits(count: int) -> str:
     return f'{count} commit{"s" * (count != 1)}'
 
 
-def _ago(seconds: float) -> str:
+def ago(seconds: float) -> str:
     for size, unit in ((86400, 'day'), (3600, 'hour'), (60, 'minute')):
         if seconds >= size:
             count = int(seconds // size)

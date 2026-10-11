@@ -53,7 +53,7 @@ from dotfiles.session import Session
 
 
 def executable(directory: Path, name: str, script: str) -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -187,7 +187,7 @@ def test_a_privileged_manager_that_exits_non_zero_carries_its_status(upstream) -
 
 
 def test_an_unprivileged_manager_that_exits_non_zero_fails_the_item_not_the_run(upstream) -> None:
-    """brew failing is a failed item, which `_transact` then retries one package at
+    """brew failing is a failed item, which `transact` then retries one package at
     a time — so it has to come back as a Result rather than as a raise."""
     upstream(reachable=False, said='Error: No available formula with the name "ripgrepp"')
 
@@ -428,7 +428,7 @@ repos with an empty screen.
 
 @pytest.mark.parametrize(('shape', 'line', 'shown'), LAZY_LINES, ids=[row[0] for row in LAZY_LINES])
 def test_only_the_line_lazy_starts_a_task_with_reaches_the_screen(shape: str, line: str, shown: str | None) -> None:
-    assert pluginsync._lazy_line(line) == shown, shape
+    assert pluginsync.lazy_line(line) == shown, shape
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -467,7 +467,7 @@ def test_a_full_filesystem_is_named_when_df_answers_in_the_shape_it_was_asked_fo
     Docker volume fill for different reasons and are cleared different ways."""
     executable(fake_bin, 'df', f'#!/bin/sh\n{script}\n')
 
-    found = diagnose._no_space(tmp_path / 'ntfy')
+    found = diagnose.no_space(tmp_path / 'ntfy')
 
     assert found.cause, 'a diagnosis that says nothing is worse than none'
     assert ('/mnt/data' in found.cause) is names_mount, f'df answered with {answer}'
@@ -485,7 +485,7 @@ def test_a_missing_df_is_reported_as_a_question_that_could_not_be_asked(fake_bin
     beside it reads as a measurement on a machine where nothing was measured."""
     monkeypatch.setenv('PATH', str(fake_bin))
 
-    found = diagnose._no_space(Path('/var/lib/x'))
+    found = diagnose.no_space(Path('/var/lib/x'))
 
     assert found.cause
     assert len(found.unavailable) == 1

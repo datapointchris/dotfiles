@@ -531,7 +531,7 @@ def executed(setup: harness.Setup, tests: tuple[str, ...], scratch: Path) -> sco
     planned = harness.Planned(
         relative='src/toy/thing.py', site=planter.sites(ast.parse(TOY_SOURCE))[0], verdict=classify.DEFAULT, tests=tests
     )
-    return harness._execute(setup, workers, {'src/toy/thing.py': TOY_SOURCE}, planned, 60.0)
+    return harness.execute(setup, workers, {'src/toy/thing.py': TOY_SOURCE}, planned, 60.0)
 
 
 @pytest.mark.replants

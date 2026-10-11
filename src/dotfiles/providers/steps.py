@@ -18,7 +18,7 @@ sets match in both directions. A `check:`/`apply:` argv pair in the YAML would b
 a command language invented for a handful of rows, and most of them would not fit
 it.
 
-Every function here observes without escalating. `_xcode_license` is the
+Every function here observes without escalating. `xcode_license` is the
 exception the design predicted — `xcodebuild -license status` needs root to read
 — so it reports `UNKNOWN` with the reason rather than reaching for a password
 from the half of the run that must never prompt.
@@ -65,7 +65,7 @@ COMMAND_LINE_TOOLS = '/Library/Developer/CommandLineTools'
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _library_visible() -> State:
+def library_visible() -> State:
     """`~/Library` is hidden by two mechanisms and needs both undone.
 
     `UF_HIDDEN` is what `chflags nohidden` clears; the `FinderInfo` extended
@@ -76,32 +76,32 @@ def _library_visible() -> State:
     if not library.is_dir():
         return State(Verdict.UNKNOWN, 'no ~/Library on this machine', repair=Repair.NONE)
 
-    by = [reason for reason, held in (('the UF_HIDDEN flag', _hidden_flag(library)), (FINDER_INFO, _finder_info(library))) if held]
+    by = [reason for reason, held in (('the UF_HIDDEN flag', hidden_flag(library)), (FINDER_INFO, finder_info(library))) if held]
     if not by:
         return State(Verdict.MATCHED)
     return State(Verdict.STALE, f'~/Library is hidden by {" and ".join(by)}')
 
 
-def _hidden_flag(path: Path) -> bool:
+def hidden_flag(path: Path) -> bool:
     """`st_flags` is a BSD field, so it is absent on Linux and on any filesystem
     that does not carry one — where nothing hid the folder either."""
     return bool(getattr(path.stat(), 'st_flags', 0) & stat.UF_HIDDEN)
 
 
-def _finder_info(path: Path) -> bool:
+def finder_info(path: Path) -> bool:
     """Read through `xattr`, not `os.listxattr`, which is Linux-only.
 
     Asking CPython raised `AttributeError` on the one platform this row exists
     for, and the `OSError` guard that was here could not catch it: every macOS
     run reported the whole system resource unexaminable. `xattr` is what
-    `_show_library` already writes through, so the pair now agrees on the
+    `show_library` already writes through, so the pair now agrees on the
     mechanism as well as the attribute.
     """
     listed = run(['xattr', str(path)], output=Output.QUIET)
     return listed.ok and FINDER_INFO in listed.stdout.split()
 
 
-def _show_library() -> Result:
+def show_library() -> Result:
     library = Path.home() / 'Library'
     cleared = run(['chflags', 'nohidden', str(library)], output=Output.QUIET)
     if not cleared.ok:
@@ -116,25 +116,25 @@ def _show_library() -> Result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _screenshot_directory() -> Path:
+def screenshot_directory() -> Path:
     return Path.home() / 'Desktop' / 'screenshots'
 
 
-def _screenshots_exist() -> State:
+def screenshots_exist() -> State:
     """The directory `com.apple.screencapture location` points at.
 
     Its own row rather than a side effect of that entry, because a location key
     pointing at a directory that does not exist is a screenshot that silently
     fails to save — and the two can drift apart independently.
     """
-    if _screenshot_directory().is_dir():
+    if screenshot_directory().is_dir():
         return State(Verdict.MATCHED)
-    return State(Verdict.MISSING, f'{_screenshot_directory()} does not exist')
+    return State(Verdict.MISSING, f'{screenshot_directory()} does not exist')
 
 
-def _make_screenshots() -> Result:
-    _screenshot_directory().mkdir(parents=True, exist_ok=True)
-    return Result(True, f'{_screenshot_directory()} created', kind=Kind.APPLIED)
+def make_screenshots() -> Result:
+    screenshot_directory().mkdir(parents=True, exist_ok=True)
+    return Result(True, f'{screenshot_directory()} created', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ def _make_screenshots() -> Result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _xcode_license() -> State:
+def xcode_license() -> State:
     """The exception `check` is built to survive rather than to hide.
 
     `xcodebuild -license status` needs root, and `observe` is never handed an
@@ -152,7 +152,7 @@ def _xcode_license() -> State:
     no `xcodebuild` at all, or an active developer directory that is the Command
     Line Tools, means there is no license to accept.
     """
-    if not _xcodebuild_present():
+    if not xcodebuild_present():
         return State(Verdict.MATCHED, 'no Xcode command line tools, so no license to accept')
 
     selected = run(['xcode-select', '-p'], output=Output.QUIET)
@@ -162,11 +162,11 @@ def _xcode_license() -> State:
     return State(Verdict.UNKNOWN, 'needs root to read (xcodebuild -license status)', repair=Repair.NONE)
 
 
-def _xcodebuild_present() -> bool:
+def xcodebuild_present() -> bool:
     return run(['xcodebuild', '-version'], output=Output.QUIET).returncode != 127
 
 
-def _accept_xcode_license(privilege: Escalates) -> Result:
+def accept_xcode_license(privilege: Escalates) -> Result:
     """Accept, then run the first-launch setup the license gates.
 
     `-runFirstLaunch` is unprivileged and frequently a no-op; it fails on an
@@ -188,13 +188,13 @@ def _accept_xcode_license(privilege: Escalates) -> Result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _docker_config() -> Path:
+def docker_config() -> Path:
     """`$DOCKER_CONFIG` where it is set, which is the knob docker itself reads."""
     declared = os.environ.get('DOCKER_CONFIG')
     return (Path(declared) if declared else Path.home() / '.config' / 'docker') / 'config.json'
 
 
-def _orbstack_plugins() -> State:
+def orbstack_plugins() -> State:
     """OrbStack ships docker, compose and buildx; only the plugin path is ours.
 
     Read against docker's config and never against `/Applications`. OrbStack is a
@@ -208,15 +208,15 @@ def _orbstack_plugins() -> State:
     makes reading the config cheaper than teaching the row to ask what the plan
     holds.
     """
-    config = _read_docker_config()
+    config = read_docker_config()
     if config is None:
-        return State(Verdict.UNKNOWN, f'{_docker_config()} is not readable JSON', repair=Repair.NONE)
-    if str(ORBSTACK_PLUGINS) in _plugin_directories(config):
+        return State(Verdict.UNKNOWN, f'{docker_config()} is not readable JSON', repair=Repair.NONE)
+    if str(ORBSTACK_PLUGINS) in plugin_directories(config):
         return State(Verdict.MATCHED)
-    return State(Verdict.MISSING, f'{_docker_config()} does not list {ORBSTACK_PLUGINS}')
+    return State(Verdict.MISSING, f'{docker_config()} does not list {ORBSTACK_PLUGINS}')
 
 
-def _plugin_directories(config: dict[str, object]) -> list[str]:
+def plugin_directories(config: dict[str, object]) -> list[str]:
     """Whatever is already there, or nothing where the key holds something else.
 
     The key is docker's, not this repo's, so it may hold anything — and a list of
@@ -226,14 +226,14 @@ def _plugin_directories(config: dict[str, object]) -> list[str]:
     return [str(entry) for entry in declared] if isinstance(declared, list) else []
 
 
-def _read_docker_config() -> dict[str, object] | None:
+def read_docker_config() -> dict[str, object] | None:
     """The existing config, `{}` where there is none, None where it is unusable.
 
     A file that is not JSON is the one case worth refusing: merging into it means
     rewriting it, and rewriting a config this repo cannot parse would discard
     whatever else it holds.
     """
-    path = _docker_config()
+    path = docker_config()
     if not path.is_file():
         return {}
     try:
@@ -243,14 +243,14 @@ def _read_docker_config() -> dict[str, object] | None:
     return loaded if isinstance(loaded, dict) else None
 
 
-def _add_orbstack_plugins() -> Result:
-    config = _read_docker_config()
+def add_orbstack_plugins() -> Result:
+    config = read_docker_config()
     if config is None:
-        return Result(False, f'{_docker_config()} is not readable JSON, so nothing was written', kind=Kind.TARGET_UNUSABLE)
+        return Result(False, f'{docker_config()} is not readable JSON, so nothing was written', kind=Kind.TARGET_UNUSABLE)
 
-    config['cliPluginsExtraDirs'] = [*_plugin_directories(config), str(ORBSTACK_PLUGINS)]
+    config['cliPluginsExtraDirs'] = [*plugin_directories(config), str(ORBSTACK_PLUGINS)]
 
-    path = _docker_config()
+    path = docker_config()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, indent=2) + '\n')
     return Result(True, f'{path} points at OrbStack plugins', kind=Kind.APPLIED)
@@ -265,7 +265,7 @@ FONTCONFIG = Path('.config') / 'fontconfig' / 'fonts.conf'
 WINDOWS_MOUNT = Path('/mnt/c')
 
 
-def _windows_fonts_directory() -> Path | None:
+def windows_fonts_directory() -> Path | None:
     """Where Windows puts a non-admin user's fonts, or None if it cannot be found.
 
     The username is asked of Windows rather than read from `$WINDOWS_USER`,
@@ -282,7 +282,7 @@ def _windows_fonts_directory() -> Path | None:
     return WINDOWS_MOUNT / 'Users' / user / 'AppData' / 'Local' / 'Microsoft' / 'Windows' / 'Fonts'
 
 
-def _fontconfig_content(fonts: Path) -> str:
+def fontconfig_content(fonts: Path) -> str:
     return (
         '<?xml version="1.0"?>\n'
         '<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">\n'
@@ -296,13 +296,13 @@ def _fontconfig_content(fonts: Path) -> str:
 FONT_DIR_ELEMENT = re.compile(r'<dir>([^<]*)</dir>')
 
 
-def _fonts_dir_in(written: str) -> Path | None:
+def fonts_dir_in(written: str) -> Path | None:
     """The directory a deployed fontconfig already points at."""
     found = FONT_DIR_ELEMENT.search(written)
     return Path(found.group(1)) if found else None
 
 
-def _windows_fonts() -> State:
+def windows_fonts() -> State:
     """Nothing to do without a mounted Windows filesystem, and that is not drift.
 
     A container or a plain Linux box at the wsl host coordinate has no `/mnt/c`.
@@ -310,7 +310,7 @@ def _windows_fonts() -> State:
     error comes to be scrolled past.
 
     **A converged machine is answered off its own file, and never by asking
-    Windows.** `_windows_fonts_directory` forks `cmd.exe` across the WSL boundary,
+    Windows.** `windows_fonts_directory` forks `cmd.exe` across the WSL boundary,
     and this observe runs on the ten-minute timer `providers/schedule.py` installs
     — so deriving the path every time spawned a Windows process 144 times a day to
     re-learn an account name that does not change. Read back, it is two filesystem
@@ -327,11 +327,11 @@ def _windows_fonts() -> State:
 
     target = Path.home() / FONTCONFIG
     deployed = target.read_text() if target.is_file() else ''
-    already = _fonts_dir_in(deployed)
-    if already is not None and already.is_dir() and deployed == _fontconfig_content(already):
+    already = fonts_dir_in(deployed)
+    if already is not None and already.is_dir() and deployed == fontconfig_content(already):
         return State(Verdict.MATCHED)
 
-    fonts = _windows_fonts_directory()
+    fonts = windows_fonts_directory()
     if fonts is None:
         return State(Verdict.MATCHED, 'no Windows filesystem to take fonts from')
     if not fonts.is_dir():
@@ -339,14 +339,14 @@ def _windows_fonts() -> State:
     return State(Verdict.MISSING if not deployed else Verdict.STALE, f'{target} does not point at {fonts}')
 
 
-def _write_fontconfig() -> Result:
-    fonts = _windows_fonts_directory()
+def write_fontconfig() -> Result:
+    fonts = windows_fonts_directory()
     if fonts is None or not fonts.is_dir():
         return Result(False, 'no Windows fonts directory to point at', kind=Kind.UNSUPPORTED_HERE)
 
     target = Path.home() / FONTCONFIG
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(_fontconfig_content(fonts))
+    target.write_text(fontconfig_content(fonts))
     # The file is only useful once fontconfig has read it; a machine without
     # fc-cache still gets a correct config for whatever reads it next.
     run(['fc-cache', '-f'], output=Output.QUIET)
@@ -360,7 +360,7 @@ def _write_fontconfig() -> Result:
 WSLCONFIG_TEMPLATE = paths.INSTALL_DIR / 'wsl' / 'wslconfig.template'
 
 
-def _windows_profile() -> Path | None:
+def windows_profile() -> Path | None:
     """%USERPROFILE%, asked of Windows because it is not always C:\\Users\\<name>."""
     if not WINDOWS_MOUNT.is_dir():
         return None
@@ -373,11 +373,11 @@ def _windows_profile() -> Path | None:
     return Path(linux_path) if linux_path else None
 
 
-def _a_profile_already_holding_the_template() -> Path | None:
+def a_profile_already_holding_the_template() -> Path | None:
     """The installed copy, found by reading the profiles rather than asking Windows.
 
     The observe runs on the check timer, and asking forks `cmd.exe` for the reason
-    `_windows_fonts` gives. Another account's profile holding an exact copy while
+    `windows_fonts` gives. Another account's profile holding an exact copy while
     this one has none would read as converged, which needs two accounts each
     applying this repo.
     """
@@ -395,13 +395,13 @@ def _a_profile_already_holding_the_template() -> Path | None:
     return None
 
 
-def _wslconfig() -> State:
+def wslconfig() -> State:
     if not WINDOWS_MOUNT.is_dir():
         return State(Verdict.MATCHED, 'no Windows filesystem to write .wslconfig to')
-    if _a_profile_already_holding_the_template() is not None:
+    if a_profile_already_holding_the_template() is not None:
         return State(Verdict.MATCHED)
 
-    profile = _windows_profile()
+    profile = windows_profile()
     if profile is None:
         return State(Verdict.MATCHED, 'Windows named no profile directory to write .wslconfig to')
     target = profile / '.wslconfig'
@@ -412,13 +412,13 @@ def _wslconfig() -> State:
     return State(Verdict.STALE, f'{target} differs from {WSLCONFIG_TEMPLATE.name}, and apply backs it up before replacing it')
 
 
-def _write_wslconfig() -> Result:
+def write_wslconfig() -> Result:
     """Copy the template, keeping a differing file beside it rather than losing it.
 
     `.wslconfig` is edited by hand at the moment something is broken, and a fix
     replaced with no copy kept is one nobody finds again.
     """
-    profile = _windows_profile()
+    profile = windows_profile()
     if profile is None or not profile.is_dir():
         return Result(False, 'Windows named no profile directory to write .wslconfig to', kind=Kind.UNSUPPORTED_HERE)
 
@@ -443,7 +443,7 @@ def _write_wslconfig() -> Result:
 KEG_ONLY = 'libpq'
 
 
-def _psql_linked() -> State:
+def psql_linked() -> State:
     """Whether `psql` resolves, which is the whole point of installing libpq.
 
     libpq is keg-only: Homebrew installs it and deliberately puts nothing on PATH,
@@ -461,7 +461,7 @@ def _psql_linked() -> State:
     if not shutil.which('brew'):
         return State(Verdict.MISSING, 'brew is not on PATH yet, so libpq cannot be linked')
     # Nothing to link is not a machine with something wrong with it — the same
-    # shape as the OrbStack row. `_link_psql` refuses this state rather than
+    # shape as the OrbStack row. `link_psql` refuses this state rather than
     # failing on it, so reporting drift here would raise a finding whose only
     # repair declines to run.
     if not run(['brew', 'list', KEG_ONLY], output=Output.QUIET).ok:
@@ -469,7 +469,7 @@ def _psql_linked() -> State:
     return State(Verdict.MISSING, f'{KEG_ONLY} is installed but keg-only, so psql is on no PATH')
 
 
-def _link_psql() -> Result:
+def link_psql() -> Result:
     """`--force`, which is what keg-only means: without it brew declines and exits 0.
 
     Refuses rather than fails where brew or the formula is still absent. Both
@@ -500,7 +500,7 @@ HOSTS_WRITE = ('/usr/bin/tee', '/etc/hosts')
 HOSTS_GRANT = Path('/etc/sudoers.d/etc-hosts')
 
 
-def _hosts_write_granted() -> State:
+def hosts_write_granted() -> State:
     """The grant's effect, read from sudo, rather than the file that makes it.
 
     The file is unreadable without root, and the effect is the question anyway:
@@ -513,7 +513,7 @@ def _hosts_write_granted() -> State:
     return State(Verdict.MISSING, f'sudo asks for a password before {" ".join(HOSTS_WRITE)}')
 
 
-def _grant_hosts_write(privilege: Escalates) -> Result:
+def grant_hosts_write(privilege: Escalates) -> Result:
     """Install the rule after `visudo` has parsed it.
 
     One unparseable file in /etc/sudoers.d stops sudo running at all, which on a
@@ -551,7 +551,7 @@ Applier = Callable[[Escalates, 'MachineContext'], Result]
 is. The adapters below hand each row only what it reads."""
 
 
-def _anywhere(observe: Callable[[], State]) -> Observer:
+def anywhere(observe: Callable[[], State]) -> Observer:
     """A row whose state reads the same whichever run asks."""
 
     def observe_it(_session: MachineContext) -> State:
@@ -560,7 +560,7 @@ def _anywhere(observe: Callable[[], State]) -> Observer:
     return observe_it
 
 
-def _unprivileged(apply: Callable[[], Result]) -> Applier:
+def unprivileged(apply: Callable[[], Result]) -> Applier:
     """A row that needs neither root nor the run to converge."""
 
     def run_it(_privilege: Escalates, _session: MachineContext) -> Result:
@@ -569,7 +569,7 @@ def _unprivileged(apply: Callable[[], Result]) -> Applier:
     return run_it
 
 
-def _escalating(apply: Callable[[Escalates], Result]) -> Applier:
+def escalating(apply: Callable[[Escalates], Result]) -> Applier:
     """A row that needs root and not the run."""
 
     def run_it(privilege: Escalates, _session: MachineContext) -> Result:
@@ -583,14 +583,14 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
         lambda session: schedule.observe(session.machine),
         lambda _privilege, session: schedule.apply(session.machine),
     ),
-    'library-visible': (_anywhere(_library_visible), _unprivileged(_show_library)),
-    'screenshot-directory': (_anywhere(_screenshots_exist), _unprivileged(_make_screenshots)),
-    'xcode-license': (_anywhere(_xcode_license), _escalating(_accept_xcode_license)),
-    'orbstack-docker-plugins': (_anywhere(_orbstack_plugins), _unprivileged(_add_orbstack_plugins)),
-    'windows-fonts': (_anywhere(_windows_fonts), _unprivileged(_write_fontconfig)),
-    'wslconfig': (_anywhere(_wslconfig), _unprivileged(_write_wslconfig)),
-    'psql-linked': (_anywhere(_psql_linked), _unprivileged(_link_psql)),
-    'etc-hosts-sudo-grant': (_anywhere(_hosts_write_granted), _escalating(_grant_hosts_write)),
+    'library-visible': (anywhere(library_visible), unprivileged(show_library)),
+    'screenshot-directory': (anywhere(screenshots_exist), unprivileged(make_screenshots)),
+    'xcode-license': (anywhere(xcode_license), escalating(accept_xcode_license)),
+    'orbstack-docker-plugins': (anywhere(orbstack_plugins), unprivileged(add_orbstack_plugins)),
+    'windows-fonts': (anywhere(windows_fonts), unprivileged(write_fontconfig)),
+    'wslconfig': (anywhere(wslconfig), unprivileged(write_wslconfig)),
+    'psql-linked': (anywhere(psql_linked), unprivileged(link_psql)),
+    'etc-hosts-sudo-grant': (anywhere(hosts_write_granted), escalating(grant_hosts_write)),
 }
 """Every `steps` row, and the pair of functions that answers for it."""
 

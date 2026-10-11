@@ -127,17 +127,17 @@ def aur() -> Result:
     makepkg verifies upstream source signatures and a missing `GNUPGHOME` fails
     the verification rather than skipping it.
     """
-    home = _gnupg_home()
+    home = gnupg_home()
     try:
         home.mkdir(parents=True, exist_ok=True)
         home.chmod(0o700)
     except OSError as refused:
         return Result(False, f'could not prepare {home} for AUR signature verification: {refused}', kind=Kind.WRITE_FAILED)
 
-    return _yay()
+    return yay()
 
 
-def _gnupg_home() -> Path:
+def gnupg_home() -> Path:
     """Where `.zshrc` puts GnuPG, which is where makepkg has to be told to look.
 
     Duplicated from the shell rather than shared with it because the shell is not
@@ -149,7 +149,7 @@ def _gnupg_home() -> Path:
     return Path(data) / 'gnupg'
 
 
-def _yay() -> Result:
+def yay() -> Result:
     """Build yay from the AUR, which is the only way to get an AUR helper.
 
     `makepkg` refuses to run as root and escalates for the install step itself, so
@@ -165,7 +165,7 @@ def _yay() -> Result:
     if shutil.which('makepkg') is None:
         return Result(False, 'building yay needs base-devel, which this machine has not installed', kind=Kind.PREREQUISITE_MISSING)
 
-    environment = {'GNUPGHOME': str(_gnupg_home())}
+    environment = {'GNUPGHOME': str(gnupg_home())}
     with tempfile.TemporaryDirectory(prefix='dotfiles-yay-') as scratch:
         checkout = Path(scratch) / 'yay'
         cloned = effects.run(['git', 'clone', '--depth', '1', YAY_REPO, str(checkout)])

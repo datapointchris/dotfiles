@@ -25,7 +25,7 @@ from dotfiles.resources import Verdict
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -193,7 +193,7 @@ def written(fake_bin: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     log = tmp_path / 'writes'
     executable(fake_bin, 'defaults', f'#!/bin/sh\nprintf "defaults %s\\n" "$*" >> {log}\nexit 0\n')
     executable(fake_bin, 'osascript', f'#!/bin/sh\nprintf "osascript %s\\n" "$*" >> {log}\nexit 0\n')
-    monkeypatch.setattr(macdefaults, '_QUIT', False)
+    monkeypatch.setattr(macdefaults, 'QUIT', False)
     return log
 
 

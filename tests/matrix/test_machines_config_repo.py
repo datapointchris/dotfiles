@@ -771,7 +771,7 @@ def test_a_leaf_given_a_machine_that_does_not_exist_names_the_ones_that_do(verb:
     """A typo is a usage error naming the known machines, never a report that this
     machine's declaration cannot be read.
 
-    All four call `_manifest_path` before loading. `requirements` was the one that
+    All four call `manifest_path` before loading. `requirements` was the one that
     did not, and it let the `MachineError` out as a traceback — which is the reason
     this is a matrix rather than one test about one leaf.
     """

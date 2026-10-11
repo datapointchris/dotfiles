@@ -165,7 +165,7 @@ every process, including one that never sourced `~/.env`.
 [Symlinks Manager](../reference/tools/symlinks.md) says when a file earns one.
 
 `--safekeep` emits the files as the `[[back_up_paths]]` blocks safekeep's config
-wants. Blocks to paste rather than a generated config, and `_safekeep_block` in
+wants. Blocks to paste rather than a generated config, and `safekeep_block` in
 `src/dotfiles/commands/machines.py` holds why that boundary is load-bearing.
 
 ## Git builds its own layering on top of what arrived
@@ -188,7 +188,7 @@ needing none ships nothing. Trust comes last, because its nonfleet form override
 a default with an `includeIf` and git resolves last-wins.
 
 Two rules hold that scheme together. Git enforces neither, so
-`dotfiles machines check` does. `_git_variants` in `src/dotfiles/validate.py` is
+`dotfiles machines check` does. `git_variants` in `src/dotfiles/validate.py` is
 the pair, and its docstring carries why a broken one is invisible on the machine
 it breaks.
 

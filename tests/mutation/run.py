@@ -314,20 +314,20 @@ def control(setup: Setup, shadow: Path, basetemp: Path, relative: str, source: s
     return seconds
 
 
-def _execute(setup: Setup, workers: Workers, sources: dict[str, str], planned: Planned, timeout: float) -> score.SiteResult:
+def execute(setup: Setup, workers: Workers, sources: dict[str, str], planned: Planned, timeout: float) -> score.SiteResult:
     shadow, basetemp = workers.take()
     try:
         text = planter.plant(sources[planned.relative], planned.site.index)
     except SyntaxError as unparseable:
         workers.give_back((shadow, basetemp))
-        return _result(planned, score.SKIPPED, detail=f'{planter.UNPARSEABLE}: {unparseable}')
+        return site_result(planned, score.SKIPPED, detail=f'{planter.UNPARSEABLE}: {unparseable}')
     except Exception as broken:
         # A site the planner recognized and the planter cannot perform is a fault
         # in the harness, not a property of the source. Recorded as a skip it would
         # leave the denominator, so a half-added operator would raise the score
         # rather than failing — which `Tally.scored` excluding SKIPPED makes silent.
         workers.give_back((shadow, basetemp))
-        return _result(planned, score.HARNESS_ERROR, detail=f'planting failed: {type(broken).__name__}: {broken}')
+        return site_result(planned, score.HARNESS_ERROR, detail=f'planting failed: {type(broken).__name__}: {broken}')
     try:
         write_into(shadow, setup.source_root, planned.relative, text)
         # Attribution needs every failure, and `-x` stops at the first one. A killer-recording run therefore forgoes the saving
@@ -358,13 +358,13 @@ def _execute(setup: Setup, workers: Workers, sources: dict[str, str], planned: P
             status, detail = score.HARNESS_ERROR, UNATTRIBUTED
         if status == score.HARNESS_ERROR:
             detail = f'{detail}\n{output[-400:]}'.strip()
-        return _result(planned, status, seconds=seconds, detail=detail, killers=killers, unmeasured=unmeasured)
+        return site_result(planned, status, seconds=seconds, detail=detail, killers=killers, unmeasured=unmeasured)
     finally:
         write_into(shadow, setup.source_root, planned.relative, sources[planned.relative])
         workers.give_back((shadow, basetemp))
 
 
-def _result(
+def site_result(
     planned: Planned,
     status: str,
     seconds: float = 0.0,
@@ -408,8 +408,8 @@ def measure(
             found = [item for item in found if item.site.lineno in lines.get(relative, set())]
         everything.extend(found)
 
-    skipped = [_result(item, score.SKIPPED, detail=item.site.skipped) for item in everything if item.site.skipped]
-    unreached = [_result(item, score.UNREACHED) for item in everything if not item.site.skipped and not item.tests]
+    skipped = [site_result(item, score.SKIPPED, detail=item.site.skipped) for item in everything if item.site.skipped]
+    unreached = [site_result(item, score.UNREACHED) for item in everything if not item.site.skipped and not item.tests]
     results: list[score.SiteResult] = [*skipped, *unreached]
     runnable = [item for item in everything if not item.site.skipped and item.tests]
     if limit is not None:
@@ -442,7 +442,7 @@ def measure(
             done = 0
             with concurrent.futures.ThreadPoolExecutor(max_workers=setup.jobs) as pool:
                 futures = {
-                    pool.submit(_execute, setup, workers, sources, item, per_target.get(item.relative, TIMEOUT_FLOOR)): item
+                    pool.submit(execute, setup, workers, sources, item, per_target.get(item.relative, TIMEOUT_FLOOR)): item
                     for item in runnable
                 }
                 for future in concurrent.futures.as_completed(futures):
@@ -455,7 +455,7 @@ def measure(
     return score.Run(
         started_at=score.stamp(started),
         finished_at=score.stamp(dt.datetime.now(dt.UTC)),
-        machine=_machine_id(),
+        machine=machine_id(),
         targets=tuple(relatives),
         results=tuple(sorted(results, key=lambda item: (item.file, item.line, item.col))),
         control_seconds=round(control_seconds, 2),
@@ -463,7 +463,7 @@ def measure(
     )
 
 
-def _machine_id() -> str:
+def machine_id() -> str:
     return paths.MACHINE_ID
 
 

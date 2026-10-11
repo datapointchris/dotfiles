@@ -64,8 +64,8 @@ def test_a_run_id_resolves_as_well_as_a_filename_prefix(runs_dir: Path) -> None:
     stream(runs_dir, '20260815T100000Z', ran('git status', run_id='111122223333'))
     wanted = stream(runs_dir, '20260815T110000Z', ran('go install', run_id='444455556666'))
 
-    assert logs._resolve('4444') == wanted
-    assert logs._resolve('20260815T11') == wanted
+    assert logs.resolve('4444') == wanted
+    assert logs.resolve('20260815T11') == wanted
 
 
 def test_an_ambiguous_identifier_is_refused_rather_than_guessed(runs_dir: Path) -> None:
@@ -140,8 +140,8 @@ def test_a_newer_run_is_chosen_by_name_rather_than_mtime(runs_dir: Path) -> None
     later.touch()
     current.touch()
 
-    assert logs._newer_than(current) == later
-    assert logs._newer_than(later) is None
+    assert logs.newer_than(current) == later
+    assert logs.newer_than(later) is None
 
 
 def test_a_command_line_carrying_brackets_survives_rendering(runs_dir: Path) -> None:

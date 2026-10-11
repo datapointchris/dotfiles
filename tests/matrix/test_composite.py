@@ -717,11 +717,11 @@ def test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing(ver
     """Exit 2, and the same answer `machines show <typo>` already gives.
 
     Two codes were available and the codebase has already picked between them, in
-    the noun whose whole subject is machines: `_manifest_path` raises
+    the noun whose whole subject is machines: `manifest_path` raises
     `BadParameter` for a name with no manifest, so `machines show ghost` exits 2
     naming the ones that exist — a *passing* row in
     `test_machines_config_repo.py::test_a_leaf_given_a_machine_that_does_not_exist_names_the_ones_that_do`.
-    `commands/resources.py::_validate_source` states the principle for the sibling
+    `commands/resources.py::validate_source` states the principle for the sibling
     case: a caller has to be able to tell "you typed it wrong" from "it ran and
     failed", and only the first is worth retrying.
 

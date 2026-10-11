@@ -722,14 +722,14 @@ def install_record_gap(machine: Machine) -> str:
     """
     home = machine.environment.home
     if not machine.read(f'cat {home}/{INSTALL_STATUS} 2>/dev/null').strip().isdigit():
-        return f'{INSTALL_STATUS} is absent or holds no number, so the install did not reach the end of the command{_install_tail(machine)}'
+        return f'{INSTALL_STATUS} is absent or holds no number, so the install did not reach the end of the command{install_tail(machine)}'
     return (
         f'{INSTALL_STATUS} is present, so the install ran — but {INSTALL_RECORD} is empty, '
-        f'so {LATEST_RECORD} matched nothing{_install_tail(machine)}'
+        f'so {LATEST_RECORD} matched nothing{install_tail(machine)}'
     )
 
 
-def _install_tail(machine: Machine) -> str:
+def install_tail(machine: Machine) -> str:
     """The end of the install log, appended to whatever gap is being reported.
 
     The log is written by `tee` and survives every failure, and the fixture that

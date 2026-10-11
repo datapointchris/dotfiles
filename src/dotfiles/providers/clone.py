@@ -56,7 +56,7 @@ def tracked(item: DesiredItem, home: Path) -> Path | None:
     """The checkout a `git pull` would move, or None where there is none.
 
     A subdirectory plugin has none by construction: what survives is the copy
-    `_subdirectory` made, and the shallow clone it came out of was deleted. So
+    `copy_subdirectory` made, and the shallow clone it came out of was deleted. So
     `yazi-rs/plugins` moving upstream is not drift this can measure, and saying so
     is better than reporting every yazi plugin permanently current.
     """
@@ -101,14 +101,14 @@ def pull(item: DesiredItem, home: Path) -> Result:
     if checkout is None:
         return Result(False, f'{destination(item, home)} is not a checkout this can pull', kind=Kind.TARGET_UNUSABLE)
 
-    was = _commit(checkout)
+    was = commit(checkout)
     result = run(['git', '-C', str(checkout), 'pull', '--quiet', '--ff-only'], output=Output.STREAM)
     if not result.ok:
         return Result(False, result.transcript.strip() or f'git pull exited {result.returncode}', kind=Kind.DOWNLOAD_FAILED)
-    return Result(True, f'{item.name} updated: {was} → {_commit(checkout)}', kind=Kind.APPLIED)
+    return Result(True, f'{item.name} updated: {was} → {commit(checkout)}', kind=Kind.APPLIED)
 
 
-def _commit(checkout: Path) -> str:
+def commit(checkout: Path) -> str:
     """The short commit, which is the only evidence a pull actually moved anything.
 
     `git pull --quiet` on a current clone exits 0 and prints nothing, so the
@@ -133,7 +133,7 @@ def clone(item: DesiredItem, home: Path) -> Result:
     target = destination(item, home)
     target.parent.mkdir(parents=True, exist_ok=True)
     if inner := subdirectory(item):
-        return _subdirectory(repository(item), inner, target)
+        return copy_subdirectory(repository(item), inner, target)
 
     result = run(['git', 'clone', '--quiet', repository(item), str(target)], output=Output.STREAM)
     if not result.ok:
@@ -141,7 +141,7 @@ def clone(item: DesiredItem, home: Path) -> Result:
     return Result(True, f'cloned into {target}', kind=Kind.APPLIED)
 
 
-def _subdirectory(repo: str, inner: str, target: Path) -> Result:
+def copy_subdirectory(repo: str, inner: str, target: Path) -> Result:
     """Take one plugin out of a repository carrying two dozen of them.
 
     Copied out rather than moved, and with symlinks resolved: `yazi-rs/plugins`

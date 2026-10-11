@@ -100,7 +100,7 @@ def annotation_nodes(tree: ast.AST) -> set[int]:
     return found
 
 
-def _mutation(node: ast.AST) -> tuple[str, str] | None:
+def mutation(node: ast.AST) -> tuple[str, str] | None:
     """The kind and the description, or None where no operator applies."""
     if isinstance(node, ast.Compare) and len(node.ops) == 1 and type(node.ops[0]) in SWAP_COMPARISON:
         operator = type(node.ops[0])
@@ -111,45 +111,45 @@ def _mutation(node: ast.AST) -> tuple[str, str] | None:
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
         return NEGATION, 'drop not'
     if isinstance(node, ast.Constant):
-        return _constant_mutation(node.value)
+        return constant_mutation(node.value)
     return None
 
 
 CONSTANT_KINDS: tuple[tuple[type, str], ...] = ((bool, BOOLEAN), (int, INTEGER), (float, FLOATING), (str, STRING))
 """Which kind a constant is, in the order `isinstance` has to ask.
 
-`bool` before `int` because it is one. The table is here so `_constant_mutation`
+`bool` before `int` because it is one. The table is here so `constant_mutation`
 and `mutated` cannot disagree about what a site is — the description is keyed
 into `score.compare`, so a description drifting from what `mutated` performs
 makes every survivor in the file read as new with nothing able to say why.
 """
 
 
-def _kind_of(value: object) -> str | None:
+def kind_of(value: object) -> str | None:
     for kind_type, kind in CONSTANT_KINDS:
         if isinstance(value, kind_type):
             return kind
     return None
 
 
-def _constant_mutation(value: object) -> tuple[str, str] | None:
+def constant_mutation(value: object) -> tuple[str, str] | None:
     """The kind and a description of what `mutated` will actually do to it."""
-    kind = _kind_of(value)
+    kind = kind_of(value)
     if kind is None:
         return None
     after = mutated(value)
     if kind is STRING:
-        return kind, f'{_short(str(value))} -> {_short(str(after))}'
+        return kind, f'{short(str(value))} -> {short(str(after))}'
     return kind, f'{value} -> {after}'
 
 
-def _short(value: str) -> str:
+def short(value: str) -> str:
     rendered = repr(value)
     return rendered if len(rendered) <= 48 else f'{rendered[:45]}…'
 
 
 def mutated(value: object) -> str | bool | int | float:
-    """The one place a constant is actually changed. `_constant_mutation` describes this."""
+    """The one place a constant is actually changed. `constant_mutation` describes this."""
     if isinstance(value, bool):
         return not value
     if isinstance(value, int):
@@ -165,7 +165,7 @@ def mutable(tree: ast.AST) -> Iterator[tuple[Held, str, str, str]]:
     """Every site, in walk order, as `(held, kind, description, skip reason)`."""
     skippable = annotation_nodes(tree)
     for held in walk(tree):
-        found = _mutation(held.node)
+        found = mutation(held.node)
         if found is None:
             continue
         kind, description = found
@@ -186,7 +186,7 @@ def sites(tree: ast.AST) -> list[Site]:
     ]
 
 
-def _replace(held: Held, replacement: ast.AST) -> None:
+def replace(held: Held, replacement: ast.AST) -> None:
     if held.parent is None:
         raise ValueError('a site with no parent cannot be replaced')
     if held.slot < 0:
@@ -195,7 +195,7 @@ def _replace(held: Held, replacement: ast.AST) -> None:
     getattr(held.parent, held.field)[held.slot] = replacement
 
 
-def _plant_into(held: Held) -> None:
+def plant_into(held: Held) -> None:
     node = held.node
     if isinstance(node, ast.Compare):
         node.ops = [SWAP_COMPARISON[type(node.ops[0])]()]
@@ -204,10 +204,10 @@ def _plant_into(held: Held) -> None:
         node.op = ast.Or() if isinstance(node.op, ast.And) else ast.And()
         return
     if isinstance(node, ast.UnaryOp):
-        _replace(held, node.operand)
+        replace(held, node.operand)
         return
     if isinstance(node, ast.Constant):
-        _replace(held, ast.Constant(value=mutated(node.value)))
+        replace(held, ast.Constant(value=mutated(node.value)))
         return
     raise TypeError(f'no operator for {type(node).__name__}')
 
@@ -221,7 +221,7 @@ def plant(source: str, index: int) -> str:
     for position, (held, _, _, _) in enumerate(mutable(tree)):
         if position != index:
             continue
-        _plant_into(held)
+        plant_into(held)
         ast.fix_missing_locations(tree)
         return ast.unparse(tree)
     raise IndexError(f'no site {index}')

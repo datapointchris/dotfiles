@@ -145,27 +145,27 @@ def install(entry: catalog.WingetPackage, into: Path, *, offline: bool) -> Resul
     while a current bundle sits staged on disk.
     """
     if offline:
-        return _from_bundle(entry, into) or Result(False, _unstaged(entry), kind=Kind.NOT_IN_BUNDLE)
+        return from_bundle(entry, into) or Result(False, unstaged(entry), kind=Kind.NOT_IN_BUNDLE)
 
     winget = client()
     if not winget:
-        return _from_bundle(entry, into) or Result(False, f'winget is not on PATH, and {_unstaged(entry)}', kind=Kind.NOT_IN_BUNDLE)
+        return from_bundle(entry, into) or Result(False, f'winget is not on PATH, and {unstaged(entry)}', kind=Kind.NOT_IN_BUNDLE)
 
     home = Path.home()
     effects.run((winget, 'install', '--accept-package-agreements', '--accept-source-agreements', entry.winget), output=Output.STREAM)
 
     if copy_installed(home, into, entry):
         return Result(True, f'winget: {entry.winget}', kind=Kind.APPLIED)
-    return _from_bundle(entry, into) or Result(
-        False, f'winget left no {entry.filename} under {home / PACKAGES}, and {_unstaged(entry)}', kind=Kind.VERIFY_FAILED
+    return from_bundle(entry, into) or Result(
+        False, f'winget left no {entry.filename} under {home / PACKAGES}, and {unstaged(entry)}', kind=Kind.VERIFY_FAILED
     )
 
 
-def _unstaged(entry: catalog.WingetPackage) -> str:
+def unstaged(entry: catalog.WingetPackage) -> str:
     return f'the offline bundle at {bundled(entry).parent} carries no {entry.filename}'
 
 
-def _from_bundle(entry: catalog.WingetPackage, into: Path) -> Result | None:
+def from_bundle(entry: catalog.WingetPackage, into: Path) -> Result | None:
     """The staged executable, or None where the bundle carries none.
 
     None rather than a failed Result, so a caller can tell "the bundle does not

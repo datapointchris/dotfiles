@@ -422,7 +422,7 @@ def test_the_walk_keeps_every_link_it_should_and_descends_into_nothing_it_should
     """
     made = a_tree_of_every_shape(tmp_path)
 
-    found = set(core._find_symlinks(tmp_path).found)
+    found = set(core.find_symlinks(tmp_path).found)
 
     assert found == {made[name] for name in KEPT}
 
@@ -448,7 +448,7 @@ def test_a_link_whose_target_cannot_be_reached_costs_only_itself(tmp_path: Path)
     ordinary.symlink_to(tmp_path / 'gone.txt')
     locked.chmod(0o000)
     try:
-        found = set(core._find_symlinks(tmp_path).found)
+        found = set(core.find_symlinks(tmp_path).found)
     finally:
         locked.chmod(0o755)
 
@@ -500,7 +500,7 @@ def test_the_walk_scans_a_root_whose_own_path_is_excluded(tmp_path: Path) -> Non
         (root / name).symlink_to(root / 'plain.txt')
 
     assert core.is_excluded_search_dir(root) is True
-    assert len(core._find_symlinks(root).found) == 3
+    assert len(core.find_symlinks(root).found) == 3
 
 
 def test_a_directory_that_cannot_be_read_is_reported_rather_than_skipped_in_silence(tmp_path: Path) -> None:
@@ -513,7 +513,7 @@ def test_a_directory_that_cannot_be_read_is_reported_rather_than_skipped_in_sile
     (tmp_path / 'ordinary').symlink_to(tmp_path / 'gone.txt')
     locked.chmod(0o000)
     try:
-        scan = core._find_symlinks(tmp_path)
+        scan = core.find_symlinks(tmp_path)
     finally:
         locked.chmod(0o755)
 

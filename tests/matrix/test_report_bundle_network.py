@@ -326,8 +326,8 @@ def test_an_install_that_left_the_item_absent_is_named_in_the_listing(sandbox: S
 
     `OutcomeStatus.ABSENT` means the install command exited 0 and the thing is
     still not there — `brew install pkg-config` landing a formula renamed to
-    `pkgconf`, thirteen times. `_never_converged` says that case is now caught on
-    the first run rather than the third, because `_transact` re-observes and
+    `pkgconf`, thirteen times. `never_converged` says that case is now caught on
+    the first run rather than the third, because `transact` re-observes and
     records `absent`. The listing is where a reader goes to find which run went
     wrong, and it counted every unsuccessful action but this one.
     """
@@ -627,7 +627,7 @@ def test_the_listing_reports_the_runs_it_can_read(sandbox: Sandbox, cli: Callabl
     `runs/` is replicated across the whole fleet, and a record is written with a
     plain `write_text` — so an interrupted process or a full disk leaves a
     truncated file every reading verb has to survive. The companion event log is
-    tolerated exactly this way: `_slow_commands` catches its own parse errors
+    tolerated exactly this way: `slow_commands` catches its own parse errors
     line by line and says so, on the grounds that a run must not refuse to
     render because an optional file is malformed. The blast radius is larger here
     — `list`, `stats`, `latest` and `show` all answer out of this reader, so one
@@ -1143,13 +1143,13 @@ class TestTheClosingLine:
     """
 
     def test_a_reachable_network_says_so_without_naming_a_remedy(self) -> None:
-        assert network_command._closing(0, 0) == 'every source this machine installs from is reachable'
+        assert network_command.closing(0, 0) == 'every source this machine installs from is reachable'
 
     def test_a_blocked_network_names_the_machine_that_can_build_the_bundle(self) -> None:
         """Pointing a blocked box at `dotfiles bundle create` and leaving it there is
         an instruction that fails on the machine reading it, so the sentence carries
         the where and the command stays last for a copy-paste."""
-        closing = network_command._closing(3, 0)
+        closing = network_command.closing(3, 0)
 
         assert closing.startswith('3 source(s) unreachable, so installing here needs a bundle built elsewhere')
         assert closing.endswith('run: dotfiles bundle create')
@@ -1158,7 +1158,7 @@ class TestTheClosingLine:
         """The connection succeeded and the certificate was somebody else's, so the
         answer is a CA rather than a tarball — the one distinction a reader of forty
         identical-looking `blocked` rows would otherwise have to find for themselves."""
-        assert '2 of them presented an untrusted certificate, which a bundle does not fix' in network_command._closing(3, 2)
+        assert '2 of them presented an untrusted certificate, which a bundle does not fix' in network_command.closing(3, 2)
 
     def test_the_run_closes_on_it_rather_than_on_the_tally_alone(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
         """The section says what was measured and the closing line says what to do

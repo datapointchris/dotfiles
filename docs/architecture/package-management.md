@@ -125,7 +125,7 @@ question back.
 
 An entry that cannot be asked declares so rather than being probed and hoped for.
 Which clauses have to hold, and the GUI whose probe blocked three `dotfiles plan`
-runs on its own event loop, are `_has_currency` in
+runs on its own event loop, are `has_currency` in
 `src/dotfiles/resources/packages.py`.
 
 ## Implementation

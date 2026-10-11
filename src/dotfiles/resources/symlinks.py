@@ -78,7 +78,7 @@ class Content(enum.StrEnum):
     """What is at one target, in the only terms a copy machine can answer in.
 
     An enum rather than the five bare strings it replaced, for the reason
-    `core.Ownership` is one: `_copy_verdict` has a branch per member and a
+    `core.Ownership` is one: `copy_verdict` has a branch per member and a
     fallthrough that means converged, and over strings a sixth answer would take
     that fallthrough silently. `assert_never` there turns the same addition into a
     type error, which is the only notice that arrives before the machine does.
@@ -157,8 +157,8 @@ class Observed:
     """Whether this machine deploys by copy, which decides *which* of the fields
     below carries the answer.
 
-    A field rather than a second call to `machine.wants` inside `_verdict`,
-    because `_verdict` is the pure half: everything it decides from has to have
+    A field rather than a second call to `machine.wants` inside `verdict`,
+    because `verdict` is the pure half: everything it decides from has to have
     been observed. It is also what `summary` counts through, so a mode read
     somewhere other than here would be a second opinion free to disagree with the
     rows it is summarizing.
@@ -248,11 +248,11 @@ class Observed:
         half a reader keeps.
 
         `symlinks` or `copies` by what this machine writes. Every row below already
-        keeps the two mechanisms apart, `_copy_verdict`'s detail most explicitly,
+        keeps the two mechanisms apart, `copy_verdict`'s detail most explicitly,
         and a summary counting `symlinks` on a machine that creates none names a
         thing that is not there.
 
-        Counted through `_verdict`, which is what decides the same question for
+        Counted through `verdict`, which is what decides the same question for
         every row below. A second predicate here would be free to disagree with the
         rows it is summarizing.
 
@@ -263,7 +263,7 @@ class Observed:
         rendered = [link for link in self.links if link.rendered]
 
         def in_place(links: list[Link]) -> int:
-            return sum(1 for link in links if _verdict(link, self) is None)
+            return sum(1 for link in links if verdict(link, self) is None)
 
         said = f'{in_place(deployed)} of {len(deployed)} declared {"copies" if self.copying else "symlinks"} in place'
         if rendered:
@@ -275,7 +275,7 @@ class Observed:
         """Every declared link, addressed as `diff` addresses one, showing where it lands.
 
         The whole set rather than the deployed subset, because deciding which is
-        which is `_verdict`'s and duplicating it here is a second opinion that can
+        which is `verdict`'s and duplicating it here is a second opinion that can
         disagree. `reconcile.sift` drops the ones that produced a finding.
         """
         return tuple(Examined(link.address, str(link.target)) for link in self.links)
@@ -355,7 +355,7 @@ because the template tells this manager's output apart where a copy cannot.
 `--force` is refused at that machine's door, so moving the file is the way past."""
 
 
-def _foreign_advice(copying: bool) -> str:
+def foreign_advice(copying: bool) -> str:
     return MOVE_ASIDE_ADVICE if copying else FOREIGN_ADVICE
 
 
@@ -432,13 +432,13 @@ class SymlinksResource:
     help = 'deployed dotfiles: the repo linked into $HOME'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
-        # `_index` is keyed on the Session, and two Sessions in one process compare
+        # `index` is keyed on the Session, and two Sessions in one process compare
         # equal by value. Uncleared, a second run in the same interpreter reads the
         # first run's declaration index, and `perform` refuses a file added to the
         # repo between them as "nothing in the repo declares this link any more".
         # Cleared here because this is the one place that re-reads the repo, so it
         # is where a run's idea of what is declared begins.
-        _index.cache_clear()
+        index.cache_clear()
         links = declared(session, plan.machine.coordinates)
         deployed = [link for link in links if not link.rendered]
         rendered = measure_rendered(session, [link for link in links if link.rendered])
@@ -449,7 +449,7 @@ class SymlinksResource:
                 ownership={},
                 pointing_at={},
                 adoptable=frozenset(),
-                content={link.target: _compare(link) for link in deployed},
+                content={link.target: compare(link) for link in deployed},
                 orphans=(),
                 rendered=rendered,
                 env_file=session.env_file,
@@ -462,7 +462,7 @@ class SymlinksResource:
 
         for link in deployed:
             ownership[link.target] = core.link_ownership(link.target, link.root)
-            pointing_at[link.target] = _destination(link.target)
+            pointing_at[link.target] = destination(link.target)
             if ownership[link.target] is core.Ownership.FOREIGN and (session.force or core.is_untouched_skeleton(link.target)):
                 adoptable.add(link.target)
 
@@ -484,7 +484,7 @@ class SymlinksResource:
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
-        changes = [change for link in observed.links if (change := _verdict(link, observed)) is not None]
+        changes = [change for link in observed.links if (change := verdict(link, observed)) is not None]
         changes.extend(
             Change(
                 NAME,
@@ -526,18 +526,18 @@ class SymlinksResource:
         address is `origin/path-in-the-repo`; an orphan has nothing declaring it,
         so it is addressed by its absolute path in `$HOME`.
         """
-        link = _link_for(session, change)
+        link = link_for(session, change)
         if link is None:
             target = Path(change.item)
             if not target.is_absolute():
                 return Outcome(change, OutcomeStatus.REFUSED, 'nothing in the repo declares this link any more')
-            return _prune(change, target)
+            return prune(change, target)
 
         if link.rendered:
-            return _render(session, change, link)
+            return render(session, change, link)
 
         if session.machine.wants(DEPLOY_BY_COPY):
-            return _copy(change, link)
+            return copy(change, link)
 
         ownership = core.link_ownership(link.target, link.root)
         if ownership is core.Ownership.FOREIGN and not (session.force or core.is_untouched_skeleton(link.target)):
@@ -554,7 +554,7 @@ class SymlinksResource:
         return Outcome(change, OutcomeStatus.DONE, f'{link.target} → {core.make_relative_symlink(link.source, link.target)}')
 
 
-def _compare(link: Link) -> Content:
+def compare(link: Link) -> Content:
     """Measure one target, in the only terms a copy machine can answer in.
 
     `LINKED` is asked first and answers without reading anything, because every
@@ -576,11 +576,11 @@ def _compare(link: Link) -> Content:
     guard: a source that is itself a broken symlink fails the same way and means
     the same thing.
     """
-    return _measure(link.target, link.source.read_bytes)
+    return measure(link.target, link.source.read_bytes)
 
 
-def _measure(target: Path, expected: Callable[[], bytes]) -> Content:
-    """What is at one target against the bytes it should hold, in `_compare`'s order."""
+def measure(target: Path, expected: Callable[[], bytes]) -> Content:
+    """What is at one target against the bytes it should hold, in `compare`'s order."""
     if target.is_symlink():
         return Content.LINKED
     if not target.exists():
@@ -624,8 +624,8 @@ def measure_rendered(session: Session, templates: list[Link]) -> dict[Path, Rend
         if not rendering.complete:
             measured[link.target] = Rendered(None, unset=rendering.unset)
             continue
-        content = _measure(link.target, rendering.text.encode)
-        foreign = _foreign(link, content, copying=session.machine.wants(DEPLOY_BY_COPY))
+        content = measure(link.target, rendering.text.encode)
+        foreign = holds_foreign_content(link, content, copying=session.machine.wants(DEPLOY_BY_COPY))
         measured[link.target] = Rendered(
             content,
             foreign=foreign,
@@ -634,13 +634,13 @@ def measure_rendered(session: Session, templates: list[Link]) -> dict[Path, Rend
     return measured
 
 
-def _foreign(link: Link, content: Content, *, copying: bool) -> bool:
+def holds_foreign_content(link: Link, content: Content, *, copying: bool) -> bool:
     """Whether a template's target holds something this manager did not write.
 
     A regular file is this manager's where it is a rendering of the template with
     any values. A link is this manager's where it resolves into the repo, which is
     where deploying the file as a link points it. On a copy machine every link
-    counts as this manager's, as `_copy_verdict` treats one. A file that cannot be
+    counts as this manager's, as `copy_verdict` treats one. A file that cannot be
     read as text is nobody's rendering.
     """
     match content:
@@ -656,7 +656,7 @@ def _foreign(link: Link, content: Content, *, copying: bool) -> bool:
     assert_never(content)
 
 
-def _render(session: Session, change: Change, link: Link) -> Outcome:
+def render(session: Session, change: Change, link: Link) -> Outcome:
     """Write the template with this machine's values, rendered again live.
 
     `perform` re-checks everything, and this re-renders for the same reason:
@@ -672,9 +672,9 @@ def _render(session: Session, change: Change, link: Link) -> Outcome:
     if not rendering.complete:
         return Outcome(change, OutcomeStatus.REFUSED, f'nothing sets {", ".join(rendering.unset)}, so {link.target} was left as it was')
     copying = session.machine.wants(DEPLOY_BY_COPY)
-    content = _measure(link.target, rendering.text.encode)
-    if _foreign(link, content, copying=copying) and not (session.force or core.is_untouched_skeleton(link.target)):
-        return Outcome(change, OutcomeStatus.REFUSED, f'a target this manager did not create; {_foreign_advice(copying)}')
+    content = measure(link.target, rendering.text.encode)
+    if holds_foreign_content(link, content, copying=copying) and not (session.force or core.is_untouched_skeleton(link.target)):
+        return Outcome(change, OutcomeStatus.REFUSED, f'a target this manager did not create; {foreign_advice(copying)}')
     try:
         template.write(link.target, rendering.text)
     except OSError as problem:
@@ -694,9 +694,9 @@ def remove_copies(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
 
     That is also why this can exist where the orphan prune cannot. Pruning has to
     ask about a path nothing declares and has no way to; this asks only about
-    paths the repo names, and `_compare` answers for each of them.
+    paths the repo names, and `compare` answers for each of them.
 
-    Byte equality decides, for the reason `_compare` gives: a target holding the
+    Byte equality decides, for the reason `compare` gives: a target holding the
     source's bytes is this manager's output, and one that differs is somebody's
     file. The first is removed and the second is left with its reason, because
     leaving a file is the outcome with an undo — and on the machine that deploys
@@ -713,7 +713,7 @@ def remove_copies(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
     for link in declared(session, session.machine.coordinates):
         if link.rendered:
             continue
-        state = _compare(link)
+        state = compare(link)
         match state:
             case Content.ABSENT:
                 pass
@@ -742,7 +742,7 @@ def remove_copies(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
     return removed, tuple(kept)
 
 
-def _copy(change: Change, link: Link) -> Outcome:
+def copy(change: Change, link: Link) -> Outcome:
     """Put the repo's bytes at the target, and the mode with them.
 
     The mode is not decoration: an `apps/` file that arrives without its execute
@@ -774,7 +774,7 @@ def _copy(change: Change, link: Link) -> Outcome:
     return Outcome(change, OutcomeStatus.DONE, f'copied {link.address} → {link.target}')
 
 
-def _prune(change: Change, target: Path) -> Outcome:
+def prune(change: Change, target: Path) -> Outcome:
     try:
         target.unlink()
     except OSError as problem:
@@ -782,7 +782,7 @@ def _prune(change: Change, target: Path) -> Outcome:
     return Outcome(change, OutcomeStatus.DONE, f'removed {target}')
 
 
-def _verdict(link: Link, observed: Observed) -> Change | None:
+def verdict(link: Link, observed: Observed) -> Change | None:
     """One row's finding, or None where the target is already what it should be.
 
     Both mechanisms return None for converged, which makes every unwritten branch
@@ -792,10 +792,10 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
     mypy error here rather than a target this resource stops reporting on.
     """
     if link.rendered:
-        return _rendered_verdict(link, observed)
+        return rendered_verdict(link, observed)
 
     if observed.copying:
-        return _copy_verdict(link, observed)
+        return copy_verdict(link, observed)
 
     ownership = observed.ownership.get(link.target, core.Ownership.ABSENT)
 
@@ -843,7 +843,7 @@ def _verdict(link: Link, observed: Observed) -> Change | None:
     assert_never(ownership)
 
 
-def _copy_verdict(link: Link, observed: Observed) -> Change | None:
+def copy_verdict(link: Link, observed: Observed) -> Change | None:
     """The same three answers as the link branch, decided on content.
 
     Shorter than its twin by exactly the refusal: there is no `FOREIGN` row,
@@ -867,7 +867,7 @@ def _copy_verdict(link: Link, observed: Observed) -> Change | None:
     the absent entry is itself the thing nothing established.
 
     `SAME` is the only converged answer and says so by name, per the reasoning in
-    `_verdict`.
+    `verdict`.
     """
     state = observed.content.get(link.target, Content.UNREADABLE)
 
@@ -913,7 +913,7 @@ def _copy_verdict(link: Link, observed: Observed) -> Change | None:
     assert_never(state)
 
 
-def _rendered_verdict(link: Link, observed: Observed) -> Change | None:
+def rendered_verdict(link: Link, observed: Observed) -> Change | None:
     """The copy branch's answers, decided against this machine's rendering, with
     the link branch's refusal of a target this manager did not write.
 
@@ -962,7 +962,7 @@ def _rendered_verdict(link: Link, observed: Observed) -> Change | None:
             Verdict.STALE,
             repair=Repair.BY_HAND,
             detail=f'{paths.under_home(link.target, observed.home)} is not a rendering of {link.address}, so this manager did not write it',
-            advice=_foreign_advice(observed.copying),
+            advice=foreign_advice(observed.copying),
         )
 
     match rendered.content:
@@ -1035,7 +1035,7 @@ def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]
                 pass
 
             case Content.SAME:
-                removed += _unlink_rendering(link.target, kept)
+                removed += unlink_rendering(link.target, kept)
 
             case Content.LINKED:
                 kept.append((link.target, 'a symlink rather than a rendered file'))
@@ -1044,7 +1044,7 @@ def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]
                 kept.append((link.target, f'is not a rendering of {link.address}'))
 
             case Content.DIFFERS:
-                removed += _unlink_rendering(link.target, kept)
+                removed += unlink_rendering(link.target, kept)
 
             case Content.UNREADABLE | None:
                 kept.append((link.target, 'could not be read, so nothing was established about it'))
@@ -1055,7 +1055,7 @@ def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]
     return removed, tuple(kept)
 
 
-def _unlink_rendering(target: Path, kept: list[tuple[Path, str]]) -> int:
+def unlink_rendering(target: Path, kept: list[tuple[Path, str]]) -> int:
     """Remove one rendering, counting it, or record why it stays."""
     try:
         target.unlink()
@@ -1065,14 +1065,14 @@ def _unlink_rendering(target: Path, kept: list[tuple[Path, str]]) -> int:
     return 1
 
 
-def _destination(target: Path) -> Path | None:
+def destination(target: Path) -> Path | None:
     if not target.is_symlink():
         return None
     return target.resolve() if target.exists() else core.resolve_broken_symlink(target)
 
 
 @functools.lru_cache(maxsize=1)
-def _index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link]:
+def index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link]:
     """Declared links by address, derived once for the run.
 
     `perform` is handed a `Change` and not the `Observation` that produced it, so
@@ -1088,8 +1088,8 @@ def _index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link
     return {link.address: link for link in declared(session, coordinates)}
 
 
-def _link_for(session: Session, change: Change) -> Link | None:
-    return _index(session, session.machine.coordinates).get(change.item)
+def link_for(session: Session, change: Change) -> Link | None:
+    return index(session, session.machine.coordinates).get(change.item)
 
 
 RESOURCE = SymlinksResource()

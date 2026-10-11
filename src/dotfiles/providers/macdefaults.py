@@ -91,7 +91,7 @@ def observe_default(entry: catalog.MacosDefault, stores: dict[Domain, dict[str, 
         return State(Verdict.MISSING, f'{entry.name} is unset (should be {entry.value})')
     if present == expected(entry):
         return State(Verdict.MATCHED)
-    return State(Verdict.STALE, f'{entry.name} is {_spelled(present)}, should be {entry.value}')
+    return State(Verdict.STALE, f'{entry.name} is {spelled(present)}, should be {entry.value}')
 
 
 def expected(entry: catalog.MacosDefault) -> bool | int | str:
@@ -120,7 +120,7 @@ def written_value(entry: catalog.MacosDefault) -> str:
     return os.path.expanduser(entry.value) if entry.value.startswith('~/') else entry.value
 
 
-def _spelled(value: object) -> str:
+def spelled(value: object) -> str:
     return 'true' if value is True else 'false' if value is False else str(value)
 
 
@@ -131,7 +131,7 @@ def apply_default(entry: catalog.MacosDefault) -> Result:
     user's, and asking for a password to set the Dock's tile size would be asking
     for one that is never checked.
     """
-    _quit_settings_once()
+    quit_settings_once()
     prefix = ['defaults'] + (['-currentHost'] if entry.current_host else [])
     flag = f'-{entry.type}'
     value = written_value(entry)
@@ -146,10 +146,10 @@ def apply_default(entry: catalog.MacosDefault) -> Result:
     return Result(True, f'{entry.name} set to {entry.value}', kind=Kind.APPLIED)
 
 
-_QUIT = False
+QUIT = False
 
 
-def _quit_settings_once() -> None:
+def quit_settings_once() -> None:
     """Before the first write of the process, and never again.
 
     A module flag rather than a step the caller has to remember, because the
@@ -158,9 +158,9 @@ def _quit_settings_once() -> None:
     reverted with nothing to say it happened. Two osascript calls per run is
     cheap; two per entry would be 73.
     """
-    global _QUIT
-    if _QUIT:
+    global QUIT
+    if QUIT:
         return
-    _QUIT = True
+    QUIT = True
     for app in SYSTEM_SETTINGS_APPS:
         run(['osascript', '-e', f'tell application "{app}" to quit'], output=Output.QUIET)

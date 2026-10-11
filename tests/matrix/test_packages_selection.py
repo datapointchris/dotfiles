@@ -126,7 +126,7 @@ def test_a_source_this_resource_cannot_install_is_a_usage_error(verb: str, sourc
 
     A name that is not a section at all is caught by the option's own callback
     against `packages.yml`; a section another resource installs and a section
-    nothing installs are both caught in `_selected`, against the registry. All
+    nothing installs are both caught in `selected`, against the registry. All
     three are usage errors rather than findings, because none of them ran.
     """
     ran = cli('packages', verb, '--source', source)

@@ -171,7 +171,7 @@ def test_an_item_installed_every_apply_is_named_as_unconverged(runs_dir: Path) -
     for day in ('01', '02', '03', '04'):
         runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
 
-    found = report._never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
+    found = report.never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
 
     assert [(entry.address, entry.applies) for entry in found] == [('packages/zk', 4)]
 
@@ -185,7 +185,7 @@ def test_an_item_the_newest_apply_left_alone_is_not_named(runs_dir: Path) -> Non
         runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
     runs.write(churn_record(MACHINE, '2026-08-04T00:00:00Z', 'other'), runs_dir)
 
-    found = report._never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
+    found = report.never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
 
     assert not [entry for entry in found if entry.address == 'packages/zk']
 
@@ -196,7 +196,7 @@ def test_a_short_streak_is_not_yet_a_fault(runs_dir: Path) -> None:
     for day in ('03', '04'):
         runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
 
-    assert not report._never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
+    assert not report.never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
 
 
 def test_streaks_are_counted_per_machine(runs_dir: Path) -> None:
@@ -206,7 +206,7 @@ def test_streaks_are_counted_per_machine(runs_dir: Path) -> None:
         runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
         runs.write(churn_record('linux-lxc-server', f'2026-08-{day}T00:00:00Z', 'other'), runs_dir)
 
-    found = report._never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
+    found = report.never_converged([runs.read(path) for path in runs.list_runs(runs_dir)])
 
     assert {entry.machine for entry in found} == {MACHINE, 'linux-lxc-server'}
     assert all(entry.applies == 3 for entry in found)

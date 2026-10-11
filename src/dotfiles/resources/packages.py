@@ -77,7 +77,7 @@ and `custom.version_file` is the vendor's own file where no repo answers.
 The engine acts on verdicts, so a section with no verdict for "behind" is a section
 that silently never upgrades.
 
-Which entries cannot be asked is `_has_currency`'s answer rather than a list here —
+Which entries cannot be asked is `has_currency`'s answer rather than a list here —
 an entry naming no upstream, reporting no version, or installing no binary drops
 out there, and `dotfiles machines show --json` is what enumerates them.
 """
@@ -206,18 +206,18 @@ class PackagesResource:
         evidence = {item.address: registry.evidence_for(item, session.inventories) for item in mine}
 
         present = tuple(
-            item for item in mine if evidence[item.address].verdict is Verdict.MATCHED and _has_currency(item, offline=session.offline)
+            item for item in mine if evidence[item.address].verdict is Verdict.MATCHED and has_currency(item, offline=session.offline)
         )
-        latest, consulted = _upstream(session, present)
-        probed = _reported_versions(present, evidence)
+        latest, consulted = upstream(session, present)
+        probed = reported_versions(present, evidence)
 
         return Observed(
             evidence=evidence,
             met=session.preconditions,
             reported={address: answer.version for address, answer in probed.items() if answer.version},
             refused={address: answer.refusal for address, answer in probed.items() if answer.refusal},
-            shadowed=_shadowing(mine, evidence, plan, session.repo),
-            undeclared=_undeclared_own_tools(session, plan),
+            shadowed=shadowing(mine, evidence, plan, session.repo),
+            undeclared=undeclared_own_tools(session, plan),
             latest=latest,
             consulted_network=consulted,
             from_bundle=session.offline,
@@ -273,7 +273,7 @@ class PackagesResource:
                         observed=observed.reported.get(item.address, ''),
                     )
                 )
-            elif _has_currency(item, offline=observed.from_bundle):
+            elif has_currency(item, offline=observed.from_bundle):
                 changes.extend(currency_of(item, observed))
 
             if stray := observed.shadowed.get(item.address):
@@ -285,7 +285,7 @@ class PackagesResource:
                         Verdict.UNDECLARED,
                         repair=Repair.BY_HAND,
                         detail=f'found: {paths.under_home(Path(observed.evidence[item.address].detail), observed.home)}',
-                        advice=_undeclared_advice(stray, plan.machine.coordinates.package_manager, observed.home),
+                        advice=undeclared_advice(stray, plan.machine.coordinates.package_manager, observed.home),
                         desired=item,
                         observed=', '.join(paths.under_home(Path(path), observed.home) for path in stray),
                     )
@@ -311,11 +311,11 @@ class PackagesResource:
         return registry.install(session, change, privilege)
 
 
-def _undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
+def undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
     """Go binaries built from an owner this machine declares tools from, and does
     not declare.
 
-    The mirror of `_shadowing`, and the direction nothing else here looks. Every
+    The mirror of `shadowing`, and the direction nothing else here looks. Every
     other measurement reads down from the declaration and asks whether the
     machine matches it; this one reads up from the machine and asks whether the
     declaration explains what is there. `fleet` sat installed on two workstations
@@ -351,7 +351,7 @@ def _undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
     }
 
 
-def _shadowing(
+def shadowing(
     mine: tuple[DesiredItem, ...],
     evidence: dict[str, ev.Evidence],
     plan: Plan,
@@ -408,7 +408,7 @@ def _shadowing(
     return shadowed
 
 
-def _has_currency(item: DesiredItem, *, offline: bool) -> bool:
+def has_currency(item: DesiredItem, *, offline: bool) -> bool:
     """Whether this item can be compared against an upstream at all.
 
     Every clause has to hold, and an entry failing one is not a finding — it is a
@@ -427,7 +427,7 @@ def _has_currency(item: DesiredItem, *, offline: bool) -> bool:
     """
     if not (isinstance(item.entry, CURRENCY) and item.entry.reports_version and item.executable):
         return False
-    wanted = _wanted(item)
+    wanted = wanted_release(item)
     return bool(wanted.repo) or (bool(wanted.version_file) and not offline)
 
 
@@ -445,7 +445,7 @@ the wait, so the work being overlapped is exactly the part Python is not doing.
 """
 
 
-def _reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, ev.Evidence]) -> dict[str, ev.Reported]:
+def reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, ev.Evidence]) -> dict[str, ev.Reported]:
     """What every installed tool says it is, or the loader's refusal to start it, asked concurrently.
 
     The dominant cost of measuring this resource, and the one that made a `check`
@@ -476,7 +476,7 @@ def _reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, 
 
     found: dict[str, ev.Reported] = {}
     with ThreadPoolExecutor(max_workers=min(PROBE_WORKERS, len(present))) as pool:
-        probes = {pool.submit(_installed_version, item, evidence[item.address]): item for item in present}
+        probes = {pool.submit(installed_version, item, evidence[item.address]): item for item in present}
         for probe in as_completed(probes):
             item = probes[probe]
             try:
@@ -491,7 +491,7 @@ def _reported_versions(present: tuple[DesiredItem, ...], evidence: Mapping[str, 
     return found
 
 
-def _installed_version(item: DesiredItem, found: ev.Evidence) -> ev.Reported:
+def installed_version(item: DesiredItem, found: ev.Evidence) -> ev.Reported:
     """What is actually installed, from whichever source can say it exactly.
 
     A git uv tool is asked through uv's receipt rather than by running it, and that
@@ -508,7 +508,7 @@ def _installed_version(item: DesiredItem, found: ev.Evidence) -> ev.Reported:
     return ev.probe_version(str(found.binary or item.executable))
 
 
-def _wanted(item: DesiredItem) -> releases.Wanted:
+def wanted_release(item: DesiredItem) -> releases.Wanted:
     entry = item.entry
     if isinstance(entry, catalog.GithubRelease | catalog.CustomInstaller):
         from_tags = entry.version_source == catalog.VERSION_FROM_TAGS
@@ -519,7 +519,7 @@ def _wanted(item: DesiredItem) -> releases.Wanted:
     if isinstance(entry, catalog.GitUvTool):
         # A `tracks_branch` repo publishes no release, so there is no tag it could
         # be behind and no upstream to consult. Naming no repo is how that reaches
-        # `_has_currency`, which already reads an empty one as "not a question this
+        # `has_currency`, which already reads an empty one as "not a question this
         # entry can be asked" — the same answer a Go tool declared by module path
         # alone gets, rather than a second exception written beside it.
         # Through `repo_slug_of` because this section carries a clone URL where
@@ -529,7 +529,7 @@ def _wanted(item: DesiredItem) -> releases.Wanted:
     return releases.Wanted(repo='')
 
 
-def _upstream(session: Session, present: tuple[DesiredItem, ...]) -> tuple[dict[str, releases.Cached], bool]:
+def upstream(session: Session, present: tuple[DesiredItem, ...]) -> tuple[dict[str, releases.Cached], bool]:
     """What each present tool should be at, from whichever upstream this run has.
 
     Offline never asks GitHub, whatever `--refresh` says: the flag means "spend the
@@ -543,19 +543,19 @@ def _upstream(session: Session, present: tuple[DesiredItem, ...]) -> tuple[dict[
     name a tag with no network.
     """
     if session.offline:
-        return _staged(present), False
+        return staged(present), False
 
     entries = releases.load()
     if not session.refresh or not present:
         return entries, False
 
     now = dt.datetime.now(dt.UTC)
-    entries = releases.refresh(tuple({_wanted(item) for item in present}), entries, now)
+    entries = releases.refresh(tuple({wanted_release(item) for item in present}), entries, now)
     releases.save(entries)
     return entries, True
 
 
-def _staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
+def staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
     """What a staged bundle holds for each present tool, keyed as the cache is.
 
     Stamped now rather than with the bundle's build date, because the TTL is about
@@ -576,7 +576,7 @@ def _staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
         # older full bundle's row beat a newer measurement.
         version = ghrelease.published_version(item.name)
         if version:
-            found[_wanted(item).key] = releases.Cached(version=version, checked=now)
+            found[wanted_release(item).key] = releases.Cached(version=version, checked=now)
     return found
 
 
@@ -619,9 +619,9 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     reported = observed.reported.get(item.address)
     if reported is None:
         if isinstance(item.entry, catalog.GitUvTool):
-            return _unpinned_git(item, observed)
+            return unpinned_git(item, observed)
         if refusal := observed.refused.get(item.address):
-            return (_cannot_start(item, refusal),)
+            return (cannot_start(item, refusal),)
         return (
             Change(
                 NAME,
@@ -636,9 +636,9 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
 
     pinned = item.entry.version if isinstance(item.entry, catalog.GithubRelease) else ''
     if pinned:
-        return _compared(item, reported, pinned, versions.exactly(reported, pinned), f'pinned to {pinned}', observed.met)
+        return compared(item, reported, pinned, versions.exactly(reported, pinned), f'pinned to {pinned}', observed.met)
 
-    cached = releases.current(_wanted(item), observed.latest, dt.datetime.now(dt.UTC))
+    cached = releases.current(wanted_release(item), observed.latest, dt.datetime.now(dt.UTC))
     if cached is None:
         return (
             Change(
@@ -647,8 +647,8 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.address,
                 Verdict.UNKNOWN,
                 repair=Repair.NONE,
-                detail=_unmeasurable(item, observed),
-                advice=_unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
+                detail=unmeasurable(item, observed),
+                advice=unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
                 desired=item,
                 observed=reported,
             ),
@@ -663,7 +663,7 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.address,
                 Verdict.STALE,
                 repair=repair,
-                detail=_ahead_of(cached.version, observed),
+                detail=ahead_of(cached.version, observed),
                 advice=advice_for(item, repair),
                 desired=item,
                 observed=reported,
@@ -671,7 +671,7 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
         )
 
     current = versions.at_least(reported, cached.version)
-    if current and _installed_without_its_lock(item, reported, cached):
+    if current and installed_without_its_lock(item, reported, cached):
         repair = repair_for(item, Verdict.STALE, observed.met)
         return (
             Change(
@@ -686,10 +686,10 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 observed=reported,
             ),
         )
-    return _compared(item, reported, cached.version, current, _behind(cached.version, observed), observed.met)
+    return compared(item, reported, cached.version, current, behind(cached.version, observed), observed.met)
 
 
-def _installed_without_its_lock(item: DesiredItem, reported: str, cached: releases.Cached) -> bool:
+def installed_without_its_lock(item: DesiredItem, reported: str, cached: releases.Cached) -> bool:
     """A git tool at the tag the cache measured, whose tag has a lock its receipt does not hold.
 
     `uvtool.install_git` holds every install to its tag's lock, so this is an
@@ -704,7 +704,7 @@ def _installed_without_its_lock(item: DesiredItem, reported: str, cached: releas
     )
 
 
-def _cannot_start(item: DesiredItem, refusal: str) -> Change:
+def cannot_start(item: DesiredItem, refusal: str) -> Change:
     """`BY_HAND`, because a reinstall writes the same build and the loader refuses it again."""
     return Change(
         NAME,
@@ -718,7 +718,7 @@ def _cannot_start(item: DesiredItem, refusal: str) -> Change:
     )
 
 
-def _ahead_of(version: str, observed: Observed) -> str:
+def ahead_of(version: str, observed: Observed) -> str:
     """Why an installed version newer than the target is drift, in that target's terms.
 
     Offline the figure is what one tarball holds, so the repair is an older build
@@ -731,7 +731,7 @@ def _ahead_of(version: str, observed: Observed) -> str:
     return f'ahead of {version}, which is the newest release and what a fresh install produces'
 
 
-def _behind(version: str, observed: Observed) -> str:
+def behind(version: str, observed: Observed) -> str:
     """What the installed version is being measured against, named by its source.
 
     A bundle's row is what its builder resolved on the day it was built, not what
@@ -741,7 +741,7 @@ def _behind(version: str, observed: Observed) -> str:
     return f'{version} is what the staged bundle carries' if observed.from_bundle else f'{version} is the latest release'
 
 
-def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
+def unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     """A git tool whose receipt records no revision, so it came from a default branch.
 
     `catalog.GitUvTool` calls that "the degraded state rather than the flexible
@@ -753,7 +753,7 @@ def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     cannot tell "this repo publishes none" from "nobody asked yet", and calling the
     first drift would report a permanently unrepairable row on every plan.
     """
-    cached = releases.current(_wanted(item), observed.latest, dt.datetime.now(dt.UTC))
+    cached = releases.current(wanted_release(item), observed.latest, dt.datetime.now(dt.UTC))
     if cached is None:
         return (
             Change(
@@ -762,8 +762,8 @@ def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.address,
                 Verdict.UNKNOWN,
                 repair=Repair.NONE,
-                detail=_unmeasurable(item, observed),
-                advice=_unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
+                detail=unmeasurable(item, observed),
+                advice=unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
                 desired=item,
             ),
         )
@@ -782,7 +782,7 @@ def _unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     )
 
 
-def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
+def unmeasurable(item: DesiredItem, observed: Observed) -> str:
     """Why nothing can say whether this one is current, in the terms of the upstream
     that was asked. A bundle carrying no row for a tool and a cache nobody has
     filled are different problems with different fixes."""
@@ -792,7 +792,7 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
         # advised extracting a newer bundle to fix something no bundle will ever
         # carry — a permanent finding against the wrong artifact.
         if not bundle.bundlable(item.entry):
-            return _never_bundled(item)
+            return never_bundled(item)
         # A sparse bundle explains most of what it left out, so an entry it does
         # not explain is a different finding: the declaration gained it after the
         # status the bundle was planned from was taken, and nothing has ever
@@ -807,11 +807,11 @@ def _unmeasurable(item: DesiredItem, observed: Observed) -> str:
             return f'the sparse bundle neither carries {item.name} nor measured it, so it was never considered'
         return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
-    wanted = _wanted(item)
+    wanted = wanted_release(item)
     return f'no cached release for {wanted.version_file or wanted.repo} within the TTL ({reason})'
 
 
-def _never_bundled(item: DesiredItem) -> str:
+def never_bundled(item: DesiredItem) -> str:
     """Why no bundle carries this entry, asked of the entry where the section cannot answer.
 
     A section is the right subject for every kind but one. `custom_installers`
@@ -826,8 +826,8 @@ def _never_bundled(item: DesiredItem) -> str:
     return f'no bundle carries a {kind}, so an offline run cannot say whether {item.name} is current'
 
 
-def _unmeasurable_advice(observed: Observed, *, bundlable: bool) -> str:
-    """The fix for `_unmeasurable`, which is not always a command.
+def unmeasurable_advice(observed: Observed, *, bundlable: bool) -> str:
+    """The fix for `unmeasurable`, which is not always a command.
 
     Four states, and only two of them have a next step.
 
@@ -852,7 +852,7 @@ def _unmeasurable_advice(observed: Observed, *, bundlable: bool) -> str:
     return 'upstream did not answer this run, so nothing here says what is newest; try again later'
 
 
-def _undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Path) -> str:
+def undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Path) -> str:
     """What to do about a copy nothing declares — asked of the machine, not guessed.
 
     The row names what owns the file rather than telling a person to go and find
@@ -874,7 +874,7 @@ def _undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Pat
     return '\n'.join(rows)
 
 
-def _compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str, met: Preconditions) -> tuple[Change, ...]:
+def compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str, met: Preconditions) -> tuple[Change, ...]:
     """One comparison's outcome, with `None` kept distinct from `False`.
 
     An unparseable version is not an old one. Reporting it as behind would send

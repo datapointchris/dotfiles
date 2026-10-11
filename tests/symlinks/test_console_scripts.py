@@ -31,9 +31,9 @@ import pytest
 from dotfiles import paths
 from dotfiles.symlinks import core
 
-_DECLARATION = tomllib.loads(paths.PYPROJECT_FILE.read_text()) if paths.PYPROJECT_FILE.exists() else {}
+DECLARATION = tomllib.loads(paths.PYPROJECT_FILE.read_text()) if paths.PYPROJECT_FILE.exists() else {}
 
-SCRIPTS: dict[str, str] = _DECLARATION.get('project', {}).get('scripts', {})
+SCRIPTS: dict[str, str] = DECLARATION.get('project', {}).get('scripts', {})
 """The table entry by entry, guarded the way `console_script_names` guards it.
 
 That function answers with the names alone and resolving an entry needs the

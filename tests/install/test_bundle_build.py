@@ -620,31 +620,31 @@ def redeclare(
         (install / 'manifests' / f'{machine}.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
 
 
-def _unparseable_manifest(_upstream: Upstream, install: Path) -> None:
+def unparseable_manifest(_upstream: Upstream, install: Path) -> None:
     redeclare(install, manifest={**MANIFESTS[MACHINE], 'platform': 'atlantis'})
 
 
-def _release_with_no_asset_function(_upstream: Upstream, install: Path) -> None:
+def release_with_no_asset_function(_upstream: Upstream, install: Path) -> None:
     packages = {**PACKAGES, 'github_releases': [*PACKAGES['github_releases'], {'name': 'nosuchtool', 'repo': 'owner/nosuchtool'}]}
     redeclare(install, packages=packages, manifest={**MANIFESTS[MACHINE], 'github_releases': ['lazygit', 'fzf', 'nosuchtool']})
 
 
-def _a_pin_nothing_published(_upstream: Upstream, install: Path) -> None:
+def a_pin_nothing_published(_upstream: Upstream, install: Path) -> None:
     pinned = [{**PACKAGES['github_releases'][0], 'version': '9.9.9'}, *PACKAGES['github_releases'][1:]]
     redeclare(install, packages={**PACKAGES, 'github_releases': pinned})
 
 
-def _a_windows_asset_in_a_third_shape(upstream: Upstream, install: Path) -> None:
+def a_windows_asset_in_a_third_shape(upstream: Upstream, install: Path) -> None:
     winget_packages = [PACKAGES['winget_packages'][0], {**PACKAGES['winget_packages'][1], 'asset': 'rg.tar.gz'}]
     redeclare(install, packages={**PACKAGES, 'winget_packages': winget_packages})
     upstream.publish(RIPGREP_REPO, RIPGREP_TAG, {'rg.tar.gz': tarball('rg.exe', b'RG')})
 
 
-def _a_zip_without_the_declared_executable(upstream: Upstream, _install: Path) -> None:
+def a_zip_without_the_declared_executable(upstream: Upstream, _install: Path) -> None:
     upstream.publish(RIPGREP_REPO, RIPGREP_TAG, {'rg.zip': zipped('README.md', b'not the binary')})
 
 
-def _a_uv_archive_without_uv_in_it(upstream: Upstream, _install: Path) -> None:
+def a_uv_archive_without_uv_in_it(upstream: Upstream, _install: Path) -> None:
     upstream.publish(create_bundle.UV_REPO, UV_TAG, {f'uv-{cargo.triple(LINUX)}.tar.gz': tarball('uvx', b'THE OTHER BINARY')})
 
 
@@ -659,12 +659,12 @@ class Broken:
 
 
 BROKEN = (
-    Broken('a manifest that will not parse', _unparseable_manifest, 'atlantis'),
-    Broken('a release with no asset function', _release_with_no_asset_function, 'asset function'),
-    Broken('a pin nothing published', _a_pin_nothing_published, 'release tag'),
-    Broken('a windows asset in a third shape', _a_windows_asset_in_a_third_shape, 'neither a .zip nor a .exe', WINDOWS_MACHINE),
-    Broken('a zip without the declared executable', _a_zip_without_the_declared_executable, 'rg.exe', WINDOWS_MACHINE),
-    Broken('a uv archive without uv in it', _a_uv_archive_without_uv_in_it, 'no uv binary'),
+    Broken('a manifest that will not parse', unparseable_manifest, 'atlantis'),
+    Broken('a release with no asset function', release_with_no_asset_function, 'asset function'),
+    Broken('a pin nothing published', a_pin_nothing_published, 'release tag'),
+    Broken('a windows asset in a third shape', a_windows_asset_in_a_third_shape, 'neither a .zip nor a .exe', WINDOWS_MACHINE),
+    Broken('a zip without the declared executable', a_zip_without_the_declared_executable, 'rg.exe', WINDOWS_MACHINE),
+    Broken('a uv archive without uv in it', a_uv_archive_without_uv_in_it, 'no uv binary'),
 )
 """Each row is a state, so a seventh is a row rather than a function.
 

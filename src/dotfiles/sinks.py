@@ -77,10 +77,10 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
     for event in events:
         match event.payload:
             case Change() as change:
-                written.record_outcome(f'{event.resource}/{change.item}', str(change.verdict), intention(change), _timing(event))
+                written.record_outcome(f'{event.resource}/{change.item}', str(change.verdict), intention(change), timing(event))
             case Outcome() as outcome:
                 address = f'{event.resource}/{outcome.change.item}'
-                written.record_outcome(address, str(outcome.change.verdict), str(outcome.status), _timing(event), outcome.message)
+                written.record_outcome(address, str(outcome.change.verdict), str(outcome.status), timing(event), outcome.message)
                 # A failed write is an Issue too. `issues` held Refusals alone, which
                 # are raised exceptions — and a provider answering `Result(ok=False)`
                 # returns normally, so the record of a run that failed an install
@@ -96,7 +96,7 @@ def record(events: Iterable[Event], identity: runs.Identity, flags: dict | None 
                 # cost: an inventory is one query per manager rather than one per
                 # package, so the time belongs to the resource and attributing a
                 # share of it to each item would be inventing a number.
-                written.record_outcome(event.resource, runs.EXAMINED, str(runs.Intention.OBSERVED), _timing(event))
+                written.record_outcome(event.resource, runs.EXAMINED, str(runs.Intention.OBSERVED), timing(event))
             case Started():
                 # A record is what was found, and this is the announcement that
                 # nothing has been found yet. Named rather than left to fall
@@ -122,7 +122,7 @@ def keep(events: Iterable[Event], identity: runs.Identity, flags: dict | None = 
         return None
 
 
-def _timing(event: Event) -> runs.Timing:
+def timing(event: Event) -> runs.Timing:
     """What the engine measured, or a zero for a decision that cost nothing.
 
     `record_outcome` refuses an outcome with no timing on purpose — an untimed

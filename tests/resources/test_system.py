@@ -41,7 +41,7 @@ from dotfiles.session import Session
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -828,7 +828,7 @@ def test_an_unmeasurable_manager_says_which_of_the_three_causes_it_is(
 
     assert change.verdict is Verdict.UNKNOWN
     assert change.repair is Repair.NONE
-    assert ev.by_currency(_row(live, 'apt'), {}).unmeasured is reason
+    assert ev.by_currency(row(live, 'apt'), {}).unmeasured is reason
 
 
 def test_a_manager_whose_reader_ships_separately_names_the_package_to_install(
@@ -842,7 +842,7 @@ def test_a_manager_whose_reader_ships_separately_names_the_package_to_install(
     """
     monkeypatch.setattr(shutil, 'which', only_missing('checkupdates'))
 
-    evidence = ev._unmeasured_currency('pacman')
+    evidence = ev.unmeasured_currency('pacman')
 
     assert evidence.unmeasured is ev.Unmeasured.READER_ABSENT
     assert 'pacman-contrib' in evidence.detail
@@ -886,7 +886,7 @@ def test_upgrading_a_manager_moves_everything_it_installed(tmp_path: Path, fake_
     monkeypatch.setattr(syspkg, 'upgrade', record)
     live = session(tmp_path, DECLARED, WORKSTATION)
 
-    outcome = registry.BY_NAME['manager'].install(live, manager_rows(live)['apt'], _row(live, 'apt'), Privilege(offer=False))
+    outcome = registry.BY_NAME['manager'].install(live, manager_rows(live)['apt'], row(live, 'apt'), Privilege(offer=False))
 
     assert ran == ['apt']
     assert outcome.status is OutcomeStatus.DONE
@@ -906,7 +906,7 @@ def test_the_upgrade_runs_after_both_install_stages(tmp_path: Path, fake_bin: Pa
     assert max(item.stage for item in live.plan.for_resource('system') if item.provider == 'manager') is Stage.SYSTEM_UPGRADE
 
 
-def _row(live: Session, manager: str):
+def row(live: Session, manager: str):
     found = [item for item in live.plan.for_resource('system') if item.provider == 'manager' and item.name == manager]
     assert len(found) == 1, found
     return found[0]
@@ -1056,7 +1056,7 @@ esac
 """
 """A brew answering the two questions `syspkg.requested` asks, and nothing else.
 
-`--version` is what `_answers` probes with, so a script without it is a brew that
+`--version` is what `answers` probes with, so a script without it is a brew that
 is not there — a different assertion from the one the test using this makes.
 """
 
@@ -1175,7 +1175,7 @@ def test_a_renamed_entry_the_manifest_declines_is_not_called_absent(tmp_path: Pa
 def test_a_manager_that_cannot_be_asked_is_not_a_manager_that_chose_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """None and an empty set are different answers, and `syspkg.requested`'s
     docstring says so. Nothing downstream distinguished them, so the claim was
-    unpinned: `_undeclared_packages` skipped a None and iterated an empty set to the
+    unpinned: `undeclared_packages` skipped a None and iterated an empty set to the
     same result. `asked` is where the difference has to show."""
     silent = session(tmp_path, DECLARES_BAT, MAC)
     monkeypatch.setattr(syspkg, 'requested', lambda manager: frozenset())

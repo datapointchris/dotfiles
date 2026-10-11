@@ -885,7 +885,7 @@ def test_a_declaration_error_stops_the_runs_it_concerns(section: str, resources:
     """
     broken = (validate.Finding(section, validate.Severity.ERROR, 'measured elsewhere'),)
 
-    gated = reconcile._gating(broken, engine.Selection(resources=resources))
+    gated = reconcile.gating(broken, engine.Selection(resources=resources))
 
     assert bool(gated) is stops, why
 

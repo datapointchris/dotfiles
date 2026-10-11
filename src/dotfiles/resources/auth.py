@@ -126,7 +126,7 @@ class AuthResource:
     help = 'the tools declared under `auth:`, and whether each can log in'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
-        return Observed({tool: _asked(tool, session) for tool in session.machine.auth})
+        return Observed({tool: asked(tool, session) for tool in session.machine.auth})
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         """One row per tool that could not show a credential.
@@ -161,7 +161,7 @@ class AuthResource:
         return Outcome(change, OutcomeStatus.REFUSED, 'a login is personal and interactive; the repo has nothing to write here')
 
 
-def _asked(tool: str, session: Session) -> Credential:
+def asked(tool: str, session: Session) -> Credential:
     """One probe's answer, with an unreadable path reported rather than raised.
 
     A credential file under a directory this user cannot traverse is one row's
@@ -182,7 +182,7 @@ def _asked(tool: str, session: Session) -> Credential:
         return Credential(Verdict.UNKNOWN, f'{tool} could not be asked: {unreadable}')
 
 
-def _uninstalled(tool: str) -> Credential:
+def uninstalled(tool: str) -> Credential:
     """A tool that is not here has no login to be missing.
 
     `UNKNOWN` with no advice, which lands in the unmeasured bucket rather than the
@@ -193,7 +193,7 @@ def _uninstalled(tool: str) -> Credential:
     return Credential(Verdict.UNKNOWN, f'{tool} is not on PATH, so there is nothing to log in to')
 
 
-def _unanswered(tool: str, answer: Completed) -> Credential | None:
+def unanswered_credential(tool: str, answer: Completed) -> Credential | None:
     """A probe that never ran is not evidence about a credential, so it says so.
 
     `effects.run` reports both a deadline and a binary the kernel would not start
@@ -205,7 +205,7 @@ def _unanswered(tool: str, answer: Completed) -> Credential | None:
     sharing this closure, so the cost multiplies on a resource whose whole
     constraint is being cheap enough to run unattended.
 
-    `UNKNOWN` rather than `MISSING`, which is where `_uninstalled` and `_asked`'s
+    `UNKNOWN` rather than `MISSING`, which is where `uninstalled` and `asked`'s
     unreadable-path guard already put a question that could not be asked: `sift`
     counts it unmeasured and keeps it out of the exit code. `diagnose.probed` splits
     the same two codes off the same `run` for the same reason.
@@ -220,7 +220,7 @@ def _unanswered(tool: str, answer: Completed) -> Credential | None:
     return None
 
 
-def _data_home(session: Session) -> Path:
+def data_home(session: Session) -> Path:
     """`$XDG_DATA_HOME`, or this session's home with the default under it.
 
     The variable rather than the session alone, because it is a real knob every
@@ -231,12 +231,12 @@ def _data_home(session: Session) -> Path:
     return Path(declared) if declared else session.home / '.local' / 'share'
 
 
-def _config_home(session: Session) -> Path:
+def config_home(session: Session) -> Path:
     declared = os.environ.get('XDG_CONFIG_HOME')
     return Path(declared) if declared else session.home / '.config'
 
 
-def _holds_something(path: Path) -> bool:
+def holds_something(path: Path) -> bool:
     """Whether a file exists and holds more than whitespace.
 
     Emptiness matters: `bbkt config init` writes the token file before anything
@@ -249,7 +249,7 @@ def _holds_something(path: Path) -> bool:
     newline reads the same way here as it does to the tool that owns it.
 
     Bytes rather than text. Decoding raises `UnicodeDecodeError`, which is a
-    `ValueError` and so travels straight through the `OSError` guard in `_asked`,
+    `ValueError` and so travels straight through the `OSError` guard in `asked`,
     out of `observe` and into `auth could not be examined` — one stray byte in
     `~/.aws/credentials` costing every other tool its measurement. Three of the
     probes reach this call, and none of them interprets what it finds: the
@@ -258,7 +258,7 @@ def _holds_something(path: Path) -> bool:
     return path.is_file() and bool(path.read_bytes().strip())
 
 
-def _github(session: Session) -> Credential:
+def github(session: Session) -> Credential:
     """Read off the run's shared measurement rather than probed again.
 
     `evidence.have_github_credentials` already answers this for the resources that
@@ -269,13 +269,13 @@ def _github(session: Session) -> Credential:
     both slower and a network call.
     """
     if not shutil.which('gh') and not os.environ.get('GITHUB_TOKEN'):
-        return _uninstalled('gh')
+        return uninstalled('gh')
     if session.preconditions.github_auth:
         return Credential(Verdict.MATCHED, 'a credential is present')
     return Credential(Verdict.MISSING, 'no GITHUB_TOKEN, and `gh auth token` has nothing', advice=GITHUB_AUTH_ADVICE)
 
 
-def _keychain_cli(tool: str) -> Probe:
+def keychain_cli(tool: str) -> Probe:
     """A personal data CLI holding an Authelia token in the OS keychain.
 
     `auth status` rather than `auth token`, which inverts what `gh` wants and was
@@ -292,18 +292,18 @@ def _keychain_cli(tool: str) -> Probe:
 
     def probe(session: Session) -> Credential:
         if not shutil.which(tool):
-            return _uninstalled(tool)
+            return uninstalled(tool)
         answer = run([tool, 'auth', 'status'], output=Output.QUIET, timeout=evidence.PROBE_SECONDS)
         if answer.ok:
             return Credential(Verdict.MATCHED, answer.stdout.strip().splitlines()[0] if answer.stdout.strip() else 'logged in')
-        if (unanswered := _unanswered(tool, answer)) is not None:
+        if (unanswered := unanswered_credential(tool, answer)) is not None:
             return unanswered
         return Credential(Verdict.MISSING, 'the OS keychain holds no token', advice=f'log in with `{tool} auth login`')
 
     return probe
 
 
-def _atuin_syncs(session: Session) -> bool:
+def atuin_syncs(session: Session) -> bool:
     """Whether this machine's atuin config asks for a sync at all.
 
     `true` where the file is absent or will not parse, which is atuin's own
@@ -314,20 +314,20 @@ def _atuin_syncs(session: Session) -> bool:
     `ValueError` rather than `TOMLDecodeError`, which is the rest of this repo's
     idiom. `read_text` decodes, so one stray byte raises `UnicodeDecodeError` —
     also a `ValueError`, and one that travels straight through the `OSError`
-    guard in `_asked` and costs every other tool its measurement.
+    guard in `asked` and costs every other tool its measurement.
 
     `ATUIN_CONFIG_DIR` is the knob atuin itself honors, and `atuin info` prints
     it, so a machine that moves the config is read where it actually keeps it.
     """
     declared = os.environ.get('ATUIN_CONFIG_DIR')
-    directory = Path(declared) if declared else _config_home(session) / 'atuin'
+    directory = Path(declared) if declared else config_home(session) / 'atuin'
     try:
         return bool(tomllib.loads((directory / 'config.toml').read_text()).get('auto_sync', True))
     except (OSError, ValueError):
         return True
 
 
-def _atuin_session(session: Session) -> bool:
+def atuin_session(session: Session) -> bool:
     """Whether atuin holds a sync token, asked of both places it has kept one.
 
     atuin 18 moved the token out of `~/.local/share/atuin/session` and into a
@@ -344,9 +344,9 @@ def _atuin_session(session: Session) -> bool:
     a locked store is a question that could not be asked rather than a resource
     that could not be examined.
     """
-    if (_data_home(session) / 'atuin' / 'session').is_file():
+    if (data_home(session) / 'atuin' / 'session').is_file():
         return True
-    meta = _data_home(session) / 'atuin' / 'meta.db'
+    meta = data_home(session) / 'atuin' / 'meta.db'
     if not meta.is_file():
         return False
     try:
@@ -357,7 +357,7 @@ def _atuin_session(session: Session) -> bool:
     return bool(stored and stored[0])
 
 
-def _atuin(session: Session) -> Credential:
+def atuin(session: Session) -> Credential:
     """The stored token, because `atuin status` reaches the sync server.
 
     `atuin status` measures 13ms on this box only because it is logged out and
@@ -369,19 +369,19 @@ def _atuin(session: Session) -> Credential:
     asks whether a login is wanted before asking whether one is held. Everything
     else here cannot do its job logged out; atuin logged out is a local history
     store that still records, searches and answers `doit review` and `doit kit`
-    about this machine. `UNKNOWN` for that case, which is where `_uninstalled` already
+    about this machine. `UNKNOWN` for that case, which is where `uninstalled` already
     puts a tool with nothing to log in to.
     """
     if not shutil.which('atuin'):
-        return _uninstalled('atuin')
-    if not _atuin_syncs(session):
+        return uninstalled('atuin')
+    if not atuin_syncs(session):
         return Credential(Verdict.UNKNOWN, 'auto_sync is off, so history stays on this machine and no server holds an account')
-    if _atuin_session(session):
+    if atuin_session(session):
         return Credential(Verdict.MATCHED, 'a sync session is stored')
     return Credential(Verdict.MISSING, 'no stored session, so nothing reaches the configured server', advice='log in with `atuin login`')
 
 
-def _claude(session: Session) -> Credential:
+def claude(session: Session) -> Credential:
     """Either credential variable, or the OAuth block in Claude Code's own credential file.
 
     `CLAUDE_CODE_OAUTH_TOKEN` is what `claude setup-token` mints for a box nobody
@@ -394,12 +394,12 @@ def _claude(session: Session) -> Credential:
 
     Searched as bytes rather than parsed. A refresh rewrites this file, and a read
     landing mid-write raises `JSONDecodeError` — a `ValueError`, which travels
-    straight through the `OSError` guard in `_asked` and costs every other tool
+    straight through the `OSError` guard in `asked` and costs every other tool
     its measurement, for a file that is whole again a second later. This is
-    `_holds_something`'s reasoning applied to a file that happens to be JSON.
+    `holds_something`'s reasoning applied to a file that happens to be JSON.
     """
     if not shutil.which('claude'):
-        return _uninstalled('claude')
+        return uninstalled('claude')
     if os.environ.get('ANTHROPIC_API_KEY'):
         return Credential(Verdict.MATCHED, 'ANTHROPIC_API_KEY is set')
     if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN'):
@@ -419,7 +419,7 @@ def _claude(session: Session) -> Credential:
     )
 
 
-def _aws(session: Session) -> Credential:
+def aws(session: Session) -> Credential:
     """Three places a credential can be, answered by stats rather than a round trip.
 
     `aws sts get-caller-identity` is the real answer and is 698ms and networked;
@@ -430,13 +430,13 @@ def _aws(session: Session) -> Credential:
     logged in rather than one fact spelled three ways, so all three are asked.
     """
     if not shutil.which('aws'):
-        return _uninstalled('aws')
+        return uninstalled('aws')
     if os.environ.get('AWS_ACCESS_KEY_ID'):
         return Credential(Verdict.MATCHED, 'AWS_ACCESS_KEY_ID is set')
 
     declared = os.environ.get('AWS_SHARED_CREDENTIALS_FILE')
     credentials = Path(declared) if declared else session.home / '.aws' / 'credentials'
-    if _holds_something(credentials):
+    if holds_something(credentials):
         return Credential(Verdict.MATCHED, f'{paths.under_home(credentials, session.home)} holds a profile')
 
     cache = session.home / '.aws' / 'sso' / 'cache'
@@ -449,7 +449,7 @@ def _aws(session: Session) -> Credential:
     )
 
 
-def _bbkt(session: Session) -> Credential:
+def bbkt(session: Session) -> Credential:
     """`config path token`, which resolves locally; never `config check`.
 
     `bbkt config check` is the honest answer to "does this work" and says so in its
@@ -460,20 +460,20 @@ def _bbkt(session: Session) -> Credential:
     override this repo has no business guessing at.
     """
     if not shutil.which('bbkt'):
-        return _uninstalled('bbkt')
+        return uninstalled('bbkt')
     if os.environ.get('BBKT_TOKEN'):
         return Credential(Verdict.MATCHED, 'BBKT_TOKEN is set')
 
     located = run(['bbkt', 'config', 'path', 'token'], output=Output.QUIET, timeout=evidence.PROBE_SECONDS)
-    if (unanswered := _unanswered('bbkt', located)) is not None:
+    if (unanswered := unanswered_credential('bbkt', located)) is not None:
         return unanswered
     token = Path(located.stdout.strip()) if located.ok and located.stdout.strip() else None
-    if token is not None and _holds_something(token):
+    if token is not None and holds_something(token):
         return Credential(Verdict.MATCHED, f'{paths.under_home(token, session.home)} holds a token')
     return Credential(Verdict.MISSING, 'no token file and no BBKT_TOKEN', advice='run `bbkt config init`, or set BBKT_TOKEN')
 
 
-def _jira(session: Session) -> Credential:
+def jira(session: Session) -> Credential:
     """The config `jira init` writes, or the token in the environment.
 
     The one path here taken from upstream convention rather than measured, because
@@ -486,30 +486,30 @@ def _jira(session: Session) -> Credential:
     probe here gives.
     """
     if not shutil.which('jira'):
-        return _uninstalled('jira')
+        return uninstalled('jira')
     if os.environ.get('JIRA_API_TOKEN'):
         return Credential(Verdict.MATCHED, 'JIRA_API_TOKEN is set')
 
     declared = os.environ.get('JIRA_CONFIG_FILE')
-    config = Path(declared) if declared else _config_home(session) / '.jira' / '.config.yml'
-    if _holds_something(config):
+    config = Path(declared) if declared else config_home(session) / '.jira' / '.config.yml'
+    if holds_something(config):
         return Credential(Verdict.MATCHED, f'{paths.under_home(config, session.home)} holds a configured account')
     return Credential(Verdict.MISSING, 'no jira config and no JIRA_API_TOKEN', advice='run `jira init`')
 
 
 PROBES: dict[str, Probe] = {
-    'gh': _github,
-    'homelab': _keychain_cli('homelab'),
-    'icb': _keychain_cli('icb'),
-    'learning': _keychain_cli('learning'),
-    'meso': _keychain_cli('meso'),
-    'nomad': _keychain_cli('nomad'),
-    'ypl': _keychain_cli('ypl'),
-    'atuin': _atuin,
-    'claude': _claude,
-    'aws': _aws,
-    'bbkt': _bbkt,
-    'jira': _jira,
+    'gh': github,
+    'homelab': keychain_cli('homelab'),
+    'icb': keychain_cli('icb'),
+    'learning': keychain_cli('learning'),
+    'meso': keychain_cli('meso'),
+    'nomad': keychain_cli('nomad'),
+    'ypl': keychain_cli('ypl'),
+    'atuin': atuin,
+    'claude': claude,
+    'aws': aws,
+    'bbkt': bbkt,
+    'jira': jira,
 }
 """Every tool a manifest may name in its `auth:` list, and the local probe for it.
 

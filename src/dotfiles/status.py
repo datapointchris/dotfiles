@@ -148,7 +148,7 @@ def document(
         'machine': machine,
         'checked': when.isoformat(),
         'scope': sorted({vocabulary.parse_address(result.address)[0] for result in results}),
-        'verdict': _worst(results),
+        'verdict': worst(results),
         'resources': [result.as_dict() for result in results],
     }
     if written_by:
@@ -189,10 +189,10 @@ def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) ->
         'machine': machine,
         'host': paths.MACHINE_ID,
         'checked': when.isoformat(),
-        'verdict': _worst(results),
+        'verdict': worst(results),
         'resources': [result.as_counts() for result in results],
     }
 
 
-def _worst(results: Sequence[ResourceResult]) -> str:
+def worst(results: Sequence[ResourceResult]) -> str:
     return str(reconcile.worst(results))

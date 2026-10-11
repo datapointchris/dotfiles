@@ -188,10 +188,10 @@ class ToolchainsResource:
 
             reported = observed.reported[item.name]
             if item.name == UV_RUNTIME:
-                changes.extend(_against_pin(item, reported, observed))
+                changes.extend(against_pin(item, reported, observed))
                 continue
 
-            floor = _floor(item)
+            floor = declared_floor(item)
             if not floor:
                 continue
 
@@ -250,7 +250,7 @@ class ToolchainsResource:
         return registry.install(session, change, privilege)
 
 
-def _against_pin(item: DesiredItem, reported: str, observed: Observed) -> tuple[Change, ...]:
+def against_pin(item: DesiredItem, reported: str, observed: Observed) -> tuple[Change, ...]:
     """uv against the one release the repo pins, where every other runtime meets a floor.
 
     A uv above the pin is as wrong as one below, because either writes `uv.lock`
@@ -297,7 +297,7 @@ def _against_pin(item: DesiredItem, reported: str, observed: Observed) -> tuple[
     )
 
 
-def _floor(item: DesiredItem) -> str:
+def declared_floor(item: DesiredItem) -> str:
     """The declared minimum for a runtime, or '' where none is declared.
 
     Read off the entry the plan carries rather than looked up, because

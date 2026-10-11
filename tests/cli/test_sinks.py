@@ -95,12 +95,12 @@ def test_keeping_a_record_hands_back_where_it_landed(runs_dir: Path) -> None:
 def test_a_record_that_cannot_be_written_says_so_without_failing_the_run(runs_dir: Path, monkeypatch) -> None:
     """`$XDG_STATE_HOME` is absent on a fresh machine, and that is not a reason for
     a verb to exit non-zero on a question it answered."""
-    monkeypatch.setattr('dotfiles.runs.write', _refuse)
+    monkeypatch.setattr('dotfiles.runs.write', refuse)
 
     assert sinks.keep([Event('packages', change('zk'))], identity('plan')) is None
 
 
-def _refuse(*_args, **_kwargs):
+def refuse(*_args, **_kwargs):
     raise OSError('read-only file system')
 
 
@@ -124,12 +124,12 @@ def test_a_log_that_cannot_be_opened_leaves_the_console_working(runs_dir: Path, 
     """`$XDG_STATE_HOME` is absent on a fresh machine and read-only in more
     containers than it should be. Neither is a reason for a verb to fail a
     question it can answer, which is the same rule `keep` holds at the other end."""
-    monkeypatch.setattr('dotfiles.logging.configure', _refuse_once())
+    monkeypatch.setattr('dotfiles.logging.configure', refuse_once())
 
     sinks.open_log(identity('check'))
 
 
-def _refuse_once():
+def refuse_once():
     """An OSError on the call that names a file, and success on the fallback."""
     original = log.configure
 

@@ -194,20 +194,20 @@ class SystemResource:
         return Observed(
             evidence={item.address: registry.evidence_for(item, inventories) for item in payload},
             asked=inventories.asked,
-            config=_observe_config(_config_items(plan), session),
-            described={item.address: getattr(item.entry, 'description', '') for item in _config_items(plan)},
+            config=observe_config(config_items(plan), session),
+            described={item.address: getattr(item.entry, 'description', '') for item in config_items(plan)},
             met=session.preconditions,
             packages=frozenset(item.address for item in payload if item.stage is not Stage.SYSTEM_UPGRADE),
             # No `plan` argument, and that is the finding rather than a tidy-up: this
             # reads `session.plan` so a narrowed walk cannot shrink the declaration
             # side of a subtraction. Taking one would put the narrowed plan back in
             # reach of the next edit.
-            undeclared=_undeclared_packages(session),
+            undeclared=undeclared_packages(session),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         packages = tuple(
-            _package_change(item, observed)
+            package_change(item, observed)
             for item in plan.for_resource(NAME)
             if item.stage is not Stage.SYSTEM_CONFIG and observed.evidence[item.address].verdict is not Verdict.MATCHED
         )
@@ -222,7 +222,7 @@ class SystemResource:
                 desired=item,
                 privileged=registry.needs_root(item),
             )
-            for item in _config_items(plan)
+            for item in config_items(plan)
             if observed.config[item.address].verdict is not Verdict.MATCHED
         )
         # `Repair.BY_HAND`, and the advice is a command to read rather than one
@@ -265,7 +265,7 @@ class SystemResource:
         return registry.install_all(session, changes, privilege)
 
 
-def _package_change(item: DesiredItem, observed: Observed) -> Change:
+def package_change(item: DesiredItem, observed: Observed) -> Change:
     evidence = observed.evidence[item.address]
     repair = repair_for(item, evidence.verdict, observed.met, evidence.blocked_by)
     return Change(
@@ -307,7 +307,7 @@ and opens the one this run resolved.
 """
 
 
-def _undeclared_packages(session: Session) -> dict[str, Stray]:
+def undeclared_packages(session: Session) -> dict[str, Stray]:
     """Packages a manager was asked for by name that this declaration never names.
 
     The direction nothing else in this resource looks. Every other measurement
@@ -350,14 +350,14 @@ def _undeclared_packages(session: Session) -> dict[str, Stray]:
         chosen = session.inventories.get(f'{ev.REQUESTED_PREFIX}{manager}')
         if chosen is None:
             continue
-        declared = _declared_names(session.plan, manager)
-        installable, known = _catalogd_names(session.catalog, manager)
+        declared = declared_names(session.plan, manager)
+        installable, known = catalogd_names(session.catalog, manager)
         for name in chosen - declared:
-            found[name] = Stray(manager, _standing(name, installable, known))
+            found[name] = Stray(manager, standing(name, installable, known))
     return found
 
 
-def _standing(name: str, installable: frozenset[str], known: frozenset[str]) -> Standing:
+def standing(name: str, installable: frozenset[str], known: frozenset[str]) -> Standing:
     """Which of the three the declaration's silence about this package is.
 
     `installable` before `known`, because a name in both is one the file can install
@@ -368,7 +368,7 @@ def _standing(name: str, installable: frozenset[str], known: frozenset[str]) -> 
     return Standing.OTHER_MANAGERS if name in known else Standing.UNKNOWN
 
 
-def _catalogd_names(catalog: catalog.Catalog, manager: str) -> tuple[frozenset[str], frozenset[str]]:
+def catalogd_names(catalog: catalog.Catalog, manager: str) -> tuple[frozenset[str], frozenset[str]]:
     """Every name `packages.yml` carries: those installable under this manager, and all of them.
 
     Both from `evidence.entry_names`, so the catalog side of the comparison spells a
@@ -387,7 +387,7 @@ def _catalogd_names(catalog: catalog.Catalog, manager: str) -> tuple[frozenset[s
     return frozenset(installable), frozenset(known)
 
 
-def _declared_names(plan: Plan, manager: str) -> frozenset[str]:
+def declared_names(plan: Plan, manager: str) -> frozenset[str]:
     """Every spelling this declaration knows a package by, under one manager.
 
     Three, because one entry is spelled differently in three places: the entry
@@ -414,11 +414,11 @@ def _declared_names(plan: Plan, manager: str) -> frozenset[str]:
     return frozenset(names)
 
 
-def _config_items(plan: Plan) -> list[DesiredItem]:
+def config_items(plan: Plan) -> list[DesiredItem]:
     return [item for item in plan.for_resource(NAME) if item.stage is Stage.SYSTEM_CONFIG]
 
 
-def _observe_config(items: list[DesiredItem], session: Session) -> dict[str, sysconfig.State]:
+def observe_config(items: list[DesiredItem], session: Session) -> dict[str, sysconfig.State]:
     """Every configuration row's state, each provider reading its own.
 
     Branching on the entry class and knowing a `defaults` read is cheaper in bulk

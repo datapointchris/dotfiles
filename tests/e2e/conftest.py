@@ -134,7 +134,7 @@ def pytest_report_header(config: pytest.Config) -> str:
     )
 
 
-def _narrow_to_level(config: pytest.Config, items: list[pytest.Item]) -> None:
+def narrow_to_level(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Keep only the rung that was asked for.
 
     Read off each test's `fixturenames` rather than a list of modules, so a test
@@ -186,8 +186,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             config.hook.pytest_deselected(items=installing)
             items[:] = [item for item in items if item not in installing]
 
-    _narrow_to_declaring_environment(config, items)
-    _narrow_to_level(config, items)
+    narrow_to_declaring_environment(config, items)
+    narrow_to_level(config, items)
 
     wanted = str(config.getoption('--environment')).strip()
     if not wanted:
@@ -214,7 +214,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     """Give a per-item test one node per thing its manifest declares.
 
     Every environment's items are offered to every environment's container here,
-    and `_narrow_to_declaring_environment` throws away the mismatches. The direct
+    and `narrow_to_declaring_environment` throws away the mismatches. The direct
     pairing would be one `metafunc.parametrize` over both names with `container`
     indirect — pytest refuses it, because `container` is parametrized by its own
     `params=ENVIRONMENTS` and a second parametrization of a fixture is an error.
@@ -241,7 +241,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     metafunc.parametrize('declared_item', offered, ids=[f'{one.environment}-{one.item.address}' for one in offered])
 
 
-def _narrow_to_declaring_environment(config: pytest.Config, items: list[pytest.Item]) -> None:
+def narrow_to_declaring_environment(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Keep the node where the container and the item name the same environment.
 
     The other half of `pytest_generate_tests` above: the cross product exists only
@@ -261,7 +261,7 @@ def _narrow_to_declaring_environment(config: pytest.Config, items: list[pytest.I
         items[:] = [item for item in items if item not in dropping]
 
 
-def _purpose(config: pytest.Config) -> str:
+def purpose(config: pytest.Config) -> str:
     """What the container this run wants is *for*, which is its name's middle.
 
     `machine` when no level was named, because a bare `pytest tests/e2e --docker`
@@ -297,7 +297,7 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
     if verdict.action == 'build':
         subprocess.run(environment.build_image, check=True, cwd=UNDER_TEST)
 
-    name = container_name(_purpose(request.config), environment.name)
+    name = container_name(purpose(request.config), environment.name)
     # `--reuse` keeps the OS state — an Arch container is 4.5GB of pacman
     # downloads — and never the repo inside it. Reusing both is how the Arch
     # harness came to test whatever code was mounted when the container was
@@ -353,7 +353,7 @@ def builder(request: pytest.FixtureRequest) -> Iterator[Machine]:
     if not image_exists(exchange.BUILDER.image):
         subprocess.run(exchange.BUILDER.build_image, check=True, cwd=UNDER_TEST)
 
-    name = exchange.builder_name(_purpose(request.config))
+    name = exchange.builder_name(purpose(request.config))
     reusing = reusing_containers(request.config) and docker('container', 'inspect', name).returncode == 0
     if reusing:
         docker('start', name)

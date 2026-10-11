@@ -49,7 +49,7 @@ class NoSuchMachine(MachineError):
 
     Split from its parent because the two ask different things of a caller. A
     name nothing declares is worth retrying with a different name, and every
-    front door already answers that with `ExitCode.USAGE` — `_manifest_path` in
+    front door already answers that with `ExitCode.USAGE` — `manifest_path` in
     `commands/machines.py` has done so for `machines show` all along, by testing
     `exists()` before loading rather than by catching anything.
 
@@ -409,11 +409,11 @@ def load(name: str, root: Path | None = None) -> Machine:
     if not isinstance(declared, Mapping):
         raise MachineError((DeclarationIssue(name, f'is a {type(declared).__name__} where a mapping is expected'),))
 
-    issues.extend(_unknown_keys(name, declared))
-    coordinates = _coordinates(name, declared, issues)
-    flags = _flags(declared, flag_data or {}, issues)
-    auth = _auth(name, declared, issues)
-    check_schedule = _check_schedule(name, declared, issues)
+    issues.extend(unknown_keys(name, declared))
+    coordinates = declared_coordinates(name, declared, issues)
+    flags = resolved_flags(declared, flag_data or {}, issues)
+    auth = declared_auth_tools(name, declared, issues)
+    check_schedule = declared_check_schedule(name, declared, issues)
 
     if issues:
         raise MachineError(tuple(issues))
@@ -421,10 +421,10 @@ def load(name: str, root: Path | None = None) -> Machine:
     return Machine(
         name=declared.get('machine') or name,
         coordinates=coordinates,
-        subscriptions={section: _subscribe(section, declared) for section in catalog.SECTIONS},
+        subscriptions={section: subscribe(section, declared) for section in catalog.SECTIONS},
         features=frozenset(feature for feature in FEATURES if declared.get(feature) is True),
         flags=flags,
-        requirements=_requirements(flag_data or {}, declared.get('machine') or name, coordinates),
+        requirements=requirements(flag_data or {}, declared.get('machine') or name, coordinates),
         source=source,
         auth=auth,
         check_schedule=check_schedule,
@@ -456,7 +456,7 @@ def applies_to(narrowing: Mapping[str, str], machine_name: str, coordinates: axe
     return narrowing.get('platform', label) == label
 
 
-def _auth(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> tuple[str, ...]:
+def declared_auth_tools(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> tuple[str, ...]:
     """The tools this machine names in `auth:`, or none where it names none.
 
     Absent is the ordinary case rather than a fault. A machine that names nothing
@@ -472,7 +472,7 @@ def _auth(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]
     return tuple(value)
 
 
-def _check_schedule(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> bool | None:
+def declared_check_schedule(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> bool | None:
     """`check_schedule: "no"` is truthy, so read as a bool it would install the timer
     it declines."""
     value = declared.get('check_schedule')
@@ -482,7 +482,7 @@ def _check_schedule(name: str, declared: Mapping[str, Any], issues: list[Declara
     return None
 
 
-def _unknown_keys(name: str, declared: Mapping[str, Any]) -> list[DeclarationIssue]:
+def unknown_keys(name: str, declared: Mapping[str, Any]) -> list[DeclarationIssue]:
     known = {
         'machine',
         'platform',
@@ -501,7 +501,7 @@ def _unknown_keys(name: str, declared: Mapping[str, Any]) -> list[DeclarationIss
     ]
 
 
-def _coordinates(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> axes.Coordinates:
+def declared_coordinates(name: str, declared: Mapping[str, Any], issues: list[DeclarationIssue]) -> axes.Coordinates:
     """Resolve the platform bundle, or the axes a manifest names directly.
 
     Never both: two spellings of the same fact is the drift the split exists to
@@ -532,10 +532,10 @@ def _coordinates(name: str, declared: Mapping[str, Any], issues: list[Declaratio
         issues.append(DeclarationIssue(name, 'declares both a platform and coordinates; a fact spelled twice is a fact that can disagree'))
         return base
 
-    return _from_axes(name, overrides, issues)
+    return from_axes(name, overrides, issues)
 
 
-def _from_axes(name: str, overrides: Mapping[str, Any], issues: list[DeclarationIssue]) -> axes.Coordinates:
+def from_axes(name: str, overrides: Mapping[str, Any], issues: list[DeclarationIssue]) -> axes.Coordinates:
     """Build coordinates a manifest names directly, one axis at a time.
 
     A rejected value still yields *something*, because the caller raises on the
@@ -564,7 +564,7 @@ def _from_axes(name: str, overrides: Mapping[str, Any], issues: list[Declaration
     return point
 
 
-def _subscribe(section: str, declared: Mapping[str, Any]) -> Subscription:
+def subscribe(section: str, declared: Mapping[str, Any]) -> Subscription:
     spelling, key = SUBSCRIPTIONS[section]
 
     if spelling is Spelling.WHOLESALE:
@@ -595,7 +595,7 @@ def _subscribe(section: str, declared: Mapping[str, Any]) -> Subscription:
     return Subscription(section, Coverage.NAMED, declared=True, names=frozenset(value))
 
 
-def _flags(declared: Mapping[str, Any], flag_data: Mapping[str, Any], issues: list[DeclarationIssue]) -> dict[str, str]:
+def resolved_flags(declared: Mapping[str, Any], flag_data: Mapping[str, Any], issues: list[DeclarationIssue]) -> dict[str, str]:
     """Every declared flag's value for this machine: its override, else its default.
 
     Rendered as the shell reads it, because `~/.env` is the only consumer and a
@@ -603,14 +603,14 @@ def _flags(declared: Mapping[str, Any], flag_data: Mapping[str, Any], issues: li
     """
     overrides = declared.get('flags') or {}
     resolved = {}
-    for flag in _declared_flags(flag_data):
-        resolved[flag.name] = _shell_value(overrides.get(flag.name, flag.default))
+    for flag in declared_flags(flag_data):
+        resolved[flag.name] = shell_value(overrides.get(flag.name, flag.default))
     for unknown in sorted(set(overrides) - set(resolved)):
         issues.append(DeclarationIssue(declared.get('machine', ''), f'overrides {unknown}, which flags.yml does not declare'))
     return resolved
 
 
-def _declared_flags(flag_data: Mapping[str, Any]) -> tuple[Flag, ...]:
+def declared_flags(flag_data: Mapping[str, Any]) -> tuple[Flag, ...]:
     return tuple(
         Flag(
             name=entry['name'],
@@ -622,13 +622,13 @@ def _declared_flags(flag_data: Mapping[str, Any]) -> tuple[Flag, ...]:
     )
 
 
-def _shell_value(value: Any) -> str:
+def shell_value(value: Any) -> str:
     if isinstance(value, bool):
         return 'true' if value else 'false'
     return str(value)
 
 
-def _requirements(flag_data: Mapping[str, Any], machine_name: str, coordinates: axes.Coordinates) -> tuple[Requirement, ...]:
+def requirements(flag_data: Mapping[str, Any], machine_name: str, coordinates: axes.Coordinates) -> tuple[Requirement, ...]:
     found = []
     for key in ('required', 'required_files'):
         for entry in flag_data.get(key) or ():

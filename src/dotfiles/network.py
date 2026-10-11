@@ -206,21 +206,21 @@ def derive(machine: machines.Machine) -> Derived:
     rather than about today's connectivity.
     """
     plan = resolve.resolve(catalog.load(), machine)
-    installers, unprobed = _custom_installer_probes(plan, coordinates.target_for(machine.coordinates))
-    runtimes, runtimes_unprobed = _runtime_probes(machine.coordinates.os_family)
+    installers, unprobed = custom_installer_probes(plan, coordinates.target_for(machine.coordinates))
+    runtimes, runtimes_unprobed = runtime_probes(machine.coordinates.os_family)
     return Derived(
         probes=(
-            *_release_probes(plan),
-            *_clone_probes(plan),
+            *release_probes(plan),
+            *clone_probes(plan),
             *installers,
             *runtimes,
-            *_registry_probes(plan),
+            *registry_probes(plan),
         ),
         unprobed=(*unprobed, *runtimes_unprobed),
     )
 
 
-def _entries[E: catalog.Entry](plan: planning.Plan, kind: type[E]) -> tuple[E, ...]:
+def entries[E: catalog.Entry](plan: planning.Plan, kind: type[E]) -> tuple[E, ...]:
     """Every declaration row of one type the plan resolved, deduplicated by name.
 
     A tool can enter the plan more than once — a runtime is pulled in by each tool
@@ -238,7 +238,7 @@ def _entries[E: catalog.Entry](plan: planning.Plan, kind: type[E]) -> tuple[E, .
     return tuple(seen.values())
 
 
-def _release_probes(plan: planning.Plan) -> tuple[Probe, ...]:
+def release_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     """`/releases/latest` per tool, then the API and an asset off the first one.
 
     Release pages live on github.com but assets redirect to a separate host, so a
@@ -249,7 +249,7 @@ def _release_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     `/releases/latest` redirects to the newest tag, so there is no version to pin —
     which is what stopped the pinned-version 404s being read as blocks.
     """
-    releases = _entries(plan, catalog.GithubRelease)
+    releases = entries(plan, catalog.GithubRelease)
     found = tuple(Probe('github_release', entry.name, f'https://github.com/{entry.repo}/releases/latest') for entry in releases)
     if not releases:
         return found
@@ -261,7 +261,7 @@ def _release_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     )
 
 
-def _clone_probes(plan: planning.Plan) -> tuple[Probe, ...]:
+def clone_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     """This repo, then every tool and plugin installed by cloning one.
 
     Kept separate from the release rows even though both name github.com: at the
@@ -271,13 +271,13 @@ def _clone_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     """
     cloned = (
         Probe('git_clone', 'dotfiles', DOTFILES_REPO, Reach.CLONE),
-        *(Probe('git_clone', entry.name, entry.repo, Reach.CLONE) for entry in _entries(plan, catalog.GitUvTool)),
-        *(Probe('git_clone', entry.name, entry.repo, Reach.CLONE) for entry in _entries(plan, catalog.ShellPlugin)),
+        *(Probe('git_clone', entry.name, entry.repo, Reach.CLONE) for entry in entries(plan, catalog.GitUvTool)),
+        *(Probe('git_clone', entry.name, entry.repo, Reach.CLONE) for entry in entries(plan, catalog.ShellPlugin)),
     )
     return cloned
 
 
-def _custom_installer_probes(plan: planning.Plan, target: Target) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
+def custom_installer_probes(plan: planning.Plan, target: Target) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
     """Whatever each installer says it reaches, asked of the installer.
 
     `providers.custom.sources` is the answer rather than a `source_type` word here,
@@ -293,7 +293,7 @@ def _custom_installer_probes(plan: planning.Plan, target: Target) -> tuple[tuple
     are different answers and the row's absence cannot tell them apart.
     """
     found, unprobed = [], []
-    for entry in _entries(plan, catalog.CustomInstaller):
+    for entry in entries(plan, catalog.CustomInstaller):
         sources = custom.sources(entry, target)
         if not sources:
             unprobed.append(f'{entry.name}: installs from nothing on this platform')
@@ -303,7 +303,7 @@ def _custom_installer_probes(plan: planning.Plan, target: Target) -> tuple[tuple
     return tuple(found), tuple(unprobed)
 
 
-def _runtime_probes(os_family: coordinates.OSFamily) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
+def runtime_probes(os_family: coordinates.OSFamily) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
     """Where the language runtimes come from, imported rather than retyped.
 
     The installer's own constant is the one that decides where a real install
@@ -339,7 +339,7 @@ would happily serve.
 """
 
 
-def _registry_probes(plan: planning.Plan) -> tuple[Probe, ...]:
+def registry_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     """A registry is probed only where the plan actually resolved tools using it.
 
     `git_uv_tools` and `uv_tools` both reach pypi.org, so the same URL can be
@@ -348,7 +348,7 @@ def _registry_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     """
     found: dict[str, Probe] = {}
     for kind, name, url in REGISTRY_PROBES:
-        if _entries(plan, kind) and url not in found:
+        if entries(plan, kind) and url not in found:
             found[url] = Probe('registry', name, url)
     return tuple(found.values())
 
@@ -368,18 +368,18 @@ def measure(probe: Probe) -> ProbeResult:
     environment = {'GIT_TERMINAL_PROMPT': '0'} if probe.cloned else None
     answered = effects.run(probe.command(), env=environment, output=effects.Output.QUIET)
     if answered.ok:
-        return ProbeResult(probe, True, _landing(probe, answered.stdout))
+        return ProbeResult(probe, True, landing(probe, answered.stdout))
 
     fallback = probe.fallback_command()
     if fallback is None:
-        return ProbeResult(probe, False, _landing(probe, answered.stdout), *_refusal(probe, answered))
+        return ProbeResult(probe, False, landing(probe, answered.stdout), *refusal(probe, answered))
     retried = effects.run(fallback, output=effects.Output.QUIET)
     if retried.ok:
-        return ProbeResult(probe, True, _landing(probe, retried.stdout))
-    return ProbeResult(probe, False, _landing(probe, retried.stdout or answered.stdout), *_refusal(probe, retried))
+        return ProbeResult(probe, True, landing(probe, retried.stdout))
+    return ProbeResult(probe, False, landing(probe, retried.stdout or answered.stdout), *refusal(probe, retried))
 
 
-def _refusal(probe: Probe, answered: effects.Completed) -> tuple[Refusal, str]:
+def refusal(probe: Probe, answered: effects.Completed) -> tuple[Refusal, str]:
     """Why one probe said no, from what the command exited with and printed.
 
     The transcript's own words win over the exit status, because git has no code for
@@ -401,7 +401,7 @@ def _refusal(probe: Probe, answered: effects.Completed) -> tuple[Refusal, str]:
     return Refusal.NONE, ''
 
 
-def _landing(probe: Probe, written: str) -> str:
+def landing(probe: Probe, written: str) -> str:
     """The host curl ended on, where that is not the host it started on.
 
     The host and not the effective URL, though curl reports the URL: the host is
@@ -436,7 +436,7 @@ def asset_probe(machine: machines.Machine) -> tuple[Probe | None, str]:
     is returned rather than dropped, because a reader otherwise cannot tell an
     unprobed asset row from a machine that has no releases to probe.
     """
-    releases = _entries(resolve.resolve(catalog.load(), machine), catalog.GithubRelease)
+    releases = entries(resolve.resolve(catalog.load(), machine), catalog.GithubRelease)
     if not releases:
         return None, ''
 
@@ -473,7 +473,7 @@ existed have identically shaped rows and mean opposite things. Named here becaus
 the code that writes the column is what should say how to recognize it."""
 
 
-def _row(verdict: ProbeResult) -> str:
+def row(verdict: ProbeResult) -> str:
     """One measured row, ending at REACH unless there is a landing to add.
 
     The trailing separator is omitted rather than emitted empty, so a row carries a
@@ -517,7 +517,7 @@ def render(machine: machines.Machine, measurement: Measurement, *, when: str, sy
     before the column existed" are different facts, and the rows cannot tell them
     apart.
     """
-    rows = '\n'.join(_row(verdict) for verdict in measurement.verdicts)
+    rows = '\n'.join(row(verdict) for verdict in measurement.verdicts)
     reachable = sum(1 for verdict in measurement.verdicts if verdict.reachable)
     unprobed = (
         ['', 'Unprobed - nothing to ask, rather than asked and blocked:', *(f'  {reason}' for reason in measurement.unprobed)]

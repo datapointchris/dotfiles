@@ -284,7 +284,7 @@ def test_every_companion_resolves_at_its_own_tag(tool, resolved_urls, http):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _fleet_install_urls() -> list[tuple[str, str]]:
+def fleet_install_urls() -> list[tuple[str, str]]:
     """Every `custom_installers` entry whose install script comes from a repo here.
 
     Off the declaration rather than a list, because the whole property being
@@ -304,7 +304,7 @@ def _fleet_install_urls() -> list[tuple[str, str]]:
     return sorted((entry.name, entry.install_url) for entry in entries if entry.install_url.startswith(prefix))
 
 
-@pytest.mark.parametrize(('name', 'url'), _fleet_install_urls())
+@pytest.mark.parametrize(('name', 'url'), fleet_install_urls())
 def test_an_install_script_is_fetched_from_a_tag_rather_than_a_branch(name, url):
     """`providers/custom.py` downloads this URL and executes it, which is the
     widest reach anything in the install engine has.
@@ -325,7 +325,7 @@ def test_an_install_script_is_fetched_from_a_tag_rather_than_a_branch(name, url)
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize(('name', 'url'), _fleet_install_urls())
+@pytest.mark.parametrize(('name', 'url'), fleet_install_urls())
 def test_the_pinned_install_script_still_resolves(name, url, http):
     """A tag deleted or renamed upstream breaks a fresh machine build and nothing
     else, so without this it surfaces on a rebuild rather than in CI.

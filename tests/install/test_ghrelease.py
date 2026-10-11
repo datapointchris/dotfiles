@@ -375,7 +375,7 @@ class TestCompanions:
     def test_a_companion_comes_from_the_bundle_that_supplied_the_binary(self, home, bundle, tmp_path):
         """A companion filename carries no version, so an unpinned lookup returns
         whichever staged bundle is newest — pairing an older bundle's binary with a
-        newer bundle's companion, which is what `_verify` was already changed to
+        newer bundle's companion, which is what `verify` was already changed to
         stop doing for a checksum."""
         newer = tmp_path / 'staged' / 'dotfiles-offline-v20260901T000000Z-box-linux-x86_64'
         (newer / 'binaries').mkdir(parents=True)
@@ -415,7 +415,7 @@ class TestChecksumPolicy:
     @staticmethod
     def refusal(outcome: github_release.Verification, declared: str, monkeypatch) -> str:
         monkeypatch.setattr(github_release, 'verify_release_checksum', lambda *args, **kwargs: outcome)
-        return ghrelease._verify(Path('unused'), 'demo.tar.gz', entry(checksum=declared), 'v1', from_bundle=False, offline=False)
+        return ghrelease.verify(Path('unused'), 'demo.tar.gz', entry(checksum=declared), 'v1', from_bundle=False, offline=False)
 
     def test_a_verified_asset_installs_whatever_it_declares(self, monkeypatch):
         for declared in sorted(catalog.CHECKSUM_STATES):
@@ -605,7 +605,7 @@ class TestLaunchAgent:
         assert plistlib.loads(placed.read_bytes())['Label'] == 'com.example.demo'
 
     def test_the_plist_runs_the_binary_this_install_placed(self, home, bundle):
-        """The same correction `_exec_at` makes to a systemd unit, and the reason it
+        """The same correction `exec_at` makes to a systemd unit, and the reason it
         cannot come from upstream: the published example names `~/bin/syncthing` and
         a release install puts the binary under `~/.local/bin`."""
         stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
@@ -723,14 +723,14 @@ class TestSupervisionEvidence:
 
     def test_a_plist_launchd_has_not_loaded_is_reported(self, home):
         recording(home, 'launchctl', exit_code=1)
-        _write_agent(home, AGENT)
+        write_agent(home, AGENT)
 
         with supervised('demo', AGENT):
             assert 'has not loaded it' in ghrelease.unsupervised('demo', 'demo')
 
     def test_a_loaded_agent_owes_nothing(self, home):
         recording(home, 'launchctl')
-        _write_agent(home, AGENT)
+        write_agent(home, AGENT)
 
         with supervised('demo', AGENT):
             assert ghrelease.unsupervised('demo', 'demo') == ''
@@ -798,7 +798,7 @@ class TestUnitEvidence:
     """The Linux half of `unsupervised`, and the three states it separates.
 
     The unit's body comes out of the archive rather than from this repo, so there is
-    nothing to compare it against offline — except the one part `_place` authors,
+    nothing to compare it against offline — except the one part `place` authors,
     which is the `ExecStart` path. That is also the half that goes wrong: a unit
     still naming `/usr/bin` after the package it came from was removed is
     exec-not-found on every start.
@@ -818,34 +818,34 @@ class TestUnitEvidence:
         """The state the migration produces: the release places a unit and the
         `ExecStart` still names the path the removed package used."""
         recording(home, 'systemctl')
-        _write_unit(home, UNIT_BODY.decode())
+        write_unit(home, UNIT_BODY.decode())
 
         with registered(with_unit(tmp_path, bundle), entry()):
             assert 'does not start' in ghrelease.unsupervised('demo', 'demo')
 
     def test_a_unit_systemd_has_not_enabled_is_reported(self, home, bundle, tmp_path):
         recording(home, 'systemctl', exit_code=1)
-        _write_unit(home, f'[Service]\nExecStart={home}/.local/bin/demo serve\n')
+        write_unit(home, f'[Service]\nExecStart={home}/.local/bin/demo serve\n')
 
         with registered(with_unit(tmp_path, bundle), entry()):
             assert 'has not enabled it' in ghrelease.unsupervised('demo', 'demo')
 
     def test_an_enabled_unit_owes_nothing(self, home, bundle, tmp_path):
         recording(home, 'systemctl')
-        _write_unit(home, f'[Service]\nExecStart={home}/.local/bin/demo serve\n')
+        write_unit(home, f'[Service]\nExecStart={home}/.local/bin/demo serve\n')
 
         with registered(with_unit(tmp_path, bundle), entry()):
             assert ghrelease.unsupervised('demo', 'demo') == ''
 
 
-def _write_unit(home: Path, body: str) -> Path:
+def write_unit(home: Path, body: str) -> Path:
     placed = ghrelease.unit_dir() / 'demo.service'
     placed.parent.mkdir(parents=True, exist_ok=True)
     placed.write_text(body)
     return placed
 
 
-def _write_agent(home: Path, agent: LaunchAgent) -> Path:
+def write_agent(home: Path, agent: LaunchAgent) -> Path:
     """The plist exactly as an install would have left it, so a comparison passes."""
     placed = launchd.agent_path(agent.label)
     placed.parent.mkdir(parents=True, exist_ok=True)

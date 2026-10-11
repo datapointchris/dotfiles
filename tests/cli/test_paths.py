@@ -26,11 +26,11 @@ def make_checkout(root: Path) -> Path:
 def test_the_real_repo_is_recognized() -> None:
     """Guards every other test here: if the marker were wrong, all of them pass
     while the recognizer recognizes nothing."""
-    assert paths._looks_like_repo(paths.REPO_ROOT)
+    assert paths.looks_like_repo(paths.REPO_ROOT)
 
 
 def test_a_directory_without_the_marker_is_not_a_checkout(tmp_path: Path) -> None:
-    assert not paths._looks_like_repo(tmp_path)
+    assert not paths.looks_like_repo(tmp_path)
 
 
 def test_the_environment_wins_even_over_a_tree_that_is_incomplete(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -55,7 +55,7 @@ def test_an_editable_install_resolves_by_walking_up(tmp_path: Path, monkeypatch:
     monkeypatch.delenv('DOTFILES_DIR', raising=False)
     monkeypatch.setattr(paths, '__file__', str(module))
 
-    assert paths._repo_root() == checkout.resolve()
+    assert paths.repo_root() == checkout.resolve()
 
 
 def test_a_non_editable_install_falls_through_to_the_checkout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -75,4 +75,4 @@ def test_a_non_editable_install_falls_through_to_the_checkout(tmp_path: Path, mo
 
     walked = Path(module).resolve().parents[2]
     assert walked.is_dir(), 'the wrong answer has to be a real directory, or this proves nothing'
-    assert paths._repo_root() == home.resolve()
+    assert paths.repo_root() == home.resolve()

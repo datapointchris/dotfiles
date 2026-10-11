@@ -72,7 +72,7 @@ class Diagnosis:
         return tuple(rows)
 
 
-def _ask(argv: tuple[str, ...], about: str, absent_when: tuple[int, ...] = ()) -> tuple[str, str]:
+def ask(argv: tuple[str, ...], about: str, absent_when: tuple[int, ...] = ()) -> tuple[str, str]:
     """One bounded, read-only question. Returns what it said and why it could not.
 
     Exactly one of the two is ever non-empty, and an empty pair means the command
@@ -115,12 +115,12 @@ def process_holding(path: Path) -> tuple[str, str]:
     """
     # lsof exits 1 when nothing has the file open, which is the common case and an
     # answer rather than a broken probe — the same convention `pacman -Qo` uses.
-    pids, why = _ask(('lsof', '-t', '-w', '--', str(path)), 'what is holding it', absent_when=(1,))
+    pids, why = ask(('lsof', '-t', '-w', '--', str(path)), 'what is holding it', absent_when=(1,))
     if why or not pids:
         return '', why
 
     first = pids.splitlines()[0].strip()
-    name, name_why = _ask(('ps', '-o', 'comm=', '-p', first), 'the name of that process')
+    name, name_why = ask(('ps', '-o', 'comm=', '-p', first), 'the name of that process')
     if name_why:
         return f'pid {first}', name_why
     return f'{name} (pid {first})', ''
@@ -172,7 +172,7 @@ def package_owning(path: Path, manager: PackageManager) -> tuple[str, str]:
         return '', f'{manager} cannot be asked which package a file belongs to'
     # Every one of these reports 'no package owns this' as exit 1, which is an
     # answer rather than a broken probe.
-    answered, why = _ask(query, f'which package owns {path}', absent_when=(1,))
+    answered, why = ask(query, f'which package owns {path}', absent_when=(1,))
     if why or not answered:
         return '', why
     first = answered.splitlines()[0].strip()
@@ -233,7 +233,7 @@ def language_bin_dirs(home: Path) -> tuple[tuple[Path, str], ...]:
     )
 
 
-def _cargo_package_providing(binary: str) -> str:
+def cargo_package_providing(binary: str) -> str:
     """The crate that installed a binary, from `cargo install --list`.
 
     Asked rather than assumed, because a crate's name and its binary's name
@@ -244,7 +244,7 @@ def _cargo_package_providing(binary: str) -> str:
     The listing is a crate header at column zero and its binaries indented under
     it, so the last header seen above an indented match is the answer.
     """
-    answered, why = _ask(('cargo', 'install', '--list'), f'which crate installed {binary}')
+    answered, why = ask(('cargo', 'install', '--list'), f'which crate installed {binary}')
     if why or not answered:
         return ''
     crate = ''
@@ -256,7 +256,7 @@ def _cargo_package_providing(binary: str) -> str:
     return ''
 
 
-def _uv_tool_providing(binary: str) -> str:
+def uv_tool_providing(binary: str) -> str:
     """The uv tool that installed a binary, from `uv tool list`.
 
     `~/.local/bin` is the one directory here with more than one filler — uv
@@ -264,7 +264,7 @@ def _uv_tool_providing(binary: str) -> str:
     mechanism cannot be read off the path alone. Asking uv separates them: a name
     it claims is a uv tool, and anything else is a file.
     """
-    answered, why = _ask(('uv', 'tool', 'list'), f'which uv tool installed {binary}')
+    answered, why = ask(('uv', 'tool', 'list'), f'which uv tool installed {binary}')
     if why or not answered:
         return ''
     tool = ''
@@ -276,7 +276,7 @@ def _uv_tool_providing(binary: str) -> str:
     return ''
 
 
-def _npm_package_providing(path: Path) -> str:
+def npm_package_providing(path: Path) -> str:
     """The npm package behind a global binary, read off the symlink it is.
 
     A filesystem read rather than a probe, because npm has no query from binary
@@ -314,11 +314,11 @@ def removal_of(path: Path, manager: PackageManager, home: Path) -> Removal:
     for directory, mechanism in language_bin_dirs(home):
         if path.parent != directory:
             continue
-        if mechanism == 'cargo' and (crate := _cargo_package_providing(path.name)):
+        if mechanism == 'cargo' and (crate := cargo_package_providing(path.name)):
             return Removal('cargo', f'cargo uninstall {crate}')
-        if mechanism == 'npm' and (package := _npm_package_providing(path)):
+        if mechanism == 'npm' and (package := npm_package_providing(path)):
             return Removal('npm', f'npm uninstall -g {package}')
-        if mechanism == 'uv' and (tool := _uv_tool_providing(path.name)):
+        if mechanism == 'uv' and (tool := uv_tool_providing(path.name)):
             return Removal('uv', f'uv tool uninstall {tool}')
         # go keeps no receipt, so its directory is the only evidence there is.
         # The other managers were asked and did not claim the file, and
@@ -339,7 +339,7 @@ QUOTED_PATH = re.compile(r"'([^']+)'|\"([^\"]+)\"")
 provider that writes a file."""
 
 
-def _path_in(message: str) -> Path | None:
+def path_in(message: str) -> Path | None:
     """The first quoted absolute path in a message, which is the subject of it."""
     for found in QUOTED_PATH.finditer(message):
         candidate = found.group(1) or found.group(2)
@@ -348,7 +348,7 @@ def _path_in(message: str) -> Path | None:
     return None
 
 
-def _busy(path: Path) -> Diagnosis:
+def busy(path: Path) -> Diagnosis:
     """ETXTBSY: the kernel refused to write a file that is being executed.
 
     Worth keeping even though `effects.install` made this impossible for a
@@ -384,15 +384,15 @@ def _busy(path: Path) -> Diagnosis:
     return Diagnosis(cause=f'{path} is being executed by {holder}', fix=f'kill {pid}  # then apply again', unavailable=unavailable)
 
 
-def _permission(path: Path) -> Diagnosis:
+def permission(path: Path) -> Diagnosis:
     """EACCES: the path exists and this user may not write it."""
-    owner, why = _ask(('stat', '-c', '%U:%G %a', str(path)), f'who owns {path}')
+    owner, why = ask(('stat', '-c', '%U:%G %a', str(path)), f'who owns {path}')
     if why:
         return Diagnosis(cause=f'{path} could not be written by this user', unavailable=(why,))
     return Diagnosis(cause=f'{path} is owned {owner} and this user may not write it')
 
 
-def _no_space(path: Path) -> Diagnosis:
+def no_space(path: Path) -> Diagnosis:
     """ENOSPC: the filesystem is full, and which one is the useful half.
 
     **`df` answering something this cannot read is a probe that could not answer,
@@ -403,7 +403,7 @@ def _no_space(path: Path) -> Diagnosis:
     flag all reach this branch.
     """
     about = f'which filesystem holds {path}'
-    where, why = _ask(('df', '-h', '--output=target,avail', str(path)), about)
+    where, why = ask(('df', '-h', '--output=target,avail', str(path)), about)
     if why:
         return Diagnosis(cause=f'the filesystem holding {path} is full', unavailable=(why,))
     tail = where.splitlines()[-1].split() if where.splitlines() else []
@@ -491,7 +491,7 @@ firing, with nothing asserting it.
 """
 
 
-def _intercepted(stores: dict[str, str] | None = None) -> Diagnosis:
+def intercepted(stores: dict[str, str] | None = None) -> Diagnosis:
     """A certificate this machine will not trust, and where its trust store is.
 
     The extra CA path is asked of the machine rather than written down, because the
@@ -515,9 +515,9 @@ def _intercepted(stores: dict[str, str] | None = None) -> Diagnosis:
 
 
 WRITE_FAILURES = (
-    ('Text file busy', _busy),
-    ('Permission denied', _permission),
-    ('No space left', _no_space),
+    ('Text file busy', busy),
+    ('Permission denied', permission),
+    ('No space left', no_space),
 )
 """What a message has to contain for a probe to be worth running.
 
@@ -566,13 +566,13 @@ def explain(item: str, message: str) -> str:
     from a download and this one had nothing to match on.
     """
     if any(marker in message for marker in INTERCEPTED):
-        found = _intercepted()
+        found = intercepted()
         return '\n'.join((message, *found.lines())) if found else message
 
     for marker, interpret in WRITE_FAILURES:
         if marker not in message:
             continue
-        path = _path_in(message)
+        path = path_in(message)
         if path is None:
             return message
         found = interpret(path)

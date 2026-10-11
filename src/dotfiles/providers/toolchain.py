@@ -133,7 +133,7 @@ def install_uv(config: Path, os_family: OSFamily, *, offline: bool) -> Result:
     if found is None or not versions.exactly(uv_version() or '', version):
         if found is not None and (refusal := uv_installed_elsewhere(Path(found), version)):
             return refusal
-        placed = _uv_from_bundle(version) or _uv_from_vendor(version, os_family, offline=offline)
+        placed = uv_from_bundle(version) or uv_from_vendor(version, os_family, offline=offline)
         if not placed.ok:
             return placed
         put_on_path(bin_dir())
@@ -178,7 +178,7 @@ def uv_installer_url(version: str, os_family: OSFamily) -> str:
     return (UV_WINDOWS_INSTALL_URL if os_family is OSFamily.WINDOWS else UV_INSTALL_URL).format(version=version)
 
 
-def _uv_from_bundle(version: str) -> Result | None:
+def uv_from_bundle(version: str) -> Result | None:
     """`bin/uv` out of the newest staged bundle whose own row names `version`, or None.
 
     The row and the binary come out of one bundle, so a newer bundle's row cannot
@@ -197,7 +197,7 @@ def _uv_from_bundle(version: str) -> Result | None:
     return None
 
 
-def _uv_from_vendor(version: str, os_family: OSFamily, *, offline: bool) -> Result:
+def uv_from_vendor(version: str, os_family: OSFamily, *, offline: bool) -> Result:
     """astral's installer for `version`, from the network and never from a bundle.
 
     The script downloads the release it names, so a staged copy of it cannot
@@ -350,7 +350,7 @@ def install_go(target: Target, privilege: Escalates, *, offline: bool) -> Result
     archive_name = f'{release}.{go_platform(target)}.tar.gz'
     with tempfile.TemporaryDirectory(prefix='dotfiles-go-') as scratch:
         staging = Path(scratch)
-        archive = _tarball(archive_name, staging)
+        archive = tarball(archive_name, staging)
         if archive is None:
             return Result(
                 False,
@@ -364,7 +364,7 @@ def install_go(target: Target, privilege: Escalates, *, offline: bool) -> Result
         if not (unpacked / 'go' / 'bin' / 'go').is_file():
             return Result(False, f'{archive_name} carries no go/bin/go', kind=Kind.ARCHIVE_INCOMPLETE)
 
-        replaced = _replace_goroot(unpacked / 'go', privilege)
+        replaced = replace_goroot(unpacked / 'go', privilege)
         if not replaced.ok:
             return replaced
 
@@ -396,7 +396,7 @@ def go_platform(target: Target) -> str:
     return f'{target.os_family}-{"arm64" if target.is_arm else "amd64"}'
 
 
-def _tarball(name: str, into: Path) -> Path | None:
+def tarball(name: str, into: Path) -> Path | None:
     """The tarball, from go.dev or from a copy left in `$HOME`.
 
     The home-directory fallback is the work firewall's escape hatch and predates
@@ -415,7 +415,7 @@ def _tarball(name: str, into: Path) -> Path | None:
     return None
 
 
-def _replace_goroot(unpacked: Path, privilege: Escalates) -> Result:
+def replace_goroot(unpacked: Path, privilege: Escalates) -> Result:
     """Swap the whole tree, which is the only supported way to move Go versions.
 
     Unpacked as this user first and copied in as root, rather than handing the
@@ -548,7 +548,7 @@ def install_node(home: Path, *, offline: bool) -> Result:
     return Result(True, f"node {reported.transcript.strip()} is fnm's default alias", kind=Kind.APPLIED)
 
 
-def _under_home(relative: Path) -> str:
+def under_home(relative: Path) -> str:
     """One home-relative directory, spelled the way a shell reads it.
 
     `$HOME` rather than a resolved path because the readers are `.zshenv` and a
@@ -558,11 +558,11 @@ def _under_home(relative: Path) -> str:
 
 
 TOOL_PATH_DIRS = (
-    _under_home(FNM_HOME / FNM_ALIAS_BIN),
-    _under_home(npm.PREFIX / 'bin'),
-    _under_home(BIN_DIR),
-    _under_home(CARGO_BIN),
-    _under_home(GO_BIN),
+    under_home(FNM_HOME / FNM_ALIAS_BIN),
+    under_home(npm.PREFIX / 'bin'),
+    under_home(BIN_DIR),
+    under_home(CARGO_BIN),
+    under_home(GO_BIN),
     str(GO_ROOT / 'bin'),
     '/usr/local/bin',
 )

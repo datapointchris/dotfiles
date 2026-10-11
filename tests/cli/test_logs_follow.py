@@ -5,10 +5,10 @@ is the other half: a follower has no output at all until the directory changes
 underneath it, and `list` and `path` answer about the machine rather than about
 one run.
 
-The seam is `time.sleep` and nothing else. `_stream` polls, so every wait is the
+The seam is `time.sleep` and nothing else. `stream` polls, so every wait is the
 loop asking for the clock — which makes a fake sleep both the only place a test
 can advance a follower and the only place it can open the next run's file
-mid-follow. `runs.list_event_logs`, `runs.latest_event_log` and `_newer_than` are
+mid-follow. `runs.list_event_logs`, `runs.latest_event_log` and `newer_than` are
 the real ones: *which* file a follower moves to is the property under test, and a
 stub for any of them would answer it in the test's own words.
 

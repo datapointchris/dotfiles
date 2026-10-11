@@ -235,7 +235,7 @@ def rows_in(roots: tuple[Path, ...]) -> tuple[Staged, ...]:
     """
     merged: dict[tuple[str, str], Staged] = {}
     for root in reversed(roots):
-        for row in parse(_text(root)):
+        for row in parse(text(root)):
             merged[row.category, row.name] = row
     return tuple(merged.values())
 
@@ -245,7 +245,7 @@ def rows() -> tuple[Staged, ...]:
     return rows_in(staged_bundles())
 
 
-def _text(root: Path) -> str:
+def text(root: Path) -> str:
     """One bundle's manifest, or '' where it cannot be read."""
     try:
         return (root / MANIFEST).read_text()
@@ -341,7 +341,7 @@ def published(name: str, *categories: str) -> str | None:
     """
     wanted = {f'{category}/{name}' for category in categories}
     for root in staged_bundles():
-        row = next((one for one in parse(_text(root)) if one.name == name and one.category in categories), None)
+        row = next((one for one in parse(text(root)) if one.name == name and one.category in categories), None)
         if row and row.version:
             return row.version
         found = next((version for key, version in description_of(root).current.items() if key in wanted), None)
@@ -377,7 +377,7 @@ def row_in(root: Path, name: str, *categories: str) -> Staged | None:
     Pairing both to one root is what makes the version describe the bytes.
     """
     wanted = frozenset(categories)
-    return next((row for row in parse(_text(root)) if row.name == name and row.category in wanted), None)
+    return next((row for row in parse(text(root)) if row.name == name and row.category in wanted), None)
 
 
 REBUILD = 'dotfiles bundle download, then dotfiles apply --offline'
@@ -397,7 +397,7 @@ def behind_refusal(carried: Staged | None, floor: str, failure: Result) -> Resul
     """The refusal a staged row earns when installing it would write bytes already there.
 
     `None` where the bundle is still worth reaching for, so a provider reads this
-    as a guard: `behind_refusal(...) or _from_bundle(...) or failure`.
+    as a guard: `behind_refusal(...) or from_bundle(...) or failure`.
 
     **Equality, never "no newer".** A staged version *below* the installed one is a
     real write that `resources.packages` wants, to bring a tool ahead of the newest

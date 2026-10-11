@@ -89,7 +89,7 @@ class TestTheDiagnosisNamesTheFix:
         about the branch rather than about whichever distribution runs the suite."""
         store = tmp_path / 'anchors'
         store.mkdir()
-        found = diagnose._intercepted({str(tmp_path / 'absent'): 'never', str(store): 'sudo refresh-trust'})
+        found = diagnose.intercepted({str(tmp_path / 'absent'): 'never', str(store): 'sudo refresh-trust'})
 
         assert found.fix == f'install the proxy CA into {store}, then: sudo refresh-trust'
         assert not found.unavailable
@@ -98,7 +98,7 @@ class TestTheDiagnosisNamesTheFix:
         """The branch a Mac takes, since none of the three Linux trust-store
         directories exists there — macOS keeps its own in the Keychain. Read off the real
         machine, this was asserted by `all([])` and passed without reaching it."""
-        found = diagnose._intercepted({str(tmp_path / 'absent'): 'never'})
+        found = diagnose.intercepted({str(tmp_path / 'absent'): 'never'})
 
         assert found.fix == ''
         assert found.unavailable

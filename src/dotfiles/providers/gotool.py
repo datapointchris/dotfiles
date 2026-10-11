@@ -203,21 +203,21 @@ def install(entry: catalog.GoTool, *, offline: bool, floor: str) -> Result:
     would fail on — `registry.version_floor` is the one thing that knows the answer.
     """
     if offline:
-        carried = _carried(entry)
-        installed = _from_bundle(entry, carried[1]) if carried else None
+        carried = bundled_binary(entry)
+        installed = from_bundle(entry, carried[1]) if carried else None
         return installed or Result(
             False,
             f'{entry.name} is not in the offline bundle at {bundled(entry).parent}, and offline cannot reach the proxy',
             kind=Kind.NOT_IN_BUNDLE,
         )
 
-    fetched = _from_proxy(entry)
+    fetched = from_proxy(entry)
     if fetched.ok:
         return fetched
-    return _from_bundle_unless_behind(entry, fetched, floor)
+    return from_bundle_unless_behind(entry, fetched, floor)
 
 
-def _from_bundle_unless_behind(entry: catalog.GoTool, failure: Result, floor: str) -> Result:
+def from_bundle_unless_behind(entry: catalog.GoTool, failure: Result, floor: str) -> Result:
     """The bundle, on a run that had a network and could not install through it.
 
     Worth reaching at all because "online" here means a network rather than a
@@ -226,17 +226,17 @@ def _from_bundle_unless_behind(entry: catalog.GoTool, failure: Result, floor: st
     current bundle sits unused on disk.
 
     Worth declining where the staged version is what is already installed, for the
-    reason `bundle.behind_refusal` records. One `_carried` answers both halves, so
+    reason `bundle.behind_refusal` records. One `bundled_binary` answers both halves, so
     the version ranked and the bytes written come out of one bundle.
     """
-    carried = _carried(entry)
+    carried = bundled_binary(entry)
     if carried is None:
         return failure
     row, binary = carried
-    return bundle.behind_refusal(row, floor, failure) or _from_bundle(entry, binary) or failure
+    return bundle.behind_refusal(row, floor, failure) or from_bundle(entry, binary) or failure
 
 
-def _carried(entry: catalog.GoTool) -> tuple[bundle.Staged | None, Path] | None:
+def bundled_binary(entry: catalog.GoTool) -> tuple[bundle.Staged | None, Path] | None:
     """The staged binary and its own bundle's row, or None where no bundle has the file.
 
     The file decides which bundle answers, because `bundled` is what installs and
@@ -261,7 +261,7 @@ def _carried(entry: catalog.GoTool) -> tuple[bundle.Staged | None, Path] | None:
     return None
 
 
-def _from_proxy(entry: catalog.GoTool) -> Result:
+def from_proxy(entry: catalog.GoTool) -> Result:
     """`go install`, keeping what it said.
 
     Its output is the entire diagnosis behind the work firewall — the TLS error it
@@ -286,11 +286,11 @@ def _from_proxy(entry: catalog.GoTool) -> Result:
     return Result(False, f'go install {entry.package}@latest exited {completed.returncode}: {said.strip()}', kind=Kind.COMMAND_FAILED)
 
 
-def _from_bundle(entry: catalog.GoTool, cached: Path) -> Result | None:
+def from_bundle(entry: catalog.GoTool, cached: Path) -> Result | None:
     """Install one staged binary, or None where it is not there to install.
 
     Handed the file rather than resolving it, so the version a caller ranked and
-    the bytes written here cannot come from two bundles — `_carried` records what
+    the bytes written here cannot come from two bundles — `bundled_binary` records what
     that costs when they do.
 
     None rather than a failed Result, so a caller can tell "the bundle does not

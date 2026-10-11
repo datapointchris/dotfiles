@@ -76,7 +76,7 @@ def every_run_here_is_rooted_in_tmp_path(no_ambient_answer: Path) -> None:
 
     `settings.config_file()` derives from `$XDG_CONFIG_HOME`, so a synthetic
     machine resolves through this desk's own config.toml however thoroughly its
-    repo and home are confined. `_named_files` then reports on every name that
+    repo and home are confined. `named_files` then reports on every name that
     file answers, and an assertion that a machine declaring nothing finds nothing
     is really an assertion about the developer's library.
 

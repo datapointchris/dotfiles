@@ -56,7 +56,7 @@ from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
 
 
-def _report(
+def report_and_exit(
     results: Sequence[ResourceResult],
     as_json: bool,
     *,
@@ -88,7 +88,7 @@ def _report(
     raise typer.Exit(reconcile.exit_code(list(results)))
 
 
-def _survey(
+def survey(
     address: str,
     machine: str | None,
     lens: Lens,
@@ -112,7 +112,7 @@ def _survey(
 
     One noun, not always one resource: `--source` selects by address, and an
     address carries its own resource, so a section whose runtime is declared
-    `needed_by` puts that runtime in the walk. `_report` prints all of it.
+    `needed_by` puts that runtime in the walk. `report_and_exit` prints all of it.
 
     Narrowed by address rather than by a per-resource function, so a resource
     cannot answer one way here and another way under `dotfiles plan` — which is
@@ -140,12 +140,12 @@ def _survey(
     session = Session.resolve(machine, owner, entries=entries, offline=offline, refresh=refresh)
     if offline:
         reconcile.report_bundle(offline_bundle.describe(), session.machine_name)
-    selection = reconcile.narrowed(engine.Selection.of(*_selected(address, source, entries)), session)
+    selection = reconcile.narrowed(engine.Selection.of(*selected(address, source, entries)), session)
     walked = reconcile.fold(engine.assess(session, selection), lens)
-    _report(walked, as_json, machine=session.machine_name, when=began, lens=lens)
+    report_and_exit(walked, as_json, machine=session.machine_name, when=began, lens=lens)
 
 
-def _selected(resource: str, source: str | None, entries: frozenset[str] = frozenset()) -> tuple[str, ...]:
+def selected(resource: str, source: str | None, entries: frozenset[str] = frozenset()) -> tuple[str, ...]:
     """The addresses this noun's narrowings name, plus whatever they cannot install without.
 
     A section names a provider and an address is `resource/provider`, so `--source`
@@ -171,7 +171,7 @@ def _selected(resource: str, source: str | None, entries: frozenset[str] = froze
     the narrowed plan left, so a prerequisite offered here and not wanted costs a
     row nobody sees.
     """
-    needed = _prerequisites(entries)
+    needed = prerequisites(entries)
     if not source:
         return (resource, *needed)
     provider = registry.for_section(source)
@@ -184,7 +184,7 @@ def _selected(resource: str, source: str | None, entries: frozenset[str] = froze
     return (*(addressed(one.resource, one.name) for one in registry.serving(source)), *needed)
 
 
-def _prerequisites(entries: frozenset[str]) -> tuple[str, ...]:
+def prerequisites(entries: frozenset[str]) -> tuple[str, ...]:
     """The addresses the named entries cannot install without.
 
     Resolved from the declaration rather than from the plan, because this decides
@@ -209,7 +209,7 @@ def _prerequisites(entries: frozenset[str]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(wanted))
 
 
-def _within(resource: str) -> tuple[str, ...]:
+def within(resource: str) -> tuple[str, ...]:
     """`--section` flags naming every declaration section this noun covers.
 
     Read off the registry rather than typed at each command, which is where the
@@ -231,7 +231,7 @@ def available_sources() -> list[str]:
     return sorted(declared)
 
 
-def _declared_entries() -> tuple[catalog.Entry, ...]:
+def declared_entries() -> tuple[catalog.Entry, ...]:
     """Every row the parsed declaration carries, for the completion callbacks below.
 
     Through the catalog rather than the YAML that `available_sources` reads,
@@ -256,7 +256,7 @@ def declared_names() -> list[str]:
     and are still the names `toolchains apply --entry` takes.
     """
     runtimes = {provider.runtime for provider in registry.PROVIDERS if isinstance(provider, registry.ToolchainProvider)}
-    return sorted({entry.name for entry in _declared_entries()} | runtimes)
+    return sorted({entry.name for entry in declared_entries()} | runtimes)
 
 
 def declared_packages() -> list[str]:
@@ -266,10 +266,10 @@ def declared_packages() -> list[str]:
     there completes to a usage error.
     """
     sections = set(registry.sections_for('packages'))
-    return sorted({entry.name for entry in _declared_entries() if entry.section in sections})
+    return sorted({entry.name for entry in declared_entries() if entry.section in sections})
 
 
-def _validate_source(value: str | None) -> str | None:
+def validate_source(value: str | None) -> str | None:
     if value is None or value in available_sources():
         return value
     # BadParameter, not Exit(1): a caller has to be able to tell "you typed it
@@ -282,7 +282,7 @@ SourceOption = typer.Option(
     '--source',
     help='Narrow to one packages.yml section',
     autocompletion=available_sources,
-    callback=_validate_source,
+    callback=validate_source,
 )
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
@@ -307,7 +307,7 @@ which is why they take `--entry`."""
 ReinstallOption = typer.Option(False, '--reinstall', help='Install again whatever measuring concludes, for everything this run covers')
 
 
-def _apply_resource(
+def apply_resource(
     resource: str,
     machine: str | None,
     offline: bool,
@@ -322,18 +322,18 @@ def _apply_resource(
     """Converge this resource, or just what `--source` names and what that needs.
 
     The same call `dotfiles apply` makes, narrowed by addresses rather than by a
-    resource sub-app of its own — and by the same `_selected` the read verbs use,
+    resource sub-app of its own — and by the same `selected` the read verbs use,
     so a preview and the write it rehearses cannot disagree about what a section
     covers.
 
     `--owner` and the named entries narrow the plan rather than the selection,
     because which entries are wanted is a fact about the entries. What a named
-    entry *needs* is not, which is why `_selected` takes the names too. `--owner`
+    entry *needs* is not, which is why `selected` takes the names too. `--owner`
     arrived to serve `update.sh --mine` against `install/phases.sh`'s
     hand-maintained `owner_aware` column; the column and the script are gone and
     the flag is the survivor.
     """
-    addresses = _selected(resource, source, entries)
+    addresses = selected(resource, source, entries)
 
     raise typer.Exit(
         reconcile.apply_machine(
@@ -397,7 +397,7 @@ def packages_plan(
     the same question. `--cached` declines it.
     """
     verbosity(verbose, quiet)
-    _survey(
+    survey(
         'packages',
         machine,
         Lens.PLAN,
@@ -433,7 +433,7 @@ def packages_check(
     default for a caller who wants it on the line.
     """
     verbosity(verbose, quiet)
-    _survey(
+    survey(
         'packages',
         machine,
         Lens.CHECK,
@@ -503,7 +503,7 @@ def packages_apply(
     stranded above its own newest release is already this command's to fix.
     """
     verbosity(verbose, quiet)
-    _apply_resource(
+    apply_resource(
         'packages',
         machine,
         offline,
@@ -567,7 +567,7 @@ def toolchains_plan(
     `--entry` is `apply`'s, and means the same here.
     """
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, Lens.PLAN, as_json, entries=frozenset(entry or ()), refresh=False, offline=offline)
+    survey('toolchains', machine, Lens.PLAN, as_json, entries=frozenset(entry or ()), refresh=False, offline=offline)
 
 
 @toolchains_app.command('check')
@@ -580,7 +580,7 @@ def toolchains_check(
 ) -> None:
     """Report toolchain drift."""
     verbosity(verbose, quiet)
-    _survey('toolchains', machine, Lens.CHECK, as_json, refresh=False, offline=offline)
+    survey('toolchains', machine, Lens.CHECK, as_json, refresh=False, offline=offline)
 
 
 @toolchains_app.command(
@@ -606,13 +606,13 @@ def toolchains_apply(
     installing a missing node beside it.
     """
     verbosity(verbose, quiet)
-    _apply_resource('toolchains', machine, offline, None, entries=frozenset(entry or ()), as_json=as_json)
+    apply_resource('toolchains', machine, offline, None, entries=frozenset(entry or ()), as_json=as_json)
 
 
 @toolchains_app.command('list')
 def toolchains_list(as_json: bool = JsonOption) -> None:
     """List the declared toolchains."""
-    arguments = ['list', *_within('toolchains'), *(('--json',) if as_json else ())]
+    arguments = ['list', *within('toolchains'), *(('--json',) if as_json else ())]
     bridge.declaration(*arguments)
     raise typer.Exit(ExitCode.CONVERGED)
 
@@ -625,7 +625,7 @@ def toolchains_show(name: str = typer.Argument(..., help='Toolchain name')) -> N
     `packages show`, so the noun answered for a cargo package as readily as for a
     runtime — and `packages show` is the door that is meant to.
     """
-    bridge.declaration('show', name, *_within('toolchains'))
+    bridge.declaration('show', name, *within('toolchains'))
     raise typer.Exit(ExitCode.CONVERGED)
 
 
@@ -649,7 +649,7 @@ def plugins_plan(
     what makes measuring here cost about as much as measuring one.
     """
     verbosity(verbose, quiet)
-    _survey('plugins', machine, Lens.PLAN, as_json, offline=offline, refresh=currency(refresh, offline=offline))
+    survey('plugins', machine, Lens.PLAN, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @plugins_app.command('check')
@@ -663,7 +663,7 @@ def plugins_check(
 ) -> None:
     """Report plugin drift, including clones behind their remote."""
     verbosity(verbose, quiet)
-    _survey('plugins', machine, Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
+    survey('plugins', machine, Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @plugins_app.command('apply')
@@ -676,13 +676,13 @@ def plugins_apply(
 ) -> None:
     """Install or update the declared plugins."""
     verbosity(verbose, quiet)
-    _apply_resource('plugins', machine, offline, None, as_json=as_json)
+    apply_resource('plugins', machine, offline, None, as_json=as_json)
 
 
 @plugins_app.command('list')
 def plugins_list(as_json: bool = JsonOption) -> None:
     """List every declared plugin, in all of the sections this resource owns."""
-    arguments = ['list', *_within('plugins'), *(('--json',) if as_json else ())]
+    arguments = ['list', *within('plugins'), *(('--json',) if as_json else ())]
     bridge.declaration(*arguments)
     raise typer.Exit(ExitCode.CONVERGED)
 
@@ -696,7 +696,7 @@ def symlinks_plan(
 ) -> None:
     """Show which declared links `apply` would deploy or prune."""
     verbosity(verbose, quiet)
-    _survey('symlinks', machine, Lens.PLAN, as_json, refresh=False)
+    survey('symlinks', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @symlinks_app.command('check')
@@ -705,7 +705,7 @@ def symlinks_check(
 ) -> None:
     """Report broken or missing symlinks without touching any."""
     verbosity(verbose, quiet)
-    _survey('symlinks', machine, Lens.CHECK, as_json, refresh=False)
+    survey('symlinks', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @symlinks_app.command('apply')
@@ -740,7 +740,7 @@ def symlinks_apply(
                 f'--force decides nothing on {session.machine_name}, which deploys by copy rather than by symlink',
                 advice=symlinks.FORCE_ADVICE,
             )
-    _apply_resource('symlinks', machine, False, None, force=force, as_json=as_json)
+    apply_resource('symlinks', machine, False, None, force=force, as_json=as_json)
 
 
 @symlinks_app.command('show')
@@ -776,21 +776,21 @@ env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity a
 def env_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Show what `apply` would write to ~/.env."""
     verbosity(verbose, quiet)
-    _survey('env', machine, Lens.PLAN, as_json, refresh=False)
+    survey('env', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @env_app.command('check')
 def env_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report drift between the declared flags and this machine."""
     verbosity(verbose, quiet)
-    _survey('env', machine, Lens.CHECK, as_json, refresh=False)
+    survey('env', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @env_app.command('apply')
 def env_apply(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Write ~/.env from the manifest, preserving hand-edited overrides."""
     verbosity(verbose, quiet)
-    _apply_resource('env', machine, False, None, as_json=as_json)
+    apply_resource('env', machine, False, None, as_json=as_json)
 
 
 @env_app.command('show')
@@ -825,7 +825,7 @@ def system_plan(
     asked flatpak what is behind` on the door whose whole subject is the system.
     """
     verbosity(verbose, quiet)
-    _survey(
+    survey(
         'system',
         machine,
         Lens.PLAN,
@@ -848,7 +848,7 @@ def system_check(
 ) -> None:
     """Report system configuration drift, and which managers are behind."""
     verbosity(verbose, quiet)
-    _survey('system', machine, Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
+    survey('system', machine, Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
 @system_app.command('apply')
@@ -871,7 +871,7 @@ def system_apply(
     a unit as readily as a package.
     """
     verbosity(verbose, quiet)
-    _apply_resource('system', machine, offline, source, entries=frozenset(entry or ()), as_json=as_json)
+    apply_resource('system', machine, offline, source, entries=frozenset(entry or ()), as_json=as_json)
 
 
 identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")
@@ -883,7 +883,7 @@ def identity_plan(
 ) -> None:
     """Show whether `apply` would set this machine's git identity."""
     verbosity(verbose, quiet)
-    _survey('identity', machine, Lens.PLAN, as_json, refresh=False)
+    survey('identity', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @identity_app.command('check')
@@ -897,7 +897,7 @@ def identity_check(
     rather than `~/.env`, which is why it is its own address and not part of env.
     """
     verbosity(verbose, quiet)
-    _survey('identity', machine, Lens.CHECK, as_json, refresh=False)
+    survey('identity', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @identity_app.command('show')
@@ -938,7 +938,7 @@ def auth_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose:
     every finding is `BY_HAND`, so there is nothing for the write half to keep.
     """
     verbosity(verbose, quiet)
-    _survey('auth', machine, Lens.PLAN, as_json, refresh=False)
+    survey('auth', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @auth_app.command('check')
@@ -951,7 +951,7 @@ def auth_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose
     runs unattended on a timer.
     """
     verbosity(verbose, quiet)
-    _survey('auth', machine, Lens.CHECK, as_json, refresh=False)
+    survey('auth', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @auth_app.command('show')
@@ -993,7 +993,7 @@ def credentials_plan(
     `test_conformance.py` exists to catch.
     """
     verbosity(verbose, quiet)
-    _survey('credentials', machine, Lens.PLAN, as_json, refresh=False)
+    survey('credentials', machine, Lens.PLAN, as_json, refresh=False)
 
 
 @credentials_app.command('check')
@@ -1007,7 +1007,7 @@ def credentials_check(
     where that lives.
     """
     verbosity(verbose, quiet)
-    _survey('credentials', machine, Lens.CHECK, as_json, refresh=False)
+    survey('credentials', machine, Lens.CHECK, as_json, refresh=False)
 
 
 @credentials_app.command('show')

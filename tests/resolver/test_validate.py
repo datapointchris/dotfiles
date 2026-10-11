@@ -344,7 +344,7 @@ def test_fnm_overrides_both_target_triples() -> None:
 
 
 def test_no_declared_entry_carries_a_pattern_it_cannot_build_a_url_from() -> None:
-    """The real-declaration half of `_unbuildable_assets`, which is a warning and
+    """The real-declaration half of `unbuildable_assets`, which is a warning and
     so is not covered by `test_the_real_declaration_is_sound` above — that one
     folds to errors alone."""
     unbuildable = [finding for finding in validate.declaration() if 'binary_pattern' in finding.message]

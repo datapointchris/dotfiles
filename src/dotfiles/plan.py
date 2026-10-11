@@ -97,7 +97,7 @@ class Stage(enum.IntEnum):
     """A label rather than an ordering, and the only stage that is.
 
     Every other value here sequences work. This one cannot: no auth change is
-    `actionable`, so `_in_stage_order` filters all of them out before the number is
+    `actionable`, so `in_stage_order` filters all of them out before the number is
     ever compared, and `apply` still ends on SYSTEM_CONFIG. It exists so an auth row
     carries a stage like every other row and so `test_no_two_resources_share_a_stage`
     stays total over the resources.

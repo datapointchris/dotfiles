@@ -19,7 +19,7 @@ from dotfiles.providers import syspkg
 
 
 def executable(directory: Path, name: str, script: str) -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -82,7 +82,7 @@ def test_pacman_currency_is_read_through_checkupdates_rather_than_off_the_sync_d
 def apt_listing(fake_bin: Path, listing: str) -> Path:
     """An apt that lists `listing`, and the `apt-get` its refresh runs first.
 
-    Both, always. `_apt_outdated` runs `apt-get update` before it lists, so an
+    Both, always. `apt_outdated` runs `apt-get update` before it lists, so an
     unshadowed one is the real binary on whatever box runs the suite — absent on
     Arch and a 25 MB fetch on the Ubuntu runner.
     """

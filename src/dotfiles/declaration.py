@@ -127,13 +127,13 @@ def load_packages() -> dict[str, Any]:
 
 
 def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Get all packages with their section attached as _section."""
+    """Get all packages with their section attached as section."""
     all_packages = []
     for section in PACKAGE_SECTIONS:
         for pkg in iter_section_entries(data, section):
             if isinstance(pkg, dict) and 'name' in pkg:
                 pkg_copy = dict(pkg)
-                pkg_copy['_section'] = section
+                pkg_copy['section'] = section
                 all_packages.append(pkg_copy)
     return all_packages
 
@@ -162,7 +162,7 @@ def get_current_platform() -> Platform:
 
 def is_available_on_platform(pkg: dict[str, Any]) -> bool:
     """Check if package is available on the current platform."""
-    section = pkg.get('_section', '')
+    section = pkg.get('section', '')
     current = get_current_platform()
 
     # Platform-exclusive sections
@@ -192,7 +192,7 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
 
     name = pkg.get('name', '')
     cmd_name = pkg.get('command', name)
-    section = pkg.get('_section', '')
+    section = pkg.get('section', '')
 
     # Check binary_link field (used by github_releases)
     binary_link = pkg.get('binary_link', '')
@@ -382,7 +382,7 @@ def sections_named(args: argparse.Namespace) -> list[str]:
     return named
 
 
-def _listing(named: list[str]) -> str:
+def listing(named: list[str]) -> str:
     """The command that lists what this invocation was narrowed to, as typed.
 
     `--section` is this bridge's own flag and the front door spells it `--source`,
@@ -440,7 +440,7 @@ def show_rows(pkg: dict[str, Any]) -> list[Row]:
     """
     rows = [
         Row('Description', str(pkg.get('description', 'N/A'))),
-        Row('Section', str(pkg['_section'])),
+        Row('Section', str(pkg['section'])),
         Row('Tags', ', '.join(pkg.get('tags', [])) or 'none'),
         *platform_rows(pkg),
         *(Row(label, str(pkg[field])) for field, label in METADATA_FIELDS if field in pkg),
@@ -480,7 +480,7 @@ def described(pkg: dict[str, Any]) -> dict[str, Any]:
     return {
         'name': pkg['name'],
         'description': pkg.get('description', ''),
-        'section': pkg['_section'],
+        'section': pkg['section'],
         'tags': pkg.get('tags', []),
         'platforms': {field: pkg[field] for field in PLATFORM_FIELDS if field in pkg},
         'metadata': {field: pkg[field] for field, _ in METADATA_FIELDS if field in pkg},
@@ -498,7 +498,7 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
     answering for a cargo package makes the address vocabulary a suggestion.
     """
     named = sections_named(args)
-    within = [pkg for pkg in get_all_packages(data) if not named or pkg['_section'] in named]
+    within = [pkg for pkg in get_all_packages(data) if not named or pkg['section'] in named]
 
     name_lower = args.name.lower()
     matches = [p for p in within if p.get('name', '').lower() == name_lower]
@@ -510,7 +510,7 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
         raise Refusal(
             f'no package named {args.name}{scope}',
             code=ExitCode.USAGE,
-            advice=f'did you mean: {near}' if near else f'list them with: {_listing(named)}',
+            advice=f'did you mean: {near}' if near else f'list them with: {listing(named)}',
         )
 
     # Sort with available-on-this-platform first
@@ -547,19 +547,19 @@ def cmd_search(args: argparse.Namespace, data: dict[str, Any]) -> None:
         print(f'No packages found matching: {args.query}')
         return
 
-    widths = calculate_column_widths(results, ['name', '_section'])
+    widths = calculate_column_widths(results, ['name', 'section'])
 
     for pkg in results:
         name = pkg.get('name', '')
         desc = pkg.get('description', '')
-        section = pkg.get('_section', '')
+        section = pkg.get('section', '')
         tags = pkg.get('tags', [])
 
         status, path = check_installed(pkg)
         status_str = format_status(status, path)
         tags_str = f'[{", ".join(tags)}]' if tags else ''
 
-        print(f'{name:<{widths["name"]}} {section:<{widths["_section"]}} {tags_str}')
+        print(f'{name:<{widths["name"]}} {section:<{widths["section"]}} {tags_str}')
         print(f'  {desc}')
         if status_str:
             print(f'  {status_str}')

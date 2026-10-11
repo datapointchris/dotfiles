@@ -323,7 +323,7 @@ def together(planted: Sequence[Mutant], pool: Iterable[str], room: Iterable[str]
     return frozenset(pool - keepers)
 
 
-def _cover(killed: Sequence[Mutant], test: str) -> tuple[str, ...]:
+def cover(killed: Sequence[Mutant], test: str) -> tuple[str, ...]:
     """The other tests that between them catch everything this one catches.
 
     The intersection first, because a test in it subsumes this one on its own and that is the strongest thing the data supports.
@@ -387,7 +387,7 @@ def prove(
         if alone is not None:
             load_bearing.append(Proof(test=test, killed=len(killed), subsumed_by=(), sole_owner=(alone.address, alone.description)))
             continue
-        redundant.append(Proof(test=test, killed=len(killed), subsumed_by=_cover(killed, test)))
+        redundant.append(Proof(test=test, killed=len(killed), subsumed_by=cover(killed, test)))
 
     # Every test the run saw kill something is in the room whether or not the caller listed it, and leaving one out would hold a
     # pool member back to cover a mutant something else already covers.

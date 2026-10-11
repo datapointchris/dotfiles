@@ -146,7 +146,7 @@ INSTALLED = Path.home() / '.local' / 'bin' / 'dotfiles'
 directory `symlinks/core.py` names for the apps tree."""
 
 
-def _executable() -> str:
+def executable() -> str:
     """The *installed* `dotfiles`, not whichever one is on PATH right now.
 
     `shutil.which` was the obvious answer and is wrong here: running the install
@@ -170,12 +170,12 @@ def _executable() -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _systemd_dir() -> Path:
+def systemd_dir() -> Path:
     declared = os.environ.get('XDG_CONFIG_HOME')
     return (Path(declared) if declared else Path.home() / '.config') / 'systemd' / 'user'
 
 
-def _service_content() -> str:
+def service_content() -> str:
     # No `SuccessExitStatus=1`. `check` exits 0 or 3, so a red unit means something
     # is actually wrong — masking 1 here would be masking a real failure. Drift is
     # `plan`'s answer, not this verb's.
@@ -202,14 +202,14 @@ def _service_content() -> str:
     return (
         '[Unit]\nDescription=Report anything wrong with this machine\n\n'
         f'[Service]\nType=oneshot\nTimeoutStartSec={UNIT_SECONDS}\n'
-        f'Environment=PATH={_unit_path()}\nExecStart={_executable()} check --refresh\n'
+        f'Environment=PATH={unit_path()}\nExecStart={executable()} check --refresh\n'
     )
 
 
-def _unit_path() -> str:
+def unit_path() -> str:
     """The directories this repo installs into, ahead of what the manager carries.
 
-    `_executable` above records that a user manager inherits no interactive PATH,
+    `executable` above records that a user manager inherits no interactive PATH,
     and pins the binary against it. The run *inside* that binary shells out too,
     and had the same problem one level down.
 
@@ -237,12 +237,12 @@ SYSTEM_PATH = ('/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/s
 The installing shell's own `PATH` is not used, and that is the point rather than
 an omission. It carries whatever that shell happened to have — a `uv run` venv, an
 fnm multishell directory named after a pid, a plugin checkout — and a unit built
-from it pins the schedule to directories that outlive nothing. `_executable`
+from it pins the schedule to directories that outlive nothing. `executable`
 records the same trap for the binary; this is it for the environment.
 """
 
 
-def _timer_content() -> str:
+def timer_content() -> str:
     # OnUnitActiveSec restarts the clock from the last *run* rather than from
     # boot, so a laptop that sleeps does not accumulate a backlog to fire at once.
     return (
@@ -257,18 +257,18 @@ def _timer_content() -> str:
     )
 
 
-def _systemd_files() -> dict[Path, str]:
+def systemd_files() -> dict[Path, str]:
     return {
-        _systemd_dir() / f'{UNIT}.service': _service_content(),
-        _systemd_dir() / f'{UNIT}.timer': _timer_content(),
+        systemd_dir() / f'{UNIT}.service': service_content(),
+        systemd_dir() / f'{UNIT}.timer': timer_content(),
     }
 
 
-def _observe_systemd() -> State:
+def observe_systemd() -> State:
     if not systemd.available():
         return State(Verdict.UNKNOWN, 'no systemctl, so nothing can schedule a check here', repair=Repair.NONE)
 
-    wrong = [path for path, content in _systemd_files().items() if not path.is_file() or path.read_text() != content]
+    wrong = [path for path, content in systemd_files().items() if not path.is_file() or path.read_text() != content]
     if wrong:
         verdict = Verdict.MISSING if all(not path.is_file() for path in wrong) else Verdict.STALE
         return State(verdict, f'{", ".join(path.name for path in wrong)} differs from what this repo declares')
@@ -278,9 +278,9 @@ def _observe_systemd() -> State:
     return State(Verdict.MATCHED)
 
 
-def _apply_systemd() -> Result:
-    _systemd_dir().mkdir(parents=True, exist_ok=True)
-    for path, content in _systemd_files().items():
+def apply_systemd() -> Result:
+    systemd_dir().mkdir(parents=True, exist_ok=True)
+    for path, content in systemd_files().items():
         path.write_text(content)
 
     enabled = systemd.enable(f'{UNIT}.timer')
@@ -294,19 +294,19 @@ def _apply_systemd() -> Result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _agent_path() -> Path:
+def agent_path() -> Path:
     return launchd.agent_path(LABEL)
 
 
-def _agent_content() -> bytes:
+def agent_content() -> bytes:
     """The job this repo declares for the scheduled check."""
     return launchd.serialize(
         {
             'Label': LABEL,
-            # --refresh for the reason in _service_content: it restates the default
+            # --refresh for the reason in service_content: it restates the default
             # so the job file answers on its own what this machine reaches.
-            'ProgramArguments': [_executable(), 'check', '--refresh'],
-            # The same pinning `_service_content` gives the systemd unit. launchd
+            'ProgramArguments': [executable(), 'check', '--refresh'],
+            # The same pinning `service_content` gives the systemd unit. launchd
             # hands an agent `/usr/bin:/bin:/usr/sbin:/sbin` and nothing else, so
             # `/usr/local/bin` is absent and every tool the run shells out to
             # resolves to nothing. `github_release.github_token` is the sharp
@@ -314,7 +314,7 @@ def _agent_content() -> bytes:
             # to an unauthenticated request rather than an error, and the whole
             # refresh spends the 60-per-hour anonymous quota that every host
             # behind this egress IP shares.
-            'EnvironmentVariables': {'PATH': _unit_path()},
+            'EnvironmentVariables': {'PATH': unit_path()},
             'StartInterval': INTERVAL_SECONDS,
             'RunAtLoad': True,
             # launchd has no notion of "log somewhere sensible"; without these the
@@ -325,21 +325,21 @@ def _agent_content() -> bytes:
     )
 
 
-def _observe_launchd() -> State:
-    agent = _agent_path()
+def observe_launchd() -> State:
+    agent = agent_path()
     if not agent.is_file():
         return State(Verdict.MISSING, f'{agent} does not exist')
-    if agent.read_bytes() != _agent_content():
+    if agent.read_bytes() != agent_content():
         return State(Verdict.STALE, f'{agent} differs from what this repo declares')
     if not launchd.loaded(LABEL):
         return State(Verdict.STALE, f'{LABEL} is installed but not loaded')
     return State(Verdict.MATCHED)
 
 
-def _apply_launchd() -> Result:
-    agent = _agent_path()
+def apply_launchd() -> Result:
+    agent = agent_path()
     agent.parent.mkdir(parents=True, exist_ok=True)
-    agent.write_bytes(_agent_content())
+    agent.write_bytes(agent_content())
 
     loaded = launchd.reload(LABEL)
     if not loaded.ok:
@@ -352,14 +352,14 @@ def _apply_launchd() -> Result:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _installed() -> tuple[Path, ...]:
+def installed() -> tuple[Path, ...]:
     """The files this row writes, whichever manager this machine has."""
-    if _is_darwin():
-        return (_agent_path(),)
-    return tuple(_systemd_files())
+    if is_darwin():
+        return (agent_path(),)
+    return tuple(systemd_files())
 
 
-def _observe_declined(declined: Answer) -> State:
+def observe_declined(declined: Answer) -> State:
     """A machine that turned the schedule off should have no schedule.
 
     Absent rather than merely unmanaged, because a timer installed before the
@@ -367,29 +367,29 @@ def _observe_declined(declined: Answer) -> State:
     is the whole failure this row exists for, read the other way round: a schedule
     nobody can check is a schedule that silently keeps running.
     """
-    found = [path for path in _installed() if path.exists()]
+    found = [path for path in installed() if path.exists()]
     if not found:
         return State(Verdict.MATCHED, f'no periodic check, and {declined.because()}')
     return State(Verdict.STALE, f'{", ".join(path.name for path in found)} still installed while {declined.because()}')
 
 
-def _remove(declined: Answer) -> Result:
+def remove(declined: Answer) -> Result:
     """Stop the schedule and take its files away.
 
     The manager is told first and the files go second. A file removed while the
     manager still holds the job leaves it running with nothing on disk to explain
     it, which is worse than either state on its own.
     """
-    if _is_darwin():
+    if is_darwin():
         stopped = launchd.bootout(LABEL)
-        if not stopped.ok and _agent_path().exists() and launchd.loaded(LABEL):
+        if not stopped.ok and agent_path().exists() and launchd.loaded(LABEL):
             return Result(False, f'could not unload {LABEL}: {stopped.transcript.strip()}', kind=Kind.COMMAND_FAILED)
     else:
         stopped = systemd.disable(f'{UNIT}.timer')
         if not stopped.ok and systemd.enabled(f'{UNIT}.timer'):
             return Result(False, f'could not disable {UNIT}.timer: {stopped.transcript.strip()}', kind=Kind.COMMAND_FAILED)
 
-    for path in _installed():
+    for path in installed():
         path.unlink(missing_ok=True)
     return Result(True, f'periodic check removed, because {declined.because()}', kind=Kind.APPLIED)
 
@@ -397,18 +397,18 @@ def _remove(declined: Answer) -> Result:
 def observe(machine: Machine) -> State:
     decided = answer(machine)
     if not decided.wanted:
-        return _observe_declined(decided)
-    return _observe_launchd() if _is_darwin() else _observe_systemd()
+        return observe_declined(decided)
+    return observe_launchd() if is_darwin() else observe_systemd()
 
 
 def apply(machine: Machine) -> Result:
     decided = answer(machine)
     if not decided.wanted:
-        return _remove(decided)
-    return _apply_launchd() if _is_darwin() else _apply_systemd()
+        return remove(decided)
+    return apply_launchd() if is_darwin() else apply_systemd()
 
 
-def _is_darwin() -> bool:
+def is_darwin() -> bool:
     """Detected rather than declared, and this is the exception that earns it.
 
     Everything else in the resolver takes the OS from the manifest, because a

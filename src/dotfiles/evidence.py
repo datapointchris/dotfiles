@@ -466,7 +466,7 @@ sentence a person reads, and working the second out of the first would mean
 """
 
 
-def _unmeasured_currency(manager: str) -> Evidence:
+def unmeasured_currency(manager: str) -> Evidence:
     """The cause, and the sentence rendered from it."""
     reader = syspkg.OUTDATED[manager][0]
     if not shutil.which(syspkg.INSTALL[manager][0]):
@@ -498,7 +498,7 @@ def by_currency(item: DesiredItem, installed: Inventory) -> Evidence:
     """
     behind = installed.get(f'{OUTDATED_PREFIX}{item.name}')
     if behind is None:
-        return _unmeasured_currency(item.name)
+        return unmeasured_currency(item.name)
     if not behind:
         return Evidence(Verdict.MATCHED, f'{item.name} has nothing to upgrade')
     named = ', '.join(sorted(behind)[:3])

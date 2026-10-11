@@ -39,7 +39,7 @@ RESTORE = 'restore it with safekeep'
 
 NOT_A_FLAG = 'is neither truthy nor falsey'
 """Said once, because the two halves of the file report it with the same words and
-a different repair — see `_unparseable`."""
+a different repair — see `unparseable`."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -115,7 +115,7 @@ class Observed:
         never hold it, and printing it on a screen somebody screenshots undoes
         that. `Examined` also reaches `--json`, so the interchange document a
         disconnected machine hands another one would carry it. Screening by name is
-        what makes both true wherever the value sits: `_unexported` promotes an
+        what makes both true wherever the value sits: `unexported` promotes an
         answered value into the generated section, so the register's own names
         appear in the half that otherwise prints what it holds.
 
@@ -170,14 +170,14 @@ class EnvResource:
             )
 
         changes: list[Change] = []
-        changes.extend(_identity(machine, observed))
-        changes.extend(_flags(machine, observed))
-        changes.extend(_config(observed))
-        changes.extend(_named_files(machine, observed))
-        changes.extend(_unexported(machine, observed))
-        changes.extend(_requirements(machine, observed))
-        changes.extend(_orphaned(machine, observed))
-        changes.extend(_undeclared(machine, observed))
+        changes.extend(identity(machine, observed))
+        changes.extend(flags(machine, observed))
+        changes.extend(config(observed))
+        changes.extend(named_files(machine, observed))
+        changes.extend(unexported(machine, observed))
+        changes.extend(requirements(machine, observed))
+        changes.extend(orphaned(machine, observed))
+        changes.extend(undeclared(machine, observed))
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
@@ -200,14 +200,14 @@ class EnvResource:
         return Outcome(change, OutcomeStatus.DONE, message)
 
 
-def _identity(machine, observed: Observed) -> list[Change]:
+def identity(machine, observed: Observed) -> list[Change]:
     """What machine this is.
 
     `MACHINE` is identity rather than configuration: it selects the manifest every
     coordinate, package list and flag is derived from, so a machine holding the
     wrong one is a machine converging on somebody else's declaration, not a
     preference that drifted. That is the whole of why an override below the marker
-    is named here and stays silent in `_flags` — the marker exists to let a machine
+    is named here and stays silent in `flags` — the marker exists to let a machine
     hold a preference of its own, and an identity is not a preference.
 
     Which half disagrees decides who can repair it. A generated value that no
@@ -262,7 +262,7 @@ def _identity(machine, observed: Observed) -> list[Change]:
     return changes
 
 
-def _flags(machine, observed: Observed) -> list[Change]:
+def flags(machine, observed: Observed) -> list[Change]:
     """Whether every declared flag arrived, parses, and still says what it should.
 
     The third question is asked of the generated half alone. A flag whose default
@@ -274,7 +274,7 @@ def _flags(machine, observed: Observed) -> list[Change]:
     rewrite of the section above it could repair it anyway.
 
     The second question asks the same thing of the same file and has to answer who
-    can repair it, which is `_identity`'s split three functions above. A value the
+    can repair it, which is `identity`'s split three functions above. A value the
     shell cannot read is drift wherever it was written, but only the generated half
     is `apply`'s to rewrite: an unparseable assignment below the marker is still
     the last one in the file, so offering it as repairable buys a `check` that
@@ -287,7 +287,7 @@ def _flags(machine, observed: Observed) -> list[Change]:
         if actual is None:
             changes.append(Change(NAME, Stage.ENVIRONMENT, name, Verdict.MISSING, repair=Repair.AUTOMATIC, detail=f'would be {expected}'))
         elif actual.lower() not in envfile.TRUTHY | envfile.FALSEY:
-            changes.append(_unparseable(name, actual, generated=written == actual, path=observed.path))
+            changes.append(unparseable(name, actual, generated=written == actual, path=observed.path))
         elif written is not None and written != expected:
             changes.append(
                 Change(
@@ -303,7 +303,7 @@ def _flags(machine, observed: Observed) -> list[Change]:
     return changes
 
 
-def _unparseable(name: str, actual: str, generated: bool, path: Path) -> Change:
+def unparseable(name: str, actual: str, generated: bool, path: Path) -> Change:
     """A flag holding a value no shell reads as true or false, addressed to whoever
     owns the half it was written in."""
     if generated:
@@ -344,7 +344,7 @@ def exportable(machine, observed: Observed) -> dict[str, str]:
     }
 
 
-def _config(observed: Observed) -> list[Change]:
+def config(observed: Observed) -> list[Change]:
     """This tool's own config.toml, when it exists and cannot be parsed.
 
     Reported before the register below it, because it is the reason every entry
@@ -368,7 +368,7 @@ def _config(observed: Observed) -> list[Change]:
     ]
 
 
-def _unexported(machine, observed: Observed) -> list[Change]:
+def unexported(machine, observed: Observed) -> list[Change]:
     """A required value the config answers that the generated half does not carry.
 
     Fires on the file rather than on the resolution: a resolved name satisfies
@@ -393,7 +393,7 @@ def _unexported(machine, observed: Observed) -> list[Change]:
     ]
 
 
-def _named_files(machine, observed: Observed) -> list[Change]:
+def named_files(machine, observed: Observed) -> list[Change]:
     """A shared path this tool resolved, whose file is not there.
 
     Resolving a name is not finding what it names, and a default is only safe
@@ -418,7 +418,7 @@ def _named_files(machine, observed: Observed) -> list[Change]:
     ]
 
 
-def _requirements(machine, observed: Observed) -> list[Change]:
+def requirements(machine, observed: Observed) -> list[Change]:
     """Values and files the repo declares and deliberately never contains.
 
     Unset, a required value expands to the empty string and quietly builds a
@@ -470,7 +470,7 @@ def _requirements(machine, observed: Observed) -> list[Change]:
             )
     for entry in machine.required_files:
         if entry.path in observed.present_files:
-            changes.extend(_unready(entry, machine, observed))
+            changes.extend(unready(entry, machine, observed))
             continue
         description = entry.description or 'a machine-local file'
         if unnamed := observed.resolved.unresolved(entry.path):
@@ -506,7 +506,7 @@ def _requirements(machine, observed: Observed) -> list[Change]:
     return changes
 
 
-def _unready(entry, machine, observed: Observed) -> list[Change]:
+def unready(entry, machine, observed: Observed) -> list[Change]:
     """A required file that is there and cannot do its job.
 
     Presence is not readiness, and the gap reads as success: measuring presence
@@ -539,20 +539,20 @@ def _unready(entry, machine, observed: Observed) -> list[Change]:
     ]
 
 
-def _orphaned(machine, observed: Observed) -> list[Change]:
+def orphaned(machine, observed: Observed) -> list[Change]:
     """Generated lines the declaration no longer writes.
 
-    Repairable, unlike `_undeclared`, and that is the whole difference between
+    Repairable, unlike `undeclared`, and that is the whole difference between
     them. `apply` rebuilds the managed section from `render`, so an orphan is one
     rewrite from gone.
 
-    The two also read different halves and ask different questions. `_undeclared`
+    The two also read different halves and ask different questions. `undeclared`
     asks the hand-set half whether a name *looks* like a flag, which is a
     convention and sees nothing spelled otherwise. This asks the generated half
     whether the declaration still produces the name at all, so a variable named
     unusually cannot slip past.
     """
-    # One source for who owns a generated line, shared with `_unexported` and
+    # One source for who owns a generated line, shared with `unexported` and
     # `render`. Asking the rungs directly made ownership depend on whether a shell
     # had sourced ~/.env, so the two functions disagreed by context and each undid
     # the other's write.
@@ -572,7 +572,7 @@ def _orphaned(machine, observed: Observed) -> list[Change]:
     ]
 
 
-def _undeclared(machine, observed: Observed) -> list[Change]:
+def undeclared(machine, observed: Observed) -> list[Change]:
     """Hand-set flags the declaration does not know about.
 
     Below the marker only, which is the same split `Observed.inventory` makes and

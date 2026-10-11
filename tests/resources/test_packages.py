@@ -68,7 +68,7 @@ def a_home_this_test_owns(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.Mo
 
     The provider directories are on `PATH` for the reason `toolchain.TOOL_PATH_DIRS`
     puts them there on a real machine: a tool is invisible to anything walking
-    `PATH` unless the directory holding it is named. `_shadowing` is that walk, and
+    `PATH` unless the directory holding it is named. `shadowing` is that walk, and
     without them a declared tool measured at its provider's directory has no copy on
     `PATH` for a second one to shadow.
 
@@ -835,7 +835,7 @@ def test_the_declared_source_decides_which_endpoint_is_asked(tmp_path: Path, fak
 
     item = next(item for item in live.plan.for_resource('packages') if item.name == 'awscli')
 
-    assert packages._wanted(item) == releases.Wanted(repo='aws/aws-cli', from_tags=True)
+    assert packages.wanted_release(item) == releases.Wanted(repo='aws/aws-cli', from_tags=True)
 
 
 def test_a_pinned_release_is_checked_without_any_cache(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
@@ -1558,10 +1558,10 @@ def test_asking_whether_a_manager_answers_follows_path(tmp_path: Path, monkeypat
     executable(present, 'pacman')
 
     monkeypatch.setenv('PATH', str(absent))
-    assert not syspkg._answers('pacman')
+    assert not syspkg.answers('pacman')
 
     monkeypatch.setenv('PATH', f'{present}{os.pathsep}{absent}')
-    assert syspkg._answers('pacman')
+    assert syspkg.answers('pacman')
 
 
 def test_a_copy_an_undeclared_package_owns_is_still_a_stray(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1746,10 +1746,10 @@ def test_a_probe_that_raises_is_recorded_rather_than_dropped(
 
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
     (item,) = live.plan.for_resource('packages')
-    monkeypatch.setattr(packages, '_installed_version', raises)
+    monkeypatch.setattr(packages, 'installed_version', raises)
 
     with caplog.at_level('DEBUG'):
-        assert packages._reported_versions((item,), {item.address: ev.Evidence(Verdict.MATCHED)}) == {}
+        assert packages.reported_versions((item,), {item.address: ev.Evidence(Verdict.MATCHED)}) == {}
 
     assert any('probe failed' in record.getMessage() for record in caplog.records)
 
@@ -1769,6 +1769,6 @@ def test_a_reported_version_keeps_only_the_version_it_carries(
     into the row. Text with no version in it stays whole for the row to name."""
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
     (item,) = live.plan.for_resource('packages')
-    monkeypatch.setattr(packages, '_installed_version', lambda *_: ev.Reported(printed))
+    monkeypatch.setattr(packages, 'installed_version', lambda *_: ev.Reported(printed))
 
-    assert packages._reported_versions((item,), {item.address: ev.Evidence(Verdict.MATCHED)}) == {item.address: ev.Reported(kept)}
+    assert packages.reported_versions((item,), {item.address: ev.Evidence(Verdict.MATCHED)}) == {item.address: ev.Reported(kept)}

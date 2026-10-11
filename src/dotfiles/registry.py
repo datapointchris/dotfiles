@@ -551,12 +551,12 @@ class SystemPackageProvider(RegistryProvider):
         genuinely a second manager and a second transaction.
         """
         outcomes: dict[str, Outcome] = {}
-        for manager, wanted in _by_manager(session, changes).items():
-            ready = _bootstrap(manager, session, privilege)
+        for manager, wanted in by_manager(session, changes).items():
+            ready = bootstrap_manager(manager, session, privilege)
             if not ready.ok:
                 outcomes |= {change.item: Outcome(change, OutcomeStatus.REFUSED, ready.detail) for change, _ in wanted}
                 continue
-            outcomes |= _transact(manager, wanted, privilege)
+            outcomes |= transact(manager, wanted, privilege)
         unreachable = 'no package manager on this machine installs it'
         return [outcomes.get(change.item, Outcome(change, OutcomeStatus.REFUSED, unreachable)) for change in changes]
 
@@ -615,7 +615,7 @@ class CaskProvider(RegistryProvider):
         return self.install_all(session, [change], privilege)[0]
 
     def install_all(self, session: MachineContext, changes: Sequence[Change], privilege: Escalates) -> list[Outcome]:
-        return _through('cask', session, changes, privilege, lambda item: item.name)
+        return through('cask', session, changes, privilege, lambda item: item.name)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -644,10 +644,10 @@ class AppStoreProvider(CatalogProvider):
         same thing in a comment and then printed advice on every failure; the
         advice is here, once, on the outcome that earns it.
         """
-        return _through('mas', session, changes, privilege, _app_id)
+        return through('mas', session, changes, privilege, app_id)
 
 
-def _app_id(item: DesiredItem) -> str:
+def app_id(item: DesiredItem) -> str:
     """An App Store app is addressed by number, and only by number."""
     entry = item.entry
     return str(entry.id) if isinstance(entry, catalogs.MasApp) else ''
@@ -661,10 +661,10 @@ class FlatpakProvider(RegistryProvider):
         return self.install_all(session, [change], privilege)[0]
 
     def install_all(self, session: MachineContext, changes: Sequence[Change], privilege: Escalates) -> list[Outcome]:
-        return _through('flatpak', session, changes, privilege, _flatpak_id)
+        return through('flatpak', session, changes, privilege, flatpak_id)
 
 
-def _flatpak_id(item: DesiredItem) -> str:
+def flatpak_id(item: DesiredItem) -> str:
     entry = item.entry
     return entry.flatpak_id if isinstance(entry, catalogs.FlatpakApp) else ''
 
@@ -913,7 +913,7 @@ class ManagerProvider(Provider):
                 entry=None,
                 reason=Reason('managers', f'installs {provider}'),
             )
-            for manager, provider in _managers_in_use(machine, planned)
+            for manager, provider in managers_in_use(machine, planned)
         )
 
     def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
@@ -929,14 +929,14 @@ class ManagerProvider(Provider):
         return item.name in syspkg.ESCALATES
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
-        ready = _bootstrap(item.name, session, privilege)
+        ready = bootstrap_manager(item.name, session, privilege)
         if not ready.ok:
             return Outcome(change, OutcomeStatus.REFUSED, ready.detail)
         result = syspkg.upgrade(item.name, privilege)
         return Outcome.from_result(change, result)
 
 
-def _managers_in_use(machine: machines.Machine, planned: tuple[DesiredItem, ...]) -> tuple[tuple[str, str], ...]:
+def managers_in_use(machine: machines.Machine, planned: tuple[DesiredItem, ...]) -> tuple[tuple[str, str], ...]:
     """Which managers this machine's plan reaches, each with the provider that reached it.
 
     Keyed on the provider that planned an item rather than on the machine's
@@ -1213,7 +1213,7 @@ class SystemConfigProvider(Provider):
         measuring. The planned item carries the catalog row and not the manifest.
         """
         stores = self.stores([entry for item in items if isinstance(entry := item.entry, catalogs.SystemConfig)])
-        return {item.address: self.state(_configuration(item.entry), stores, session) for item in items}
+        return {item.address: self.state(configuration(item.entry), stores, session) for item in items}
 
     def stores(self, entries: Sequence[catalogs.SystemConfig]) -> dict[macdefaults.Domain, dict[str, object] | None]:
         """A bulk read this provider can do once for all its rows. Usually none."""
@@ -1228,7 +1228,7 @@ class SystemConfigProvider(Provider):
         return sysconfig.apply(entry, privilege)
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
-        entry = _configuration(item.entry)
+        entry = configuration(item.entry)
 
         # Re-read rather than trusting the diff: `observe` ran before the report
         # was printed, and an earlier change in this same batch — the docker
@@ -1277,7 +1277,7 @@ class StepProvider(SystemConfigProvider):
         return steps.apply(entry.name, privilege, session)
 
 
-def _configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
+def configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
     assert isinstance(entry, catalogs.SystemConfig)
     return entry
 
@@ -1459,7 +1459,7 @@ def needs_root(item: DesiredItem) -> bool:
     return provider is not None and provider.needs_root(item)
 
 
-def _by_manager(session: MachineContext, changes: Sequence[Change]) -> dict[str, list[tuple[Change, str]]]:
+def by_manager(session: MachineContext, changes: Sequence[Change]) -> dict[str, list[tuple[Change, str]]]:
     """Which manager installs each change, and under what name.
 
     A machine's `installers` is the family its package manager selects — pacman
@@ -1481,7 +1481,7 @@ def _by_manager(session: MachineContext, changes: Sequence[Change]) -> dict[str,
     return grouped
 
 
-def _bootstrap(manager: str, session: MachineContext, privilege: Escalates) -> Result:
+def bootstrap_manager(manager: str, session: MachineContext, privilege: Escalates) -> Result:
     """Whatever this manager needs to exist before it can install anything.
 
     Routed here rather than dispatched inside `providers.bootstrap`, for the same
@@ -1502,7 +1502,7 @@ def _bootstrap(manager: str, session: MachineContext, privilege: Escalates) -> R
     return Result(True, '', kind=Kind.UNCHANGED)
 
 
-def _through(
+def through(
     manager: str,
     session: MachineContext,
     changes: Sequence[Change],
@@ -1520,16 +1520,16 @@ def _through(
     if not wanted:
         return [Outcome(change, OutcomeStatus.REFUSED, 'nothing declares this any more') for change in changes]
 
-    ready = _bootstrap(manager, session, privilege)
+    ready = bootstrap_manager(manager, session, privilege)
     if not ready.ok:
         return [Outcome(change, OutcomeStatus.REFUSED, ready.detail) for change in changes]
 
-    outcomes = _transact(manager, wanted, privilege)
+    outcomes = transact(manager, wanted, privilege)
     undeclared = 'nothing declares this any more'
     return [outcomes.get(change.item, Outcome(change, OutcomeStatus.REFUSED, undeclared)) for change in changes]
 
 
-def _arrived(manager: str) -> frozenset[str] | None:
+def arrived_packages(manager: str) -> frozenset[str] | None:
     """What the manager has, asked fresh after acting. `None` if it cannot say.
 
     A new `Inventories` rather than the one the observe pass built: that one is a
@@ -1543,7 +1543,7 @@ def _arrived(manager: str) -> frozenset[str] | None:
     return ev.Inventories().get(ev.INSTALLER_QUERIES[manager])
 
 
-def _settled(manager: str, name: str, arrived: frozenset[str] | None) -> tuple[OutcomeStatus, str]:
+def settled(manager: str, name: str, arrived: frozenset[str] | None) -> tuple[OutcomeStatus, str]:
     """What a zero exit code actually left behind.
 
     A manager that cannot be asked stays DONE. Not verifying is the state this
@@ -1555,7 +1555,7 @@ def _settled(manager: str, name: str, arrived: frozenset[str] | None) -> tuple[O
     return OutcomeStatus.ABSENT, f'{manager} exited 0 for {name} and reports nothing by that name'
 
 
-def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Escalates) -> dict[str, Outcome]:
+def transact(manager: str, wanted: list[tuple[Change, str]], privilege: Escalates) -> dict[str, Outcome]:
     """One manager's whole batch, falling back to one call per package on failure.
 
     The fallback is what lets the report name the package that broke: `brew
@@ -1576,8 +1576,8 @@ def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Escalat
 
     together = syspkg.install(manager, [name for _, name in wanted], privilege)
     if together.ok:
-        arrived = _arrived(manager)
-        return {change.item: Outcome(change, *_settled(manager, name, arrived)) for change, name in wanted}
+        arrived = arrived_packages(manager)
+        return {change.item: Outcome(change, *settled(manager, name, arrived)) for change, name in wanted}
 
     isolated: dict[str, Outcome] = {}
     installed: list[tuple[Change, str]] = []
@@ -1590,9 +1590,9 @@ def _transact(manager: str, wanted: list[tuple[Change, str]], privilege: Escalat
 
     # Asked once after the loop rather than after each install: a per-package
     # query would spend one subprocess per name to answer the same question.
-    arrived = _arrived(manager) if installed else None
+    arrived = arrived_packages(manager) if installed else None
     for change, name in installed:
-        isolated[change.item] = Outcome(change, *_settled(manager, name, arrived))
+        isolated[change.item] = Outcome(change, *settled(manager, name, arrived))
     return isolated
 
 

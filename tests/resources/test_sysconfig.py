@@ -31,7 +31,7 @@ from dotfiles.resources import Verdict
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
-    """See `_executable` in tests/conftest.py for why this is copied rather than imported."""
+    """See `executable` in tests/conftest.py for why this is copied rather than imported."""
     target = directory / name
     target.write_text(script)
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
@@ -330,7 +330,7 @@ def test_a_reload_is_issued_before_the_unit_is_enabled(fake_bin: Path, tmp_path:
 def systemctl_that(fake_bin: Path, log: Path, *, reload_fails: bool, needs_reload: str = '', restart_fails: bool = False) -> None:
     """A `systemctl` recording its argv, with the three answers these rows turn on.
 
-    `show` is what `_needs_reload` reads and decides whether a failed reload is
+    `show` is what `needs_reload` reads and decides whether a failed reload is
     fatal, so it is a parameter rather than a fixed `yes`.
     """
     refuses = 'echo "Failed to connect to user scope bus" >&2; exit 1' if reload_fails else 'exit 0'
@@ -350,7 +350,7 @@ def systemctl_that(fake_bin: Path, log: Path, *, reload_fails: bool, needs_reloa
 
 
 def issued(log: Path) -> list[str]:
-    """The calls that were writes, with `_needs_reload`'s read dropped."""
+    """The calls that were writes, with `needs_reload`'s read dropped."""
     return [line for line in log.read_text().splitlines() if 'show' not in line]
 
 
@@ -403,7 +403,7 @@ def test_a_failed_reload_is_still_fatal_where_the_manager_holds_an_older_copy(fa
 
     A manager answering `NeedDaemonReload` is reachable and holding an older copy of
     this file, so enabling against it leaves the service on the old one. It is also
-    what `_observe_unit` turns into STALE — so tolerating it would report `ok=True`
+    what `observe_unit` turns into STALE — so tolerating it would report `ok=True`
     about a row the next `check` calls drift, every run, on a bus that is not coming
     back.
     """
@@ -519,13 +519,13 @@ def test_a_non_member_is_stale(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_a_group_that_does_not_exist_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(grp, 'getgrnam', _raises_keyerror)
+    monkeypatch.setattr(grp, 'getgrnam', raises_keyerror)
 
     assert sysconfig.observe(group_entry(create_group=True)).verdict is Verdict.MISSING
 
 
 def test_a_group_nothing_here_creates_is_nobody_s_to_repair(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(grp, 'getgrnam', _raises_keyerror)
+    monkeypatch.setattr(grp, 'getgrnam', raises_keyerror)
     state = sysconfig.observe(group_entry())
 
     assert state.verdict is Verdict.MISSING
@@ -541,13 +541,13 @@ def test_a_missing_group_is_created_before_the_user_is_added(
     log = tmp_path / 'calls'
     for tool in ('groupadd', 'usermod'):
         executable(fake_bin, tool, f'#!/bin/sh\nprintf "{tool} %s\\n" "$*" >> {log}\nexit 0\n')
-    monkeypatch.setattr(grp, 'getgrnam', _raises_keyerror)
+    monkeypatch.setattr(grp, 'getgrnam', raises_keyerror)
 
     assert sysconfig.apply(group_entry(create_group=True), granted).ok
     assert log.read_text().splitlines() == ['groupadd docker', f'usermod -aG docker {sysconfig.current_user()}']
 
 
-def _raises_keyerror(_name: str) -> grp.struct_group:
+def raises_keyerror(_name: str) -> grp.struct_group:
     raise KeyError(_name)
 
 
@@ -558,7 +558,7 @@ def _raises_keyerror(_name: str) -> grp.struct_group:
 
 def declare_shell(monkeypatch: pytest.MonkeyPatch, shell: str) -> None:
     """Rebuilt rather than copied: `pwd.struct_passwd` is a structseq, so it has
-    no `_replace`, and the name is kept real because `current_user` reads it too."""
+    no `replace`, and the name is kept real because `current_user` reads it too."""
     real = pwd.getpwuid(os.getuid())
     fake = pwd.struct_passwd((real.pw_name, 'x', real.pw_uid, real.pw_gid, '', real.pw_dir, shell))
     monkeypatch.setattr(pwd, 'getpwuid', lambda _uid: fake)

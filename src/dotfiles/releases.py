@@ -227,7 +227,7 @@ def refresh(wanted: tuple[Wanted, ...], existing: dict[str, Cached], now: dt.dat
     github_release.github_token()
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        fetched = list(pool.map(lambda item: (item, _answered(item, existing.get(item.key), now)), wanted))
+        fetched = list(pool.map(lambda item: (item, answered(item, existing.get(item.key), now)), wanted))
 
     entries = dict(existing)
     for item, entry in fetched:
@@ -236,13 +236,13 @@ def refresh(wanted: tuple[Wanted, ...], existing: dict[str, Cached], now: dt.dat
     return entries
 
 
-def _answered(wanted: Wanted, previous: Cached | None, now: dt.datetime) -> Cached | None:
+def answered(wanted: Wanted, previous: Cached | None, now: dt.datetime) -> Cached | None:
     """The entry one repo's answer leaves, or None to keep whatever was there.
 
     `locked` is asked only where the entry has no answer for its version, so a
     release costs one contents read and a 304 costs none.
     """
-    answer = _newest(wanted, previous)
+    answer = newest(wanted, previous)
     if answer.unchanged and previous is not None:
         entry = dc.replace(previous, checked=now)
     elif answer.version:
@@ -255,7 +255,7 @@ def _answered(wanted: Wanted, previous: Cached | None, now: dt.datetime) -> Cach
     return entry
 
 
-def _newest(wanted: Wanted, previous: Cached | None = None) -> github_release.Newest:
+def newest(wanted: Wanted, previous: Cached | None = None) -> github_release.Newest:
     """Whichever endpoint this repo publishes its newest version on.
 
     Dispatched on the declaration rather than tried in turn: falling back to tags

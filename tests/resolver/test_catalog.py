@@ -129,7 +129,7 @@ def test_a_row_narrowing_on_a_trust_value_that_does_not_exist_is_refused() -> No
 def test_a_section_is_read_out_of_exactly_one_file() -> None:
     """The two maps partition the sections rather than overlapping.
 
-    A section in both would be read from whichever file `_file_for` picked and
+    A section in both would be read from whichever file `file_for` picked and
     silently ignored in the other, which is a declaration that can be edited with
     no effect.
     """

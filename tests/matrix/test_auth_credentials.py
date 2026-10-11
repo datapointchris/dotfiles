@@ -690,7 +690,7 @@ def test_a_probe_never_executes_the_operation_word_as_a_command(
     `Helper.invocation` assembles the shell form as `sh -c '<command> get'`, so an
     empty command left `sh -c ' get'` — and the shell resolved `get` on PATH and
     ran whatever was there. `--probe` executed a binary the configuration never
-    named, on the one entry `_asked` had already ruled `stale` for naming no
+    named, on the one entry `asked` had already ruled `stale` for naming no
     command.
 
     The witness is a real script on PATH, so this fails by the fault occurring
@@ -805,7 +805,7 @@ def test_a_machine_name_nothing_declares_should_be_diagnosed_rather_than_raised(
     name was wrong.
 
     Exit 2 rather than 3, because
-    `_manifest_path` already settles this for the `machines` noun and `machines
+    `manifest_path` already settles this for the `machines` noun and `machines
     show <typo>` exits 2. The reasoning is one shared claim across this file,
     `test_symlinks.py` and `test_composite.py`; it is written out in the latter's
     `test_a_read_verb_reports_a_machine_with_no_manifest_rather_than_crashing`.

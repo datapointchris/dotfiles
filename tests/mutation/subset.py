@@ -184,7 +184,7 @@ def load(
             cached.unlink(missing_ok=True)
     found = measure(repo, source_root, pytest_prefix=pytest_prefix, pytest_args=pytest_args)
     cached.write_text(json.dumps(found.as_payload()))
-    _prune(cache_dir, keep=cached)
+    prune(cache_dir, keep=cached)
     return found, cached, True
 
 
@@ -199,7 +199,7 @@ def cache_for(root: Path, repo: Path) -> Path:
     return root / hashlib.blake2b(str(repo.resolve()).encode(), digest_size=6).hexdigest()
 
 
-def _prune(cache_dir: Path, keep: Path, limit: int = 3) -> None:
+def prune(cache_dir: Path, keep: Path, limit: int = 3) -> None:
     """Regenerate rather than repair, so old keys are dropped rather than accumulating a directory of maps nobody can date.
 
     **The directory is one checkout's, which is what makes the sweep per

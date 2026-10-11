@@ -560,7 +560,7 @@ LISTING_ADVICE = (
     (('show', 'lazygit', '--section', 'tmux_plugins'), 'dotfiles packages list --source tmux_plugins'),
     (('show', 'lazygit', '--section', 'tmux_plugins', '--section', 'macos_casks'), 'dotfiles packages list'),
 )
-"""No narrowing, one, and two — the three cases `_listing` distinguishes."""
+"""No narrowing, one, and two — the three cases `listing` distinguishes."""
 
 
 @pytest.mark.parametrize(('argv', 'command'), LISTING_ADVICE, ids=[' '.join(argv) for argv, _ in LISTING_ADVICE])
@@ -946,7 +946,7 @@ def test_a_packages_status_is_read_from_the_evidence_its_section_allows(
     monkeypatch.setattr(platform, 'system', lambda: system)
     entry, expected_path = prepare(machine)
 
-    status, path = declaration.check_installed({**entry, '_section': section})
+    status, path = declaration.check_installed({**entry, 'section': section})
 
     assert status is expected
     assert path == (expected_path if expected in (InstallStatus.INSTALLED, InstallStatus.APP_ONLY) else None)
@@ -970,7 +970,7 @@ def test_an_empty_uv_tool_dir_is_read_as_unset_rather_than_as_the_working_direct
     monkeypatch.chdir(tmp_path / 'decoy')
     (machine.home / '.local' / 'share' / 'uv' / 'tools' / 'numpy').mkdir(parents=True)
 
-    status, path = declaration.check_installed({'name': 'numpy', '_section': 'uv_tools', 'command': 'absent-by-construction'})
+    status, path = declaration.check_installed({'name': 'numpy', 'section': 'uv_tools', 'command': 'absent-by-construction'})
 
     assert status is InstallStatus.INSTALLED
     assert path == str(machine.home / '.local' / 'share' / 'uv' / 'tools' / 'numpy')
@@ -994,7 +994,7 @@ def test_a_system_package_is_available_only_where_its_own_manager_is(
     if on_arch:
         (tmp_path / 'arch-release').touch()
 
-    available = declaration.is_available_on_platform({'_section': 'system_packages', 'name': 'ripgrep', key: 'ripgrep'})
+    available = declaration.is_available_on_platform({'section': 'system_packages', 'name': 'ripgrep', key: 'ripgrep'})
 
     assert available is (on_arch if wanted_on_arch else not on_arch)
 
@@ -1004,7 +1004,7 @@ def test_an_unrecognized_system_still_answers_with_the_debian_spelling(monkeypat
     Linux, and the availability check has to answer something — apt is the
     fallback, so an unrecognized box lists what it can rather than nothing."""
     monkeypatch.setattr(platform, 'system', lambda: 'FreeBSD')
-    packaged = {'_section': 'system_packages', 'name': 'ripgrep'}
+    packaged = {'section': 'system_packages', 'name': 'ripgrep'}
 
     assert declaration.is_available_on_platform({**packaged, 'apt': 'ripgrep'}) is True
     assert declaration.is_available_on_platform({**packaged, 'brew': 'ripgrep'}) is False

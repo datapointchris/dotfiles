@@ -18,7 +18,7 @@ class Ownership(enum.StrEnum):
     An enum rather than the three bare strings it replaced, because the caller
     that reads it is a dispatch with a branch per member and a fallthrough meaning
     converged. Over strings a fourth answer added here reads as converged at that
-    fallthrough with nothing failing; over members, `_verdict`'s `assert_never`
+    fallthrough with nothing failing; over members, `verdict`'s `assert_never`
     is a type error the moment this class grows.
     """
 
@@ -291,7 +291,7 @@ class Scan:
     skipped: tuple[Unreadable, ...]
 
 
-def _find_symlinks(base_dir: Path) -> Scan:
+def find_symlinks(base_dir: Path) -> Scan:
     """Every symlink under base_dir, depth-limited and exclusion-aware.
 
     `os.scandir` departs from using `pathlib.Path` for every filesystem
@@ -307,7 +307,7 @@ def _find_symlinks(base_dir: Path) -> Scan:
     early reports a machine with no orphans.
 
     **The exclusions apply below the root, never to the root.** A caller naming a
-    directory has said to scan it, so `_find_symlinks(~/Downloads/x)` scans where
+    directory has said to scan it, so `find_symlinks(~/Downloads/x)` scans where
     `is_excluded_search_dir` answers True about that same path.
     """
     symlinks: list[Path] = []
@@ -435,7 +435,7 @@ def remove_symlinks(
     err_console.print(f'[blue]Removing {origin} symlinks...[/]')
     count = 0
 
-    for symlink in _find_symlinks(_target_dir).found:
+    for symlink in find_symlinks(_target_dir).found:
         try:
             target = resolve_broken_symlink(symlink) if not symlink.exists() else symlink.resolve()
             if target and target.is_relative_to(source_dir):
@@ -467,7 +467,7 @@ def find_broken_symlinks(
     """
     _target_dir = (target_dir or TARGET_DIR).resolve()
     _dotfiles_dir = (dotfiles_dir or DOTFILES_DIR).resolve()
-    scanned = _find_symlinks(_target_dir)
+    scanned = find_symlinks(_target_dir)
     broken = []
 
     for symlink in scanned.found:
