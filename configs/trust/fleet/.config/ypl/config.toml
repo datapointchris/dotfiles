@@ -1,0 +1,16 @@
+# ypl's machine config: where the ypl server is, and which identity provider
+# signs the tokens it takes.
+#
+# Fleet-scoped because both name this fleet's own installation, and ypl compiles
+# neither in: a value shipped in the binary would point someone else's copy at
+# this server. A nonfleet manifest does not install ypl, so
+# configs/trust/nonfleet/ carries no counterpart.
+#
+# client_id is left to ypl's default, ypl-cli-<machine>, which is the device
+# client each machine has at the identity provider.
+
+# YPL_API_BASE overrides this.
+api_base = "https://ypl.ichrisbirch.com"
+
+# YPL_OIDC_ISSUER overrides this.
+issuer = "https://auth.ichrisbirch.com"
