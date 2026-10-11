@@ -5,7 +5,8 @@ screenshot directory existing is a directory existing. The Xcode license is the
 one observation in the repo that genuinely needs root. OrbStack's plugin
 directory is a JSON merge into a user config. libpq is a formula Homebrew
 installs and deliberately does not link. The Windows font path is discovered by
-asking Windows across a filesystem boundary only a WSL machine can see. The
+asking Windows across a filesystem boundary only a WSL machine can see, and so is
+the profile `.wslconfig` is copied into. The
 /etc/hosts grant is a sudoers rule only root can read, so it is observed through
 what sudo will list instead. The scheduled check is a systemd user timer or a
 LaunchAgent, and lives in `providers/schedule.py` because it is the only one
@@ -25,6 +26,7 @@ from the half of the run that must never prompt.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import re
@@ -35,6 +37,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.privilege import Escalates
@@ -351,6 +354,89 @@ def _write_fontconfig() -> Result:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# .wslconfig, in the Windows profile
+# ─────────────────────────────────────────────────────────────────────────────
+
+WSLCONFIG_TEMPLATE = paths.INSTALL_DIR / 'wsl' / 'wslconfig.template'
+
+
+def _windows_profile() -> Path | None:
+    """%USERPROFILE%, asked of Windows because it is not always C:\\Users\\<name>."""
+    if not WINDOWS_MOUNT.is_dir():
+        return None
+    asked = run(['cmd.exe', '/C', 'echo %USERPROFILE%'], output=Output.QUIET)
+    profile = asked.stdout.strip() if asked.ok else ''
+    if not profile or profile == '%USERPROFILE%':
+        return None
+    converted = run(['wslpath', '-u', profile], output=Output.QUIET)
+    linux_path = converted.stdout.strip() if converted.ok else ''
+    return Path(linux_path) if linux_path else None
+
+
+def _a_profile_already_holding_the_template() -> Path | None:
+    """The installed copy, found by reading the profiles rather than asking Windows.
+
+    The observe runs on the check timer, and asking forks `cmd.exe` for the reason
+    `_windows_fonts` gives. Another account's profile holding an exact copy while
+    this one has none would read as converged, which needs two accounts each
+    applying this repo.
+    """
+    template = WSLCONFIG_TEMPLATE.read_bytes()
+    try:
+        profiles = sorted((WINDOWS_MOUNT / 'Users').iterdir())
+    except OSError:
+        return None
+    for profile in profiles:
+        try:
+            if (profile / '.wslconfig').read_bytes() == template:
+                return profile / '.wslconfig'
+        except OSError:
+            continue
+    return None
+
+
+def _wslconfig() -> State:
+    if not WINDOWS_MOUNT.is_dir():
+        return State(Verdict.MATCHED, 'no Windows filesystem to write .wslconfig to')
+    if _a_profile_already_holding_the_template() is not None:
+        return State(Verdict.MATCHED)
+
+    profile = _windows_profile()
+    if profile is None:
+        return State(Verdict.MATCHED, 'Windows named no profile directory to write .wslconfig to')
+    target = profile / '.wslconfig'
+    if not target.is_file():
+        return State(Verdict.MISSING, f'{target} does not exist')
+    if target.read_bytes() == WSLCONFIG_TEMPLATE.read_bytes():
+        return State(Verdict.MATCHED)
+    return State(Verdict.STALE, f'{target} differs from {WSLCONFIG_TEMPLATE.name}, and apply backs it up before replacing it')
+
+
+def _write_wslconfig() -> Result:
+    """Copy the template, keeping a differing file beside it rather than losing it.
+
+    `.wslconfig` is edited by hand at the moment something is broken, and a fix
+    replaced with no copy kept is one nobody finds again.
+    """
+    profile = _windows_profile()
+    if profile is None or not profile.is_dir():
+        return Result(False, 'Windows named no profile directory to write .wslconfig to', kind=Kind.UNSUPPORTED_HERE)
+
+    target = profile / '.wslconfig'
+    template = WSLCONFIG_TEMPLATE.read_bytes()
+    kept = ''
+    try:
+        if target.is_file() and target.read_bytes() != template:
+            backup = target.with_name(f'.wslconfig.{dt.datetime.now():%Y%m%d%H%M%S}.bak')
+            shutil.copy2(target, backup)
+            kept = f', and the previous one is at {backup}'
+        target.write_bytes(template)
+    except OSError as error:
+        return Result(False, f'could not write {target}: {error}', kind=Kind.WRITE_FAILED)
+    return Result(True, f'{target} written{kept}. WSL reads it after `wsl.exe --shutdown` and about eight seconds', kind=Kind.APPLIED)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # libpq, which Homebrew installs without linking
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -502,6 +588,7 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
     'xcode-license': (_anywhere(_xcode_license), _escalating(_accept_xcode_license)),
     'orbstack-docker-plugins': (_anywhere(_orbstack_plugins), _unprivileged(_add_orbstack_plugins)),
     'windows-fonts': (_anywhere(_windows_fonts), _unprivileged(_write_fontconfig)),
+    'wslconfig': (_anywhere(_wslconfig), _unprivileged(_write_wslconfig)),
     'psql-linked': (_anywhere(_psql_linked), _unprivileged(_link_psql)),
     'etc-hosts-sudo-grant': (_anywhere(_hosts_write_granted), _escalating(_grant_hosts_write)),
 }

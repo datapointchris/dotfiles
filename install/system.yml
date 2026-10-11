@@ -614,7 +614,7 @@ macos_defaults:
     description: Reduce motion
 
 # Machine state with no shared mechanism behind it: a file flag, a directory, a
-# root-only license read, a JSON merge, a keg-only formula's link, and a path
+# root-only license read, a JSON merge, a keg-only formula's link, and two paths
 # discovered by asking Windows. The mechanics are one pair of functions each in
 # src/dotfiles/providers/steps.py, for the same reason custom_installers has no
 # engine.
@@ -656,6 +656,14 @@ steps:
     needs_root: false
   - name: windows-fonts
     description: fontconfig pointing at the Windows user font directory
+    host: wsl
+
+  # .wslconfig configures the VM that hosts every distro, so it sits in the
+  # Windows profile, outside the $HOME the symlink manager deploys into, and is
+  # copied rather than linked. A copy that differs is backed up beside itself
+  # before it is replaced: it is edited by hand while something is broken.
+  - name: wslconfig
+    description: .wslconfig in the Windows profile, matching install/wsl/wslconfig.template
     host: wsl
 
   # A scheduled job writes /etc/hosts from the fleet's inventory with

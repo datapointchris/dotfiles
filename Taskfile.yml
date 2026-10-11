@@ -255,12 +255,3 @@ tasks:
     desc: The same, for the mutation harness README against the package it sits beside
     cmds:
       - "{{.DOTFILES_DIR}}/install/ops/docs-duplication.py --pages tests/mutation --code tests/mutation --max 200 {{.CLI_ARGS}}"
-
-  # ================================================================
-  # WSL
-  # ================================================================
-
-  wsl:tune:
-    desc: Install .wslconfig to the Windows user profile (run from WSL)
-    cmds:
-      - bash "{{.DOTFILES_DIR}}/install/wsl/install-wslconfig.sh" {{.CLI_ARGS}}

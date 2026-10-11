@@ -1,7 +1,8 @@
 # %UserProfile%\.wslconfig — global settings for every WSL 2 distro.
 #
-# Installed by install/wsl/install-wslconfig.sh (task wsl:tune). Changes need
-# `wsl.exe --shutdown` and about eight seconds before WSL picks them up.
+# Installed by `dotfiles system apply`, as the wslconfig row in
+# install/system.yml. Changes need `wsl.exe --shutdown` and about eight seconds
+# before WSL picks them up.
 #
 # Only settings that are an actual decision are written here. Everything WSL
 # already defaults to correctly is left out rather than restated, so a line in

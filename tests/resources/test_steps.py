@@ -283,6 +283,74 @@ def test_a_windows_that_will_not_name_its_user_is_nothing_to_do(windows: Path, f
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# .wslconfig
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def profile(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A Windows profile under a stand-in /mnt/c, which `cmd.exe` names and `wslpath` converts."""
+    mount = tmp_path / 'mnt-c'
+    windows_profile = mount / 'Users' / 'chris.birch'
+    windows_profile.mkdir(parents=True)
+    monkeypatch.setattr(steps, 'WINDOWS_MOUNT', mount)
+    executable(fake_bin, 'cmd.exe', '#!/bin/sh\nprintf "C:\\\\Users\\\\chris.birch\\r\\n"\n')
+    executable(fake_bin, 'wslpath', f'#!/bin/sh\nprintf "%s\\n" "{windows_profile}"\n')
+    return windows_profile
+
+
+def test_a_missing_wslconfig_is_written_from_the_template_and_then_matches(profile: Path) -> None:
+    assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.MISSING
+    assert steps.apply('wslconfig', Privilege(), ANY_RUN).ok
+
+    assert (profile / '.wslconfig').read_bytes() == steps.WSLCONFIG_TEMPLATE.read_bytes()
+    assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.MATCHED
+
+
+def test_a_differing_wslconfig_is_stale_and_kept_beside_its_replacement(profile: Path) -> None:
+    """It is edited by hand while something is broken, so replacing it without a
+    copy loses the fix with nothing saying so."""
+    existing = profile / '.wslconfig'
+    existing.write_text('[wsl2]\nmemory=2GB\n')
+    assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.STALE
+
+    result = steps.apply('wslconfig', Privilege(), ANY_RUN)
+
+    backups = list(profile.glob('.wslconfig.*.bak'))
+    assert result.ok
+    assert [backup.read_text() for backup in backups] == ['[wsl2]\nmemory=2GB\n']
+    assert str(backups[0]) in result.detail
+    assert existing.read_bytes() == steps.WSLCONFIG_TEMPLATE.read_bytes()
+
+
+def test_a_converged_wslconfig_never_asks_windows_for_the_profile(profile: Path, fake_bin: Path, tmp_path: Path) -> None:
+    """The observe runs on the check timer, where forking `cmd.exe` on every tick
+    is the pattern `_windows_fonts` avoids."""
+    assert steps.apply('wslconfig', Privilege(), ANY_RUN).ok
+    asked = tmp_path / 'cmd-was-called'
+    executable(fake_bin, 'cmd.exe', f'#!/bin/sh\ntouch {asked}\n')
+
+    assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.MATCHED
+    assert not asked.exists(), 'a converged machine forked cmd.exe to find a profile it had already written to'
+
+
+def test_a_windows_that_will_not_name_its_profile_writes_nothing(profile: Path, fake_bin: Path) -> None:
+    """`cmd.exe` echoing the unexpanded variable back is a broken interop, and a
+    path built from it cannot exist."""
+    executable(fake_bin, 'cmd.exe', '#!/bin/sh\nprintf "%%USERPROFILE%%\\r\\n"\n')
+
+    assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.MATCHED
+    assert not steps.apply('wslconfig', Privilege(), ANY_RUN).ok
+    assert not (profile / '.wslconfig').exists()
+
+
+def test_no_windows_filesystem_has_no_wslconfig_to_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(steps, 'WINDOWS_MOUNT', tmp_path / 'absent')
+
+    assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.MATCHED
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # libpq, linked so that psql exists
 # ─────────────────────────────────────────────────────────────────────────────
 

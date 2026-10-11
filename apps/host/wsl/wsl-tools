@@ -692,7 +692,7 @@ check_wslconfig() {
   config="$profile/.wslconfig"
   if [[ ! -f "$config" ]]; then
     print_warning "No .wslconfig — every setting is at its default"
-    note "No .wslconfig exists" "Install the annotated one: task wsl:tune"
+    note "No .wslconfig exists" "Install the annotated one: dotfiles system apply"
     return 0
   fi
 

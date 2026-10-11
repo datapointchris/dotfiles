@@ -41,10 +41,13 @@ the moment space is what you are short of.
 `.wslconfig` configures the VM that hosts every distro, so it sits in
 `%UserProfile%` on the Windows side. The symlink manager deploys below `$HOME`,
 and `$HOME` here is inside the guest. The mechanism this repo uses for everything
-else therefore cannot reach it. `install/wsl/install-wslconfig.sh` — `task
-wsl:tune` — copies the file instead, and its header comment carries why an
-existing one is backed up rather than overwritten.
+else therefore cannot reach it. The `wslconfig` row in `install/system.yml`
+copies `install/wsl/wslconfig.template` there instead, so `dotfiles system plan`,
+`check` and `apply` cover it like any other system row. A copy that differs is
+backed up beside itself before it is replaced, because it is the file someone
+edits by hand while something is broken.
 
-Its `--check` mode prints drift on stdout and nothing else, so an empty answer
-reads as converged. That matches the shape of every other check in this repo,
-which is what lets a copied file take part in convergence at all.
+The row finds a converged copy by reading the profiles under `/mnt/c/Users`
+rather than asking Windows for `%USERPROFILE%`. The scheduled check observes it
+every few minutes, and a Linux process forking `cmd.exe` on a timer is the
+pattern `windows-fonts` avoids for the same reason.

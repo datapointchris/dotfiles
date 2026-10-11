@@ -29,7 +29,6 @@ from shells import Shell
 from shells import shell_out
 
 TOOL = str(REPO / 'apps' / 'host' / 'wsl' / 'wsl-tools')
-WSLCONFIG = str(REPO / 'install' / 'wsl' / 'install-wslconfig.sh')
 TEMPLATE = REPO / 'install' / 'wsl' / 'wslconfig.template'
 
 BASE_PATH = r'C:\Users\me\AppData\Local\wsl\{7f3a}'
@@ -403,72 +402,6 @@ def test_the_template_sets_the_memory_reclaim_mode() -> None:
 
 
 # ================================================================
-# .wslconfig install
-# ================================================================
-
-
-def wslconfig(windows: Windows, profile: Path, *args: str) -> Shell:
-    """`is_wsl` is overridden after sourcing, so the body runs on a machine that
-    is not WSL. The guard itself is tested separately, by running the script."""
-    return shell_out(
-        'source "$1"; is_wsl() { return 0; }; main "${@:2}"',
-        WSLCONFIG,
-        *args,
-        PATH=f'{windows.path}{os.pathsep}{os.environ["PATH"]}',
-        ARGV_LOG=str(windows.argv_log),
-        STUB_PROFILE=str(profile),
-        DOTFILES_DIR=str(REPO),
-    )
-
-
-@pytest.fixture
-def profile(tmp_path: Path) -> Path:
-    """Stands in for %USERPROFILE%. The stub answers a Linux path, which the
-    wslpath stub passes through unchanged."""
-    home = tmp_path / 'win-home'
-    home.mkdir()
-    return home
-
-
-def test_check_reports_a_missing_wslconfig(windows: Windows, profile: Path) -> None:
-    result = wslconfig(windows, profile, '--check')
-    assert 'missing: .wslconfig' in result.stdout
-
-
-def test_check_reports_a_wslconfig_that_differs(windows: Windows, profile: Path) -> None:
-    (profile / '.wslconfig').write_text('[wsl2]\nmemory=2GB\n')
-    result = wslconfig(windows, profile, '--check')
-    assert 'differs: .wslconfig' in result.stdout
-
-
-def test_check_is_silent_when_converged(windows: Windows, profile: Path) -> None:
-    (profile / '.wslconfig').write_text(TEMPLATE.read_text(encoding='utf-8'))
-    result = wslconfig(windows, profile, '--check')
-    assert result.stdout.strip() == ''
-    assert result.ok
-
-
-def test_an_existing_wslconfig_is_backed_up_before_it_is_replaced(windows: Windows, profile: Path) -> None:
-    """It is a file edited by hand at the moment something is broken. Losing
-    that edit to an unrelated install is silent."""
-    existing = profile / '.wslconfig'
-    existing.write_text('[wsl2]\nmemory=2GB\n')
-
-    wslconfig(windows, profile)
-
-    backups = list(profile.glob('.wslconfig.*.bak'))
-    assert len(backups) == 1
-    assert backups[0].read_text(encoding='utf-8') == '[wsl2]\nmemory=2GB\n'
-    assert existing.read_text(encoding='utf-8') == TEMPLATE.read_text(encoding='utf-8')
-
-
-def test_a_converged_wslconfig_is_not_backed_up_every_run(windows: Windows, profile: Path) -> None:
-    (profile / '.wslconfig').write_text(TEMPLATE.read_text(encoding='utf-8'))
-    wslconfig(windows, profile)
-    assert list(profile.glob('.wslconfig.*.bak')) == []
-
-
-# ================================================================
 # The guard
 # ================================================================
 
@@ -485,22 +418,6 @@ def test_help_works_off_wsl(windows: Windows) -> None:
 def test_a_verb_refuses_off_wsl(windows: Windows) -> None:
     result = shell_out('bash "$1" status', TOOL, SHELL_DIR=str(windows.shell_dir))
     assert not result.ok
-
-
-def test_the_wslconfig_installer_skips_off_wsl(windows: Windows, profile: Path) -> None:
-    """A skip, not a failure: it is called from a task that also runs on the
-    machines this repo deploys to that are not WSL."""
-    result = shell_out(
-        'bash "$1"',
-        WSLCONFIG,
-        PATH=f'{windows.path}{os.pathsep}{os.environ["PATH"]}',
-        ARGV_LOG=str(windows.argv_log),
-        STUB_PROFILE=str(profile),
-        DOTFILES_DIR=str(REPO),
-    )
-    assert result.ok
-    assert 'Not in WSL' in result.stdout
-    assert not (profile / '.wslconfig').exists()
 
 
 def test_a_bare_invocation_lists_the_verbs(windows: Windows) -> None:
