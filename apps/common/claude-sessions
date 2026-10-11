@@ -17,8 +17,10 @@ set -euo pipefail
 
 REGISTRY_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/sessions"
 
-readonly ROW_OBJECT='{name, sessionId, status, waiting: .waitingFor, cwd, tmux, pid}'
-readonly ROW_TSV='[.name, .status, (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv'
+# A live session's registry file can carry no `status`. It reads as `unknown`
+# rather than a null each reader would render its own way.
+readonly ROW_OBJECT='{name, sessionId, status: (.status // "unknown"), waiting: .waitingFor, cwd, tmux, pid}'
+readonly ROW_TSV='[.name, (.status // "unknown"), (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv'
 
 # formatting.sh is sourced here rather than at the top because the hot path
 # runs over ssh from another machine, and every file this needs is another
@@ -37,6 +39,7 @@ show_help() {
 
   help_section "Notes"
   help_row "" "" "NAME is the address peers message, as /list-agents shows it"
+  help_row "" "" "STATUS is unknown where the session's registry file holds none"
   help_row "" "" "This machine only; a fleet-wide listing runs this on each box"
   help_row "" "" "--self exits 1 when no session owns the caller"
   help_end
