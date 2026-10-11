@@ -64,7 +64,9 @@ return {
   -- manifest without molten. Where the host cannot import it, keep the old registration.
   -- The check starts python, so as a `cond` every startup would pay for it.
   build = function(plugin)
-    if not pcall(vim.cmd.python3, 'import jupyter_client') then return end
+    if not pcall(vim.cmd.python3, 'import jupyter_client') then
+      return
+    end
     vim.cmd('Lazy load ' .. plugin.name)
     vim.cmd('UpdateRemotePlugins')
   end,

@@ -33,7 +33,9 @@ local vscode_enabled = {
 ---@param plugin LazyPlugin
 ---@return boolean
 function M.plugin_enabled(plugin)
-  if M.is_vscode then return vscode_enabled[plugin.name] == true end
+  if M.is_vscode then
+    return vscode_enabled[plugin.name] == true
+  end
   return true
 end
 

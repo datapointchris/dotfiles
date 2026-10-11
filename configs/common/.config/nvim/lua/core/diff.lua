@@ -36,18 +36,26 @@ local LINE_CONTRAST = 1.45
 local EMPHASIS_CONTRAST = 2.2
 local TEXT_CONTRAST = 4.5
 
-local function channels(n) return { math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256 } end
+local function channels(n)
+  return { math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256 }
+end
 
 local function linear(value)
   local c = value / 255
-  if c <= 0.03928 then return c / 12.92 end
+  if c <= 0.03928 then
+    return c / 12.92
+  end
   return ((c + 0.055) / 1.055) ^ 2.4
 end
 
-local function luminance(c) return 0.2126 * linear(c[1]) + 0.7152 * linear(c[2]) + 0.0722 * linear(c[3]) end
+local function luminance(c)
+  return 0.2126 * linear(c[1]) + 0.7152 * linear(c[2]) + 0.0722 * linear(c[3])
+end
 
 local function contrast(a, b)
-  if a > b then return (a + 0.05) / (b + 0.05) end
+  if a > b then
+    return (a + 0.05) / (b + 0.05)
+  end
   return (b + 0.05) / (a + 0.05)
 end
 
@@ -59,9 +67,13 @@ local function mix(accent, background, fraction)
   return out
 end
 
-local function rounded(c) return { math.floor(c[1] + 0.5), math.floor(c[2] + 0.5), math.floor(c[3] + 0.5) } end
+local function rounded(c)
+  return { math.floor(c[1] + 0.5), math.floor(c[2] + 0.5), math.floor(c[3] + 0.5) }
+end
 
-local function hex(c) return string.format('#%02x%02x%02x', c[1], c[2], c[3]) end
+local function hex(c)
+  return string.format('#%02x%02x%02x', c[1], c[2], c[3])
+end
 
 -- Capped at 0.65 so an accent already close to the background cannot resolve to
 -- an opaque slab.
@@ -91,7 +103,9 @@ local function legible(text, surface, target)
   local f = 0
   while f < 1 do
     local c = rounded(mix(toward, t, f))
-    if contrast(luminance(c), base) >= target then return c end
+    if contrast(luminance(c), base) >= target then
+      return c
+    end
     f = f + 0.02
   end
   return toward
@@ -99,7 +113,9 @@ end
 
 local function resolved(group)
   local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = group, link = false })
-  if not ok or type(hl) ~= 'table' then return {} end
+  if not ok or type(hl) ~= 'table' then
+    return {}
+  end
   return hl
 end
 
@@ -112,7 +128,9 @@ local function apply()
   local add = resolved('Added').fg
   local delete = resolved('Removed').fg
   local change = resolved('Changed').fg
-  if not (add and delete and change) then return end
+  if not (add and delete and change) then
+    return
+  end
 
   -- A theme may leave Normal's background to the terminal (solarized-osaka), and
   -- there is no way to read what the terminal chose.
@@ -133,7 +151,9 @@ local function apply()
   -- lazy-loads, so it already runs after this one; the call is here so the
   -- result does not depend on that ordering.
   local loaded, hl = pcall(require, 'diffview.hl')
-  if loaded then pcall(hl.update_diff_hl) end
+  if loaded then
+    pcall(hl.update_diff_hl)
+  end
 end
 
 vim.api.nvim_create_autocmd('ColorScheme', {

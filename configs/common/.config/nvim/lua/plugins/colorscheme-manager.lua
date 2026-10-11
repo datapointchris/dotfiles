@@ -20,12 +20,18 @@ local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
 local function generated_colorscheme(theme)
   local colors_dir = themes_dir .. '/' .. theme .. '/neovim/colors'
   local handle = vim.loop.fs_scandir(colors_dir)
-  if not handle then return nil end
+  if not handle then
+    return nil
+  end
 
   while true do
     local name, type = vim.loop.fs_scandir_next(handle)
-    if not name then return nil end
-    if type == 'file' and name:sub(-4) == '.lua' then return name:sub(1, -5) end
+    if not name then
+      return nil
+    end
+    if type == 'file' and name:sub(-4) == '.lua' then
+      return name:sub(1, -5)
+    end
   end
 end
 
@@ -42,7 +48,9 @@ return {
     local options = {
       ['projekt0n/github-nvim-theme'] = {
         name = 'github-theme',
-        config = function() require('github-theme').setup() end,
+        config = function()
+          require('github-theme').setup()
+        end,
       },
       ['rose-pine/neovim'] = {
         name = 'rose-pine',
@@ -61,7 +69,9 @@ return {
             background = 'hard',
             -- everforest's own option name, spelled its way. An unknown key is
             -- ignored in silence, so the American spelling reads as working.
-            colours_override = function(palette) palette.bg0 = palette.bg_dim end,
+            colours_override = function(palette)
+              palette.bg0 = palette.bg_dim
+            end,
           })
         end,
       },
@@ -72,19 +82,27 @@ return {
     -- that needs its options above.
     local function plugin_repo(line)
       local repo = line:match('^%s*plugin:%s*"([^"]+)"') or line:match("^%s*plugin:%s*'([^']+)'")
-      if repo then return repo end
+      if repo then
+        return repo
+      end
       local bare = line:match('^%s*plugin:%s*([^%s#]+)')
-      if bare and bare ~= 'null' and bare ~= '~' then return bare end
+      if bare and bare ~= 'null' and bare ~= '~' then
+        return bare
+      end
       return nil
     end
 
     local specs, seen = {}, {}
     local handle = vim.loop.fs_scandir(themes_dir)
-    if not handle then return specs end
+    if not handle then
+      return specs
+    end
 
     while true do
       local name, type = vim.loop.fs_scandir_next(handle)
-      if not name then break end
+      if not name then
+        break
+      end
       if type == 'directory' then
         local yml = themes_dir .. '/' .. name .. '/theme.yml'
         if vim.fn.filereadable(yml) == 1 then
@@ -115,7 +133,9 @@ return {
     if handle then
       while true do
         local name, type = vim.loop.fs_scandir_next(handle)
-        if not name then break end
+        if not name then
+          break
+        end
         if type == 'directory' then
           local colorscheme = generated_colorscheme(name)
           -- Named after the colorscheme, not the theme directory. lazy.nvim
@@ -171,7 +191,9 @@ return {
       -- A theme is rejected if its last reject/unreject action was "reject"
       local function get_rejected_themes()
         local rejected = {}
-        if vim.fn.filereadable(history_file) == 0 then return rejected end
+        if vim.fn.filereadable(history_file) == 0 then
+          return rejected
+        end
 
         local lines = vim.fn.readfile(history_file)
         local last_action = {} -- theme -> {action, ts}
@@ -181,13 +203,17 @@ return {
             local ok, entry = pcall(vim.json.decode, line)
             if ok and entry and entry.theme then
               local action = entry.action
-              if action == 'reject' or action == 'unreject' then last_action[entry.theme] = action end
+              if action == 'reject' or action == 'unreject' then
+                last_action[entry.theme] = action
+              end
             end
           end
         end
 
         for theme, action in pairs(last_action) do
-          if action == 'reject' then rejected[theme] = true end
+          if action == 'reject' then
+            rejected[theme] = true
+          end
         end
 
         return rejected
@@ -196,7 +222,9 @@ return {
       -- Parse meta fields from theme.yml (simple pattern matching)
       local function parse_theme_yml(theme_path)
         local yml_path = theme_path .. '/theme.yml'
-        if vim.fn.filereadable(yml_path) == 0 then return nil end
+        if vim.fn.filereadable(yml_path) == 0 then
+          return nil
+        end
         local lines = vim.fn.readfile(yml_path)
         local result = {}
         for _, line in ipairs(lines) do
@@ -208,7 +236,9 @@ return {
           if not key then
             key, value = line:match('^%s*([%w_]+):%s*([^%s#]+)')
           end
-          if key and value then result[key] = value end
+          if key and value then
+            result[key] = value
+          end
         end
         return result
       end
@@ -222,11 +252,15 @@ return {
       local function build_colorscheme_display_map()
         local display_map = {}
         local handle = vim.loop.fs_scandir(themes_dir)
-        if not handle then return display_map end
+        if not handle then
+          return display_map
+        end
 
         while true do
           local name, type = vim.loop.fs_scandir_next(handle)
-          if not name then break end
+          if not name then
+            break
+          end
           if type == 'directory' then
             local meta = parse_theme_yml(themes_dir .. '/' .. name)
             if meta and meta.neovim_colorscheme_name then
@@ -261,11 +295,15 @@ return {
         local rejected = get_rejected_themes()
 
         local handle = vim.loop.fs_scandir(themes_dir)
-        if not handle then return colorschemes end
+        if not handle then
+          return colorschemes
+        end
 
         while true do
           local name, type = vim.loop.fs_scandir_next(handle)
-          if not name then break end
+          if not name then
+            break
+          end
           if type == 'directory' and not rejected[name] then
             local theme_path = themes_dir .. '/' .. name
             local neovim_dir = theme_path .. '/neovim'
@@ -277,7 +315,9 @@ return {
 
             if has_neovim_dir or is_plugin_theme then
               local colorscheme = meta and meta.neovim_colorscheme_name
-              if colorscheme then table.insert(colorschemes, colorscheme) end
+              if colorscheme then
+                table.insert(colorschemes, colorscheme)
+              end
             end
           end
         end
@@ -310,7 +350,9 @@ return {
 
       local function get_random_colorscheme()
         local all_colorschemes = get_all_good_colorschemes()
-        if #all_colorschemes == 0 then return 'default' end
+        if #all_colorschemes == 0 then
+          return 'default'
+        end
         math.randomseed(os.time())
         local index = math.random(#all_colorschemes)
         return all_colorschemes[index]
@@ -320,19 +362,27 @@ return {
       local theme_current_file = vim.fn.expand('~/.local/state/theme/current')
 
       local function get_current_theme_from_system()
-        if vim.fn.filereadable(theme_current_file) == 0 then return nil end
+        if vim.fn.filereadable(theme_current_file) == 0 then
+          return nil
+        end
         local lines = vim.fn.readfile(theme_current_file)
-        if #lines > 0 and lines[1] ~= '' then return lines[1] end
+        if #lines > 0 and lines[1] ~= '' then
+          return lines[1]
+        end
         return nil
       end
 
       local function load_colorscheme_from_theme_system()
         local theme_name = get_current_theme_from_system()
-        if not theme_name then return false end
+        if not theme_name then
+          return false
+        end
 
         local meta = parse_theme_yml(themes_dir .. '/' .. theme_name)
         local colorscheme = meta and meta.neovim_colorscheme_name
-        if not colorscheme then return false end
+        if not colorscheme then
+          return false
+        end
 
         -- Ensure dark background for dark variant themes
         if meta.variant == 'dark' then
@@ -347,7 +397,9 @@ return {
         -- app moves. The module is assumed to be named after the colorscheme,
         -- which holds for every plugin using this key so far.
         if meta.neovim_plugin_background then
-          local configured, err = pcall(function() require(colorscheme).setup({ background = meta.neovim_plugin_background }) end)
+          local configured, err = pcall(function()
+            require(colorscheme).setup({ background = meta.neovim_plugin_background })
+          end)
           if not configured then
             vim.notify('colorscheme-manager: could not set ' .. colorscheme .. ' background: ' .. tostring(err), vim.log.levels.WARN)
           end
@@ -393,12 +445,20 @@ return {
 
       local function setup_theme_file_watcher()
         local w = vim.loop.new_fs_event()
-        if not w then return end
+        if not w then
+          return
+        end
 
         local theme_dir = vim.fn.expand('~/.local/state/theme')
         w:start(theme_dir, {}, function(err, filename)
-          if err then return end
-          if filename == 'current' then vim.schedule(function() load_colorscheme_from_theme_system() end) end
+          if err then
+            return
+          end
+          if filename == 'current' then
+            vim.schedule(function()
+              load_colorscheme_from_theme_system()
+            end)
+          end
         end)
       end
 
