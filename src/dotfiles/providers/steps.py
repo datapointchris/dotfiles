@@ -265,6 +265,23 @@ FONTCONFIG = Path('.config') / 'fontconfig' / 'fonts.conf'
 WINDOWS_MOUNT = Path('/mnt/c')
 
 
+def windows_variable(name: str) -> str | None:
+    """`%name%` as Windows expands it, or None where Windows will not answer.
+
+    `cmd.exe` is run by its path under the mount rather than found on PATH.
+    `appendWindowsPath=false`, which `wsl-tools` recommends, takes it off PATH
+    while leaving interop able to run it. Echoed back unexpanded, or not run at
+    all because `[interop] enabled=false`, it has not answered.
+    """
+    cmd = WINDOWS_MOUNT / 'Windows' / 'System32' / 'cmd.exe'
+    asked = run([str(cmd), '/C', f'echo %{name}%'], output=Output.QUIET)
+    value = asked.stdout.strip() if asked.ok else ''
+    return value if value and value != f'%{name}%' else None
+
+
+WINDOWS_SILENT = 'Windows did not answer through /mnt/c/Windows/System32/cmd.exe; `[interop] enabled=false` in /etc/wsl.conf is one cause'
+
+
 def windows_fonts_directory() -> Path | None:
     """Where Windows puts a non-admin user's fonts, or None if it cannot be found.
 
@@ -275,9 +292,8 @@ def windows_fonts_directory() -> Path | None:
     """
     if not WINDOWS_MOUNT.is_dir():
         return None
-    asked = run(['cmd.exe', '/C', 'echo %USERNAME%'], output=Output.QUIET)
-    user = asked.stdout.strip() if asked.ok else ''
-    if not user or user == '%USERNAME%':
+    user = windows_variable('USERNAME')
+    if user is None:
         return None
     return WINDOWS_MOUNT / 'Users' / user / 'AppData' / 'Local' / 'Microsoft' / 'Windows' / 'Fonts'
 
@@ -333,7 +349,7 @@ def windows_fonts() -> State:
 
     fonts = windows_fonts_directory()
     if fonts is None:
-        return State(Verdict.MATCHED, 'no Windows filesystem to take fonts from')
+        return State(Verdict.UNKNOWN, WINDOWS_SILENT, repair=Repair.NONE)
     if not fonts.is_dir():
         return State(Verdict.MATCHED, f'{fonts} does not exist; Windows creates it on the first non-admin font install')
     return State(Verdict.MISSING if not deployed else Verdict.STALE, f'{target} does not point at {fonts}')
@@ -364,9 +380,8 @@ def windows_profile() -> Path | None:
     """%USERPROFILE%, asked of Windows because it is not always C:\\Users\\<name>."""
     if not WINDOWS_MOUNT.is_dir():
         return None
-    asked = run(['cmd.exe', '/C', 'echo %USERPROFILE%'], output=Output.QUIET)
-    profile = asked.stdout.strip() if asked.ok else ''
-    if not profile or profile == '%USERPROFILE%':
+    profile = windows_variable('USERPROFILE')
+    if profile is None:
         return None
     converted = run(['wslpath', '-u', profile], output=Output.QUIET)
     linux_path = converted.stdout.strip() if converted.ok else ''
@@ -403,7 +418,7 @@ def wslconfig() -> State:
 
     profile = windows_profile()
     if profile is None:
-        return State(Verdict.MATCHED, 'Windows named no profile directory to write .wslconfig to')
+        return State(Verdict.UNKNOWN, WINDOWS_SILENT, repair=Repair.NONE)
     target = profile / '.wslconfig'
     if not target.is_file():
         return State(Verdict.MISSING, f'{target} does not exist')

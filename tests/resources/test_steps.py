@@ -218,13 +218,19 @@ def test_a_config_that_is_not_json_is_refused_rather_than_replaced(orbstack: Pat
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def windows_cmd(script: str) -> None:
+    """A `cmd.exe` at its path under the stand-in mount, and none on PATH, as `appendWindowsPath=false` leaves it."""
+    executable(steps.WINDOWS_MOUNT / 'Windows' / 'System32', 'cmd.exe', script)
+
+
 @pytest.fixture
-def windows(tmp_path: Path, home: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def windows(tmp_path: Path, home: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     mount = tmp_path / 'mnt-c'
     fonts = mount / 'Users' / 'chris.birch' / 'AppData' / 'Local' / 'Microsoft' / 'Windows' / 'Fonts'
     fonts.mkdir(parents=True)
+    (mount / 'Windows' / 'System32').mkdir(parents=True)
     monkeypatch.setattr(steps, 'WINDOWS_MOUNT', mount)
-    executable(fake_bin, 'cmd.exe', '#!/bin/sh\nprintf "chris.birch\\r\\n"\n')
+    windows_cmd('#!/bin/sh\nprintf "chris.birch\\r\\n"\n')
     return fonts
 
 
@@ -246,7 +252,7 @@ def test_the_font_directory_is_written_and_then_matches(windows: Path, home: Pat
     assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.MATCHED
 
 
-def test_a_converged_machine_never_asks_windows_for_the_account(windows: Path, home: Path, fake_bin: Path, tmp_path: Path) -> None:
+def test_a_converged_machine_never_asks_windows_for_the_account(windows: Path, home: Path, tmp_path: Path) -> None:
     """This observe runs on the ten-minute timer, and asking forks `cmd.exe`.
 
     A Linux process spawning `cmd.exe` to read `%USERNAME%` is user-discovery
@@ -257,7 +263,7 @@ def test_a_converged_machine_never_asks_windows_for_the_account(windows: Path, h
     assert steps.apply('windows-fonts', Privilege(), ANY_RUN).ok
 
     asked = tmp_path / 'cmd-was-called'
-    executable(fake_bin, 'cmd.exe', f'#!/bin/sh\ntouch {asked}\nprintf "chris.birch\\r\\n"\n')
+    windows_cmd(f'#!/bin/sh\ntouch {asked}\nprintf "chris.birch\\r\\n"\n')
 
     assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.MATCHED
     assert not asked.exists(), 'a converged machine forked cmd.exe to re-learn an account that had not changed'
@@ -273,13 +279,17 @@ def test_a_fonts_conf_pointing_somewhere_else_is_stale(windows: Path, home: Path
     assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.STALE
 
 
-def test_a_windows_that_will_not_name_its_user_is_nothing_to_do(windows: Path, fake_bin: Path) -> None:
+def test_a_windows_that_will_not_name_its_user_is_unknown(windows: Path) -> None:
     """`cmd.exe` echoing the unexpanded variable back is what a broken interop
     looks like, and building `/mnt/c/Users/%USERNAME%/...` from it would write a
-    config pointing at a path that cannot exist."""
-    executable(fake_bin, 'cmd.exe', '#!/bin/sh\nprintf "%%USERNAME%%\\r\\n"\n')
+    config pointing at a path that cannot exist. Matched would claim fonts that
+    nothing checked."""
+    windows_cmd('#!/bin/sh\nprintf "%%USERNAME%%\\r\\n"\n')
 
-    assert steps.observe('windows-fonts', ANY_RUN).verdict is Verdict.MATCHED
+    state = steps.observe('windows-fonts', ANY_RUN)
+
+    assert state.verdict is Verdict.UNKNOWN
+    assert state.repair is Repair.NONE
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -293,8 +303,9 @@ def profile(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> 
     mount = tmp_path / 'mnt-c'
     windows_profile = mount / 'Users' / 'chris.birch'
     windows_profile.mkdir(parents=True)
+    (mount / 'Windows' / 'System32').mkdir(parents=True)
     monkeypatch.setattr(steps, 'WINDOWS_MOUNT', mount)
-    executable(fake_bin, 'cmd.exe', '#!/bin/sh\nprintf "C:\\\\Users\\\\chris.birch\\r\\n"\n')
+    windows_cmd('#!/bin/sh\nprintf "C:\\\\Users\\\\chris.birch\\r\\n"\n')
     executable(fake_bin, 'wslpath', f'#!/bin/sh\nprintf "%s\\n" "{windows_profile}"\n')
     return windows_profile
 
@@ -323,25 +334,38 @@ def test_a_differing_wslconfig_is_stale_and_kept_beside_its_replacement(profile:
     assert existing.read_bytes() == steps.WSLCONFIG_TEMPLATE.read_bytes()
 
 
-def test_a_converged_wslconfig_never_asks_windows_for_the_profile(profile: Path, fake_bin: Path, tmp_path: Path) -> None:
+def test_a_converged_wslconfig_never_asks_windows_for_the_profile(profile: Path, tmp_path: Path) -> None:
     """The observe runs on the check timer, where forking `cmd.exe` on every tick
     is the pattern `windows_fonts` avoids."""
     assert steps.apply('wslconfig', Privilege(), ANY_RUN).ok
     asked = tmp_path / 'cmd-was-called'
-    executable(fake_bin, 'cmd.exe', f'#!/bin/sh\ntouch {asked}\n')
+    windows_cmd(f'#!/bin/sh\ntouch {asked}\n')
 
     assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.MATCHED
     assert not asked.exists(), 'a converged machine forked cmd.exe to find a profile it had already written to'
 
 
-def test_a_windows_that_will_not_name_its_profile_writes_nothing(profile: Path, fake_bin: Path) -> None:
+def test_a_windows_that_will_not_name_its_profile_is_unknown_and_writes_nothing(profile: Path) -> None:
     """`cmd.exe` echoing the unexpanded variable back is a broken interop, and a
     path built from it cannot exist."""
-    executable(fake_bin, 'cmd.exe', '#!/bin/sh\nprintf "%%USERPROFILE%%\\r\\n"\n')
+    windows_cmd('#!/bin/sh\nprintf "%%USERPROFILE%%\\r\\n"\n')
 
-    assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.MATCHED
+    assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.UNKNOWN
     assert not steps.apply('wslconfig', Privilege(), ANY_RUN).ok
     assert not (profile / '.wslconfig').exists()
+
+
+def test_a_cmd_exe_that_cannot_run_leaves_a_missing_wslconfig_unknown_rather_than_matched(profile: Path) -> None:
+    """`[interop] enabled=false` makes a PE binary an exec format error. Matched
+    there reported a file that does not exist as installed, on every check."""
+    pe_binary = steps.WINDOWS_MOUNT / 'Windows' / 'System32' / 'cmd.exe'
+    pe_binary.write_bytes(b'MZ\x90\x00')
+    pe_binary.chmod(0o755)
+
+    state = steps.observe('wslconfig', ANY_RUN)
+
+    assert state.verdict is Verdict.UNKNOWN
+    assert state.repair is Repair.NONE
 
 
 def test_no_windows_filesystem_has_no_wslconfig_to_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
