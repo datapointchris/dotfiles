@@ -23,5 +23,5 @@ repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 # local data keeps working until the login is renewed.
 [sync]
 enabled = true
-api_url = "https://ichrisbirch.com/api"
+api_url = "https://ichrisbirch.com"
 token_command = "icb auth token"

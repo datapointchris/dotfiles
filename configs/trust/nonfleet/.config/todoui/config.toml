@@ -19,4 +19,4 @@ repos_registry = "~/.config/repos.json"
 # token_command, because the CLI that prints the token is not installed here.
 [sync]
 enabled = false
-api_url = "https://ichrisbirch.com/api"
+api_url = "https://ichrisbirch.com"
