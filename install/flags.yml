@@ -164,6 +164,42 @@ required:
     consumers:
       - configs/trust/fleet/.config/atuin/config.toml.tmpl
 
+  # The domain the homelab serves its APIs and its identity provider under. Each
+  # product CLI's config.toml names its API and the provider as subdomains of
+  # it, and this public repo must not carry the domain itself.
+  #
+  # Each consumer holds the three keys goclilogin's login writes, in its order,
+  # and no comment. A file a CLI wrote at login before this machine set these
+  # values is then a rendering, so the next apply overwrites it rather than
+  # refusing it as somebody else's. Change a value here in ~/.env, since apply
+  # overwrites an edit made in the rendered file.
+  #
+  # Scoped by trust alone, for the reason ATUIN_SYNC_ADDRESS gives: the scheduler
+  # runs some of these CLIs as services and shares every coordinate with
+  # linux-lxc-server.
+  - name: HOMELAB_DOMAIN
+    description: Domain the homelab serves its APIs and identity provider under, as a bare host name such as example.com
+    network_trust: fleet
+    consumers:
+      - configs/trust/fleet/.config/icb/config.toml.tmpl
+      - configs/trust/fleet/.config/learning/config.toml.tmpl
+      - configs/trust/fleet/.config/meso/config.toml.tmpl
+      - configs/trust/fleet/.config/nomad/config.toml.tmpl
+
+  # What follows the product name in every OAuth client id this machine logs in
+  # as: `cli-<machine>` for a person's device login, `svc-<machine>` for a
+  # service. <machine> is the name the identity provider registers the machine
+  # under, which need not be its hostname. The macOS workstations share one
+  # manifest, so nothing the repo holds tells them apart.
+  - name: OAUTH_CLIENT_SUFFIX
+    description: cli-<machine> for a person's login or svc-<machine> for a service, where <machine> is the identity provider's name for this machine
+    network_trust: fleet
+    consumers:
+      - configs/trust/fleet/.config/icb/config.toml.tmpl
+      - configs/trust/fleet/.config/learning/config.toml.tmpl
+      - configs/trust/fleet/.config/meso/config.toml.tmpl
+      - configs/trust/fleet/.config/nomad/config.toml.tmpl
+
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and
 # must never know its contents — one level up: a required file rather than a
