@@ -207,6 +207,12 @@ system_packages:
     pacman: bc
     description: Arbitrary-precision calculator (macOS has it built-in)
 
+  - name: time
+    tier: core
+    apt: time
+    pacman: time
+    description: GNU time at /usr/bin/time, beside the shell keyword (macOS has BSD time built-in)
+
   - name: tree
     tier: core
     apt: tree
@@ -731,9 +737,15 @@ system_packages:
   # AUR: upstream's last tag is v2.0.0 from 2022 and the package tracking it was
   # deleted, while the project itself is still developed. sioyek-appimage packages
   # that same 2022 build and was last touched in 2023; sioyek-dev is an older
-  # revision and conflicts with this one. The source build happens once, because a
-  # VCS package's version only moves when yay's devel check runs and nothing here
-  # passes --devel.
+  # revision and conflicts with this one. Flathub ships 2.0.0 too, and upstream's
+  # newest release asset is the 2024 sioyek3-alpha0, so current code exists only
+  # as a source build.
+  #
+  # That build reruns on every upgrade after the AUR maintainer publishes a new
+  # pkgver. A plain `yay -Syu` compares against the AUR's published version, so it
+  # sees the bump without --devel; `yay -Qu --aur` shows when one is pending. The
+  # compile prints hundreds of warnings and no errors, and it runs across every
+  # core through MAKEFLAGS in configs/pkg/pacman/.config/pacman/makepkg.conf.
   #
   # `supersedes` because sioyek-git declares `Conflicts With: sioyek`, and a
   # machine that installed the old name before this entry moved still carries it.
