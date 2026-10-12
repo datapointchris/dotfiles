@@ -46,6 +46,7 @@ github_releases:
   - shellcheck
   - hadolint
   - tree-sitter
+  - taplo
   - just
   - tenv
   - yq
@@ -78,7 +79,6 @@ npm_globals:
   - yaml-language-server
   - vscode-langservers-extracted
   - gh-actions-language-server
-  - "@taplo/cli"
   - eslint
   - prettier
   - markdownlint-cli

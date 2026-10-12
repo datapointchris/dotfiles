@@ -348,6 +348,13 @@ is what makes a `.terraform-version` file decide which binary runs.
 """
 
 
+def taplo(tag: str, target: Target) -> ReleaseArtifact:
+    """The OS word then the CPU, and a bare gzip like tree-sitter's."""
+    os_name = 'darwin' if target.is_darwin else 'linux'
+    arch = 'aarch64' if target.is_arm else 'x86_64'
+    return ReleaseArtifact(f'taplo-{os_name}-{arch}.gz', Archive.GZIP)
+
+
 def tenv(tag: str, target: Target) -> ReleaseArtifact:
     """Keeps the `v` in the asset name, and capitalizes the platform."""
     platform_name = 'Darwin' if target.is_darwin else 'Linux'
@@ -469,6 +476,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'ntfy': ntfy,
     'shellcheck': shellcheck,
     'syncthing': syncthing,
+    'taplo': taplo,
     'tenv': tenv,
     'ypl': go_release_cli('ypl'),
     'terraformer': terraformer,

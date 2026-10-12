@@ -1009,6 +1009,15 @@ github_releases:
     checksum: unpublished
     description: Incremental parsing library CLI (used by Neovim treesitter; NOT installed via npm — see build_tools comment)
 
+  # The release rather than npm's @taplo/cli, which is built without the language
+  # server: `taplo lsp stdio` exits with "the LSP is not part of this build", so
+  # Neovim's taplo server never started. The release binary carries it.
+  - name: taplo
+    repo: tamasfe/taplo
+    checksum: unpublished
+    description: TOML language server and formatter
+    tags: [cli, development]
+
   # WSL-only
   - name: win32yank
     repo: equalsraf/win32yank
@@ -1495,10 +1504,6 @@ npm_globals:
 
     - name: gh-actions-language-server
       description: GitHub Actions LSP
-
-    - name: "@taplo/cli"
-      command: taplo
-      description: TOML language server and formatter
 
   # Linters & Formatters
   linters_formatters:
