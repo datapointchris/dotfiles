@@ -34,7 +34,7 @@ hl.window_rule({
 -- Prevent screen from turning off during fullscreen video
 hl.window_rule({
   name = 'idle-inhibit-fullscreen-video',
-  match = { class = '^(zen|vivaldi|firefox|mpv)$' },
+  match = { class = '^(vivaldi|firefox|mpv)$' },
   idle_inhibit = 'fullscreen',
 })
 

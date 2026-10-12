@@ -669,10 +669,6 @@ system_packages:
     aur: wlogout
     description: Logout menu for Wayland
 
-  - name: zen-browser
-    aur: zen-browser-bin
-    description: Privacy-focused Firefox fork with modern UI
-
   - name: vivaldi
     pacman: vivaldi
     description: Chromium browser with two-level tab stacks and workspaces
@@ -689,10 +685,6 @@ system_packages:
   - name: ghostty
     pacman: ghostty
     description: GPU-accelerated terminal emulator
-
-  - name: visual-studio-code
-    aur: visual-studio-code-bin
-    description: Code editor (Arch only - macOS uses cask)
 
   - name: bitwarden
     aur: bitwarden-bin
@@ -1927,7 +1919,7 @@ mas_apps:
 # ZEN / FIREFOX EXTENSIONS
 # ================================================================
 # Manual install from addons.mozilla.org (no automation available)
-# Platform: Arch Linux (Zen browser), any Firefox-based browser
+# Platform: macOS (the `zen` cask), any Firefox-based browser
 # Zen is Firefox-based and supports all Firefox Add-ons
 #
 # Vivaldi's are NOT here. Chromium reads an enterprise policy file, so they are
