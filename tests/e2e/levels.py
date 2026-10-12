@@ -70,7 +70,7 @@ LEVELS = (
         installed=False,
         per_environment=False,
         concurrency=1,
-        cost='~30s total',
+        cost='~2 min total',
         answers='every question that does not need a machine, including the rig itself',
     ),
     Level(

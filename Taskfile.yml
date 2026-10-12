@@ -97,7 +97,7 @@ tasks:
       - uv run python tests/e2e/matrix.py {{.CLI_ARGS}}
 
   test:no-container:
-    desc: 'Level 0: everything decidable without starting a machine (~30s)'
+    desc: 'Level 0: everything decidable without starting a machine (~2 min)'
     cmds:
       - uv run python tests/e2e/matrix.py --level no-container {{.CLI_ARGS}}
 

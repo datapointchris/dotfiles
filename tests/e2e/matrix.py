@@ -94,6 +94,9 @@ def command(level: Level, environment: str | None, extra: list[str]) -> list[str
     # level documented at 20-30 minutes. Measured 2026-08-16.
     if level.fixture == 'machine':
         arguments += ['--require-images']
+    # No container to share, so this rung spreads across every core but one, as `task test` does.
+    if not level.docker:
+        arguments += ['-n', str(max(1, (os.cpu_count() or 1) - 1))]
     if environment:
         arguments += ['--environment', environment]
     return arguments + extra
