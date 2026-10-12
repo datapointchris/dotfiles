@@ -53,6 +53,7 @@ github_releases:
   - yq
   - ntfy
   - duckdb
+  - abtop
   # Personal data CLIs — released by their own app repos under a cli/v* tag
   - icb
   - learning
@@ -71,7 +72,7 @@ custom_installers:
   - font
   - zmk
 
-cargo_packages: [fnm, ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker, broot, webviewrs, watchexec-cli, abtop, stylua]
+cargo_packages: [fnm, ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker, broot, webviewrs, watchexec-cli, stylua]
 
 npm_globals:
   - typescript-language-server

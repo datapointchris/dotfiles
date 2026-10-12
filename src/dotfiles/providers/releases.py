@@ -198,6 +198,15 @@ def expand_pattern(pattern: str, version: str, target: Target, *, asset_target: 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def abtop(tag: str, target: Target) -> ReleaseArtifact:
+    """cargo-dist's GNU triples, a .tar.xz, and no version in the name."""
+    if target.is_darwin:
+        triple = 'aarch64-apple-darwin' if target.is_arm else 'x86_64-apple-darwin'
+    else:
+        triple = 'aarch64-unknown-linux-gnu' if target.is_arm else 'x86_64-unknown-linux-gnu'
+    return ReleaseArtifact(f'abtop-{triple}.tar.xz', Archive.TARBALL, path=f'abtop-{triple}/abtop')
+
+
 def atuin(tag: str, target: Target) -> ReleaseArtifact:
     """musl for both architectures, and no darwin spelling: atuin is declared on
     Linux only, which is why the arm target is still a linux triple."""
@@ -442,6 +451,7 @@ def go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
 
 
 ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
+    'abtop': abtop,
     'atuin': atuin,
     'duckdb': duckdb,
     'duf': duf,

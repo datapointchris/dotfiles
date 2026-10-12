@@ -944,6 +944,14 @@ github_releases:
     description: In-process analytical SQL, for querying CSV/JSON/parquet from the shell
     tags: [cli, development]
 
+  # The datapointchris fork, which loads btop-format theme files and reloads them
+  # on SIGUSR2. A release rather than a crate: crates.io carries only upstream,
+  # and binstall names the download from the crates.io version.
+  - name: abtop
+    repo: datapointchris/abtop
+    description: htop for AI coding agents — sessions, tokens, context, quota
+    tags: [cli, tui, development]
+
   # mikefarah/yq (Go), NOT the Python jq-wrapper: the de-facto standard yq that every
   # tutorial and Claude Code assumes. Direct binary, consistent version across platforms,
   # and works behind the WSL work firewall (github release download, no Go module proxy).
@@ -1299,17 +1307,6 @@ cargo_packages:
     binary_pattern: "webviewrs-{version_num}-{target}.tar.gz"
     reports_version: false
     tags: [cli, gui]
-
-  # No linux_target or darwin_target: abtop publishes exactly the triples
-  # `_default_target` builds — abtop-x86_64-unknown-linux-gnu.tar.xz and
-  # abtop-x86_64-apple-darwin.tar.xz — so an override would restate the default.
-  # The asset carries no version, hence {target} alone in the pattern.
-  - name: abtop
-    command: abtop
-    description: htop for AI coding agents — sessions, tokens, context, quota
-    github_repo: graykode/abtop
-    binary_pattern: "abtop-{target}.tar.xz"
-    tags: [cli, tui, development]
 
   # conform.nvim formats Lua with it on save, reading the .stylua.toml deployed
   # beside the Neovim and Hyprland configs. The release binary, never the crate:

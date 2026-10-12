@@ -157,8 +157,8 @@ def bundled_archive(entry: catalog.CargoPackage) -> tuple[bundle.Staged, Path] |
 
     Walked per root rather than asking `bundle.staged` for the row and
     `bundle_file` for the archive. Those are two newest-first searches keyed on
-    different things — the crate name and the filename — and four declared crates
-    name their asset with no version in it: `fnm`, `eza`, `oxker` and `abtop`. For
+    different things — the crate name and the filename — and some declared crates
+    name their asset with no version in it: `fnm`, `eza` and `oxker`. For
     those, a newer bundle recording a row whose archive failed to extract lends its
     version to an older bundle's file, and `behind_refusal` then ranks a version
     the bytes do not carry. Measured: floor `0.23.5`, newer row `v0.24.0`, older

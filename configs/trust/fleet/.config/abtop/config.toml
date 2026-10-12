@@ -1,7 +1,7 @@
 # abtop — htop for AI coding agents.
 #
 # Trust-scoped rather than common because the install is fleet-only: the two
-# personal workstations name abtop in cargo_packages and the nonfleet box does not.
+# personal workstations name abtop in github_releases and the nonfleet box does not.
 # Move both together if that changes — a config here for a machine without the
 # binary is an orphan, and a binary without the config falls back to the btop
 # theme.
@@ -9,7 +9,10 @@
 # abtop rewrites this file itself: `t` cycles the theme and calls save_theme(),
 # which writes through the symlink into the repo. A theme tried at the keyboard
 # shows up as a dirty working tree here, so either commit it or `git restore`.
-theme = "protanopia"
+#
+# `theme apply` installs themes/current.theme pointing at the applied theme, the
+# same `current` btop reads, and signals abtop to reload it.
+theme = "current"
 
 # Not a display filter — MultiCollector::with_hidden never constructs a hidden
 # agent's collector, so this also drops their process scan and JSONL parse.

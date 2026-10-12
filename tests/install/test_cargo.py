@@ -352,8 +352,8 @@ def test_a_bundle_below_what_is_installed_is_still_written(home, staged, ready, 
 
 def test_the_version_ranked_is_the_one_the_bytes_came_with(home, staged, ready, crates, tmp_path, monkeypatch) -> None:
     """`bundle.staged` merges rows newest-first and an archive resolved by filename
-    is a second, independent newest-first search. Four declared crates name their
-    asset with no version in it — `fnm`, `eza`, `oxker` and `abtop` — so for those
+    is a second, independent newest-first search. Some declared crates name their
+    asset with no version in it — `fnm`, `eza` and `oxker` — so for those
     a newer bundle recording a row whose archive failed to extract lends its version
     to an older bundle's file.
 
