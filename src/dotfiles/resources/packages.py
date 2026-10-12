@@ -61,10 +61,12 @@ log = logging.get_logger(NAME)
 CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller, catalog.GitUvTool)
 """The entries whose currency is a question with an upstream answer.
 
-All four install from a repo this declaration names, so "what should be
-installed" is decided by a tag rather than by anyone else's schedule. `go install
-@latest` and `cargo binstall` are not exceptions to that — they *are* the upgrade,
-because nothing sits underneath a Go tool or a Rust CLI deciding when it moves.
+Each installs from an upstream this declaration names, so "what should be
+installed" is decided there rather than by anyone else's schedule. For most that
+is a repo's tag. A cargo package is the exception, measured against crates.io for
+the reason `crates_io` records. `go install @latest` and `cargo binstall` *are*
+the upgrade, because nothing sits underneath a Go tool or a Rust CLI deciding
+when it moves.
 
 Everything else here defers to a registry that upgrades on its own: asking apt or
 npm whether a package is the newest one is asking a question the machine's own
@@ -428,7 +430,7 @@ def has_currency(item: DesiredItem, *, offline: bool) -> bool:
     if not (isinstance(item.entry, CURRENCY) and item.entry.reports_version and item.executable):
         return False
     wanted = wanted_release(item)
-    return bool(wanted.repo) or (bool(wanted.version_file) and not offline)
+    return bool(wanted.repo or wanted.crate) or (bool(wanted.version_file) and not offline)
 
 
 PROBE_WORKERS = 8
@@ -514,8 +516,10 @@ def wanted_release(item: DesiredItem) -> releases.Wanted:
         from_tags = entry.version_source == catalog.VERSION_FROM_TAGS
         vendor_file = custom.version_file(entry) if isinstance(entry, catalog.CustomInstaller) else ''
         return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix, from_tags=from_tags, version_file=vendor_file)
-    if isinstance(entry, catalog.GoTool | catalog.CargoPackage):
+    if isinstance(entry, catalog.GoTool):
         return releases.Wanted(repo=entry.github_repo)
+    if isinstance(entry, catalog.CargoPackage):
+        return releases.Wanted(repo='', crate=entry.name)
     if isinstance(entry, catalog.GitUvTool):
         # A `tracks_branch` repo publishes no release, so there is no tag it could
         # be behind and no upstream to consult. Naming no repo is how that reaches
@@ -663,7 +667,7 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 item.address,
                 Verdict.STALE,
                 repair=repair,
-                detail=ahead_of(cached.version, observed),
+                detail=ahead_of(cached.version, observed, item),
                 advice=advice_for(item, repair),
                 desired=item,
                 observed=reported,
@@ -686,7 +690,7 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 observed=reported,
             ),
         )
-    return compared(item, reported, cached.version, current, behind(cached.version, observed), observed.met)
+    return compared(item, reported, cached.version, current, behind(cached.version, observed, item), observed.met)
 
 
 def installed_without_its_lock(item: DesiredItem, reported: str, cached: releases.Cached) -> bool:
@@ -718,7 +722,7 @@ def cannot_start(item: DesiredItem, refusal: str) -> Change:
     )
 
 
-def ahead_of(version: str, observed: Observed) -> str:
+def ahead_of(version: str, observed: Observed, item: DesiredItem) -> str:
     """Why an installed version newer than the target is drift, in that target's terms.
 
     Offline the figure is what one tarball holds, so the repair is an older build
@@ -728,17 +732,23 @@ def ahead_of(version: str, observed: Observed) -> str:
     """
     if observed.from_bundle:
         return f'ahead of {version}, which is what the staged bundle carries — applying installs that older build'
-    return f'ahead of {version}, which is the newest release and what a fresh install produces'
+    return f'ahead of {version}, which is {newest_upstream(item)} and what a fresh install produces'
 
 
-def behind(version: str, observed: Observed) -> str:
+def behind(version: str, observed: Observed, item: DesiredItem) -> str:
     """What the installed version is being measured against, named by its source.
 
     A bundle's row is what its builder resolved on the day it was built, not what
     upstream publishes now, and a machine that cannot reach GitHub has no way to
     tell the two apart from the sentence alone.
     """
-    return f'{version} is what the staged bundle carries' if observed.from_bundle else f'{version} is the latest release'
+    return f'{version} is what the staged bundle carries' if observed.from_bundle else f'{version} is {newest_upstream(item)}'
+
+
+def newest_upstream(item: DesiredItem) -> str:
+    """What an online figure is, named so a crate is not read against its repo's newer tag."""
+    crate = wanted_release(item).crate
+    return f'the newest {crate} on crates.io' if crate else 'the latest release'
 
 
 def unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
@@ -808,6 +818,8 @@ def unmeasurable(item: DesiredItem, observed: Observed) -> str:
         return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
     wanted = wanted_release(item)
+    if wanted.crate:
+        return f'no cached version from {wanted.key} within the TTL ({reason})'
     return f'no cached release for {wanted.version_file or wanted.repo} within the TTL ({reason})'
 
 

@@ -315,6 +315,23 @@ def test_a_version_file_is_asked_in_place_of_any_repo_and_keyed_by_its_url(answe
     assert entries[channel] == releases.Cached('2.1.295', NOW, etag='"g"')
 
 
+def test_a_crate_is_asked_in_place_of_any_repo_and_keyed_by_its_index_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    index = 'https://index.crates.io/br/oo/broot'
+    asked: list[tuple[str, str]] = []
+
+    def read(crate: str, etag: str = '') -> github_release.Newest:
+        asked.append((crate, etag))
+        return github_release.Newest(version='1.60.2', etag='"b"')
+
+    monkeypatch.setattr(releases.crates_io, 'newest_version', read)
+    existing = {index: releases.Cached('1.59.0', NOW, etag='"a"')}
+
+    entries = releases.refresh((releases.Wanted('', crate='broot'),), existing, NOW)
+
+    assert asked == [('broot', '"a"')]
+    assert entries[index] == releases.Cached('1.60.2', NOW, etag='"b"')
+
+
 def test_an_unmatched_repo_is_asked_unconditionally(monkeypatch: pytest.MonkeyPatch) -> None:
     """A repo with no entry has nothing to revalidate against, so it costs what it
     always did rather than being skipped."""

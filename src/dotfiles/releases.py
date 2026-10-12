@@ -30,6 +30,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from dotfiles import crates_io
 from dotfiles import github_release
 from dotfiles import paths
 from dotfiles import uv_lock
@@ -102,7 +103,8 @@ class Cached:
 @dc.dataclass(frozen=True, slots=True)
 class Wanted:
     """A repo to ask about, the tag prefix that narrows the answer, and which
-    endpoint holds it — or a vendor's own file, for a tool no repo answers for."""
+    endpoint holds it — or a vendor's own file or a crate, for a tool whose repo
+    is not what its installer reads."""
 
     repo: str
     tag_prefix: str = ''
@@ -127,6 +129,9 @@ class Wanted:
     tool's install script reads to decide what to install.
     """
 
+    crate: str = ''
+    """A crates.io crate, asked instead of any repo. `crates_io` says why a cargo package is measured there."""
+
     @property
     def key(self) -> str:
         """What the cache is keyed on.
@@ -136,6 +141,8 @@ class Wanted:
         """
         if self.version_file:
             return self.version_file
+        if self.crate:
+            return crates_io.index_url(self.crate)
         return f'{self.repo}#{self.tag_prefix}' if self.tag_prefix else self.repo
 
 
@@ -269,6 +276,8 @@ def newest(wanted: Wanted, previous: Cached | None = None) -> github_release.New
     etag = previous.etag if previous else ''
     if wanted.version_file:
         return github_release.newest_in_version_file(wanted.version_file, etag)
+    if wanted.crate:
+        return crates_io.newest_version(wanted.crate, etag)
     if wanted.from_tags:
         return github_release.newest_tag(wanted.repo, wanted.tag_prefix, etag)
     return github_release.newest_version(wanted.repo, wanted.tag_prefix, etag)

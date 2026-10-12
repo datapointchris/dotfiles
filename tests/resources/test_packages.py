@@ -33,6 +33,7 @@ from matrix.harness import session
 from matrix.harness import staged_bundle
 
 from dotfiles import catalog
+from dotfiles import crates_io
 from dotfiles import evidence as ev
 from dotfiles import providers
 from dotfiles import releases
@@ -876,17 +877,45 @@ def test_a_registry_installed_tool_is_never_asked_about_currency(tmp_path: Path,
 
 CARGO_CURRENCY = {'cargo_packages': [{'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd'}]}
 DECLARES_FD = {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['fd-find']}
+FD_INDEX = crates_io.index_url('fd-find')
 
 
-def test_a_cargo_package_behind_its_release_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """`cargo binstall` is the upgrade, so being behind the repo the declaration
-    names is drift rather than someone else's schedule. Without this, converting
-    the phase would have silently removed the only thing that moved these."""
+def test_a_cargo_package_behind_its_crate_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """`cargo binstall` is the upgrade, so being behind the newest crate is drift
+    rather than someone else's schedule. Without this, converting the phase would
+    have silently removed the only thing that moved these."""
     cargo_installed('fd', 'fd 10.2.0')
-    cached(release_cache, {'sharkdp/fd': 'v10.4.2'})
+    cached(release_cache, {FD_INDEX: '10.4.2'})
     live = session(tmp_path, CARGO_CURRENCY, DECLARES_FD)
 
-    assert [(change.item, change.verdict) for change in changes(live)] == [('cargo/fd-find', Verdict.STALE)]
+    found = changes(live)
+
+    assert [(change.item, change.verdict) for change in found] == [('cargo/fd-find', Verdict.STALE)]
+    assert found[0].detail == '10.4.2 is the newest fd-find on crates.io'
+
+
+def test_a_cargo_package_at_its_newest_crate_is_current_whatever_its_repo_tagged(
+    tmp_path: Path, fake_bin: Path, release_cache: Path
+) -> None:
+    """A repo can tag a release before publishing the crate, and `cargo binstall`
+    cannot install what crates.io does not hold. Measured against the tag, broot
+    read as behind after every apply that had just installed the newest crate."""
+    cargo_installed('fd', 'fd 10.2.0')
+    cached(release_cache, {FD_INDEX: '10.2.0', 'sharkdp/fd': 'v10.4.2'})
+    live = session(tmp_path, CARGO_CURRENCY, DECLARES_FD)
+
+    assert changes(live) == ()
+
+
+def test_a_cargo_package_with_no_cached_crate_names_the_index_file(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+    """index.crates.io is a different host from crates.io's API, and it is the one a firewalled machine has to reach."""
+    cargo_installed('fd', 'fd 10.2.0')
+    live = session(tmp_path, CARGO_CURRENCY, DECLARES_FD)
+
+    found = changes(live)
+
+    assert [change.verdict for change in found] == [Verdict.UNKNOWN]
+    assert FD_INDEX in found[0].detail
 
 
 @pytest.mark.parametrize('elsewhere', [None, 'fd 10.4.2'], ids=['absent-from-path', 'another-copy-first'])
@@ -897,7 +926,7 @@ def test_a_cargo_package_reports_the_version_of_the_binary_it_measured(
     "would not report a version" and was never upgraded. A second copy ahead on
     PATH answered for a binary the declaration does not own."""
     cargo_installed('fd', 'fd 10.2.0')
-    cached(release_cache, {'sharkdp/fd': 'v10.4.2'})
+    cached(release_cache, {FD_INDEX: '10.4.2'})
     kept = [entry for entry in os.environ['PATH'].split(os.pathsep) if entry != str(cargo.cargo_bin())]
     monkeypatch.setenv('PATH', os.pathsep.join(kept))
     if elsewhere:

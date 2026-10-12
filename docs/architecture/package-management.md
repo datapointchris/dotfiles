@@ -123,6 +123,11 @@ the repo the declaration names is drift `plan` reports. npm and PyPI decide what
 latest means and upgrade in bulk, so asking per package is asking their own
 question back.
 
+**A cargo package is measured against crates.io, not its repo.** The registry is
+what `cargo binstall` resolves from, and it trails any project that tags ahead of
+publishing there. Comparing against the tag in that window reports drift `apply`
+cannot close. The repo names only the release asset binstall downloads.
+
 An entry that cannot be asked declares so rather than being probed and hoped for.
 Which clauses have to hold, and the GUI whose probe blocked three `dotfiles plan`
 runs on its own event loop, are `has_currency` in
