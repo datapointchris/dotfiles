@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from matrix.harness import unwrapped
 from relay import executable
 from relay import install_spy
 from relay import recorded
@@ -399,7 +400,7 @@ def test_a_lock_uv_will_not_export_leaves_the_venv_alone(clone: Path, remote: Pa
 
     assert result.returncode == ExitCode.ISSUE
     assert [call['argv'][0] for call in recorded(record)] == ['export']
-    assert 'was not rebuilt' in result.stderr
+    assert 'was not rebuilt' in unwrapped(result.stderr)
 
 
 def test_a_commit_pulled_by_something_else_is_repaired_by_the_next_update(clone: Path, remote: Path, repairs: Path) -> None:
