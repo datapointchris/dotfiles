@@ -213,6 +213,12 @@ system_packages:
     pacman: time
     description: GNU time at /usr/bin/time, beside the shell keyword (macOS has BSD time built-in)
 
+  - name: hostname
+    tier: core
+    apt: hostname
+    pacman: inetutils
+    description: hostname, which Arch ships in inetutils (macOS has it built-in)
+
   - name: tree
     tier: core
     apt: tree
