@@ -394,12 +394,17 @@ def refresh(manager: str, privilege: Escalates) -> Result:
     A failure here is fatal to the batch rather than a warning. Installing against
     a database that could not be refreshed is the partial-upgrade case on Arch and
     the 404 case on apt, and both fail later in a way that names the wrong cause.
+
+    Streamed for `install`'s reason. On Arch this is `pacman -Syu`, which upgrades
+    the whole machine, kernel included. Silent, it reads as a hung run, and a run
+    stopped inside mkinitcpio's hook leaves the boot entry naming an initramfs that
+    was never written.
     """
     command = REFRESH.get(manager)
     if command is None:
         return Result(True, '', kind=Kind.UNCHANGED)
     try:
-        completed = privilege.run(list(command), reason=f'refresh the {manager} package database')
+        completed = privilege.run(list(command), reason=f'refresh the {manager} package database', output=Output.STREAM)
     except PrivilegeUnavailable:
         return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
     return (

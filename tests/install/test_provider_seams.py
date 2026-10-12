@@ -143,6 +143,30 @@ def test_a_transaction_reaches_exactly_one_door_and_is_streamed_through_it(manag
     assert argv[-2:] == ('ripgrep', 'fd')
 
 
+ESCALATED_TRANSACTIONS = [
+    ('refresh', lambda manager, escalation: syspkg.refresh(manager, escalation)),
+    ('upgrade', lambda manager, escalation: syspkg.upgrade(manager, escalation)),
+    ('uninstall', lambda manager, escalation: syspkg.uninstall(manager, ['ripgrep'], escalation)),
+]
+
+
+@pytest.mark.parametrize('manager', ['pacman', 'apt'])
+@pytest.mark.parametrize(('name', 'transact'), ESCALATED_TRANSACTIONS, ids=[row[0] for row in ESCALATED_TRANSACTIONS])
+def test_every_other_privileged_transaction_is_streamed_too(manager: str, name: str, transact, upstream) -> None:
+    """The refresh is the one that matters most: on Arch it is `pacman -Syu`, the
+    largest transaction an apply runs, and stopping it mid-hook can leave the
+    machine without a bootable initramfs."""
+    escalation = Escalation()
+    recorder = upstream()
+
+    result = transact(manager, escalation)
+
+    assert result.ok, result.detail
+    assert recorder.calls == []
+    [(_, passed)] = escalation.calls
+    assert passed['output'] is Output.STREAM
+
+
 def test_the_two_doors_a_transaction_can_take_default_to_opposite_output_modes() -> None:
     """What makes the explicit `Output.STREAM` above load-bearing rather than noise.
 
