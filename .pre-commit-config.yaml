@@ -1,4 +1,4 @@
-# forge-toolchain: 42
+# forge-toolchain: 45
 fail_fast: true
 default_stages: [pre-commit]
 repos:
@@ -281,6 +281,9 @@ repos:
           *) exit $status ;;
           esac' --
         language: system
+        # pre-commit otherwise splits the files across parallel mypy processes
+        # that share one .mypy_cache, and one crashes with an INTERNAL ERROR.
+        require_serial: true
         types: [text]
         files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/tmuxctl|apps/common/worktree|apps/common/zsh-startup)$'
 
