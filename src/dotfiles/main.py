@@ -58,7 +58,24 @@ app = typer.Typer(
     cls=banner.Masthead,
     no_args_is_help=True,
     rich_markup_mode='rich',
-    help='Reconcile this machine with the dotfiles repo.',
+    # The root screen carries the order a session runs in and the one pair of
+    # verbs that gets confused, because a correct list of commands still leaves the
+    # reader to deduce both. Kept to this screen: the leaves say what they do, not
+    # the sequence. Every quoted command is parsed by tests/cli/test_root_help.py.
+    help=(
+        'Reconcile this machine with the dotfiles repo.\n\n'
+        'Start with `dotfiles plan` to see what would change, then `dotfiles apply` to make it so. '
+        'Each resource below takes the same verbs for one part of the machine.\n\n'
+        'Reach for `dotfiles check` rather than `plan` to ask whether anything is wrong: '
+        '`plan` lists every difference, a package one version behind included, and `check` keeps only the faults.'
+    ),
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles plan — what apply would change on this machine\n\n'
+        'dotfiles apply — make this machine match what it declares\n\n'
+        'dotfiles check — what is wrong, not merely behind\n\n'
+        'dotfiles packages plan — the same question for one resource'
+    ),
 )
 
 app.add_typer(resources.packages_app, name='packages', rich_help_panel='Resources')
