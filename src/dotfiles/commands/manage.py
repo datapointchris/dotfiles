@@ -99,10 +99,9 @@ def update(
     replaces the virtualenv this interpreter is running from.
 
     **Measured from the commit the last update repaired at, never from the HEAD
-    before this pull.** Anything else that pulls the checkout takes the commits
-    first: a second scheduled job, or a `git pull` by hand. This pull then brings
-    nothing, and measuring from it reports `already up to date` over commits
-    nothing repaired. `paths.REPAIRED_FILE` holds that commit. It is written only
+    before this pull.** Commits reach the checkout by other routes first: a commit
+    made in it, a second scheduled job, or a `git pull` by hand. This pull then
+    brings nothing, and measuring from it would skip commits nothing repaired. `paths.REPAIRED_FILE` holds that commit. It is written only
     when every repair that ran succeeded, so the next update retries a failed one.
 
     With nothing usable recorded, both repairs run. An absent record says nothing
@@ -126,32 +125,41 @@ def update(
     # person decides.
     # git's return code, not this tool's: a refused pull exits 1, which here means
     # DRIFT — the machine differs from its declaration, and nothing is wrong.
-    if not bridge.git('pull', '--ff-only', output=Output.STREAM).ok:
+    # `--quiet` because this command reports the outcome itself, and git's
+    # `Already up to date.` above a list of changes read as a contradiction. A
+    # refusal still reaches stderr. The hint stands in for git's progress lines, so
+    # a slow fetch does not read as a hang.
+    hint('checking for updates')
+    if not bridge.git('pull', '--ff-only', '--quiet', output=Output.STREAM).ok:
         raise Refusal('pull refused, and git said why above — a self-update never forces or resets')
 
     was, now = before.stdout.strip(), bridge.git('rev-parse', 'HEAD').stdout.strip()
+    pulled = commits_between(was, now)
+    success(f'pulled {len(pulled)} new commit(s)' if pulled else 'dotfiles is up to date')
+
     repaired = last_repaired()
-    if was == now == repaired:
-        success('already up to date')
+    if now == repaired:
         return
 
-    name_commits(f'{was}..{now}', 'pulled')
-    relink: str | None = 'nothing is recorded as repaired'
+    # One list from the last update onward, whether a commit arrived by this pull,
+    # an earlier `git pull`, or a commit made in this checkout. Where it came from
+    # is this command's bookkeeping, never something the reader acts on.
+    list_changes(commits_between(repaired, now) if repaired else pulled, 'Changes since your last update' if repaired else 'Changes pulled')
+
+    relink: str | None = 'no earlier update is recorded on this machine'
     rebuild: str | None = relink
-    if repaired is None:
-        hint(f'no repair is recorded for {paths.REPO_ROOT}, so both run')
-    else:
-        if repaired != was:
-            name_commits(f'{repaired}..{was}', 'pulled before this update and never repaired')
+    if repaired is not None:
         changed = bridge.git('diff', '--name-only', repaired, now).stdout.splitlines()
         deployed = [path for path in changed if path.startswith(DEPLOYED_PREFIXES)]
         dependencies = [path for path in changed if path in DEPENDENCY_FILES]
-        relink = f'{len(deployed)} deployed file(s) changed' if deployed else None
+        relink = f'{len(deployed)} config file(s) changed' if deployed else None
         rebuild = f'{", ".join(dependencies)} changed' if dependencies else None
+        if not relink and not rebuild:
+            hint('none of these changes touch a deployed file or a dependency, so there is nothing to apply')
 
     linked = True
     if relink:
-        hint(f'{relink} — rebuilding symlinks')
+        hint(f'{relink}, so applying the symlinks')
         # A separate process, because this one is no longer whole. The pull
         # replaced the source under a running interpreter, and `engine.resources`
         # imports the resource modules lazily to keep `--help` fast — so the
@@ -171,7 +179,7 @@ def update(
         record_repair(now)
         return
 
-    hint(f'{rebuild} — rebuilding the tool venv')
+    hint(f'{rebuild}, so reinstalling dotfiles')
     try:
         pins = uv_lock.read(paths.REPO_ROOT)
     except uv_lock.Unexportable as unexportable:
@@ -195,13 +203,18 @@ def update(
     os._exit(ExitCode.CONVERGED if whole else ExitCode.ISSUE)
 
 
-def name_commits(span: str, how: str) -> None:
-    commits = bridge.git('log', '--oneline', span).stdout.splitlines()
+def commits_between(older: str, newer: str) -> list[str]:
+    """`git log --oneline` for what `newer` holds that `older` does not, newest first."""
+    return bridge.git('log', '--oneline', f'{older}..{newer}').stdout.splitlines()
+
+
+def list_changes(commits: list[str], heading: str) -> None:
     if not commits:
         return
-    console.print(f'{len(commits)} commit(s) {how}:')
+    console.print(f'\n{heading}:')
     for line in commits:
         console.print(f'  {line}')
+    console.print()
 
 
 def last_repaired() -> str | None:

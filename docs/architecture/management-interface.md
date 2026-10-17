@@ -86,13 +86,19 @@ stale only on a changed `pyproject.toml` or `uv.lock`, because uv points at the
 working tree, so code changes *are* the new code and never need a rebuild.
 
 **Repairs start from the last commit `update` repaired, not from its own pull.**
-A scheduled job or a hand-run `git pull` can fetch the commits before `update`
-runs. Measured from its own pull, `update` then had nothing to do, and the machine
-ran those commits unrepaired. The commit lives in
-`$XDG_STATE_HOME/dotfiles/repaired-<host>.json`, beside the check status.
+Commits reach the checkout before `update` runs by three routes: a commit made in
+it, a scheduled job, or a hand-run `git pull`. Measured from its own pull, `update`
+then had nothing to do, and the machine ran those commits unrepaired. The commit
+lives in `$XDG_STATE_HOME/dotfiles/repaired-<host>.json`, beside the check status.
 *Rejected:* falling back to the HEAD before the pull on a machine with no record.
 That assumes everything before it was repaired, so it keeps the gap open once on
 every machine.
+
+**The output lists every change since the last update as one set, and never says
+which route a commit took.** The route is how `update` keeps its record, and
+nothing a reader does depends on it. *Rejected:* streaming git's own output. Its
+`Already up to date.` sits directly above a list of changes and reads as a
+contradiction, so the pull runs `--quiet` and `update` reports the outcome itself.
 
 **`pyselfupdate` is deliberately not used, and its refusal is correct rather than
 a gap.** It declines to reinstall over a `directory`/`path`/`editable`

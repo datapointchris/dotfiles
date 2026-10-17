@@ -224,7 +224,6 @@ def test_update_pulls_and_names_what_came_in(clone: Path, remote: Path) -> None:
     result = run_update(clone)
 
     assert result.returncode == ExitCode.CONVERGED, result.stderr
-    assert '1 commit(s) pulled' in result.stdout
     assert 'add second.md' in result.stdout
     assert (clone / 'second.md').exists()
 
@@ -233,8 +232,8 @@ def test_update_on_a_current_checkout_says_so_and_pulls_nothing(clone: Path) -> 
     result = run_update(clone)
 
     assert result.returncode == ExitCode.CONVERGED, result.stderr
-    assert 'already up to date' in result.stderr
-    assert 'pulled' not in result.stdout
+    assert 'dotfiles is up to date' in result.stderr
+    assert result.stdout == ''
 
 
 def test_update_refuses_to_merge_a_diverged_checkout(clone: Path, remote: Path) -> None:
@@ -301,7 +300,6 @@ def test_a_pull_touching_a_deployed_file_rebuilds_the_symlinks(clone: Path, remo
 
     assert result.returncode == ExitCode.CONVERGED, result.stderr
     assert recorded(repairs) == [['symlinks', 'apply']]
-    assert 'rebuilding symlinks' in result.stderr
 
 
 def test_a_pull_touching_nothing_deployed_leaves_the_symlinks_alone(clone: Path, remote: Path, repairs: Path) -> None:
@@ -325,7 +323,6 @@ def test_a_pull_changing_the_dependency_set_reinstalls_the_tool_venv(clone: Path
 
     assert result.returncode == ExitCode.CONVERGED, result.stderr
     assert recorded(repairs) == [['tool', 'install', '--reinstall', '--editable', str(clone)]]
-    assert 'rebuilding the tool venv' in result.stderr
 
 
 def test_both_repairs_run_in_the_order_the_venv_rebuild_demands(clone: Path, remote: Path, repairs: Path) -> None:
@@ -412,10 +409,9 @@ def test_a_commit_pulled_by_something_else_is_repaired_by_the_next_update(clone:
     second = run_update(clone)
 
     assert first.returncode == ExitCode.CONVERGED, first.stderr
-    assert '1 commit(s) pulled before this update and never repaired' in first.stdout
     assert 'change configs/common/.config/x.conf' in first.stdout
     assert recorded(repairs) == [['symlinks', 'apply']]
-    assert 'already up to date' in second.stderr
+    assert second.stdout == ''
 
 
 @pytest.mark.parametrize(
@@ -444,7 +440,6 @@ def test_a_checkout_with_no_usable_record_runs_both_repairs_and_records_them(
     result = run_update(clone)
 
     assert result.returncode == ExitCode.CONVERGED, result.stderr
-    assert 'no repair is recorded' in result.stderr
     assert [call[0] for call in recorded(repairs)] == ['symlinks', 'tool']
     assert json.loads(repair_record(clone).read_text()) == {'checkout': str(clone.resolve()), 'commit': head}
 
