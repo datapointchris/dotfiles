@@ -30,6 +30,7 @@ go_tools:
   - docker-language-server
 
 github_releases:
+  - gh
   - fzf
   - syncthing
   - neovim

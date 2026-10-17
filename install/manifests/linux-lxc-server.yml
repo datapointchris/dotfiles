@@ -28,7 +28,7 @@ go_tools:
   - sops      # decrypt deployment secrets in place
 
 github_releases:
-  - gh          # GitHub CLI; apt's is years behind
+  - gh          # GitHub CLI
   - fzf         # fuzzy finder — backs the shell functions
   - neovim      # editor for on-box config/log edits
   - lazygit     # git TUI
