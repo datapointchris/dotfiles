@@ -19,6 +19,7 @@ if pcall(require, 'blink.cmp') then
 end
 
 vim.lsp.enable({
+  'asl_ls',
   'bashls',
   'basedpyright',
   'cssls',

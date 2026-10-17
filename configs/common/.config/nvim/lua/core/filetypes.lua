@@ -1,5 +1,21 @@
--- Filetype detection for shebangs Neovim cannot resolve on its own.
---
+-- Filetype detection Neovim cannot do on its own.
+
+-- Step Functions definitions. They are named `*.asl.json` or `*.asl.yaml`, plus
+-- Terraform's recommended `.tftpl` suffix when templatefile() renders one, so
+-- extension detection alone calls them plain JSON or YAML and asl_ls never
+-- attaches. A pattern at the default priority is tried before the extension.
+-- Highlighting reuses the json and yaml parsers.
+vim.filetype.add({
+  pattern = {
+    ['.*%.asl%.json'] = 'asl',
+    ['.*%.asl%.json%.tftpl'] = 'asl',
+    ['.*%.asl%.ya?ml'] = 'asl-yaml',
+    ['.*%.asl%.ya?ml%.tftpl'] = 'asl-yaml',
+  },
+})
+vim.treesitter.language.register('json', 'asl')
+vim.treesitter.language.register('yaml', 'asl-yaml')
+
 -- A PEP 723 script starts `#!/usr/bin/env -S uv run --script`, so the interpreter
 -- Neovim finds is `uv`. There is no filetype by that name, and the file falls
 -- through to `conf` — no highlighting, no LSP, no formatter. Every uv script in
