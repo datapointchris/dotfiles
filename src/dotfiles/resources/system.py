@@ -401,9 +401,9 @@ def declared_names(plan: Plan, manager: str) -> frozenset[str]:
 
     Over the whole plan rather than this resource's items, because an entry
     installing through another mechanism still explains the package. `ntfy` is a
-    `github_releases` entry and brew has a copy of it too; that is a duplicate
-    rather than something undeclared, and `packages._shadowing` is what reports a
-    duplicate.
+    `github_releases` entry and brew has a copy of it too. `packages.shadowing`
+    reports that copy, naming the release it sits beside, so it is not reported
+    here a second time.
     """
     names: set[str] = set()
     for item in plan.items:

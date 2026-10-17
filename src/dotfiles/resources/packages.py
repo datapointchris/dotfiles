@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
-from collections.abc import Iterable
 from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
@@ -86,6 +85,15 @@ out there, and `dotfiles machines show --json` is what enumerates them.
 
 
 @dc.dataclass(frozen=True, slots=True)
+class Stray:
+    """A copy of a declared binary that nothing this machine declares explains."""
+
+    path: str
+    runs_first: bool
+    """Whether PATH reaches it before the declared copy, which makes it the one that runs."""
+
+
+@dc.dataclass(frozen=True, slots=True)
 class Observed:
     evidence: dict[str, ev.Evidence]
     met: Preconditions
@@ -97,7 +105,7 @@ class Observed:
     refused: dict[str, str] = dc.field(default_factory=dict)
     """Address → the loader's line, for an installed binary it would not start."""
 
-    shadowed: dict[str, tuple[str, ...]] = dc.field(default_factory=dict)
+    shadowed: dict[str, tuple[Stray, ...]] = dc.field(default_factory=dict)
     """Address → the copies of its binary that nothing this machine declares explains.
 
     Only populated for an item that has more than one copy on PATH, so the common
@@ -278,20 +286,10 @@ class PackagesResource:
             elif has_currency(item, offline=observed.from_bundle):
                 changes.extend(currency_of(item, observed))
 
-            if stray := observed.shadowed.get(item.address):
-                changes.append(
-                    Change(
-                        NAME,
-                        item.stage,
-                        item.address,
-                        Verdict.UNDECLARED,
-                        repair=Repair.BY_HAND,
-                        detail=f'found: {paths.under_home(Path(observed.evidence[item.address].detail), observed.home)}',
-                        advice=undeclared_advice(stray, plan.machine.coordinates.package_manager, observed.home),
-                        desired=item,
-                        observed=', '.join(paths.under_home(Path(path), observed.home) for path in stray),
-                    )
-                )
+            changes.extend(
+                stray_change(item, stray, observed, plan.machine.coordinates.package_manager)
+                for stray in observed.shadowed.get(item.address, ())
+            )
 
         for binary, module in sorted(observed.undeclared.items()):
             where = paths.under_home(observed.home / 'go' / 'bin' / binary, observed.home)
@@ -358,7 +356,7 @@ def shadowing(
     evidence: dict[str, ev.Evidence],
     plan: Plan,
     checkout: Path,
-) -> dict[str, tuple[str, ...]]:
+) -> dict[str, tuple[Stray, ...]]:
     """Which declared tools have a copy on PATH that nothing declared put there.
 
     Two copies of one binary means the one that runs is decided by PATH order
@@ -398,12 +396,15 @@ def shadowing(
     candidates = [item for item in mine if item.executable and len(index.get(item.executable, ())) > 1]
     explained = declared | (syspkg.unchosen() if candidates else frozenset())
 
-    shadowed = {}
+    shadowed: dict[str, tuple[Stray, ...]] = {}
     for item in candidates:
         if evidence[item.address].verdict is not Verdict.MATCHED:
             continue
+        copies = index[item.executable]
         stray = tuple(
-            path for path in index[item.executable] if path != evidence[item.address].detail and syspkg.owner_of(path) not in explained
+            Stray(path, runs_first=path == copies[0])
+            for path in copies
+            if path != evidence[item.address].detail and syspkg.owner_of(path) not in explained
         )
         if stray:
             shadowed[item.address] = stray
@@ -864,26 +865,32 @@ def unmeasurable_advice(observed: Observed, *, bundlable: bool) -> str:
     return 'upstream did not answer this run, so nothing here says what is newest; try again later'
 
 
-def undeclared_advice(strays: Iterable[str], manager: PackageManager, home: Path) -> str:
-    """What to do about a copy nothing declares — asked of the machine, not guessed.
+def stray_change(item: DesiredItem, stray: Stray, observed: Observed, manager: PackageManager) -> Change:
+    """One row for one copy nothing declares, named by the package that owns it.
 
-    The row names what owns the file rather than telling a person to go and find
-    out, because `pacman -Qo` answers that in one bounded call the run can make
-    itself.
+    The subject is the stray rather than the declared item, because the stray is
+    what is undeclared. The declared item is matched, and a row under its address
+    would read as though it were the thing nobody declared.
 
-    One command per stray and nothing beside it, because an error is the help
-    screen for the failure in hand. Changing the declaration is a repo edit rather
-    than a repair of this machine, so it is not an alternative offered here.
-
-    Every path is asked about separately. Two strays for one tool are two
-    different packages more often than not, and one removal command covering both
-    would be wrong for at least one of them.
+    The owner comes from asking the machine, since `pacman -Qo` answers it in one
+    bounded call. Each stray gets its own row and its own command. Two strays for
+    one tool are usually two packages, and one command covering both would be
+    wrong for at least one. Changing the declaration is a repo edit rather than a
+    repair of this machine, so it is not offered here.
     """
-    rows: list[str] = []
-    for stray in strays:
-        removal = diagnose.removal_of(Path(stray), manager, home)
-        rows.append(f'duplicate: {paths.under_home(Path(stray), home)} -> {removal.origin} -> {removal.command}')
-    return '\n'.join(rows)
+    shown = paths.under_home(Path(stray.path), observed.home)
+    declared = paths.under_home(Path(observed.evidence[item.address].detail), observed.home)
+    removal = diagnose.removal_of(Path(stray.path), manager, observed.home)
+    order = 'ahead of' if stray.runs_first else 'behind'
+    return Change(
+        NAME,
+        item.stage,
+        removal.package or shown,
+        Verdict.UNDECLARED,
+        repair=Repair.BY_HAND,
+        detail=f'found: {shown} ({removal.origin}), {order} {item.address} at {declared}',
+        advice=f'undeclared: {item.address} already installs {item.executable} -> {removal.command}',
+    )
 
 
 def compared(item: DesiredItem, reported: str, wanted: str, verdict: bool | None, because: str, met: Preconditions) -> tuple[Change, ...]:

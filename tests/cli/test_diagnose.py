@@ -126,7 +126,7 @@ def test_a_cargo_binary_names_its_crate_rather_than_itself(monkeypatch: pytest.M
 
     removal = diagnose.removal_of(tmp_path / '.cargo' / 'bin' / 'fd', PackageManager.BREW, tmp_path)
 
-    assert removal == diagnose.Removal('cargo', 'cargo uninstall fd-find')
+    assert removal == diagnose.Removal('cargo', 'cargo uninstall fd-find', 'fd-find')
 
 
 def test_a_cargo_binary_no_crate_claims_falls_back_to_the_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -152,7 +152,7 @@ def test_a_scoped_npm_package_keeps_both_segments(tmp_path: Path) -> None:
 
     removal = diagnose.removal_of(binary, PackageManager.BREW, tmp_path)
 
-    assert removal == diagnose.Removal('npm', 'npm uninstall -g @taplo/cli')
+    assert removal == diagnose.Removal('npm', 'npm uninstall -g @taplo/cli', '@taplo/cli')
 
 
 def test_a_uv_tool_is_told_apart_from_a_release_binary_beside_it(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -165,7 +165,7 @@ def test_a_uv_tool_is_told_apart_from_a_release_binary_beside_it(monkeypatch: py
     tool = diagnose.removal_of(tmp_path / '.local' / 'bin' / 'safekeep', PackageManager.BREW, tmp_path)
     release = diagnose.removal_of(tmp_path / '.local' / 'bin' / 'lazygit', PackageManager.BREW, tmp_path)
 
-    assert tool == diagnose.Removal('uv', 'uv tool uninstall safekeep')
+    assert tool == diagnose.Removal('uv', 'uv tool uninstall safekeep', 'safekeep')
     assert release == diagnose.Removal('', 'rm ~/.local/bin/lazygit')
 
 
@@ -177,7 +177,7 @@ def test_a_binary_outside_every_language_directory_falls_to_the_os_manager(monke
 
     removal = diagnose.removal_of(Path('/usr/local/bin/shellcheck'), PackageManager.BREW, tmp_path)
 
-    assert removal.command == 'brew uninstall shellcheck'
+    assert removal == diagnose.Removal('brew', 'brew uninstall shellcheck', 'shellcheck')
 
 
 def test_a_binary_no_manager_claims_is_still_given_a_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

@@ -208,6 +208,8 @@ class Removal:
 
     mechanism: str
     command: str
+    package: str = ''
+    """The package the command removes, or '' where the command is an `rm`."""
 
     @property
     def origin(self) -> str:
@@ -315,11 +317,11 @@ def removal_of(path: Path, manager: PackageManager, home: Path) -> Removal:
         if path.parent != directory:
             continue
         if mechanism == 'cargo' and (crate := cargo_package_providing(path.name)):
-            return Removal('cargo', f'cargo uninstall {crate}')
+            return Removal('cargo', f'cargo uninstall {crate}', crate)
         if mechanism == 'npm' and (package := npm_package_providing(path)):
-            return Removal('npm', f'npm uninstall -g {package}')
+            return Removal('npm', f'npm uninstall -g {package}', package)
         if mechanism == 'uv' and (tool := uv_tool_providing(path.name)):
-            return Removal('uv', f'uv tool uninstall {tool}')
+            return Removal('uv', f'uv tool uninstall {tool}', tool)
         # go keeps no receipt, so its directory is the only evidence there is.
         # The other managers were asked and did not claim the file, and
         # `~/.local/bin` holds release binaries and vendor installs beside the uv
@@ -329,7 +331,7 @@ def removal_of(path: Path, manager: PackageManager, home: Path) -> Removal:
 
     owner, _ = package_owning(path, manager)
     if owner:
-        return Removal(str(manager), removal_command(owner, manager))
+        return Removal(str(manager), removal_command(owner, manager), owner)
     return Removal('', f'rm {shown}')
 
 

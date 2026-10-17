@@ -1514,22 +1514,19 @@ def test_one_copy_of_a_declared_tool_reports_nothing(tmp_path: Path, fake_bin: P
     assert shadow_changes(live) == []
 
 
-def test_a_second_copy_on_path_is_reported_against_the_item_that_declares_it(
+def test_a_second_copy_on_path_is_reported_as_the_copy_nothing_declares(
     tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Which of the two runs is decided by PATH order rather than by the manifest,
     and the loser is invisible to every other check: `apply` installs, evidence
     finds *a* binary, and the machine reports converged while the tool anyone
-    actually runs came from somewhere else."""
+    actually runs came from somewhere else. The row's subject is the stray, since
+    the declared item is the one thing here that is declared."""
     cargo_installed('frob')
     stray = executable(second_bin(tmp_path, monkeypatch), 'frob')
     live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
 
-    found = shadow_changes(live)
-
-    assert [change.item for change in found] == ['cargo/frobnicate']
-    assert found[0].observed == str(stray)
-    assert found[0].detail.endswith('.cargo/bin/frob'), 'the copy that wins is named, abbreviated under ~'
+    assert [change.item for change in shadow_changes(live)] == [str(stray)]
 
 
 def test_a_second_copy_is_not_something_apply_can_repair(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1600,9 +1597,9 @@ def test_a_copy_an_undeclared_package_owns_is_still_a_stray(tmp_path: Path, fake
     cargo_installed('frob')
     executable(second_bin(tmp_path, monkeypatch), 'frob')
     executable(fake_bin, 'pacman', OWNED_BY_FROBNICATE)
-    live = session(tmp_path, CARGO_TOOL, DECLARES_FROB)
+    live = session(tmp_path, CARGO_TOOL, {**DECLARES_FROB, 'platform': 'archlinux'})
 
-    assert [change.item for change in shadow_changes(live)] == ['cargo/frobnicate']
+    assert [change.item for change in shadow_changes(live)] == ['frobnicate']
 
 
 def test_a_copy_inside_the_checkout_is_not_machine_state(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:

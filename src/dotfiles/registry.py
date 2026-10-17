@@ -249,7 +249,7 @@ class ReleaseProvider(VendoredProvider):
         `ev.by_release` is the provenance half. The blocker is asked only where that
         answered `MISSING`, per `ev.blocker`'s own rule: a release already installed
         has nothing standing in its way, and the superseded package beside it is then
-        a duplicate on PATH, which `packages._shadowing` reports.
+        a duplicate on PATH, which `packages.shadowing` reports.
         """
         found = ev.by_release(item)
         if found.verdict is not Verdict.MISSING:
