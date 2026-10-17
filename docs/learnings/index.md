@@ -83,3 +83,6 @@ General technical notes that name nothing in this repo live on the hub at
 - [Hyprland Keeps the Config Format It Started With](hyprland-keeps-the-config-format-it-started-with.md)
   — "You are using the .conf config format" survives a deployed `hyprland.lua` and a reload, then
   `keyword can't work with non-legacy parsers. Use eval.` from every script
+- [A /bin/sh Stub Is Bash Here and Dash on CI](a-sh-stub-is-bash-here-and-dash-on-ci.md) — a test
+  passes locally and fails on CI with `FileNotFoundError` for a file its stub writes, because dash
+  printed `Bad substitution` into a tmux pane

@@ -183,3 +183,4 @@ nav:
       - tmux Before 3.6 Can Lose a Pane's Exit Status: learnings/tmux-before-3-6-can-lose-a-panes-exit-status.md
       - A Cache Outlives the File You Restored: learnings/a-cache-outlives-the-file-you-restored.md
       - Hyprland Keeps the Config Format It Started With: learnings/hyprland-keeps-the-config-format-it-started-with.md
+      - A /bin/sh Stub Is Bash Here and Dash on CI: learnings/a-sh-stub-is-bash-here-and-dash-on-ci.md
