@@ -827,11 +827,10 @@ function doshell() {
   fi
 }
 
-# Bypass is the permission mode for every session, set once as
-# permissions.defaultMode in ~/.claude/settings.json rather than repeated as a
-# flag here — a session started any other way (an editor, a resume, a scheduled
-# run) then lands in the same permission class, which is what lets cross-session
-# messages deliver instead of being held.
+# Every interactive launch passes bypass, so sessions share one permission class
+# and cross-session messages deliver instead of being held. It is a launch flag
+# rather than permissions.defaultMode in ~/.claude/settings.json because headless
+# agents load that file for its hooks, and a grant there would reach them too.
 #
 # A bare first argument is taken as the session name rather than passed through,
 # so `cc planner` reads naturally. Anything starting with `-` is a real flag and
@@ -846,9 +845,6 @@ function doshell() {
 # subject should be. Bare `cc` passes nothing and claude derives
 # `<dirname>-<hex>` for the address, which `claude-sessions` prints; pass a
 # name only when the name is also the title you want.
-#
-# Bypass is a launch flag, not settings.json's defaultMode. Headless agents load
-# that file for its hooks, and a grant there would reach them too.
 #@cc
 #--> cc [name] — start claude; unnamed, it takes an address from the directory and keeps a real title
 cc() {
