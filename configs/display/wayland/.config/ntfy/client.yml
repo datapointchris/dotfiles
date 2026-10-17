@@ -15,5 +15,5 @@ default-host: https://ntfy.ichrisbirch.com
 subscribe:
   - topic: homelab-alerts
     command: 'mkdir -p "$HOME/.local/state/ntfy"; printf "%s  [%s] %s\n" "$(date +%H:%M:%S)" "$NTFY_TITLE" "$NTFY_MESSAGE" >> $HOME/.local/state/ntfy/notify.log; /usr/bin/notify-send "$NTFY_TITLE" "$NTFY_MESSAGE"'
-  - topic: ci-failures
-    command: 'mkdir -p "$HOME/.local/state/ntfy"; printf "%s  [%s] %s\n" "$(date +%H:%M:%S)" "$NTFY_TITLE" "$NTFY_MESSAGE" >> $HOME/.local/state/ntfy/notify.log; /usr/bin/notify-send -u critical "$NTFY_TITLE" "$NTFY_MESSAGE"'
+  - topic: fleet
+    command: 'mkdir -p "$HOME/.local/state/ntfy"; printf "%s  [%s] %s\n" "$(date +%H:%M:%S)" "$NTFY_TITLE" "$NTFY_MESSAGE" >> $HOME/.local/state/ntfy/notify.log; /usr/bin/notify-send "$NTFY_TITLE" "$NTFY_MESSAGE"'

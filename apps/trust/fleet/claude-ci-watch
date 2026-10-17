@@ -3,10 +3,10 @@
 # block. Exists so a single Claude session can watch the repo it is working in
 # without every session seeing every project's failures.
 #
-# Deliberately does not touch ntfy-client.service or its client.yml: that
-# subscriber is the desktop notifier and should keep alerting on everything.
-# This is a second, read-only subscription that lives and dies with whoever ran
-# it, so nothing here changes what any other session or machine sees.
+# Deliberately does not touch ntfy-client.service or its client.yml. That
+# subscriber is the desktop notifier, and it does not read ci-failures at all.
+# This is a separate, read-only subscription that lives and dies with whoever
+# ran it, so nothing here changes what any other session or machine sees.
 #
 # Subscribes rather than tailing ~/.local/state/ntfy/notify.log, which is the
 # obvious shortcut and loses the alert: the log holds one flattened line, so the
