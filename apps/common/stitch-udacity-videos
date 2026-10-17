@@ -2,6 +2,19 @@
 
 set -euo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  cat <<'EOF'
+Usage: stitch-udacity-videos
+
+Unpacks every course zip in the current directory, cleans the filenames, and
+concatenates each lesson's videos into one mp4. The zips move to zips/.
+
+Examples:
+  stitch-udacity-videos   stitch every zip in this directory
+EOF
+  exit 0
+fi
+
 # Configuration
 readonly VIDEO_EXTENSION="mp4"
 readonly ZIP_EXTENSION="zip"
