@@ -950,6 +950,13 @@ github_releases:
     description: htop for AI coding agents — sessions, tokens, context, quota
     tags: [cli, tui, development]
 
+  # One bundled JavaScript file that runs on the fnm-managed node. A release
+  # rather than an npm global, because it is not published to npm, and a single
+  # asset is something the offline bundle can carry to a restricted network.
+  - name: asl-language-server
+    repo: datapointchris/asl-language-server
+    description: Amazon States Language LSP, aware of Terraform and SAM templating
+
   # mikefarah/yq (Go), NOT the Python jq-wrapper: the de-facto standard yq that every
   # tutorial and Claude Code assumes. Direct binary, consistent version across platforms,
   # and works behind the WSL work firewall (github release download, no Go module proxy).

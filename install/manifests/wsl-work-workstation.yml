@@ -47,6 +47,7 @@ github_releases:
   - tenv
   - yq
   - duckdb
+  - asl-language-server
 
 custom_installers:
   # - bats

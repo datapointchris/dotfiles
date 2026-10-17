@@ -207,6 +207,11 @@ def abtop(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'abtop-{triple}.tar.xz', Archive.TARBALL, path=f'abtop-{triple}/abtop')
 
 
+def asl_language_server(tag: str, target: Target) -> ReleaseArtifact:
+    """One JavaScript bundle for every platform, run by node through its shebang."""
+    return ReleaseArtifact(f'asl-language-server-{bare(tag)}.cjs', Archive.RAW)
+
+
 def atuin(tag: str, target: Target) -> ReleaseArtifact:
     """musl for both architectures, and no darwin spelling: atuin is declared on
     Linux only, which is why the arm target is still a linux triple."""
@@ -468,6 +473,7 @@ def go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
 
 ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'abtop': abtop,
+    'asl-language-server': asl_language_server,
     'atuin': atuin,
     'duckdb': duckdb,
     'duf': duf,

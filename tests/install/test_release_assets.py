@@ -135,6 +135,16 @@ the rule exists to catch. Each is held to producing one *artifact* rather than t
 spellings of one name, which is the difference between universal and half-branched.
 """
 
+ONE_ASSET_EVERYWHERE = {
+    'asl-language-server': 'publishes one JavaScript bundle that node runs, the same bytes on every system',
+}
+"""Entries exempt from both the system and the mac-architecture rules, with what
+makes each exempt.
+
+A row for the reason `UNIVERSAL_ON_DARWIN` is one, and held to the same bar: one
+artifact on every target, never one name unpacked two ways.
+"""
+
 
 def observed_archive(name: str) -> Archive:
     """What a filename says it is packed as, read the way an extractor reads it.
@@ -272,13 +282,16 @@ def test_two_targets_that_fetch_one_file_unpack_it_the_same_way(entry: str) -> N
 @pytest.mark.parametrize('arch', tuple(Arch))
 @pytest.mark.parametrize('entry', ON_BOTH_SYSTEMS)
 def test_a_mac_and_a_linux_box_never_fetch_the_same_file(entry: str, arch: Arch) -> None:
-    """Scoped to the entries some manifest installs on both, which is what makes
-    it a rule rather than a list of exceptions: atuin is a linux triple on both
-    branches and win32yank is one Windows binary, and neither is asked for on a
-    Mac."""
+    """Scoped to the entries some manifest installs on both: atuin is a linux
+    triple on both branches and win32yank is one Windows binary, and neither is
+    asked for on a Mac. A tool that publishes no native binary at all is a row in
+    `ONE_ASSET_EVERYWHERE` instead."""
     darwin = artifact(entry, Target(OSFamily.DARWIN, arch))
     linux = artifact(entry, Target(OSFamily.LINUX, arch))
 
+    if entry in ONE_ASSET_EVERYWHERE:
+        assert darwin == linux, f'{entry} is exempt because it {ONE_ASSET_EVERYWHERE[entry]}, so it owes one artifact'
+        return
     assert darwin.name != linux.name, f'{entry} fetches {darwin.name} on {arch} for both systems'
 
 
@@ -294,8 +307,9 @@ def test_the_two_mac_architectures_never_fetch_the_same_file(entry: str) -> None
     arm = artifact(entry, Target(OSFamily.DARWIN, Arch.ARM64))
     intel = artifact(entry, Target(OSFamily.DARWIN, Arch.X86_64))
 
-    if entry in UNIVERSAL_ON_DARWIN:
-        assert arm == intel, f'{entry} is exempt because it {UNIVERSAL_ON_DARWIN[entry]}, so it owes one artifact rather than two spellings'
+    exempt = UNIVERSAL_ON_DARWIN | ONE_ASSET_EVERYWHERE
+    if entry in exempt:
+        assert arm == intel, f'{entry} is exempt because it {exempt[entry]}, so it owes one artifact rather than two spellings'
         return
     assert arm.name != intel.name, f'{entry} fetches {arm.name} on both Apple Silicon and Intel'
 

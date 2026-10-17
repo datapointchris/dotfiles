@@ -56,6 +56,7 @@ github_releases:
   - ntfy
   - duckdb
   - abtop
+  - asl-language-server
   # Personal data CLIs — released by their own app repos under a cli/v* tag
   - icb
   - learning
