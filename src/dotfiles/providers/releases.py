@@ -239,6 +239,15 @@ def fzf(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'fzf-{bare(tag)}-{suffix}.tar.gz', Archive.TARBALL, path='fzf')
 
 
+def gh(tag: str, target: Target) -> ReleaseArtifact:
+    """A tarball on Linux and a zip on macOS, each nesting `bin/gh` under the asset's stem."""
+    arch = 'arm64' if target.is_arm else 'amd64'
+    stem = f'gh_{bare(tag)}_{"macOS" if target.is_darwin else "linux"}_{arch}'
+    if target.is_darwin:
+        return ReleaseArtifact(f'{stem}.zip', Archive.ZIP, path=f'{stem}/bin/gh')
+    return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/bin/gh')
+
+
 def gh_dash(tag: str, target: Target) -> ReleaseArtifact:
     """The tag whole, `v` included, which is unusual enough to be the reason this
     docstring exists — `bare` appears in most of the functions here and would
@@ -463,6 +472,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'duckdb': duckdb,
     'duf': duf,
     'fzf': fzf,
+    'gh': gh,
     'gh-dash': gh_dash,
     'glow': glow,
     'hadolint': hadolint,

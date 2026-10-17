@@ -42,6 +42,7 @@ custom_installers:
   - bats          # the commit hook of a repo with tests/*.bats, for the fix job
 
 github_releases:
+  - gh          # GitHub CLI; apt's is years behind
   - fzf         # fuzzy finder — backs the shell functions
   - neovim      # editor for on-box config/log edits
   # Not tree-sitter: every release nvim-treesitter accepts links a newer glibc than

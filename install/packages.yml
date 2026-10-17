@@ -108,9 +108,10 @@ system_packages:
     brew: git
     description: Version control system
 
+  # No apt: an apt box takes gh from its GitHub release. Debian 12 carries
+  # 2.23.0, which lacks flags scripts call, such as `gh run list --commit`.
   - name: gh
     tier: core
-    apt: gh
     pacman: github-cli
     brew: gh
     description: GitHub CLI
@@ -875,6 +876,11 @@ github_releases:
     repo: charmbracelet/glow
     description: Markdown renderer for terminal
     tags: [cli]
+
+  - name: gh
+    repo: cli/cli
+    description: GitHub CLI, on the Linux boxes whose distro package is years behind
+    tags: [cli, git, github]
 
   # Distributed both as a `gh` extension and as plain release binaries, and this
   # takes the binaries. `gh extension install` verifies no checksum, keeps its own

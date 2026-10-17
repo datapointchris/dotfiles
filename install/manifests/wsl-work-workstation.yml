@@ -25,6 +25,7 @@ go_tools:
   - ascii-image-converter
 
 github_releases:
+  - gh
   - fzf
   - neovim
   - lazygit
