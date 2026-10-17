@@ -846,6 +846,9 @@ function doshell() {
 # subject should be. Bare `cc` passes nothing and claude derives
 # `<dirname>-<hex>` for the address, which `claude-sessions` prints; pass a
 # name only when the name is also the title you want.
+#
+# Bypass is a launch flag, not settings.json's defaultMode. Headless agents load
+# that file for its hooks, and a grant there would reach them too.
 #@cc
 #--> cc [name] — start claude; unnamed, it takes an address from the directory and keeps a real title
 cc() {
@@ -854,7 +857,7 @@ cc() {
     name=(--name "$1")
     shift
   fi
-  claude "${name[@]}" "$@"
+  claude --permission-mode bypassPermissions "${name[@]}" "$@"
 }
 
 # Resume derives a fresh address rather than restoring the old one, so a session
@@ -869,7 +872,7 @@ ccr() {
     name=(--name "$1")
     shift
   fi
-  claude --resume "${name[@]}" "$@"
+  claude --permission-mode bypassPermissions --resume "${name[@]}" "$@"
 }
 
 #@find-commit

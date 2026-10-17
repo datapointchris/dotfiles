@@ -1391,7 +1391,9 @@ def open_session_pane(caller: str, workdir: Path, prompt: str, *, below: bool, s
     role = REVIEWER if below else WORKER
     partner = ['--for', caller] if below else []
     named = ['--window-name', slug] if slug and not below else []
-    made = ctl('pane', 'open', role, *partner, *named, '--cwd', str(workdir), '--', 'claude', prompt)
+    made = ctl(
+        'pane', 'open', role, *partner, *named, '--cwd', str(workdir), '--', 'claude', '--permission-mode', 'bypassPermissions', prompt
+    )
     if not made.get('readable', True):
         say_warning(f'{made["pane"]} is {made.get("width")}x{made.get("height")}, which is small to follow an agent in')
     return made

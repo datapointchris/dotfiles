@@ -330,7 +330,7 @@ __PREAMBLE__
 printf '%s' "$TMUX_PANE" > "__STATE__/pane"
 printf '%s' "$$" > "__STATE__/pid"
 pwd > "__STATE__/cwd"
-printf '%s' "$*" > "__STATE__/prompt"
+printf '%s' "${@: -1}" > "__STATE__/prompt"
 __BODY__
 """
 """A `claude` that records where tmux put it before doing whatever the case needs.

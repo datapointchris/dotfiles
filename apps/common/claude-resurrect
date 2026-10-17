@@ -118,7 +118,7 @@ restore_sessions() {
     [[ -n $pane && -n $session_id ]] || continue
     pane_is_available "$pane" "$cwd" || continue
     transcript_exists "$session_id" || continue
-    tmux send-keys -t "$pane" "claude --resume $session_id" Enter
+    tmux send-keys -t "$pane" "claude --permission-mode bypassPermissions --resume $session_id" Enter
     resumed=$((resumed + 1))
   done < <(jq -r '.[] | [.pane, .sessionId, .cwd] | @tsv' "$sidecar" 2>/dev/null)
 

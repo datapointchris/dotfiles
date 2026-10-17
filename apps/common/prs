@@ -956,7 +956,12 @@ def claude_review(pr: PullRequest, *, interactive: bool = False) -> int:
     checkout = in_repo(pr)
     if not checkout:
         return fail(f'{pr.repo} is not checked out here, and a review needs the code')
-    return open_window(f'review {pr.repo} #{pr.number}', f"claude '/review-pr {pr.number}'", cwd=checkout, needs=('claude',))
+    return open_window(
+        f'review {pr.repo} #{pr.number}',
+        f"claude --permission-mode bypassPermissions '/review-pr {pr.number}'",
+        cwd=checkout,
+        needs=('claude',),
+    )
 
 
 def open_window(name: str, command: str, *, cwd: Path | None, needs: tuple[str, ...]) -> int:
