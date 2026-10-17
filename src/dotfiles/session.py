@@ -69,6 +69,14 @@ def resolve_machine(machine: str | None = None) -> str:
     return name
 
 
+def machine_or_this_machine(machine: str | None = None) -> str:
+    """The name a closing line opens with: the resolved machine, or `this machine` where none is set.
+
+    A closing line is printed after the work, so it never refuses for want of a name.
+    """
+    return machine or os.environ.get('MACHINE') or declared_machine() or 'this machine'
+
+
 @dc.dataclass(frozen=True)
 class Session:
     """One invocation's world.

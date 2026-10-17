@@ -29,6 +29,7 @@ from dotfiles.output import render_row
 from dotfiles.output import render_verdict
 from dotfiles.output import section_line
 from dotfiles.results import ResourceVerdict
+from dotfiles.session import machine_or_this_machine
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='Whether this machine can exchange an artifact with the remote')
@@ -101,5 +102,6 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
     for reach in measured:
         if reach.advice:
             hint(reach.advice)
-    render_verdict(word, f'{detail} for the remote', err_console)
+    standing = 'cannot exchange artifacts with the remote' if faults else 'can exchange artifacts with the remote'
+    render_verdict(word, machine_or_this_machine(), standing, detail, err_console)
     raise typer.Exit(ExitCode.ISSUE if faults else ExitCode.CONVERGED)

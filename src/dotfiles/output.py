@@ -201,6 +201,30 @@ class Phrase(StrEnum):
     NOTHING_FOR_APPLY_TO_CHANGE = 'nothing for apply to change'
     """`plan`'s answer where something else on the line is not apply's to act on."""
 
+    IS_CONVERGED = 'is converged'
+    """A machine already at its declared state, so the run found nothing to move.
+
+    The state adjective rather than the verb: a machine nothing changed did not
+    converge during this run, it already was."""
+
+    CONVERGED = 'converged'
+    """A machine an `apply` moved to its declared state, the verb in its past tense."""
+
+    NOT_FULLY_CONVERGED = 'is not fully converged'
+    """A machine with drift left over that this run could not act on or could not measure."""
+
+    HAS_DRIFTED = 'has drifted'
+    """A machine whose state differs from its declaration in ways `apply` repairs."""
+
+    CANNOT_CONVERGE = 'cannot converge'
+    """A machine whose declaration will not validate, so no apply was attempted."""
+
+    CAN_INSTALL = 'can install from this network'
+    """`network check`'s answer when every source it probed answered."""
+
+    CANNOT_INSTALL = 'cannot install from this network'
+    """`network check`'s answer when a source it installs from is blocked."""
+
 
 VERDICT_MARKS = {'converged': '✓', 'drift': '~', 'issue': '✗'}
 """What stands in front of a section's name, since the name itself is the heading.
@@ -244,10 +268,6 @@ Derived rather than typed, because the number *is* the widest resource name and 
 literal is a second copy nothing would notice going stale. A longer name —
 `packages/ghrelease`, a stage called `system_upgrade` — pushes its own detail right
 rather than being cut."""
-
-VERDICT_WIDTH = max(len(word) for word in VERDICT_COLORS)
-"""How wide the closing line's verdict word is: the longest of them, so the
-sentence after it starts in one place whatever the run answered."""
 
 
 def quoted(value: str) -> str:
@@ -421,16 +441,22 @@ def render_summary_row(verdict: str, name: str, detail: str, stream: Console) ->
     stream.print(section_line(VERDICT_MARKS[verdict], name, detail, VERDICT_COLORS[verdict]))
 
 
-def render_verdict(word: str, sentence: str, stream: Console) -> None:
-    """The run's answer, and the one place the verdict word is spelled out.
+def render_verdict(word: str, subject: str, standing: str, sentence: str, stream: Console) -> None:
+    """The run's answer, as a sentence about the machine: `✓ archlinux is converged — nothing to change`.
 
-    Takes the word and the sentence rather than the results behind them: only the
-    fold knows what each verb keeps, and `apply` has no lens at all.
+    `word` picks the mark and color and is never printed. Printed alone in front
+    of the sentence it read as a verb — `converged nothing to change` — so the
+    machine is the subject and `standing` is a predicate whose tense says whether
+    this run moved it.
+
+    Takes the predicate and the sentence rather than the results behind them: only
+    the fold knows what each verb keeps, and `apply` has no lens at all.
 
     Ungated whatever `-q` says, because a run reporting by exit code alone is a
     worse command rather than a quieter one.
     """
-    stream.print(f'[{VERDICT_COLORS[word]}]{word:<{VERDICT_WIDTH}}[/] {sentence}')
+    color = VERDICT_COLORS[word]
+    stream.print(f'[{color}]{VERDICT_MARKS[word]} {subject} {standing}[/] — {sentence}')
 
 
 def section_listing(result: ResourceResult) -> tuple[tuple[Change, ...], tuple[Examined, ...]]:

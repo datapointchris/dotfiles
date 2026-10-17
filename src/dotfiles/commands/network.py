@@ -122,7 +122,7 @@ def check(
             }
         )
     else:
-        render(measurement, blocked, seconds)
+        render(machine.name, measurement, blocked, seconds)
 
     if output is not None:
         written = network.render(
@@ -138,7 +138,7 @@ def check(
     raise typer.Exit(ExitCode.ISSUE if blocked else ExitCode.CONVERGED)
 
 
-def render(measurement: network.Measurement, blocked: Sequence[network.ProbeResult], seconds: float) -> None:
+def render(machine_name: str, measurement: network.Measurement, blocked: Sequence[network.ProbeResult], seconds: float) -> None:
     """The probe run as a section, its refusals as rows, and one closing verdict.
 
     This is a `check`, so it reads beside the reconcile verbs and is written in
@@ -194,7 +194,8 @@ def render(measurement: network.Measurement, blocked: Sequence[network.ProbeResu
         render_row(Phrase.UNPROBED, '', reason, 'magenta', width)
 
     console.print()
-    render_verdict(verdict_word, closing(len(blocked), len(intercepted)), console)
+    standing = Phrase.CANNOT_INSTALL if blocked else Phrase.CAN_INSTALL
+    render_verdict(verdict_word, machine_name, standing, closing(len(blocked), len(intercepted)), console)
     if intercepted:
         # Said once at the end as well as per row, because this is the one
         # refusal whose fix is a single act covering every row that shows it —
@@ -218,4 +219,4 @@ def closing(blocked: int, intercepted: int) -> str:
     if not blocked:
         return 'every source this machine installs from is reachable'
     proxied = f' ({intercepted} of them presented an untrusted certificate, which a bundle does not fix)' if intercepted else ''
-    return f'{blocked} source(s) unreachable{proxied}, so installing here needs a bundle built elsewhere — run: dotfiles bundle create'
+    return f'{blocked} source(s) unreachable{proxied}, so installing here needs a bundle built elsewhere; run: dotfiles bundle create'

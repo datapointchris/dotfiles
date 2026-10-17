@@ -242,7 +242,7 @@ def plan(
     if as_json:
         emit_json(status.document(results, named, identity.started, verb='plan'))
     else:
-        reconcile.report_summary(results, lens)
+        reconcile.report_summary(results, lens, named)
     raise typer.Exit(reconcile.exit_code(results))
 
 
@@ -314,7 +314,7 @@ def check(
         # a machine that can build it a bundle.
         emit_json(status.document(results, checked_machine, when))
     else:
-        reconcile.report_summary(results, lens)
+        reconcile.report_summary(results, lens, checked_machine)
 
     raise typer.Exit(reconcile.exit_code(results))
 

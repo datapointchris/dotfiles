@@ -81,6 +81,7 @@ from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
 from dotfiles.results import ResourceVerdict
 from dotfiles.session import Session
+from dotfiles.session import machine_or_this_machine
 from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
 
@@ -540,6 +541,27 @@ def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:
     return sentence(answered, clause(drift, Phrase.DIFFER_FROM_DECLARED))
 
 
+def verdict_standing(results: Sequence[ResourceResult], lens: Lens) -> str:
+    """What `plan` and `check` say the machine is, read off the sets `verdict_line` names.
+
+    `check` reports drift in its predicate even though drift leaves its mark green:
+    the mark answers "is anything wrong", and `is converged` beside a drift clause
+    would claim the machine matches its declaration when it does not.
+    """
+    own = any(result.findings for result in results)
+    others = list(chain.from_iterable(result.others for result in results))
+    blind = any(refused(result) for result in results)
+
+    if lens is Lens.PLAN:
+        if own:
+            return Phrase.HAS_DRIFTED
+        return Phrase.NOT_FULLY_CONVERGED if blind or any(change.declined for change in others) else Phrase.IS_CONVERGED
+
+    if own or blind or any(result.invalid for result in results):
+        return Phrase.NEED_ATTENTION.heading
+    return Phrase.HAS_DRIFTED if any(change.actionable for change in others) else Phrase.IS_CONVERGED
+
+
 def refused(result: ResourceResult) -> bool:
     """Whether this resource produced no evidence at all and still failed.
 
@@ -568,7 +590,7 @@ def sentence(*clauses: str) -> str:
     return '; '.join(clause for clause in clauses if clause)
 
 
-def report_summary(results: Sequence[ResourceResult], lens: Lens) -> None:
+def report_summary(results: Sequence[ResourceResult], lens: Lens, machine: str) -> None:
     """Close a read verb: the sections that found something, repeated in one place,
     then the verdict.
 
@@ -589,7 +611,7 @@ def report_summary(results: Sequence[ResourceResult], lens: Lens) -> None:
     checkout.report_stray_branch()
 
     console.print()
-    render_verdict(str(worst(results)), verdict_line(results, lens), console)
+    render_verdict(str(worst(results)), machine, verdict_standing(results, lens), verdict_line(results, lens), console)
 
 
 def worst(results: Sequence[ResourceResult]) -> ResourceVerdict:
@@ -881,7 +903,9 @@ def apply_machine(
         problems = broken_declaration(broken)
         render_verdict(
             str(gate.verdict),
-            f'{problems}, so there is nothing safe to apply — run: dotfiles machines check',
+            machine_or_this_machine(machine),
+            Phrase.CANNOT_CONVERGE,
+            f'{problems}, so there is nothing safe to apply; run: dotfiles machines check',
             err_console,
         )
         return exit_code([gate])
@@ -988,6 +1012,8 @@ def apply_machine(
     changed = len([event for event in performed if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE])
     render_verdict(
         str(ResourceVerdict.ISSUE if unsuccessful else ResourceVerdict.CONVERGED),
+        session.machine_name,
+        applied_standing(changed, unsuccessful, deferred, unmeasured),
         applied_line(changed, unsuccessful, deferred, unmeasured, matched_under_entries(planned, entries)),
         err_console,
     )
@@ -1049,6 +1075,19 @@ def applied_line(
     head = sentence(repaired, failed) or idle
     attention = counted_phrase(len(deferred), Phrase.NEED_ATTENTION) if deferred else ''
     return sentence(head, attention, clause([change.item for change in unmeasured], Phrase.COULD_NOT_BE_MEASURED))
+
+
+def applied_standing(changed: int, unsuccessful: Sequence[str], deferred: Sequence[Change], unmeasured: Sequence[Change]) -> str:
+    """What an `apply` says the machine is, from the same four sets `applied_line` names.
+
+    The tense follows the run. A machine this run changed `converged`; one it found
+    already matching `is converged`, because nothing moved.
+    """
+    if unsuccessful:
+        return Phrase.DID_NOT_CONVERGE
+    if deferred or unmeasured:
+        return Phrase.NOT_FULLY_CONVERGED
+    return Phrase.CONVERGED if changed else Phrase.IS_CONVERGED
 
 
 def name_the_shared_fix(changes: Sequence[Change]) -> None:

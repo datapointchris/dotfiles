@@ -435,7 +435,7 @@ def steady_checkout(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def summarized(results: list[ResourceResult], capsys: pytest.CaptureFixture) -> list[str]:
-    reconcile.report_summary(results, Lens.CHECK)
+    reconcile.report_summary(results, Lens.CHECK, 'archlinux')
     return [line.rstrip() for line in capsys.readouterr().out.splitlines() if line.strip()]
 
 
@@ -463,7 +463,7 @@ def test_the_checkout_row_names_the_clone_and_sits_above_the_verdict(steady_chec
     lines = summarized([result(ResourceVerdict.ISSUE)], capsys)
 
     assert [position for position, line in enumerate(lines) if CLONE in line] < [
-        position for position, line in enumerate(lines) if line.startswith('issue')
+        position for position, line in enumerate(lines) if line.startswith('✗ archlinux')
     ]
 
 

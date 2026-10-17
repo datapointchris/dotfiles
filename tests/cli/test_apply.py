@@ -760,7 +760,7 @@ class TestWhatApplyDeclinedToTouch:
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        assert f'2 item(s) {output.Phrase.COULD_NOT_BE_MEASURED}' in capsys.readouterr().err
+        assert f'2 item(s) {output.Phrase.COULD_NOT_BE_MEASURED}' in capsys.readouterr().err.replace('\n', '')
 
     def test_the_closing_fix_is_named_once_however_many_items_share_it(
         self, quiet: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
@@ -772,7 +772,7 @@ class TestWhatApplyDeclinedToTouch:
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        closing = capsys.readouterr().err.split('could not be measured')[-1]
+        closing = capsys.readouterr().err.replace('\n', '').split('could not be measured')[-1]
         assert closing.count('extract a newer bundle') == 1
 
     def test_it_does_not_move_the_exit_code(self, quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:

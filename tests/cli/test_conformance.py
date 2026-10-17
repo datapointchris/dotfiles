@@ -36,6 +36,7 @@ from typer.main import get_command
 
 import dotfiles
 from dotfiles import create_bundle
+from dotfiles import engine
 from dotfiles import offline_bundle
 from dotfiles import output
 from dotfiles import reconcile
@@ -632,16 +633,15 @@ def names_the_table(node: ast.expr) -> bool:
     return isinstance(node, ast.Attribute) and node.attr == TABLE
 
 
-def test_only_the_two_heading_builders_name_the_heading_widths() -> None:
-    """A function naming either width is laying out a heading or a closing line of
-    its own, whatever it draws it with.
+def test_only_the_two_heading_builders_name_the_heading_width() -> None:
+    """A function naming the width is laying out a heading of its own, whatever it
+    draws it with.
 
     `machines show` and `network check` are the two that most wanted to. Both
     render a section and neither names a width, because `section_line` hands them
     the geometry already.
     """
     assert functions_naming('ADDRESS_COLUMN') == {'section_line', 'render_result'}
-    assert functions_naming('VERDICT_WIDTH') == {'render_verdict'}
 
 
 def test_one_function_asks_a_yes_or_no_question() -> None:
@@ -873,54 +873,6 @@ def test_every_resource_heading_shares_one_column() -> None:
     assert len(set(columns.values())) == 1, f'a resource name is wider than the column every heading shares: {columns}'
 
 
-def verdict_columns(monkeypatch: pytest.MonkeyPatch, width: int | None = None) -> dict[str, int]:
-    """Where each verdict word's closing sentence started, at one word width."""
-    if width is not None:
-        rebind(monkeypatch, 'VERDICT_WIDTH', width)
-    buffer = capture(monkeypatch)
-    found = {}
-    for word in output.VERDICT_COLORS:
-        buffer.seek(0)
-        buffer.truncate()
-        output.render_verdict(word, DETAIL, output.console)
-        found[word] = buffer.getvalue().index(DETAIL)
-    return found
-
-
-def test_every_run_starts_its_closing_sentence_in_one_column(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The other half of the same geometry, for the line a run answers with.
-
-    `output.render_verdict` is the one place the verdict word is spelled out, and
-    what that buys is a sentence starting in one place whatever the run answered.
-    A report reaching the width by importing it, or by copying the number, is a
-    second owner of that column.
-
-    Measured under a rebinding rather than at the shipped width, which is a
-    separate claim and is asserted separately below.
-    """
-    narrow = verdict_columns(monkeypatch, width=12)
-    wide = verdict_columns(monkeypatch, width=30)
-
-    assert len(set(narrow.values())) == 1, f'closing lines disagree about their column: {narrow}'
-    assert len(set(wide.values())) == 1, f'closing lines disagree about their column: {wide}'
-    assert wide['drift'] - narrow['drift'] == 18, f'a closing line did not follow the width: {narrow} then {wide}'
-
-
-def test_every_verdict_word_shares_one_column(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The shipped half of the same geometry: a width narrower than the longest
-    verdict pads that one word to nothing and moves its sentence right.
-
-    **It cannot fail while `VERDICT_WIDTH` is the maximum over
-    `VERDICT_COLORS`**, and `render_verdict` raises `KeyError` on any word outside
-    that dict, so no other word can reach the padding. What it catches is the
-    derivation replaced by a literal, and it is the only thing that does:
-    `VERDICT_WIDTH = 5` otherwise passes every test in the suite.
-    """
-    shipped = verdict_columns(monkeypatch)
-
-    assert len(set(shipped.values())) == 1, f'the closing sentence moves with the verdict: {shipped}'
-
-
 class StandIn(str):
     """What one `Phrase` member is replaced by while the table is swapped out.
 
@@ -1021,8 +973,22 @@ def rendered_lines(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     drifted = reconcile.from_changes('packages', [drifting], '', Lens.CHECK)
 
     reconcile.report_untouched([declined], [blind])
+    untouched = buffer.getvalue()
+
+    monkeypatch.setattr(validate, 'declaration', lambda: (fatal,))
+    monkeypatch.setattr(reconcile.checkout, 'report_stray_branch', lambda: None)
+    reconcile.apply_machine(engine.Selection.everything(), 'archlinux')
+    gated = buffer.getvalue().removeprefix(untouched)
 
     return {
+        "plan's standing, with work": reconcile.verdict_standing([planned], Lens.PLAN),
+        "plan's standing, with only what it will not touch": reconcile.verdict_standing([deferred], Lens.PLAN),
+        "plan's standing, with nothing at all": reconcile.verdict_standing([], Lens.PLAN),
+        "check's standing, over drift alone": reconcile.verdict_standing([drifted], Lens.CHECK),
+        "check's standing, over a resource that refused": reconcile.verdict_standing([refused], Lens.CHECK),
+        "apply's standing, having changed something": reconcile.applied_standing(1, [], [], []),
+        "apply's standing, having failed": reconcile.applied_standing(1, ['claude-code'], [], []),
+        "apply's closing line, over a declaration that will not validate": gated,
         "a plan row's tally": output.tallies(tallied),
         "a check row's tally": output.tallies(counting),
         "a plan row's own sentence": planned.detail,
@@ -1036,7 +1002,7 @@ def rendered_lines(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
         "apply's closing line, having done nothing": reconcile.applied_line(0, [], [], []),
         "apply's closing line, narrowed and current": reconcile.applied_line(0, [], [], [], ['custom/theme theme v7.1.0']),
         'the heading over a group of work': reconcile.converging_line([a_change(privileged=True)]),
-        'the headings over what apply walked past': buffer.getvalue(),
+        'the headings over what apply walked past': untouched,
         'the machines row, sound but not silent': reconcile.declaration_row([warning], []).detail,
         'the machines row, refusing': reconcile.declaration_row([fatal], [fatal]).detail,
     }
