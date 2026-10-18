@@ -79,23 +79,20 @@ UNREAD_KEYS: dict[str, str] = {
     'install_script': 'the installer is found by name at install/common/<dir>/<name>.sh',
     'build_method': 'nothing branches on how upstream builds its release',
     'source_type': 'how a custom installer distributes itself is its function in providers/custom.py, not a word here',
-    'index_url': 'name the index with index, and declare its URL once under uv_indexes',
     'tracks_branch': 'a repo publishing no release installs from its default branch anyway, with a warning that its update will refuse',
 }
-"""Keys a row may not write that look like configuration, each with what to write instead.
+"""Keys that were carried for long enough to look like configuration, each with what to write instead.
 
 An unknown key is an error either way; these get the reason attached, because
-"unknown key" tells a reader what happened and not what to do instead. Most were
-measured as read by nothing before they were removed. `index_url` is the other
-kind: a field `load` resolves, which a row writing it would go around.
+"unknown key" tells a reader what happened and not what to do instead.
 """
 
 RESOLVED_BY_LOAD = 'resolved_by_load'
-"""Field metadata marking a value `load` derives from another declaration.
+"""Field metadata marking a value `load` derives from another declaration, holding what a row writes instead.
 
-`from_mapping` leaves such a field out, so a row that writes it is refused as an
-unknown key rather than trusted. Resolving once at load is what lets every
-reader take the value off the entry without being handed the catalog.
+`from_mapping` refuses a row that writes such a field rather than trusting it.
+Resolving once at load is what lets every reader take the value off the entry
+without being handed the catalog.
 """
 
 UV_INDEXES = 'uv_indexes'
@@ -371,7 +368,12 @@ class Entry:
 
     @classmethod
     def from_mapping(cls, raw: Mapping[str, Any]) -> Self:
-        fields = {field.name: field for field in dc.fields(cls) if not field.metadata.get(RESOLVED_BY_LOAD)}
+        resolved = {field.name: field.metadata[RESOLVED_BY_LOAD] for field in dc.fields(cls) if RESOLVED_BY_LOAD in field.metadata}
+        fields = {field.name: field for field in dc.fields(cls) if field.name not in resolved}
+
+        if written := sorted(set(raw) & set(resolved)):
+            named = ', '.join(f'{key} ({resolved[key]})' for key in written)
+            raise EntryError(f'declares {named}, which load fills in and a row cannot set')
 
         if unknown := sorted(set(raw) - set(fields)):
             named = ', '.join(f'{key} ({UNREAD_KEYS[key]})' if key in UNREAD_KEYS else key for key in unknown)
@@ -738,7 +740,9 @@ class UvTool(Entry):
     refuses a name the index does not list for that reason.
     """
 
-    index_url: str = dc.field(default='', metadata={RESOLVED_BY_LOAD: True})
+    index_url: str = dc.field(
+        default='', metadata={RESOLVED_BY_LOAD: f'name the index with index, and declare its URL once under {UV_INDEXES}'}
+    )
     """The URL `index` names. `load` fills it in, and a declaration cannot set it."""
 
 
