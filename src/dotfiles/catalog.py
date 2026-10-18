@@ -80,6 +80,7 @@ UNREAD_KEYS: dict[str, str] = {
     'build_method': 'nothing branches on how upstream builds its release',
     'source_type': 'how a custom installer distributes itself is its function in providers/custom.py, not a word here',
     'index_url': 'name the index with index, and declare its URL once under uv_indexes',
+    'tracks_branch': 'a repo publishing no release installs from its default branch anyway, with a warning that its update will refuse',
 }
 """Keys a row may not write that look like configuration, each with what to write instead.
 
@@ -745,15 +746,13 @@ class UvTool(Entry):
 class GitUvTool(Entry):
     """A Python tool installed with `uv tool install` from a git repo.
 
-    `tracks_branch` follows the default branch for a repo publishing no releases;
-    everything else pins to the newest release tag, because an unpinned git
-    install is the degraded state rather than the flexible one.
+    It pins to the newest release tag, because an unpinned git install is the
+    degraded state rather than the flexible one.
     """
 
     section: ClassVar[str] = 'git_uv_tools'
 
     repo: str
-    tracks_branch: bool = False
 
     @property
     def owner(self) -> str | None:

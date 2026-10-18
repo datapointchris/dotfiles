@@ -87,9 +87,9 @@ def uv_tool_pin(name: str) -> str | None:
     than silence because it parses.
 
     None means unpinned, which is not the same as absent. A repo publishing no
-    release installs from its default branch and records no `?rev=`, and that set
-    is larger than the one `tracks_branch` declares — so the receipt, not the
-    declaration, is what decides whether a version can be compared at all.
+    release installs from its default branch and records no `?rev=`, and nothing
+    in the declaration says which repos those are — so the receipt is what
+    decides whether a version can be compared at all.
     """
     try:
         recorded = tomllib.loads((paths.uv_tool_dir() / name / 'uv-receipt.toml').read_text())

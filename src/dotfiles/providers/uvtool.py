@@ -14,16 +14,11 @@ releases back that way. Pinning here writes the same receipt shape `<tool>
 update` writes, and both read the newest release from the same API, so the two
 cannot disagree about which release that is.
 
-`tracks_branch` is the declared exception: a repo publishing no releases has no
-tag to pin to.
-
 **A git install is held to the lock at that revision.** CI tests the lock, and
 `uv tool install` ignores it, so the revision is cloned first and its lock
 handed over as `uv_lock` describes. A revision with no `uv.lock` installs
 unconstrained, with a warning naming it. A clone or an export that fails
-refuses the install rather than installing unconstrained. A `tracks_branch`
-install reads the branch head a moment before uv clones it again, so a commit
-landing in between installs against the previous lock.
+refuses the install rather than installing unconstrained.
 
 **A repair that does not move the requirement needs `--reinstall`.** `uv tool
 install` is a no-op against an unchanged requirement, which is every PyPI entry
@@ -108,7 +103,7 @@ def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False)
     The fallback below it is the bare repo, and a tool installed that way has a
     dead `update` for the reason the module docstring records. Reaching that
     fallback on an unreadable API would spend a rate-limited minute on the one
-    outcome nothing afterwards can tell from a declared `tracks_branch`.
+    outcome nothing afterwards can tell from a repo that publishes no release.
 
     **Offline reaches this on every entry that pins**, because resolving a tag is
     the one thing here that leaves the machine. So the sentence carries the
@@ -138,8 +133,6 @@ def release_tag(entry: catalog.GitUvTool) -> str | None:
     install still works; it is the tool's own updater that will not, and saying
     so at install time is the only moment anyone would notice.
     """
-    if entry.tracks_branch:
-        return None
     tag = latest_release(entry.repo)
     if tag is None:
         warn(f'{entry.name}: no release found, installing from the default branch (its own update will refuse to run)')

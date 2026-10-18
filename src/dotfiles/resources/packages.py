@@ -533,15 +533,10 @@ def wanted_release(item: DesiredItem) -> releases.Wanted:
     if isinstance(entry, catalog.CargoPackage):
         return releases.Wanted(repo='', crate=entry.name)
     if isinstance(entry, catalog.GitUvTool):
-        # A `tracks_branch` repo publishes no release, so there is no tag it could
-        # be behind and no upstream to consult. Naming no repo is how that reaches
-        # `has_currency`, which already reads an empty one as "not a question this
-        # entry can be asked" — the same answer a Go tool declared by module path
-        # alone gets, rather than a second exception written beside it.
         # Through `repo_slug_of` because this section carries a clone URL where
         # every other one carries a bare `owner/name` — uv is handed the URL
         # verbatim at install time — and the cache keys on what the API path wants.
-        return releases.Wanted(repo='' if entry.tracks_branch else catalog.repo_slug_of(entry.repo), asks_lock=True)
+        return releases.Wanted(repo=catalog.repo_slug_of(entry.repo), asks_lock=True)
     if isinstance(entry, catalog.UvTool) and entry.index_url:
         return releases.Wanted(repo='', python_project=python_index.project_url(entry.index_url, entry.name))
     return releases.Wanted(repo='')

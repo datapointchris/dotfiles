@@ -392,17 +392,6 @@ def test_a_git_uv_tool_with_a_cold_cache_is_unmeasured_not_current(
     assert [(change.item, change.verdict) for change in changes(live)] == [('uv-git/doit', Verdict.UNKNOWN)]
 
 
-def test_a_branch_tracking_tool_is_never_asked_about_currency(tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path) -> None:
-    """It publishes no release, so there is no tag it could be behind. An UNKNOWN
-    row on every plan for something unanswerable by construction is noise, not a
-    finding."""
-    declared = {'git_uv_tools': [{'name': 'doit', 'repo': 'https://github.com/datapointchris/doit.git', 'tracks_branch': True}]}
-    receipt(uv_tools, 'doit', UNPINNED)
-    live = session(tmp_path, declared, DECLARES_GIT_UV)
-
-    assert changes(live) == ()
-
-
 def holding(uv_tools: Path, tool: str, *distributions: str) -> None:
     """The tool's environment, holding these distributions the way uv lays one out."""
     for distribution in distributions:

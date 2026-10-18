@@ -34,9 +34,6 @@ RUFF = catalog.UvTool.from_mapping({'name': 'ruff'})
 OWN_INDEX = 'https://packages.example.com/simple/'
 INDEXED = dc.replace(catalog.UvTool.from_mapping({'name': 'refcheck', 'index': 'own'}), index_url=OWN_INDEX)
 SYNCER = catalog.GitUvTool.from_mapping({'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'})
-KEYMAP = catalog.GitUvTool.from_mapping(
-    {'name': 'keymap-align', 'repo': 'https://github.com/datapointchris/keymap-align.git', 'tracks_branch': True}
-)
 
 
 @pytest.fixture
@@ -325,20 +322,6 @@ def test_the_lock_is_read_at_the_tag_being_installed(uv, released, locked) -> No
     assert clone[:-1] == ('git', 'clone', '--quiet', '--depth', '1', '--branch', 'v6.0.0', 'https://github.com/datapointchris/syncer.git')
 
 
-def test_a_branch_tracking_tool_reads_the_lock_at_the_head(uv, released, locked) -> None:
-    """`tracks_branch` is declared rather than discovered, so the releases API is never asked."""
-    asked = released('v1.0.0')
-    locked(PINS)
-    reached = uv()
-
-    uvtool.install_git(KEYMAP, offline=False)
-
-    [clone] = clones(reached)
-    assert '--branch' not in clone
-    assert installs(reached)[0][-1] == 'https://github.com/datapointchris/keymap-align.git'
-    assert asked == []
-
-
 def test_a_locked_revision_hands_uv_its_constraints_and_overrides(uv, released, locked) -> None:
     released('v6.0.0')
     locked(PINS)
@@ -365,12 +348,11 @@ def test_a_revision_with_no_lock_installs_unconstrained_and_names_the_revision(u
     assert 'syncer: v6.0.0 has no uv.lock' in capsys.readouterr().err
 
 
-def test_a_clone_that_fails_refuses_rather_than_installing_unlocked(uv) -> None:
-    """Offline, on a branch-tracking tool, because that is the one install that
-    reaches the clone with no network: a pinned one has already refused on its tag."""
+def test_a_clone_that_fails_refuses_rather_than_installing_unlocked(uv, released) -> None:
+    released('v6.0.0')
     reached = uv(reachable=False, said='fatal: unable to access the repository')
 
-    result = uvtool.install_git(KEYMAP, offline=True)
+    result = uvtool.install_git(SYNCER, offline=True)
 
     assert not result.ok
     assert result.kind is Kind.DOWNLOAD_FAILED
