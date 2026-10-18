@@ -66,6 +66,10 @@ cmd-m = []     # disable minimize window
 # Terminal
 alt-enter = 'exec-and-forget open -na Ghostty'
 
+# Screenshot to the clipboard: region, then whole screen
+alt-shift-p = 'exec-and-forget screencapture -ic'
+alt-ctrl-p = 'exec-and-forget screencapture -c'
+
 # Focus navigation (vim-style)
 alt-h = 'focus left'
 alt-j = 'focus down'
