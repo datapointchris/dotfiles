@@ -82,7 +82,7 @@
     },
 
     "privacy": {
-        "icon-size": 18,
+        "icon-size": 16,
         "icon-spacing": 4,
         "transition-duration": 250,
         "modules": [
