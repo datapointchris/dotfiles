@@ -226,9 +226,10 @@ def available_sources() -> list[str]:
 
     A hand-listed enum is missing sections the day it is written, and misses every
     section added afterwards — which is the whole argument against writing one.
+    A bare section holds no packages, so it is no source.
     """
     declared = yaml.safe_load(paths.PACKAGES_FILE.read_text())
-    return sorted(declared)
+    return sorted(set(declared) - catalog.BARE_SECTIONS)
 
 
 def declared_entries() -> tuple[catalog.Entry, ...]:
