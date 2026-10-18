@@ -624,6 +624,40 @@ def test_a_release_behind_the_latest_is_stale(tmp_path: Path, fake_bin: Path, re
     assert [(change.item, change.verdict) for change in found] == [('ghrelease/lazygit', Verdict.STALE)]
 
 
+@pytest.mark.parametrize(
+    ('constraint', 'installed', 'upstream', 'expected'),
+    [
+        ({'min_version': '0.50'}, '0.45.0', {'jesseduffield/lazygit': 'v0.45.0'}, [(Verdict.STALE, Repair.BY_HAND, True)]),
+        (
+            {'max_version': '0.45'},
+            '0.45.0',
+            {'jesseduffield/lazygit<=0.45': 'v0.45.0', 'jesseduffield/lazygit': 'v0.46.0'},
+            [],
+        ),
+        ({'max_version': '0.45'}, '0.46.0', {'jesseduffield/lazygit<=0.45': 'v0.45.0'}, [(Verdict.STALE, Repair.AUTOMATIC, False)]),
+    ],
+    ids=['resolved-below-the-floor-is-an-issue', 'at-the-ceiling-is-current', 'above-the-ceiling-is-drift'],
+)
+def test_a_release_is_measured_against_its_floor_and_ceiling(
+    tmp_path: Path,
+    fake_bin: Path,
+    release_cache: Path,
+    constraint: dict[str, str],
+    installed: str,
+    upstream: dict[str, str],
+    expected: list[tuple[Verdict, Repair, bool]],
+) -> None:
+    """A floor no release meets is something `apply` cannot repair, so `check`
+    reports it. A ceiling is measured against the newest release under it, never
+    the latest, or a capped tool would read as behind on every run."""
+    released('lazygit', f'lazygit version {installed}')
+    cached(release_cache, upstream)
+    declared = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit', **constraint}]}
+    live = session(tmp_path, declared, DECLARES_LAZYGIT)
+
+    assert [(change.verdict, change.repair, change.declined) for change in changes(live)] == expected
+
+
 def test_a_release_at_the_latest_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     released('lazygit', 'lazygit version 0.45.0')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})

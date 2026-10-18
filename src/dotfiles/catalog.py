@@ -32,6 +32,7 @@ import yaml
 
 from dotfiles import coordinates as axes
 from dotfiles import paths
+from dotfiles import versions
 from dotfiles.refusal import Refusal
 
 
@@ -99,18 +100,6 @@ UV_INDEXES = 'uv_indexes'
 """The `packages.yml` key mapping an index name to its URL. A declaration beside the sections, not one of them."""
 
 CONSTRAINTS = ('version', 'min_version', 'max_version')
-
-GRANDFATHERED_CONSTRAINTS = frozenset(
-    {
-        ('github_releases', 'neovim', 'min_version'),
-        ('github_releases', 'fzf', 'min_version'),
-        # The Go installer fetches whatever go.dev currently offers, so no floor applies.
-        ('runtimes', 'go', 'min_version'),
-    }
-)
-"""Floors that predate enforcement. All are satisfied, so they mislead nobody, and
-naming them keeps the information alive for the resolver instead of deleting it to
-silence a check."""
 
 CHECKSUM_REQUIRED = 'required'
 CHECKSUM_UNPUBLISHED = 'unpublished'
@@ -391,7 +380,7 @@ class Entry:
         declared = [key for key in CONSTRAINTS if getattr(self, key)]
 
         for key in declared:
-            if key not in self.honored_constraints and (self.section, self.name, key) not in GRANDFATHERED_CONSTRAINTS:
+            if key not in self.honored_constraints:
                 found.append(
                     f"declares '{key}', which nothing honors for {self.section}. Remove it, or make it real and "
                     f'widen honored_constraints on the same class in the same change.'
@@ -404,6 +393,9 @@ class Entry:
 
         if self.version and (self.min_version or self.max_version):
             found.append("declares 'version', which pins exactly, beside a floor or ceiling describing a window nobody can predict")
+
+        if self.min_version and self.max_version and versions.exceeds(self.min_version, self.max_version):
+            found.append(f"declares 'min_version' {self.min_version} above 'max_version' {self.max_version}, so no release satisfies both")
 
         if self.version_source not in VERSION_SOURCES:
             found.append(f"declares 'version_source' as {self.version_source!r}, which is not one of {', '.join(sorted(VERSION_SOURCES))}")
@@ -496,7 +488,7 @@ class GithubRelease(Entry):
     """
 
     section: ClassVar[str] = 'github_releases'
-    honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
+    honored_constraints: ClassVar[tuple[str, ...]] = CONSTRAINTS
 
     repo: str
     binary_link: str = ''
@@ -820,11 +812,21 @@ class YaziPlugin(Entry):
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class Runtime(Entry):
-    """A language runtime, installed by its own version manager."""
+    """A language runtime, installed by its own version manager.
+
+    `version` and `min_version` are both read as a floor by
+    `resources/toolchains.py`, where an installed runtime below it is drift. Each
+    installer brings the newest release its manager offers, which meets any floor
+    upstream has reached, so an apply repairs it.
+
+    `max_version` is refused here. A ceiling is a choice of release, and none of
+    these installers takes one: go.dev's tarball and rustup install what is
+    current, and uv follows the release its pre-commit hook pins.
+    """
 
     section: ClassVar[str] = 'runtimes'
     structure: ClassVar[Structure] = Structure.KEYED
-    honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
+    honored_constraints: ClassVar[tuple[str, ...]] = ('version', 'min_version')
 
     install_method: str
     repo: str = ''

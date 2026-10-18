@@ -437,8 +437,8 @@ def release_assets(repo: str, tag: str) -> dict[str, int] | None:
     return {asset['name']: asset['id'] for asset in payload.get('assets', [])}
 
 
-def latest_version(repo: str, tag_prefix: str = '') -> str | None:
-    """The newest release tag, or the newest one under `tag_prefix`.
+def latest_version(repo: str, tag_prefix: str = '', ceiling: str = '') -> str | None:
+    """The newest release tag, or the newest one under `tag_prefix`, at or below `ceiling`.
 
     A prefix is not a nicety: four of the declared releases are CLIs living in a
     monorepo that also releases an API and a web app, so `releases/latest` there
@@ -463,24 +463,34 @@ def latest_version(repo: str, tag_prefix: str = '') -> str | None:
     `newest_version`, which keeps the two apart in its own `Newest`.
 
     **A 404 is None on the unprefixed endpoint and `Unreadable` on the other**,
-    for the reason `NOT_FOUND` states. `version_url` routes a prefix to the
-    listing endpoint, which answers `200 []` for a repo publishing nothing — so a
-    404 there is a repo that cannot be read, and five declared entries take that
-    path.
+    for the reason `NOT_FOUND` states. `version_url` routes a prefix or a ceiling
+    to the listing endpoint, which answers `200 []` for a repo publishing nothing —
+    so a 404 there is a repo that cannot be read, and five declared entries take
+    that path.
     """
     said = f'could not read the releases of {repo}, so its published versions are unknown'
     try:
-        payload = json.loads(request(version_url(repo, tag_prefix)))
+        payload = json.loads(request(version_url(repo, tag_prefix, ceiling)))
     except httpx2.HTTPStatusError as refused:
-        if refused.response.status_code == NOT_FOUND and not tag_prefix:
+        if refused.response.status_code == NOT_FOUND and not lists_releases(tag_prefix, ceiling):
             return None
         raise Unreadable.because(said, refused) from refused
     except (httpx2.HTTPError, json.JSONDecodeError) as unreachable:
         raise Unreadable.because(said, unreachable) from unreachable
-    return version_from(payload, tag_prefix)
+    return version_from(payload, tag_prefix, ceiling)
 
 
-def version_url(repo: str, tag_prefix: str) -> str:
+def lists_releases(tag_prefix: str, ceiling: str) -> bool:
+    """Whether the answer has to be chosen from the release listing.
+
+    `releases/latest` names one release and cannot be narrowed. A prefix needs the
+    listing to find this component's tags, and a ceiling needs it to find the
+    newest release that is not the latest.
+    """
+    return bool(tag_prefix or ceiling)
+
+
+def version_url(repo: str, tag_prefix: str, ceiling: str = '') -> str:
     """Which endpoint holds this repo's newest version.
 
     Shared by the unconditional and the revalidating lookup, because choosing the
@@ -488,13 +498,13 @@ def version_url(repo: str, tag_prefix: str) -> str:
     component shipped last, which is a version for the wrong project rather than an
     error anything could catch.
     """
-    if tag_prefix:
+    if lists_releases(tag_prefix, ceiling):
         return f'https://api.github.com/repos/{repo}/releases?per_page=100'
     return f'https://api.github.com/repos/{repo}/releases/latest'
 
 
-def version_from(payload: object, tag_prefix: str) -> str | None:
-    """The newest tag in a decoded payload, ranked by `version_key` where a prefix narrows it.
+def version_from(payload: object, tag_prefix: str, ceiling: str = '') -> str | None:
+    """The newest tag in a decoded payload, ranked by `version_key` where the listing is read.
 
     **Pre-releases are excluded, which the unprefixed sibling gets for free.**
     `/releases/latest` never returns one; this reads `/releases`, which returns
@@ -503,13 +513,20 @@ def version_from(payload: object, tag_prefix: str) -> str | None:
     so a machine would be told it was behind, and an install would put a release
     candidate on it. Pre-releases are excluded by default everywhere, and the two
     endpoints agreeing is the point.
+
+    **A ceiling keeps a tag only where `versions.at_least` says the ceiling meets
+    it.** That answers None for a tag holding no version, so a tag like `nightly`
+    is dropped rather than read as being under every ceiling. The listing holds the
+    newest hundred releases, so a ceiling older than all of them resolves to None.
     """
-    if not tag_prefix:
+    if not lists_releases(tag_prefix, ceiling):
         return payload.get('tag_name') if isinstance(payload, dict) else None
     if not isinstance(payload, list):
         return None
     published = [release for release in payload if not release.get('draft') and not release.get('prerelease')]
     candidates = [tag for release in published if (tag := release.get('tag_name') or '').startswith(tag_prefix)]
+    if ceiling:
+        candidates = [tag for tag in candidates if versions.at_least(ceiling, tag.removeprefix(tag_prefix)) is True]
     if not candidates:
         return None
     return max(candidates, key=lambda tag: version_key(tag, tag_prefix))
@@ -534,14 +551,14 @@ class Newest:
     unchanged: bool = False
 
 
-def newest_version(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
+def newest_version(repo: str, tag_prefix: str = '', etag: str = '', ceiling: str = '') -> Newest:
     """`latest_version`, plus the `ETag` that makes asking again cheap.
 
-    The endpoint is chosen by the prefix for the reason `latest_version` states,
-    and both of them revalidate: a monorepo's `releases?per_page=100` is the larger
-    payload and therefore the one a 304 saves most.
+    The endpoint is chosen by the prefix and the ceiling for the reason
+    `latest_version` states, and both of them revalidate: `releases?per_page=100`
+    is the larger payload and therefore the one a 304 saves most.
     """
-    answer = revalidated(version_url(repo, tag_prefix), etag)
+    answer = revalidated(version_url(repo, tag_prefix, ceiling), etag)
     if answer is None:
         return Newest()
     if answer.payload is None:
@@ -550,7 +567,7 @@ def newest_version(repo: str, tag_prefix: str = '', etag: str = '') -> Newest:
         payload = json.loads(answer.payload)
     except json.JSONDecodeError:
         return Newest()
-    return Newest(version=version_from(payload, tag_prefix), etag=answer.etag)
+    return Newest(version=version_from(payload, tag_prefix, ceiling), etag=answer.etag)
 
 
 def revalidated(url: str, etag: str) -> Conditional | None:

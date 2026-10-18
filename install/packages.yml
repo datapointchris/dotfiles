@@ -825,10 +825,12 @@ runtimes:
 # from data would mean the URL vocabulary living here too; that trade is the
 # rejected alternative in docs/architecture/github-releases.md.
 #
-# Latest is the default. An entry pins itself with `version:` — a bare version,
-# never a tag, because the same release is spelled v0.56.0 here and cli/v0.9.0
-# by the personal CLIs. A section honors a pin where its entry class lists `version`
-# in `honored_constraints`; `dotfiles machines check` rejects one written anywhere else. Vocabulary and the
+# Latest is the default. An entry pins itself with `version:`, caps itself with
+# `max_version:`, or sets a floor with `min_version:` — each a bare version, never
+# a tag, because the same release is spelled v0.56.0 here and cli/v0.9.0 by the
+# personal CLIs. A section honors a constraint where its entry class lists it in
+# `honored_constraints`; `dotfiles machines check` rejects one written anywhere
+# else. Vocabulary and the
 # reasoning: docs/architecture/package-management.md, "Version constraints".
 #
 # A verified checksum is the default, so a release that cannot supply one says so

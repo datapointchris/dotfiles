@@ -529,7 +529,13 @@ def wanted_release(item: DesiredItem) -> releases.Wanted:
     if isinstance(entry, catalog.GithubRelease | catalog.CustomInstaller):
         from_tags = entry.version_source == catalog.VERSION_FROM_TAGS
         vendor_file = custom.version_file(entry) if isinstance(entry, catalog.CustomInstaller) else ''
-        return releases.Wanted(repo=entry.repo, tag_prefix=entry.release_tag_prefix, from_tags=from_tags, version_file=vendor_file)
+        return releases.Wanted(
+            repo=entry.repo,
+            tag_prefix=entry.release_tag_prefix,
+            from_tags=from_tags,
+            version_file=vendor_file,
+            ceiling=entry.max_version,
+        )
     if isinstance(entry, catalog.GoTool):
         return releases.Wanted(repo=entry.github_repo)
     if isinstance(entry, catalog.CargoPackage):
@@ -601,7 +607,9 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     Two different questions wearing one verb. A `version:` pin is answerable with
     no network at all — the declaration names the release — so a pinned tool stays
     checkable on a machine that has never reached GitHub. Everything else means
-    "latest", and latest is a fact only upstream holds.
+    "latest", or the newest at or below a `max_version`, and either is a fact only
+    upstream holds. An installed version above the ceiling needs no upstream to be
+    called drift, so that comparison runs whatever the cache holds.
 
     An answer that could not be measured is `UNKNOWN` with the reason, never a
     quiet `MATCHED`: a tool nobody could ask about is not a tool known to be
@@ -649,11 +657,24 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
             ),
         )
 
-    pinned = item.entry.version if item.entry is not None and 'version' in item.entry.honored_constraints else ''
+    entry = item.entry
+    honored = entry.honored_constraints if entry is not None else ()
+    pinned = entry.version if entry is not None and 'version' in honored else ''
     if pinned:
         return compared(item, reported, pinned, versions.exactly(reported, pinned), f'pinned to {pinned}', observed.met)
 
     cached = releases.current(wanted_release(item), observed.latest, dt.datetime.now(dt.UTC))
+    # The floor is read before the ceiling and the ahead-of rule, because both of
+    # those plan an install of `cached`, and installing a release below the floor
+    # is no repair.
+    floor = entry.min_version if entry is not None and 'min_version' in honored else ''
+    if cached is not None and floor and versions.at_least(cached.version, floor) is False:
+        return (below_floor(item, reported, cached.version, floor, observed),)
+
+    ceiling = entry.max_version if entry is not None and 'max_version' in honored else ''
+    if ceiling and versions.exceeds(reported, ceiling):
+        return compared(item, reported, ceiling, False, f'above the declared max_version {ceiling}', observed.met)
+
     if cached is None:
         return (
             Change(
@@ -702,6 +723,30 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
             ),
         )
     return compared(item, reported, cached.version, current, behind(cached.version, observed, item), observed.met)
+
+
+def below_floor(item: DesiredItem, reported: str, resolved: str, floor: str, observed: Observed) -> Change:
+    """The release an apply would install is below the declared `min_version`.
+
+    An Issue rather than drift, so `BY_HAND`. Drift is what `apply` repairs, and
+    `apply` can only install what resolves, so no run of it meets the floor. The
+    remedy is a declaration edit or an upstream release.
+
+    An installed version below the floor while the resolved one meets it is not
+    this. That is ordinary drift, and the comparison against `cached` that follows
+    already plans the upgrade.
+    """
+    return Change(
+        NAME,
+        item.stage,
+        item.address,
+        Verdict.STALE,
+        repair=Repair.BY_HAND,
+        detail=f'{behind(resolved, observed, item)}, below the declared min_version {floor}',
+        advice=f'no release apply can install meets it; lower min_version for {item.name} in install/packages.yml, or wait for a release',
+        desired=item,
+        observed=reported,
+    )
 
 
 def installed_elsewhere(item: DesiredItem, observed: Observed) -> Change | None:
@@ -805,6 +850,8 @@ def newest_upstream(item: DesiredItem) -> str:
         return f'the newest {crate} on crates.io'
     if isinstance(item.entry, catalog.UvTool) and item.entry.index:
         return f'the newest {item.name} on the {item.entry.index} index'
+    if isinstance(item.entry, catalog.GithubRelease) and item.entry.max_version:
+        return f'the newest release at or below max_version {item.entry.max_version}'
     return 'the latest release'
 
 
