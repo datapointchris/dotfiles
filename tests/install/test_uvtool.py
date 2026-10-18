@@ -14,6 +14,7 @@ only uv can say what that argv installs.
 from __future__ import annotations
 
 import base64
+import dataclasses as dc
 import hashlib
 import os
 import subprocess
@@ -24,11 +25,14 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles import github_release
+from dotfiles import python_index
 from dotfiles import uv_lock
 from dotfiles.providers import Kind
 from dotfiles.providers import uvtool
 
 RUFF = catalog.UvTool.from_mapping({'name': 'ruff'})
+OWN_INDEX = 'https://packages.example.com/simple/'
+INDEXED = dc.replace(catalog.UvTool.from_mapping({'name': 'refcheck', 'index': 'own'}), index_url=OWN_INDEX)
 SYNCER = catalog.GitUvTool.from_mapping({'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'})
 KEYMAP = catalog.GitUvTool.from_mapping(
     {'name': 'keymap-align', 'repo': 'https://github.com/datapointchris/keymap-align.git', 'tracks_branch': True}
@@ -154,6 +158,22 @@ def test_offline_still_tries_pypi_and_says_there_is_no_fallback(uv) -> None:
     assert reached.calls == [('uv', 'tool', 'install', 'ruff')]
     assert result.kind is Kind.COMMAND_FAILED
     assert 'stages no Python tools' in result.detail
+
+
+@pytest.mark.parametrize('listed', [True, False])
+def test_an_index_tool_installs_from_its_index_only_where_the_index_lists_it(uv, monkeypatch, listed: bool) -> None:
+    """uv asks the named index first and quietly takes PyPI's project where the index has none."""
+    monkeypatch.setattr(python_index, 'lists', lambda page: listed)
+    reached = uv()
+
+    result = uvtool.install(INDEXED, offline=False)
+
+    if listed:
+        assert reached.calls == [('uv', 'tool', 'install', '--index', f'own={OWN_INDEX}', 'refcheck')]
+    else:
+        assert installs(reached) == []
+        assert result.kind is Kind.DECLARATION_INVALID
+        assert 'would install the refcheck on PyPI' in result.detail
 
 
 # ─────────────────────────────────────────────────────────────────────────────

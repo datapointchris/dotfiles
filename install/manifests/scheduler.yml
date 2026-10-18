@@ -32,8 +32,6 @@ go_tools:
   - golangci-lint
 
 git_uv_tools:
-  - doit      # the usage-digest job runs `doit kit digest run` on this box
-  - syncer    # `fleet audit run` fast-forwards every checkout through it
   - claude-code-metrics  # `ccm`, for the weekly scan and friction-check jobs on this box
   - homelab   # the scheduled CI-runner upgrade applies through it as this box's service client, from service.env
 
@@ -62,6 +60,8 @@ cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta]
 npm_globals: []
 uv_tools:
   - pre-commit  # runs a repo's commit hooks when the fix job commits there
+  - doit        # the usage-digest job runs `doit kit digest run` on this box
+  - syncer      # `fleet audit run` fast-forwards every checkout through it
 
 shell_plugins: true
 tmux_plugins: true

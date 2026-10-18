@@ -116,12 +116,18 @@ and only the binary is symlinked onto PATH, which keeps the relative path intact
 
 ## Currency is asked only of the tools that can answer it
 
-**Go, cargo, release and custom-installer entries carry currency; npm and uv do
-not.** That is not an inconsistency to even up. `go install @latest` and
+**Go, cargo, release, custom-installer and git uv entries carry currency; npm and
+PyPI do not.** That is not an inconsistency to even up. `go install @latest` and
 `cargo binstall` *are* the upgrade and nothing else moves them, so being behind
 the repo the declaration names is drift `plan` reports. npm and PyPI decide what
 latest means and upgrade in bulk, so asking per package is asking their own
 question back.
+
+**A uv tool naming an index is measured against that index.** The index is one
+these tools publish to, so no registry above it decides when they move. Its
+project page lists every file with its version, and the newest final release is
+the answer. A receipt naming a different source reads as stale, so a machine
+still holding a git install of the tool is moved onto the index.
 
 **A cargo package is measured against crates.io, not its repo.** The registry is
 what `cargo binstall` resolves from, and it trails any project that tags ahead of

@@ -33,6 +33,7 @@ from pathlib import Path
 from dotfiles import crates_io
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles import python_index
 from dotfiles import uv_lock
 from dotfiles.output import hint
 from dotfiles.output import warn
@@ -103,8 +104,8 @@ class Cached:
 @dc.dataclass(frozen=True, slots=True)
 class Wanted:
     """A repo to ask about, the tag prefix that narrows the answer, and which
-    endpoint holds it — or a vendor's own file or a crate, for a tool whose repo
-    is not what its installer reads."""
+    endpoint holds it — or a vendor's own file, a crate or a package index page,
+    for a tool whose repo is not what its installer reads."""
 
     repo: str
     tag_prefix: str = ''
@@ -132,6 +133,9 @@ class Wanted:
     crate: str = ''
     """A crates.io crate, asked instead of any repo. `crates_io` says why a cargo package is measured there."""
 
+    python_project: str = ''
+    """A project's page on a Python package index, asked instead of any repo, for a uv tool that installs from one."""
+
     @property
     def key(self) -> str:
         """What the cache is keyed on.
@@ -141,6 +145,8 @@ class Wanted:
         """
         if self.version_file:
             return self.version_file
+        if self.python_project:
+            return self.python_project
         if self.crate:
             return crates_io.index_url(self.crate)
         return f'{self.repo}#{self.tag_prefix}' if self.tag_prefix else self.repo
@@ -278,6 +284,8 @@ def newest(wanted: Wanted, previous: Cached | None = None) -> github_release.New
         return github_release.newest_in_version_file(wanted.version_file, etag)
     if wanted.crate:
         return crates_io.newest_version(wanted.crate, etag)
+    if wanted.python_project:
+        return python_index.newest_version(wanted.python_project, etag)
     if wanted.from_tags:
         return github_release.newest_tag(wanted.repo, wanted.tag_prefix, etag)
     return github_release.newest_version(wanted.repo, wanted.tag_prefix, etag)

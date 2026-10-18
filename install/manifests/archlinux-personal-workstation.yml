@@ -102,22 +102,22 @@ uv_tools:
   - pre-commit
   - git-filter-repo
   - tldr
-
-git_uv_tools:
   - doit
   - refcheck
   - syncer
   - keymap-align
   - indy
-  - digest
   - logsift
   - dectl
   - safekeep
   - typos
-  - homelab
-  - claude-code-metrics
   - runthrough
   - git-graph
+
+git_uv_tools:
+  - digest
+  - homelab
+  - claude-code-metrics
 
 shell_plugins: true
 tmux_plugins: true

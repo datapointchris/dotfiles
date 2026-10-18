@@ -79,13 +79,26 @@ UNREAD_KEYS: dict[str, str] = {
     'install_script': 'the installer is found by name at install/common/<dir>/<name>.sh',
     'build_method': 'nothing branches on how upstream builds its release',
     'source_type': 'how a custom installer distributes itself is its function in providers/custom.py, not a word here',
+    'index_url': 'name the index with index, and declare its URL once under uv_indexes',
 }
-"""Keys that were carried for long enough to look like configuration.
+"""Keys a row may not write that look like configuration, each with what to write instead.
 
 An unknown key is an error either way; these get the reason attached, because
-"unknown key" tells a reader what happened and not what to do instead. Each one
-here was measured as read by nothing before it was removed.
+"unknown key" tells a reader what happened and not what to do instead. Most were
+measured as read by nothing before they were removed. `index_url` is the other
+kind: a field `load` resolves, which a row writing it would go around.
 """
+
+RESOLVED_BY_LOAD = 'resolved_by_load'
+"""Field metadata marking a value `load` derives from another declaration.
+
+`from_mapping` leaves such a field out, so a row that writes it is refused as an
+unknown key rather than trusted. Resolving once at load is what lets every
+reader take the value off the entry without being handed the catalog.
+"""
+
+UV_INDEXES = 'uv_indexes'
+"""The `packages.yml` key mapping an index name to its URL. A declaration beside the sections, not one of them."""
 
 CONSTRAINTS = ('version', 'min_version', 'max_version')
 
@@ -357,7 +370,7 @@ class Entry:
 
     @classmethod
     def from_mapping(cls, raw: Mapping[str, Any]) -> Self:
-        fields = {field.name: field for field in dc.fields(cls)}
+        fields = {field.name: field for field in dc.fields(cls) if not field.metadata.get(RESOLVED_BY_LOAD)}
 
         if unknown := sorted(set(raw) - set(fields)):
             named = ', '.join(f'{key} ({UNREAD_KEYS[key]})' if key in UNREAD_KEYS else key for key in unknown)
@@ -699,7 +712,7 @@ class NpmGlobal(Entry):
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class UvTool(Entry):
-    """A PyPI tool installed with `uv tool install`.
+    """A Python tool installed with `uv tool install`, from PyPI or from a declared index.
 
     `library_only` marks one pulled in for another tool's benefit — numpy for the
     Jupyter stack — which installs a directory and no console script, so nothing
@@ -710,6 +723,22 @@ class UvTool(Entry):
     structure: ClassVar[Structure] = Structure.GROUPED
 
     library_only: bool = False
+
+    index: str = ''
+    """The `uv_indexes` entry this tool installs from, or empty for PyPI.
+
+    A name rather than a URL, so the URL is declared once, and the name is what uv
+    records beside it in the tool's receipt. That receipt is what `uv tool upgrade`
+    and a tool's own `update` read the index back from, so nothing machine-wide
+    names it.
+
+    A name such an index holds is often a different project's on PyPI, and uv
+    falls through to PyPI on a name the first index lacks. `uvtool.install`
+    refuses a name the index does not list for that reason.
+    """
+
+    index_url: str = dc.field(default='', metadata={RESOLVED_BY_LOAD: True})
+    """The URL `index` names. `load` fills it in, and a declaration cannot set it."""
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1138,10 +1167,11 @@ SYSTEM_SECTIONS: dict[str, type[Entry]] = {cls.section: cls for cls in SYSTEM_SE
 
 ALL_SECTIONS: dict[str, type[Entry]] = {**SECTIONS, **SYSTEM_SECTIONS}
 
-BARE_SECTIONS = frozenset({'macos_taps'})
+BARE_SECTIONS = frozenset({'macos_taps', UV_INDEXES})
 """Sections holding bare strings, so there is no row to carry a field or a
-constraint. `macos_taps` is the only one, and a dataclass for it would validate
-nothing."""
+constraint. `macos_taps` is a list of tap names, and `uv_indexes` maps an index
+name to its URL, which `uv_indexes()` checks. A dataclass for either would
+validate nothing more."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -1154,6 +1184,7 @@ class Catalog:
 
     entries: Mapping[str, tuple[Entry, ...]]
     macos_taps: tuple[str, ...]
+    uv_indexes: Mapping[str, str]
     source: Path
     system_source: Path
 
@@ -1225,6 +1256,11 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
         entries[section] = rows
         issues.extend(section_issues)
 
+    indexes, index_issues = uv_indexes(declared[source].get(UV_INDEXES))
+    issues.extend(index_issues)
+    entries[UvTool.section], unresolved = with_index_urls(entries[UvTool.section], indexes)
+    issues.extend(unresolved)
+
     for file, raw in declared.items():
         known = set(SYSTEM_SECTIONS) if file == system_source else set(SECTIONS) | BARE_SECTIONS
         for unknown in sorted(set(raw) - known):
@@ -1237,9 +1273,41 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
     return Catalog(
         entries=entries,
         macos_taps=tuple(declared[source].get('macos_taps') or ()),
+        uv_indexes=indexes,
         source=source,
         system_source=system_source,
     )
+
+
+def uv_indexes(declared: Any) -> tuple[dict[str, str], list[DeclarationIssue]]:
+    """Each declared index name and its URL, plus everything wrong with them."""
+    if declared is None:
+        return {}, []
+    if not isinstance(declared, Mapping):
+        return {}, [DeclarationIssue(UV_INDEXES, f'is a {type(declared).__name__} where a mapping of name to URL is expected')]
+    indexes, issues = {}, []
+    for name, url in declared.items():
+        if not isinstance(url, str) or not url.startswith(('https://', 'http://')):
+            issues.append(DeclarationIssue(UV_INDEXES, f'{name} is {url!r}, which is not an http(s) URL'))
+            continue
+        indexes[str(name)] = url
+    return indexes, issues
+
+
+def with_index_urls(rows: tuple[Entry, ...], indexes: Mapping[str, str]) -> tuple[tuple[Entry, ...], list[DeclarationIssue]]:
+    """`uv_tools` with each named index's URL filled in, and a refusal for each name nothing declares."""
+    resolved: list[Entry] = []
+    issues: list[DeclarationIssue] = []
+    for row in rows:
+        if isinstance(row, UvTool) and row.index:
+            if row.index not in indexes:
+                issues.append(
+                    DeclarationIssue(UvTool.section, f'{row.name} names the index {row.index!r}, which {UV_INDEXES} does not declare')
+                )
+            else:
+                row = dc.replace(row, index_url=indexes[row.index])
+        resolved.append(row)
+    return tuple(resolved), issues
 
 
 def raw_sections(path: Path) -> dict[str, Any]:

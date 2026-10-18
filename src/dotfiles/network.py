@@ -345,11 +345,18 @@ def registry_probes(plan: planning.Plan) -> tuple[Probe, ...]:
     `git_uv_tools` and `uv_tools` both reach pypi.org, so the same URL can be
     claimed twice; the first claim wins and the second is dropped, because two
     identical rows measure one thing and report it as two.
+
+    An index a `uv_tools` row names is a registry too, probed at its own root.
+    A tool's page would read an unlisted tool as a block. pypi.org stays probed
+    beside it, because a tool's dependencies still resolve there.
     """
     found: dict[str, Probe] = {}
     for kind, name, url in REGISTRY_PROBES:
         if entries(plan, kind) and url not in found:
             found[url] = Probe('registry', name, url)
+    for entry in entries(plan, catalog.UvTool):
+        if entry.index_url and entry.index_url not in found:
+            found[entry.index_url] = Probe('registry', f'{entry.index} index', entry.index_url)
     return tuple(found.values())
 
 

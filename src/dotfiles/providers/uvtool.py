@@ -48,6 +48,7 @@ from pathlib import Path
 from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import github_release
+from dotfiles import python_index
 from dotfiles import uv_lock
 from dotfiles.effects import Output
 from dotfiles.output import warn
@@ -66,14 +67,39 @@ as though it were a repo.
 
 
 def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Result:
-    """One PyPI tool.
+    """One tool, from PyPI or from the index the entry names.
 
     Offline is not refused: the bundle stages wheels for this CLI's own closure
     and nothing else, while the machine that installs offline declares six uv
     tools — so refusing would install none of them on the box the offline path
     exists for.
+
+    **An index install is refused where the index does not list the name.** uv
+    asks the named index first and falls through to PyPI on a name it lacks,
+    without a word. Most names such an index holds are a different project's on
+    PyPI, so that fall-through installs a stranger's package under the tool's
+    name. An index that could not be read is refused for the same reason.
+
+    The index goes on this one command, never machine-wide. uv records it in the
+    tool's receipt, which is where `uv tool upgrade` and a tool's own `update`
+    read it back.
     """
-    return uv_tool_install(entry.name, entry.name, offline=offline, again=again)
+    if not entry.index_url:
+        return uv_tool_install(entry.name, entry.name, offline=offline, again=again)
+
+    page = python_index.project_url(entry.index_url, entry.name)
+    try:
+        listed = python_index.lists(page)
+    except github_release.Unreadable as unreadable:
+        stranded = ', and the offline bundle stages no Python tools to fall back on' if offline else ''
+        return Result(False, f'{entry.name}: {unreadable}{stranded}', kind=unreadable_kind(unreadable.reached))
+    if not listed:
+        return Result(
+            False,
+            f'{entry.name}: the {entry.index} index lists no release at {page}, so uv would install the {entry.name} on PyPI instead',
+            kind=Kind.DECLARATION_INVALID,
+        )
+    return uv_tool_install(entry.name, entry.name, offline=offline, again=again, index=(entry.index, entry.index_url))
 
 
 def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False) -> Result:
@@ -174,7 +200,15 @@ def latest_release(repo: str) -> str | None:
     return github_release.latest_version(found.group(1)) if found else None
 
 
-def uv_tool_install(name: str, target: str, *, offline: bool, again: bool, held: Sequence[str] = ()) -> Result:
+def uv_tool_install(
+    name: str,
+    target: str,
+    *,
+    offline: bool,
+    again: bool,
+    held: Sequence[str] = (),
+    index: tuple[str, str] | None = None,
+) -> Result:
     """`again` is what makes a repair of an already-present tool do anything.
 
     uv compares the requirement against its receipt and exits 0 printing
@@ -183,11 +217,14 @@ def uv_tool_install(name: str, target: str, *, offline: bool, again: bool, held:
     record DONE having installed nothing.
 
     `held` is the flags `uv_lock.Pins.arguments` returns, empty where nothing is locked.
+    `index` is a declared index's name and URL, which uv asks before PyPI.
     """
-    command = ['uv', 'tool', 'install', *(['--reinstall'] if again else []), *held, target]
+    sources = ['--index', f'{index[0]}={index[1]}'] if index else []
+    command = ['uv', 'tool', 'install', *(['--reinstall'] if again else []), *sources, *held, target]
     completed = effects.run(command, output=Output.QUIET)
     if completed.ok:
-        return Result(True, f'{name} installed from {target}{", held to its uv.lock" if held else ""}', kind=Kind.APPLIED)
+        origin = f'the {index[0]} index' if index else target
+        return Result(True, f'{name} installed from {origin}{", held to its uv.lock" if held else ""}', kind=Kind.APPLIED)
 
     unreachable = ', and the offline bundle stages no Python tools to fall back on' if offline else ''
     return Result(
