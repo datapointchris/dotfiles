@@ -11,8 +11,9 @@
 @import "opacity/current.css";
 
 * {
-    /* font-family set via @import "fonts/current.css" */
-    font-size: 16px;
+    /* For 0.74em-tall digits. fonts/current.css sets the family and a -gtk-dpi
+       that scales pt to its digit height, so px would ignore it. */
+    font-size: 10.75pt;
     border: none;
     border-radius: 0;
     min-height: 0;

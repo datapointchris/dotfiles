@@ -34,7 +34,9 @@
     idle_threshold = 120
 
     # Text
-    # Font managed by drop-in: dunstrc.d/99-font.conf
+    # The size is for 0.74em-tall digits. `font` reads it from here and writes
+    # this family scaled to its own digit height into dunstrc.d/99-font.conf.
+    font = monospace 10
     line_height = 0
     markup = full
     format = "<b>%s</b>\n%b"
