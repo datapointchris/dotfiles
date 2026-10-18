@@ -100,6 +100,14 @@ def test_a_pypi_tool_is_installed_by_name(uv) -> None:
     assert reached.calls == [('uv', 'tool', 'install', 'ruff')]
 
 
+def test_a_pinned_tool_is_installed_at_its_version(uv) -> None:
+    reached = uv()
+
+    uvtool.install(catalog.UvTool.from_mapping({'name': 'ruff', 'version': '0.6.0'}), offline=False)
+
+    assert reached.calls == [('uv', 'tool', 'install', 'ruff==0.6.0')]
+
+
 def test_a_repair_that_would_not_move_the_requirement_forces_the_install(uv) -> None:
     """`uv tool install ruff` against an installed ruff prints "already installed"
     and exits 0, which this reads as success — so a repair recorded DONE having

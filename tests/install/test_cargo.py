@@ -163,6 +163,15 @@ def test_a_reinstall_forces_past_a_binary_cargo_owns(home, staged, ready, crates
     assert reached.calls == [('cargo', 'binstall', '-y', '--force', 'fd-find')]
 
 
+def test_a_pinned_crate_is_installed_at_its_version(home, staged, ready, crates) -> None:
+    reached = crates()
+
+    pinned = catalog.CargoPackage.from_mapping({'name': 'fd-find', 'command': 'fd', 'version': '10.2.0'})
+    cargo.install(pinned, LINUX, offline=False, floor='', reinstall=False)
+
+    assert reached.calls == [('cargo', 'binstall', '-y', 'fd-find@10.2.0')]
+
+
 def test_a_first_install_has_nothing_to_force_over(home, staged, ready, crates) -> None:
     reached = crates()
 

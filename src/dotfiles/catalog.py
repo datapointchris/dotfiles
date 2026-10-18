@@ -579,6 +579,7 @@ class CargoPackage(Entry):
     """
 
     section: ClassVar[str] = 'cargo_packages'
+    honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
     asset_fields: ClassVar[tuple[str, ...]] = ('github_repo', 'binary_pattern')
 
     github_repo: str = ''
@@ -685,6 +686,7 @@ class WingetPackage(Entry):
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class GoTool(Entry):
     section: ClassVar[str] = 'go_tools'
+    honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
     asset_fields: ClassVar[tuple[str, ...]] = ('github_repo', 'binary_pattern')
 
     package: str
@@ -711,6 +713,7 @@ class GoTool(Entry):
 class NpmGlobal(Entry):
     section: ClassVar[str] = 'npm_globals'
     structure: ClassVar[Structure] = Structure.GROUPED
+    honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -724,6 +727,7 @@ class UvTool(Entry):
 
     section: ClassVar[str] = 'uv_tools'
     structure: ClassVar[Structure] = Structure.GROUPED
+    honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
 
     library_only: bool = False
 

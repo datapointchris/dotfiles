@@ -852,16 +852,26 @@ def test_the_declared_source_decides_which_endpoint_is_asked(tmp_path: Path, fak
     assert packages.wanted_release(item) == releases.Wanted(repo='aws/aws-cli', from_tags=True)
 
 
-def test_a_pinned_release_is_checked_without_any_cache(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
+@pytest.mark.parametrize(
+    ('section', 'row', 'place', 'address'),
+    [
+        ('github_releases', {'name': 'lazygit', 'repo': 'jesseduffield/lazygit'}, released, 'ghrelease/lazygit'),
+        ('cargo_packages', {'name': 'lazygit', 'github_repo': 'jesseduffield/lazygit'}, cargo_installed, 'cargo/lazygit'),
+    ],
+    ids=['release', 'cargo'],
+)
+def test_a_pinned_tool_is_checked_without_any_cache(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, section: str, row: dict, place, address: str
+) -> None:
     """A pin names the release, so the declaration is the whole answer. This is
     what keeps a pinned tool checkable on a machine that never reaches GitHub."""
-    released('lazygit', 'lazygit version 0.44.0')
-    declared = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit', 'version': '0.45.0'}]}
-    live = session(tmp_path, declared, DECLARES_LAZYGIT)
+    place('lazygit', 'lazygit version 0.44.0')
+    declared = {section: [{**row, 'version': '0.45.0'}]}
+    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', section: ['lazygit']})
 
     found = changes(live)
 
-    assert [(change.item, change.verdict) for change in found] == [('ghrelease/lazygit', Verdict.STALE)]
+    assert [(change.item, change.verdict) for change in found] == [(address, Verdict.STALE)]
 
 
 def test_a_release_at_its_pin_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:

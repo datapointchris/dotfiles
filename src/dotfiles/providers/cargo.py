@@ -234,9 +234,14 @@ def from_binstall(entry: catalog.CargoPackage, target: Target, *, reinstall: boo
     takes — `docs/learnings/cargo-binstall-falls-back-to-compiling.md` is the
     account of why that is acceptable rather than a defect. Held quiet it cannot
     be told from a deadlock, and streamed the `Compiling` lines say it is moving.
+
+    A pinned entry is handed over as `crate@version`, binstall's own spelling for
+    one release. The `{ version }` in `release_override`'s URL is filled from the
+    version binstall resolved, so it names the pinned release too.
     """
     forced = ['--force'] if reinstall or placed_without_a_cargo_receipt(entry) else []
-    completed = effects.run(['cargo', 'binstall', '-y', *forced, *release_override(entry, target), entry.name])
+    crate = f'{entry.name}@{entry.version}' if entry.version else entry.name
+    completed = effects.run(['cargo', 'binstall', '-y', *forced, *release_override(entry, target), crate])
     if completed.ok:
         return Result(True, f'{entry.executable} installed by cargo binstall from {entry.name}', kind=Kind.APPLIED)
     return Result(
