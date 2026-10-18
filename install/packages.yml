@@ -1584,6 +1584,9 @@ uv_tools:
       command: keymap
       description: Generate keyboard layout diagrams
 
+    - name: keymap-align
+      description: Align ZMK keymap bindings into readable columns
+
     - name: numpy
       # Installed for other tools to import, and ships no entry point of its own,
       # so verification has no command to look for.
@@ -1616,10 +1619,6 @@ uv_tools:
     - name: syncer
       index: datapointchris
       description: Sync files and directories
-
-    - name: keymap-align
-      index: datapointchris
-      description: Align ZMK keymap bindings into readable columns
 
     - name: doit
       index: datapointchris
