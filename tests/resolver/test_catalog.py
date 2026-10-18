@@ -196,6 +196,12 @@ def test_a_section_no_reader_knows_is_refused(tmp_path: Path) -> None:
     assert_named(found, 'snap_packages: is not a section any reader knows')
 
 
+def test_a_uv_tool_naming_an_undeclared_index_is_refused(tmp_path: Path) -> None:
+    """Installed anyway, it would ask PyPI alone, which holds a stranger's project under most of these names."""
+    found = issues(tmp_path, {'uv_tools': {'self_published': [{'name': 'refcheck', 'index': 'own'}]}})
+    assert_named(found, "refcheck names the index 'own', which uv_indexes does not declare")
+
+
 def test_a_system_package_naming_no_manager_is_refused(tmp_path: Path) -> None:
     found = issues(tmp_path, {'system_packages': [{'name': 'git'}]})
     assert_named(found, 'names no package under any of apt, pacman, brew, aur')

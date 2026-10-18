@@ -406,6 +406,18 @@ def test_show_prints_every_field_the_entry_declares(
     assert described['installed'] == InstallStatus.NOT_INSTALLED.value
 
 
+def test_show_names_the_index_a_uv_tool_installs_from(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    point_at(
+        tmp_path / 'repo',
+        {'uv_indexes': {'own': 'https://index.example/simple/'}, 'uv_tools': {'self_published': [{'name': 'refcheck', 'index': 'own'}]}},
+        monkeypatch,
+    )
+
+    assert answered(capsys, 'show', 'refcheck')[0]['metadata'] == {'index': 'own', 'index_url': 'https://index.example/simple/'}
+
+
 EVERY_ROW: dict[str, Any] = {
     'go_tools': [
         {

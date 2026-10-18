@@ -46,14 +46,15 @@ with none of it, so an apply or a check that reaches for that data breaks there.
 
 ## Where things go
 
-**Four install patterns**, chosen by what a thing is, never by how large it grew:
+**Install patterns**, chosen by what a thing is, never by how large it grew:
 
 | Pattern | Declared in | Installer |
 | --- | --- | --- |
 | Go app | `packages.yml` `go_tools` | `providers/gotool.py` → `~/go/bin/` |
 | Script app | `apps/common/` or `apps/<axis>/<value>/` | symlinked flat to `~/.local/bin/` by `TREES` in `resources/symlinks.py` |
 | Personal CLI (theme, font) | a function in `providers/custom.py` | clone to `~/.local/share/<tool>/`, symlink the bin |
-| Python tool from git | `packages.yml` `git_uv_tools` **and** each machine's manifest | `providers/uvtool.py` |
+| Python tool on a package index | `packages.yml` `uv_tools`, with `index:` naming a `uv_indexes` key, **and** each machine's manifest | `providers/uvtool.py` |
+| Python tool from a private git repo | `packages.yml` `git_uv_tools` **and** each machine's manifest | `providers/uvtool.py` |
 
 An app that is part of the CLI's own surface becomes a module in `src/dotfiles/` with a
 `[project.scripts]` entry; a standalone tool stays in `apps/`. `prs` cannot move at all:

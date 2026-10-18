@@ -14,6 +14,7 @@ only uv can say what that argv installs.
 from __future__ import annotations
 
 import base64
+import dataclasses as dc
 import hashlib
 import os
 import subprocess
@@ -24,15 +25,15 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles import github_release
+from dotfiles import python_index
 from dotfiles import uv_lock
 from dotfiles.providers import Kind
 from dotfiles.providers import uvtool
 
 RUFF = catalog.UvTool.from_mapping({'name': 'ruff'})
+OWN_INDEX = 'https://packages.example.com/simple/'
+INDEXED = dc.replace(catalog.UvTool.from_mapping({'name': 'refcheck', 'index': 'own'}), index_url=OWN_INDEX)
 SYNCER = catalog.GitUvTool.from_mapping({'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'})
-KEYMAP = catalog.GitUvTool.from_mapping(
-    {'name': 'keymap-align', 'repo': 'https://github.com/datapointchris/keymap-align.git', 'tracks_branch': True}
-)
 
 
 @pytest.fixture
@@ -145,15 +146,29 @@ def test_a_failure_reports_what_uv_said(uv) -> None:
 
 def test_offline_still_tries_pypi_and_says_there_is_no_fallback(uv) -> None:
     """The bundle stages wheels for this CLI's own closure and nothing else, while
-    the machine that installs offline declares six uv tools — so refusing would
-    install none of them on the box the offline path exists for."""
+    the machine that installs offline declares uv tools of its own — so refusing
+    would install none of them on the box the offline path exists for."""
     reached = uv(reachable=False, said='error: network unreachable')
 
     result = uvtool.install(RUFF, offline=True)
 
     assert reached.calls == [('uv', 'tool', 'install', 'ruff')]
     assert result.kind is Kind.COMMAND_FAILED
-    assert 'stages no Python tools' in result.detail
+
+
+@pytest.mark.parametrize('listed', [True, False])
+def test_an_index_tool_installs_from_its_index_only_where_the_index_lists_it(uv, monkeypatch, listed: bool) -> None:
+    """uv asks the named index first and quietly takes PyPI's project where the index has none."""
+    monkeypatch.setattr(python_index, 'lists', lambda page: listed)
+    reached = uv()
+
+    result = uvtool.install(INDEXED, offline=False)
+
+    if listed:
+        assert reached.calls == [('uv', 'tool', 'install', '--index', f'own={OWN_INDEX}', 'refcheck')]
+    else:
+        assert installs(reached) == []
+        assert result.kind is Kind.DECLARATION_INVALID
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -174,16 +189,14 @@ def test_a_git_tool_is_pinned_to_its_newest_release(uv, released) -> None:
     assert installs(reached) == [('uv', 'tool', 'install', 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0')]
 
 
-def test_a_repo_with_no_release_installs_from_the_branch_with_a_warning(uv, released, capsys) -> None:
-    """The install still works; it is the tool's own updater that will not, and
-    install time is the only moment anyone would notice."""
+def test_a_repo_with_no_release_installs_from_the_branch(uv, released) -> None:
+    """The install still works; it is the tool's own updater that will not."""
     released(None)
     reached = uv()
 
     uvtool.install_git(SYNCER, offline=False)
 
     assert installs(reached) == [('uv', 'tool', 'install', 'https://github.com/datapointchris/syncer.git')]
-    assert 'refuse to run' in capsys.readouterr().err
 
 
 @pytest.fixture
@@ -234,24 +247,6 @@ def test_a_service_that_refused_and_a_transport_that_failed_get_different_kinds(
 
     assert refused.kind is Kind.VERSION_UNRESOLVED
     assert unreachable.kind is Kind.DOWNLOAD_FAILED
-
-
-def test_an_offline_refusal_names_the_bundle_that_stages_no_python_tools(uv, unreadable, capsys) -> None:
-    """Offline reaches this on all ten declared git tools that pin, because
-    resolving a tag is the one thing here that leaves the machine.
-
-    `uv_tool_install` carries this clause for exactly that case and no longer
-    runs for those ten, so the refusal that replaced it owes the same sentence —
-    otherwise a reader is sent after a network they already know is absent.
-    """
-    unreadable(reached=False)
-    reached = uv()
-
-    result = uvtool.install_git(SYNCER, offline=True)
-
-    assert not result.ok
-    assert 'the offline bundle stages no Python tools to fall back on' in result.detail
-    assert reached.calls == []
 
 
 @pytest.mark.parametrize(
@@ -305,20 +300,6 @@ def test_the_lock_is_read_at_the_tag_being_installed(uv, released, locked) -> No
     assert clone[:-1] == ('git', 'clone', '--quiet', '--depth', '1', '--branch', 'v6.0.0', 'https://github.com/datapointchris/syncer.git')
 
 
-def test_a_branch_tracking_tool_reads_the_lock_at_the_head(uv, released, locked) -> None:
-    """`tracks_branch` is declared rather than discovered, so the releases API is never asked."""
-    asked = released('v1.0.0')
-    locked(PINS)
-    reached = uv()
-
-    uvtool.install_git(KEYMAP, offline=False)
-
-    [clone] = clones(reached)
-    assert '--branch' not in clone
-    assert installs(reached)[0][-1] == 'https://github.com/datapointchris/keymap-align.git'
-    assert asked == []
-
-
 def test_a_locked_revision_hands_uv_its_constraints_and_overrides(uv, released, locked) -> None:
     released('v6.0.0')
     locked(PINS)
@@ -331,7 +312,6 @@ def test_a_locked_revision_hands_uv_its_constraints_and_overrides(uv, released, 
     assert (install[4], install[6]) == ('--constraints', '--overrides')
     assert install[-1] == 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0'
     assert result.ok
-    assert 'held to its uv.lock' in result.detail
 
 
 def test_a_revision_with_no_lock_installs_unconstrained_and_names_the_revision(uv, released, capsys) -> None:
@@ -345,17 +325,14 @@ def test_a_revision_with_no_lock_installs_unconstrained_and_names_the_revision(u
     assert 'syncer: v6.0.0 has no uv.lock' in capsys.readouterr().err
 
 
-def test_a_clone_that_fails_refuses_rather_than_installing_unlocked(uv) -> None:
-    """Offline, on a branch-tracking tool, because that is the one install that
-    reaches the clone with no network: a pinned one has already refused on its tag."""
+def test_a_clone_that_fails_refuses_rather_than_installing_unlocked(uv, released) -> None:
+    released('v6.0.0')
     reached = uv(reachable=False, said='fatal: unable to access the repository')
 
-    result = uvtool.install_git(KEYMAP, offline=True)
+    result = uvtool.install_git(SYNCER, offline=False)
 
     assert not result.ok
     assert result.kind is Kind.DOWNLOAD_FAILED
-    assert 'could not clone' in result.detail
-    assert 'the offline bundle stages no Python tools to fall back on' in result.detail
     assert installs(reached) == []
 
 

@@ -89,8 +89,6 @@ uv_tools:
   - pre-commit
   - git-filter-repo
   - tldr
-
-git_uv_tools:
   - doit
   - refcheck
   - syncer

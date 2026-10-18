@@ -54,16 +54,26 @@ GitHub. Run `theme update` or `font update` to pull updates to the installed ver
 
 ### 4. Python Tools (Remote Install via `uv tool install`)
 
-**Examples**: `digest`, `logsift`, `indy`, `refcheck`, `syncer`, `safekeep`
+**Examples**: `logsift`, `indy`, `refcheck`, `syncer`, `safekeep` from the index; `digest`
+from git
 
-**Installation**: declared in `install/packages.yml` under `git_uv_tools` and installed
-with `uv tool install`, pinned to the repo's newest release tag and held to that tag's
-`uv.lock`. Why the pin is not optional, why the lock is cloned and handed over, and what
-`tracks_branch` declares, are the module docstring in `src/dotfiles/providers/uvtool.py`.
+**Installation**: two paths, chosen by whether the repo is public.
+
+- A public repo publishes each release to its owner's package index. Its row sits in
+  `install/packages.yml` under `uv_tools`, naming that index with `index:`. dotfiles
+  refuses the install where the index does not list the name. uv would otherwise take
+  PyPI's project of that name, and most of these names are taken there.
+- A private repo publishes nowhere, so it installs from git. Its row sits under
+  `git_uv_tools`, pinned to the repo's newest release tag and held to that tag's
+  `uv.lock`.
+
+Both paths are the module docstring in `src/dotfiles/providers/uvtool.py`. An index
+install is not held to a lock. The tool's own `update` reinstalls from the index with
+no lock, so a held first install would last only until then.
 
 **Development**: Source code lives in `~/tools/{app}/`. Changes are tested locally, then
-pushed to GitHub — and a release must be cut for the fleet to pick them up, since the
-install tracks release tags rather than `main`.
+pushed to GitHub. A release must be cut for a machine to pick them up, since both paths
+install a release rather than `main`.
 
 **Binary location**: `~/.local/bin/` (managed by uv)
 

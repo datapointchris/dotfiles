@@ -29,13 +29,9 @@ Pin deliberately, in both directions, rather than fighting over the receipt.
 the module docstring in `src/dotfiles/providers/uvtool.py`. Moving a pin means
 reinstalling the requirement; `uv tool upgrade` cannot do it.
 
-`tracks_branch: true` in packages.yml marks the exception — a repo publishing no releases
-has no tag to pin, so it follows its default branch, held to the lock at the head it
-installed. It moves forward with `dotfiles packages apply --package <name> --reinstall`,
-which reads the new head's lock. `uv tool upgrade` resolves the new head against the
-constraints the receipt kept from the old one. Once the head raises a dependency floor
-above one of them, the upgrade fails with `error: Failed to upgrade <name>` and
-`... your requirements are unsatisfiable`.
+A public repo publishes each release to a package index and installs from it unpinned.
+Its receipt records the bare name and the index URL, which `uv tool upgrade` and the
+tool's own `update` both read.
 
 Measuring the pin is the other half of the problem. A checker that asks only whether a
 tool's directory exists reports every `git_uv_tools` entry converged forever — four tools

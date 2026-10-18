@@ -127,13 +127,16 @@ def load_packages() -> dict[str, Any]:
 
 
 def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Get all packages with their section attached as section."""
+    """Get all packages with their section attached as section, and a named index's URL as index_url."""
+    indexes, _ = catalog.uv_indexes(data.get(catalog.UV_INDEXES))
     all_packages = []
     for section in PACKAGE_SECTIONS:
         for pkg in iter_section_entries(data, section):
             if isinstance(pkg, dict) and 'name' in pkg:
                 pkg_copy = dict(pkg)
                 pkg_copy['section'] = section
+                if pkg.get('index') in indexes:
+                    pkg_copy['index_url'] = indexes[pkg['index']]
                 all_packages.append(pkg_copy)
     return all_packages
 
@@ -400,13 +403,20 @@ def listing(named: list[str]) -> str:
 
 
 PLATFORM_FIELDS = ('apt', 'brew', 'pacman', 'aur')
-METADATA_FIELDS = (('package', 'Go package'), ('repo', 'Repository'), ('github_repo', 'GitHub'))
+METADATA_FIELDS = (
+    ('package', 'Go package'),
+    ('repo', 'Repository'),
+    ('github_repo', 'GitHub'),
+    ('index', 'Index'),
+    ('index_url', 'Index URL'),
+)
 """The entry keys `show` reports as metadata, and the label each is printed under.
 
 Each label carries the key's own word, so a row read on screen is a string that
 finds the entry in `packages.yml` and the field in `show --json`. `package` takes
 the language as well, because the block's heading already reads `Package: <name>`
-and one word over both would put two questions under one label.
+and one word over both would put two questions under one label. `index_url` is
+the one key no row writes: `get_all_packages` resolves it from `uv_indexes`.
 """
 
 

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
+import importlib.metadata
 import os
 import re
 import shutil
@@ -86,9 +87,9 @@ def uv_tool_pin(name: str) -> str | None:
     than silence because it parses.
 
     None means unpinned, which is not the same as absent. A repo publishing no
-    release installs from its default branch and records no `?rev=`, and that set
-    is larger than the one `tracks_branch` declares — so the receipt, not the
-    declaration, is what decides whether a version can be compared at all.
+    release installs from its default branch and records no `?rev=`, and nothing
+    in the declaration says which repos those are — so the receipt is what
+    decides whether a version can be compared at all.
     """
     try:
         recorded = tomllib.loads((paths.uv_tool_dir() / name / 'uv-receipt.toml').read_text())
@@ -98,6 +99,58 @@ def uv_tool_pin(name: str) -> str | None:
         _, pinned, revision = str(requirement.get('git', '')).partition('?rev=')
         if pinned and requirement.get('name') == name:
             return revision
+    return None
+
+
+@dc.dataclass(frozen=True, slots=True)
+class UvToolSource:
+    """Where uv's receipt says a tool was installed from."""
+
+    direct: str
+    """The git URL, path or file URL the requirement names, empty for a registry install."""
+
+    indexes: tuple[str, ...]
+    """The index URLs uv recorded beside the requirement, which a registry install resolved against."""
+
+    def from_index(self, url: str) -> bool:
+        return not self.direct and url.rstrip('/') in {recorded.rstrip('/') for recorded in self.indexes}
+
+    @property
+    def named(self) -> str:
+        return self.direct or ', '.join(self.indexes) or 'PyPI'
+
+
+def uv_tool_source(name: str) -> UvToolSource | None:
+    """What a tool's receipt records about its source, or None where there is no readable receipt for it.
+
+    uv keeps the requirement and the index flags it was given, so this is exact
+    for an install whatever made it: dotfiles, the tool's own `update`, or a
+    `uv tool install` typed by hand.
+    """
+    try:
+        recorded = tomllib.loads((paths.uv_tool_dir() / name / 'uv-receipt.toml').read_text()).get('tool', {})
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    requirement = next((row for row in recorded.get('requirements', ()) if row.get('name') == name), None)
+    if requirement is None:
+        return None
+    direct = next((str(requirement[key]) for key in ('git', 'url', 'path', 'directory', 'editable') if requirement.get(key)), '')
+    indexes = tuple(str(index['url']) for index in recorded.get('options', {}).get('index', ()) if index.get('url'))
+    return UvToolSource(direct, indexes)
+
+
+def uv_tool_version(name: str) -> str | None:
+    """The version of a tool's own distribution in its environment, or None where none is installed.
+
+    Read from the `dist-info` uv installed, so a tool that cannot answer
+    `--version` is still measured, and nothing is run to measure it.
+    """
+    tool = paths.uv_tool_dir() / name
+    sites = [str(found) for found in (*tool.glob('lib/python*/site-packages'), *tool.glob('Lib/site-packages'))]
+    own = re.sub(r'[-_.]+', '-', name).lower()
+    for distribution in importlib.metadata.distributions(path=sites):
+        if re.sub(r'[-_.]+', '-', distribution.metadata['Name'] or '').lower() == own:
+            return distribution.version
     return None
 
 

@@ -1537,8 +1537,19 @@ npm_globals:
 # UV TOOLS (Python)
 # ================================================================
 # Installed via: uv tool install <package>
+# A row naming an `index` installs with: uv tool install --index <name>=<url> <package>
 # Managed by uv (fast Python package manager)
 # These are Python CLI tools, not project dependencies
+#
+# An index is declared once here and named by each row that installs from it.
+# The flag goes on that one install and lands in the tool's receipt, which is
+# where the tool's own `update` reads it back. It is never set machine-wide,
+# because every `uv lock` on the box would then ask it first. A name the index
+# does not list is refused rather than installed, because uv would quietly take
+# PyPI's project of that name instead. src/dotfiles/providers/uvtool.py says so.
+
+uv_indexes:
+  datapointchris: https://pypi.ichrisbirch.com/simple/
 
 uv_tools:
   # Linters & Formatters
@@ -1573,6 +1584,9 @@ uv_tools:
       command: keymap
       description: Generate keyboard layout diagrams
 
+    - name: keymap-align
+      description: Align ZMK keymap bindings into readable columns
+
     - name: numpy
       # Installed for other tools to import, and ships no entry point of its own,
       # so verification has no command to look for.
@@ -1594,82 +1608,79 @@ uv_tools:
     - name: tldr
       description: Collaborative cheatsheets for console commands
 
+  # Each of these repos publishes every release to its owner's own index. Most of
+  # their names belong to someone else's project on PyPI, which is why the index
+  # is named on the row rather than left to uv's search order.
+  self_published:
+    - name: refcheck
+      index: datapointchris
+      description: Find broken file references and fragile path patterns
+
+    - name: syncer
+      index: datapointchris
+      description: Sync files and directories
+
+    - name: doit
+      index: datapointchris
+      description: What to do now, and everything that decides it — the draw, the dashboard, the cards and Labs
+
+    - name: indy
+      index: datapointchris
+      description: Semantic search index for local codebases, docs, and notes
+
+    - name: logsift
+      index: datapointchris
+      description: Intelligent log analysis and command monitoring tool for LLM-driven workflows
+
+    - name: dectl
+      index: datapointchris
+      description: Verb-last data-engineering control CLI
+
+    - name: safekeep
+      index: datapointchris
+      description: Dated snapshots of the files no package manager will put back
+
+    # The analyzer half of typos. Its capture half is a Neovim plugin lazy installs
+    # from the same repo, so only the workstations that write sessions need the CLI
+    # that reads them.
+    - name: typos
+      index: datapointchris
+      description: Passive typing analyzer over captured Neovim keystrokes
+
+    - name: runthrough
+      index: datapointchris
+      description: Record real terminal sessions from declarative tapes, and author those tapes from a question
+
+    - name: git-graph
+      index: datapointchris
+      description: Build synthetic git histories from named scenarios, to see what merge, rebase, squash and worktrees produce
+
 # ================================================================
 # GIT UV TOOLS
 # ================================================================
 # Installed via: uv tool install <name> @ git+<repo_url>@<latest release tag>
-# Python tools installed from GitHub repositories
+# Python tools installed from private GitHub repositories, which publish to no index
 #
 # Pinned to a release tag, because each tool's own updater refuses to touch an
 # install that tracks a branch. Held to that tag's uv.lock, because uv ignores
 # the lock otherwise. src/dotfiles/providers/uvtool.py carries both reasons.
-# `tracks_branch: true` marks a repo that publishes no releases, and so has no
-# tag to pin.
 
 git_uv_tools:
-  - name: refcheck
-    repo: https://github.com/datapointchris/refcheck.git
-    description: Find broken file references and fragile path patterns
-
-  - name: syncer
-    repo: https://github.com/datapointchris/syncer.git
-    description: Sync files and directories
-
-  - name: keymap-align
-    repo: https://github.com/datapointchris/keymap-align.git
-    description: Align ZMK keymap bindings into readable columns
-    tracks_branch: true
-
-  - name: doit
-    repo: https://github.com/datapointchris/doit.git
-    description: What to do now, and everything that decides it — the draw, the dashboard, the cards and Labs
-
-  - name: indy
-    repo: https://github.com/datapointchris/indy.git
-    description: Semantic search index for local codebases, docs, and notes
-
   - name: digest
     repo: https://github.com/datapointchris/digest.git
     requires_github_auth: true
     description: Analyze YouTube videos and web articles with Claude, building a searchable knowledge base
-
-  - name: logsift
-    repo: https://github.com/datapointchris/logsift.git
-    description: Intelligent log analysis and command monitoring tool for LLM-driven workflows
-
-  - name: dectl
-    repo: https://github.com/datapointchris/dectl.git
-    description: Verb-last data-engineering control CLI
-
-  - name: safekeep
-    repo: https://github.com/datapointchris/safekeep.git
-    description: Dated snapshots of the files no package manager will put back
 
   - name: homelab
     repo: https://github.com/datapointchris/homelab.git
     requires_github_auth: true
     description: Control CLI for the homelab — one front door onto the containers, the deploys and the homelab's condition
 
-  # The analyzer half of typos. Its capture half is a Neovim plugin lazy installs
-  # from the same repo, so only the workstations that write sessions need the CLI
-  # that reads them.
-  - name: typos
-    repo: https://github.com/datapointchris/typos.git
-    description: Passive typing analyzer over captured Neovim keystrokes
-
   # Installs the `ccm` command.
   - name: claude-code-metrics
     repo: https://github.com/datapointchris/claude-code-metrics.git
     requires_github_auth: true
     description: Analytics over Claude Code sessions — DuckDB, Parquet and automated insights
-
-  - name: runthrough
-    repo: https://github.com/datapointchris/runthrough.git
-    description: Record real terminal sessions from declarative tapes, and author those tapes from a question
-
-  - name: git-graph
-    repo: https://github.com/datapointchris/git-graph.git
-    description: Build synthetic git histories from named scenarios, to see what merge, rebase, squash and worktrees produce
 
 # ================================================================
 # GO TOOLS

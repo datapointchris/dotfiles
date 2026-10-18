@@ -30,6 +30,7 @@ from dotfiles import diagnose
 from dotfiles import evidence as ev
 from dotfiles import logging
 from dotfiles import paths
+from dotfiles import python_index
 from dotfiles import registry
 from dotfiles import releases
 from dotfiles import versions
@@ -57,7 +58,7 @@ NAME = 'packages'
 
 log = logging.get_logger(NAME)
 
-CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller, catalog.GitUvTool)
+CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog.CustomInstaller, catalog.GitUvTool, catalog.UvTool)
 """The entries whose currency is a question with an upstream answer.
 
 Each installs from an upstream this declaration names, so "what should be
@@ -66,6 +67,10 @@ is a repo's tag. A cargo package is the exception, measured against crates.io fo
 the reason `crates_io` records. `go install @latest` and `cargo binstall` *are*
 the upgrade, because nothing sits underneath a Go tool or a Rust CLI deciding
 when it moves.
+
+A uv tool is asked only where it names an index. That index is one this
+declaration publishes to, so nothing else upgrades what it serves. A uv tool from
+PyPI names no upstream and drops out in `has_currency`.
 
 Everything else here defers to a registry that upgrades on its own: asking apt or
 npm whether a package is the newest one is asking a question the machine's own
@@ -283,6 +288,8 @@ class PackagesResource:
                         observed=observed.reported.get(item.address, ''),
                     )
                 )
+            elif not observed.from_bundle and (elsewhere := installed_elsewhere(item, observed)) is not None:
+                changes.append(elsewhere)
             elif has_currency(item, offline=observed.from_bundle):
                 changes.extend(currency_of(item, observed))
 
@@ -426,12 +433,13 @@ def has_currency(item: DesiredItem, *, offline: bool) -> bool:
     A vendor's version file is a question for an online run only. No bundle
     records what one said, and the script that would act on it downloads from
     that vendor's host. Offline, a present claude-code is left alone, which is
-    what `custom._claude_code` does with it too.
+    what `custom._claude_code` does with it too. A package index page is the
+    same, because no bundle stages a Python tool.
     """
     if not (isinstance(item.entry, CURRENCY) and item.entry.reports_version and item.executable):
         return False
     wanted = wanted_release(item)
-    return bool(wanted.repo or wanted.crate) or (bool(wanted.version_file) and not offline)
+    return bool(wanted.repo or wanted.crate) or (bool(wanted.version_file or wanted.python_project) and not offline)
 
 
 PROBE_WORKERS = 8
@@ -505,9 +513,14 @@ def installed_version(item: DesiredItem, found: ev.Evidence) -> ev.Reported:
     plausible number, unrelated to the revision on disk, that `versions.parse` reads
     happily and compares wrongly. Item 191 records the several that cannot answer
     at all. The receipt is what uv resolved, so it is exact for both.
+
+    A uv tool from an index is read from the `dist-info` uv installed, which is
+    exact for the same reason and runs nothing.
     """
     if isinstance(item.entry, catalog.GitUvTool):
         return ev.Reported(ev.uv_tool_pin(item.name))
+    if isinstance(item.entry, catalog.UvTool) and item.entry.index_url:
+        return ev.Reported(ev.uv_tool_version(item.name))
     return ev.probe_version(str(found.binary or item.executable))
 
 
@@ -522,15 +535,12 @@ def wanted_release(item: DesiredItem) -> releases.Wanted:
     if isinstance(entry, catalog.CargoPackage):
         return releases.Wanted(repo='', crate=entry.name)
     if isinstance(entry, catalog.GitUvTool):
-        # A `tracks_branch` repo publishes no release, so there is no tag it could
-        # be behind and no upstream to consult. Naming no repo is how that reaches
-        # `has_currency`, which already reads an empty one as "not a question this
-        # entry can be asked" — the same answer a Go tool declared by module path
-        # alone gets, rather than a second exception written beside it.
         # Through `repo_slug_of` because this section carries a clone URL where
         # every other one carries a bare `owner/name` — uv is handed the URL
         # verbatim at install time — and the cache keys on what the API path wants.
-        return releases.Wanted(repo='' if entry.tracks_branch else catalog.repo_slug_of(entry.repo), asks_lock=True)
+        return releases.Wanted(repo=catalog.repo_slug_of(entry.repo), asks_lock=True)
+    if isinstance(entry, catalog.UvTool) and entry.index_url:
+        return releases.Wanted(repo='', python_project=python_index.project_url(entry.index_url, entry.name))
     return releases.Wanted(repo='')
 
 
@@ -694,6 +704,48 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     return compared(item, reported, cached.version, current, behind(cached.version, observed, item), observed.met)
 
 
+def installed_elsewhere(item: DesiredItem, observed: Observed) -> Change | None:
+    """A uv tool whose receipt names a source other than the one its row declares.
+
+    A tool moved from `git_uv_tools` to `uv_tools` keeps its git install until
+    something replaces it. No version comparison sees that, because the git
+    install carries the version the registry publishes. The receipt records where
+    the tool came from, so that is what is read.
+
+    A PyPI row is held only against a direct source such as git. uv also records
+    an index a config file supplied, and a reinstall would record it again, so a
+    recorded index there is no sign of another source.
+
+    Read whether or not the row has currency, since a PyPI row has none. Never
+    read offline, because the reinstall it calls for needs the network.
+    """
+    entry = item.entry
+    if not isinstance(entry, catalog.UvTool):
+        return None
+    source = ev.uv_tool_source(item.name)
+    if source is None:
+        return None
+    if entry.index_url:
+        if source.from_index(entry.index_url):
+            return None
+        declared = f'the {entry.index} index'
+    elif source.direct:
+        declared = 'PyPI'
+    else:
+        return None
+    repair = repair_for(item, Verdict.STALE, observed.met)
+    return Change(
+        NAME,
+        item.stage,
+        item.address,
+        Verdict.STALE,
+        repair=repair,
+        detail=f'installed from {source.named}, where this machine declares {declared}',
+        advice=advice_for(item, repair),
+        desired=item,
+    )
+
+
 def installed_without_its_lock(item: DesiredItem, reported: str, cached: releases.Cached) -> bool:
     """A git tool at the tag the cache measured, whose tag has a lock its receipt does not hold.
 
@@ -749,7 +801,11 @@ def behind(version: str, observed: Observed, item: DesiredItem) -> str:
 def newest_upstream(item: DesiredItem) -> str:
     """What an online figure is, named so a crate is not read against its repo's newer tag."""
     crate = wanted_release(item).crate
-    return f'the newest {crate} on crates.io' if crate else 'the latest release'
+    if crate:
+        return f'the newest {crate} on crates.io'
+    if isinstance(item.entry, catalog.UvTool) and item.entry.index:
+        return f'the newest {item.name} on the {item.entry.index} index'
+    return 'the latest release'
 
 
 def unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:

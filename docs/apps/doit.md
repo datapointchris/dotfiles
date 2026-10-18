@@ -26,10 +26,11 @@ meant cutting a release every time a card changed.
 
 ## A machine gets doit only if its manifest names it
 
-Six symlinked scripts became one `git_uv_tools` install, alongside `refcheck` and `safekeep` —
-category 4 in [App Installation Patterns](../learnings/app-installation-patterns.md). That
-distinction is the one to carry. A symlinked app lands on every machine that gets `apps/` symlinks,
-while a git uv tool reaches only the machines whose manifest declares it.
+Six symlinked scripts became one `uv_tools` install from the owner's package index, alongside
+`refcheck` and `safekeep` — category 4 in
+[App Installation Patterns](../learnings/app-installation-patterns.md). That distinction is the one
+to carry. A symlinked app lands on every machine that gets `apps/` symlinks, while a uv tool reaches
+only the machines whose manifest declares it.
 
 ## `register.yml` is config, and config stays out of the repo
 

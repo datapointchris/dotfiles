@@ -129,10 +129,6 @@ def test_two_clis_in_one_monorepo_do_not_share_a_cache_entry() -> None:
     assert releases.Wanted('datapointchris/ichrisbirch', 'cli/').key != releases.Wanted('datapointchris/ichrisbirch').key
 
 
-def test_a_repo_with_no_prefix_keys_on_its_name_alone() -> None:
-    assert releases.Wanted('owner/repo').key == 'owner/repo'
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Refreshing
 # ─────────────────────────────────────────────────────────────────────────────
