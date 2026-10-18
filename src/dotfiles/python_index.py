@@ -20,7 +20,7 @@ from dotfiles import github_release
 from dotfiles import versions
 
 FINAL_RELEASE = re.compile(r'^\d+(?:\.\d+)+$')
-"""A version uv chooses by default. A pre-release, dev or post release does not match, so none is ranked."""
+"""A version made only of release numbers. Pre-release, dev and post releases are not ranked."""
 
 ARCHIVE_SUFFIXES = ('.tar.gz', '.zip')
 

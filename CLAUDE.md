@@ -46,7 +46,7 @@ with none of it, so an apply or a check that reaches for that data breaks there.
 
 ## Where things go
 
-**Four install patterns**, chosen by what a thing is, never by how large it grew:
+**Install patterns**, chosen by what a thing is, never by how large it grew:
 
 | Pattern | Declared in | Installer |
 | --- | --- | --- |

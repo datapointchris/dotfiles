@@ -65,9 +65,9 @@ def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Res
     """One tool, from PyPI or from the index the entry names.
 
     Offline is not refused: the bundle stages wheels for this CLI's own closure
-    and nothing else, while the machine that installs offline declares six uv
-    tools — so refusing would install none of them on the box the offline path
-    exists for.
+    and nothing else, while the machine that installs offline declares uv tools
+    of its own — so refusing would install none of them on the box the offline
+    path exists for.
 
     **An index install is refused where the index does not list the name.** uv
     asks the named index first and falls through to PyPI on a name it lacks,

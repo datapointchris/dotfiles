@@ -29,9 +29,9 @@ Pin deliberately, in both directions, rather than fighting over the receipt.
 the module docstring in `src/dotfiles/providers/uvtool.py`. Moving a pin means
 reinstalling the requirement; `uv tool upgrade` cannot do it.
 
-Only a private repo installs this way now. A public one publishes each release to a
-package index, and an index install needs no pin. Its receipt carries a version floor
-and the index URL, which `uv tool upgrade` and the tool's own `update` both move.
+A public repo publishes each release to a package index and installs from it unpinned.
+Its receipt records the bare name and the index URL, which `uv tool upgrade` and the
+tool's own `update` both read.
 
 Measuring the pin is the other half of the problem. A checker that asks only whether a
 tool's directory exists reports every `git_uv_tools` entry converged forever — four tools

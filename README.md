@@ -41,7 +41,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 `configs/`, `apps/`, and `shell/` all follow the same pattern: a `common/` base beside `<axis>/<value>/` directories, where the axes are the six a machine varies along (`src/dotfiles/coordinates.py`). They mean opposite things by it — `shell/` holds **layers** and sources every one a machine selects, while `configs/` and `apps/` hold **variants** and exactly one file arrives. `eza -1 -D configs apps shell` shows which directories exist, and most do not — an axis earns one only where something actually differs along it. `install/` handles provisioning — machine manifests in `install/manifests/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
 
-**External tools** (installed from GitHub, not in this repo):
+**External tools** (installed from their own repo or package index, not this one):
 
 - `doit` and the other `uv_tools` naming an `index`: Python apps installed with `uv tool install` from their owner's package index
 - `git_uv_tools`: Python apps from private repos, installed with `uv tool install` at their newest release tag, held to that tag's `uv.lock`
