@@ -288,6 +288,8 @@ class PackagesResource:
                         observed=observed.reported.get(item.address, ''),
                     )
                 )
+            elif not observed.from_bundle and (elsewhere := installed_elsewhere(item, observed)) is not None:
+                changes.append(elsewhere)
             elif has_currency(item, offline=observed.from_bundle):
                 changes.extend(currency_of(item, observed))
 
@@ -629,9 +631,6 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
     when the version comparison did, and a failure recorded on every run for work
     the machine was never able to do.
     """
-    if (elsewhere := installed_elsewhere(item, observed)) is not None:
-        return (elsewhere,)
-
     reported = observed.reported.get(item.address)
     if reported is None:
         if isinstance(item.entry, catalog.GitUvTool):
@@ -706,18 +705,33 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
 
 
 def installed_elsewhere(item: DesiredItem, observed: Observed) -> Change | None:
-    """A uv tool declared from an index whose receipt names another source.
+    """A uv tool whose receipt names a source other than the one its row declares.
 
-    A tool moved from `git_uv_tools` to an index keeps its git install until
+    A tool moved from `git_uv_tools` to `uv_tools` keeps its git install until
     something replaces it. No version comparison sees that, because the git
-    install carries the version the index publishes. The receipt records where
+    install carries the version the registry publishes. The receipt records where
     the tool came from, so that is what is read.
+
+    A PyPI row is held only against a direct source such as git. uv also records
+    an index a config file supplied, and a reinstall would record it again, so a
+    recorded index there is no sign of another source.
+
+    Read whether or not the row has currency, since a PyPI row has none. Never
+    read offline, because the reinstall it calls for needs the network.
     """
     entry = item.entry
-    if not (isinstance(entry, catalog.UvTool) and entry.index_url):
+    if not isinstance(entry, catalog.UvTool):
         return None
     source = ev.uv_tool_source(item.name)
-    if source is None or source.from_index(entry.index_url):
+    if source is None:
+        return None
+    if entry.index_url:
+        if source.from_index(entry.index_url):
+            return None
+        declared = f'the {entry.index} index'
+    elif source.direct:
+        declared = 'PyPI'
+    else:
         return None
     repair = repair_for(item, Verdict.STALE, observed.met)
     return Change(
@@ -726,7 +740,7 @@ def installed_elsewhere(item: DesiredItem, observed: Observed) -> Change | None:
         item.address,
         Verdict.STALE,
         repair=repair,
-        detail=f'installed from {source.named}, where this machine declares the {entry.index} index',
+        detail=f'installed from {source.named}, where this machine declares {declared}',
         advice=advice_for(item, repair),
         desired=item,
     )

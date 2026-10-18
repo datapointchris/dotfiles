@@ -485,7 +485,10 @@ class Sandbox:
         return reporting(self.bin, name, version) if version is not None else executable(self.bin, name)
 
     def uv_installed(self, name: str, pin: str | None = None, repo: str | None = None) -> None:
-        """A uv tool directory, pinned to `pin` when a git install recorded one."""
+        """A uv tool directory and its receipt: installed by name, or from git when `pin` or `repo` says so."""
+        if pin is None and repo is None:
+            receipt(self.uv_tools, name, f'{{ name = "{name}" }}')
+            return
         source = repo or f'https://github.com/datapointchris/{name}.git'
         requirement = f'{{ name = "{name}", git = "{source}{f"?rev={pin}" if pin else ""}" }}'
         receipt(self.uv_tools, name, requirement)

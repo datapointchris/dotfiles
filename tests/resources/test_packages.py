@@ -313,6 +313,30 @@ def test_a_library_only_tool_with_no_directory_is_missing_not_unknown(tmp_path: 
     assert verdicts(live) == {'uv/numpy': Verdict.MISSING}
 
 
+FROM_GIT = '{{ name = "{name}", git = "https://github.com/datapointchris/{name}.git" }}'
+
+
+@pytest.mark.parametrize(
+    ('row', 'requirement', 'expected'),
+    [
+        pytest.param({'name': 'tool'}, FROM_GIT.format(name='tool'), [('uv/tool', Verdict.STALE)], id='pypi row, git install'),
+        pytest.param(
+            {'name': 'tool', 'index': 'own'}, FROM_GIT.format(name='tool'), [('uv/tool', Verdict.STALE)], id='index row, git install'
+        ),
+        pytest.param({'name': 'tool'}, '{ name = "tool" }', [], id='pypi row, installed by name'),
+    ],
+)
+def test_a_uv_tool_installed_from_another_source_than_its_row_declares_is_stale(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, row: dict, requirement: str, expected: list
+) -> None:
+    executable(fake_bin, 'tool')
+    receipt(uv_tools, 'tool', requirement)
+    declared = {'uv_indexes': {'own': 'https://index.example/simple/'}, 'uv_tools': {'group': [row]}}
+    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'uv_tools': ['tool']})
+
+    assert [(change.item, change.verdict) for change in changes(live)] == expected
+
+
 def test_a_git_installed_tool_reports_the_revision_uv_recorded(uv_tools: Path) -> None:
     receipt(uv_tools, 'doit', '{ name = "doit", git = "https://github.com/datapointchris/doit.git?rev=v1.0.0" }')
 
