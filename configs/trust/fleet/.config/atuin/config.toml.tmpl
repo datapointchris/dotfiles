@@ -3,7 +3,8 @@
 # Atuin owns Ctrl-R (its DB-backed search — time, cwd, exit), while up-arrow stays
 # zsh's prefix-search; see the atuin block in .zshrc for the keybinding rationale.
 # Beyond search, atuin records each command's exit code, working directory and
-# session in ~/.local/share/atuin/history.db, for the audit-flow analysis.
+# session in ~/.local/share/atuin/history.db, which the
+# turn-shell-history-into-shortcuts skill reads.
 #
 # The flat ~/.local/state/zsh/history keeps being written too, so it stays the
 # fallback for anything reading history — `doit kit usage` and `doit review`
