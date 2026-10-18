@@ -1679,6 +1679,7 @@ class TestListing:
         assert worktree['branch'] == 'alpha'
         assert worktree['ahead'] == 1
         assert worktree['state'] == 'dirty'
+        assert worktree['changed_paths'] == ['unstaged.txt', 'x']
 
     def test_json_of_an_empty_set_is_an_empty_array(self, fleet, run):
         """An empty here-string was one empty row in the shell version, and its

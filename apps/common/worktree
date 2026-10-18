@@ -301,6 +301,9 @@ class Worktree:
     sessions: tuple[Session, ...] | None
     # A detached HEAD has no branch, so nothing can be asked about where its commits are.
     detached: bool = False
+    # What a peer about to edit the same files collides with. None where origin/<base> is
+    # unreadable, the same split `ahead` makes.
+    changed_paths: tuple[str, ...] | None = None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -313,6 +316,7 @@ class Worktree:
             'behind': self.behind,
             'state': str(self.state),
             'detached': self.detached,
+            'changed_paths': None if self.changed_paths is None else list(self.changed_paths),
             'sessions': None
             if self.sessions is None
             else [
@@ -582,6 +586,19 @@ def divergence(path: Path, base: str) -> tuple[int | None, int | None]:
     return int(behind), int(ahead)
 
 
+def changed_paths(path: Path, base: str) -> tuple[str, ...] | None:
+    """Every path changed since the tree left origin/<base>, committed or not.
+
+    From the merge base, so the base branch's own later edits are not counted. NUL-separated,
+    because git otherwise quotes a name holding a space or a non-ASCII byte.
+    """
+    tracked = git_optional(path, 'diff', '--name-only', '-z', '--merge-base', f'origin/{base}')
+    if tracked is None:
+        return None
+    untracked = git(path, 'ls-files', '--others', '--exclude-standard', '-z')
+    return tuple(sorted({name for name in (*tracked.split('\0'), *untracked.split('\0')) if name}))
+
+
 def live_sessions() -> tuple[Session, ...] | None:
     """Live Claude Code sessions, from the tool that owns the registry, or None when
     the question could not be asked at all.
@@ -700,6 +717,7 @@ def describe(repo: str, path: Path, checkout: bool, sessions: Sequence[Session] 
         # What --abbrev-ref answers for a HEAD pointing at a commit rather than a ref. There is no
         # branch behind it, so `published` and the ahead count are answers about nothing.
         detached=branch == 'HEAD',
+        changed_paths=changed_paths(path, base),
     )
 
 
