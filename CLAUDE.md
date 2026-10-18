@@ -9,9 +9,9 @@ things is `fleet standards search`.
 **editable** against `src/`. Switching branches changes both the config this machine runs and the
 tool that deploys it, and nothing announces it.
 
-- **`~/dotfiles` itself stays on `main`.** A small fix commits there directly. Work that earns a
-  branch gets a worktree rather than a checkout here. `worktree land` catches `main` up afterwards,
-  which here is a redeploy.
+- **`~/dotfiles` itself stays on `main`.** Every change, a small fix included, is made in a worktree
+  rather than a checkout here. `worktree land` catches `main` up afterwards, which here is a
+  redeploy.
 - **`EnterWorktree(path=…)` refuses when the session's directory is outside this repo.** From `~/dev`,
   drive the worktree by absolute path instead.
 - **One worktree per stack, at its top.** `rebase.updateRefs` silently skips a stacked branch checked
