@@ -126,8 +126,12 @@ question back.
 **A uv tool naming an index is measured against that index.** The index is one
 these tools publish to, so no registry above it decides when they move. Its
 project page lists every file with its version, and the newest final release is
-the answer. A receipt naming a different source reads as stale, so a machine
-still holding a git install of the tool is moved onto the index.
+the answer.
+
+**A uv tool whose receipt names another source than its row is stale.** A machine
+still holding a git install of a tool its row now takes from an index, or from
+PyPI, is moved there by a reinstall. A PyPI row is held only against a git or
+path source, because uv also records an index a config file supplied.
 
 **A cargo package is measured against crates.io, not its repo.** The registry is
 what `cargo binstall` resolves from, and it trails any project that tags ahead of
