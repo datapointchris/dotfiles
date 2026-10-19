@@ -887,14 +887,20 @@ class SystemConfig(Entry):
     host: str = ''
     display_stack: str = ''
     network_trust: str = ''
-    """Coordinate narrowings, and only the four anything declares.
+    package_manager: str = ''
+    """Coordinate narrowings, and only the five anything declares.
 
     Hyprland replacing gdm is a fact about the display stack, not about Arch; the
-    Windows font path is a fact about the host, not about Ubuntu. A fifth axis is
-    a fifth field when a row needs one — until then declaring it is a load-time
+    Windows font path is a fact about the host, not about Ubuntu. Another axis is
+    another field when a row needs one — until then declaring it is a load-time
     error rather than a key read by nothing.
 
-    `network_trust` is the newest, and `faillock-deny` is why. Loosening an
+    `package_manager` is for a row whose scope is the distribution itself.
+    `journal-size` caps the systemd journal on the pacman machines and leaves
+    every other distribution on its packaged default, and no other coordinate
+    says "Arch".
+
+    `network_trust` exists because of `faillock-deny`. Loosening an
     authentication control is a defensible choice on a machine on its own network
     and is somebody else's decision on a managed one, so the row has to be able to
     say which machines it describes. A rewrite of `/etc/security/faillock.conf`
@@ -938,6 +944,7 @@ class SystemConfig(Entry):
             ('host', self.host),
             ('display_stack', self.display_stack),
             ('network_trust', self.network_trust),
+            ('package_manager', self.package_manager),
         )
         return {axis: value for axis, value in declared if value}
 
