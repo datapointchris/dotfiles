@@ -500,13 +500,13 @@ class TestTagResolution:
         assert ghrelease.resolve_tag(entry(version='1.2.3')) == 'v1.2.3'
 
     def test_latest_is_the_default(self, monkeypatch):
-        monkeypatch.setattr(github_release, 'latest_version', lambda repo, prefix: 'v9.9.9')
+        monkeypatch.setattr(github_release, 'latest_version', lambda repo, prefix, ceiling: 'v9.9.9')
 
         assert ghrelease.resolve_tag(entry()) == 'v9.9.9'
 
     def test_a_pin_nothing_published_refuses_rather_than_falling_back(self, home, bundle, monkeypatch):
         monkeypatch.setattr(github_release, 'tag_for_version', lambda repo, version, prefix: None)
-        monkeypatch.setattr(github_release, 'latest_version', lambda repo, prefix: 'v9.9.9')
+        monkeypatch.setattr(github_release, 'latest_version', lambda repo, prefix, ceiling: 'v9.9.9')
 
         result = ghrelease.install(entry('lazygit', version='0.56.0'), LINUX)
 
@@ -543,7 +543,7 @@ class TestTagResolution:
         the contract a provider written next month reads.
         """
 
-        def refuse(repo, prefix):
+        def refuse(repo, prefix, ceiling):
             raise github_release.Unreadable(f'could not read the releases of {repo}', reached=False)
 
         monkeypatch.setattr(github_release, 'latest_version', refuse)

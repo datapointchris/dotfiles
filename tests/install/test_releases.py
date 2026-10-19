@@ -147,7 +147,7 @@ def answers(monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], str | tupl
     """
     replies: dict[tuple[str, str], str | tuple[str, str]] = {}
 
-    def newest(repo: str, prefix: str = '', etag: str = '') -> github_release.Newest:
+    def newest(repo: str, prefix: str = '', etag: str = '', ceiling: str = '') -> github_release.Newest:
         reply = replies.get((repo, prefix))
         if reply is None:
             return github_release.Newest()
@@ -282,7 +282,7 @@ def test_each_repo_is_asked_with_its_own_etag(monkeypatch: pytest.MonkeyPatch) -
     match and quietly costs the full response every time."""
     asked: dict[str, str] = {}
 
-    def newest(repo: str, prefix: str = '', etag: str = '') -> github_release.Newest:
+    def newest(repo: str, prefix: str = '', etag: str = '', ceiling: str = '') -> github_release.Newest:
         asked[repo] = etag
         return github_release.Newest(version='v9', etag='W/"x"')
 
@@ -333,7 +333,7 @@ def test_an_unmatched_repo_is_asked_unconditionally(monkeypatch: pytest.MonkeyPa
     always did rather than being skipped."""
     asked: dict[str, str] = {}
 
-    def newest(repo: str, prefix: str = '', etag: str = '') -> github_release.Newest:
+    def newest(repo: str, prefix: str = '', etag: str = '', ceiling: str = '') -> github_release.Newest:
         asked[repo] = etag
         return github_release.Newest(version='v1', etag='W/"new"')
 

@@ -177,10 +177,16 @@ def resolve_tag(entry: catalog.GithubRelease, *, offline: bool = False) -> str |
     a version fetched live names a file the bundle does not contain the moment
     upstream ships. A pin is matched against published tags rather than spelled as
     one, since the same release is `v0.56.0` for lazygit and `cli/v0.9.0` for the
-    personal CLIs. Latest is the default.
+    personal CLIs. Latest is the default, and a `max_version` caps it at the
+    newest release at or below the ceiling.
 
     A declared pin that matches no release answers None rather than falling
-    through to latest. Falling through is exactly what a pin exists to prevent.
+    through to latest. Falling through is exactly what a pin exists to prevent,
+    and a ceiling with no release under it answers None for the same reason.
+
+    `min_version` is not read here. A floor is measured against what resolves,
+    which is `packages.currency_of`'s question, and refusing the install would
+    leave a machine with no copy of the tool rather than an old one.
 
     **Raises `github_release.Unreadable`, which the annotation cannot say.** Both
     online branches do — `tag_for_version` and `latest_version` alike — so None
@@ -196,7 +202,7 @@ def resolve_tag(entry: catalog.GithubRelease, *, offline: bool = False) -> str |
         return f'{entry.release_tag_prefix}{version}' if version else None
     if entry.version:
         return github_release.tag_for_version(entry.repo, entry.version, entry.release_tag_prefix)
-    return github_release.latest_version(entry.repo, entry.release_tag_prefix)
+    return github_release.latest_version(entry.repo, entry.release_tag_prefix, entry.max_version)
 
 
 def bundle_version(name: str) -> str | None:
@@ -232,6 +238,8 @@ def unresolved(entry: catalog.GithubRelease, *, offline: bool) -> str:
         return f'no bundle staged at {paths.staging_dir()} carries a version of {entry.name}'
     if entry.version:
         return f'pinned to {entry.version}, which {entry.repo} publishes no release for'
+    if entry.max_version:
+        return f'{entry.repo} lists no release at or below max_version {entry.max_version} among its newest hundred'
     return f'{entry.repo} publishes no release'
 
 

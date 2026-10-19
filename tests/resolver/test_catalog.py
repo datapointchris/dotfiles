@@ -277,12 +277,17 @@ def test_a_constraint_nothing_honors_is_refused(tmp_path: Path) -> None:
     assert_named(found, 'nothing honors for shell_plugins')
 
 
-def test_a_pin_beside_a_bound_is_refused(tmp_path: Path) -> None:
-    found = issues(
-        tmp_path,
-        {'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': '0.50.0', 'min_version': '0.40'}]},
-    )
-    assert_named(found, 'describing a window nobody can predict')
+@pytest.mark.parametrize(
+    ('constraints', 'refusal'),
+    [
+        ({'version': '0.50.0', 'min_version': '0.40'}, 'describing a window nobody can predict'),
+        ({'min_version': '0.50', 'max_version': '0.40'}, 'so no release satisfies both'),
+    ],
+    ids=['pin-beside-a-bound', 'floor-above-ceiling'],
+)
+def test_constraints_that_contradict_each_other_are_refused(tmp_path: Path, constraints: dict[str, str], refusal: str) -> None:
+    found = issues(tmp_path, {'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', **constraints}]})
+    assert_named(found, refusal)
 
 
 @pytest.mark.parametrize('pinned', ['v0.50.0', 'cli/v0.9.0'])
@@ -291,14 +296,6 @@ def test_a_constraint_written_as_a_tag_is_refused(tmp_path: Path, pinned: str) -
     is only ever correct for its own tool and cannot be compared at all."""
     found = issues(tmp_path, {'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': pinned}]})
     assert_named(found, 'which is a tag')
-
-
-def test_a_grandfathered_floor_is_left_alone(tmp_path: Path) -> None:
-    """Satisfied floors that predate enforcement, kept so the resolver inherits
-    them rather than deleted to silence a check."""
-    loaded = catalog.load(write(tmp_path, {'github_releases': [{'name': 'neovim', 'repo': 'neovim/neovim', 'min_version': '0.11'}]}))
-
-    assert loaded.find('github_releases', 'neovim').min_version == '0.11'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

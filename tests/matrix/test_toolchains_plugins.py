@@ -54,7 +54,7 @@ from matrix.harness import unwrapped
 
 RUNTIMES: dict[str, Any] = {
     'runtimes': {
-        'rust': {'install_method': 'rustup', 'version': '1.90'},
+        'rust': {'install_method': 'rustup', 'min_version': '1.90'},
         'node': {'install_method': 'fnm'},
     },
     'go_tools': [{'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'}],
@@ -62,10 +62,6 @@ RUNTIMES: dict[str, Any] = {
     'npm_globals': {'lsp': [{'name': 'bash-language-server'}]},
 }
 """One catalog carrying a tool for each runtime, and a floor for one of them.
-
-`version` rather than `min_version`, which is the only constraint `Runtime`
-honors — `catalog.Entry.problems` refuses a constraint nothing reads, and the
-resource takes `min_version or version` as the floor either way.
 
 Rust is the runtime the floor is declared for because its `installed_at` is
 `~/.cargo/bin/rustc`, inside the sandbox's home. Go declares

@@ -344,6 +344,21 @@ class TestLatestVersion:
 
         assert github_release.latest_version('owner/repo', 'cli/') == 'cli/v0.26.0'
 
+    def test_a_ceiling_takes_the_newest_release_at_or_below_it(self, monkeypatch):
+        """`releases/latest` cannot be narrowed, so a ceiling reads the listing even
+        without a prefix."""
+        seen = []
+        payload = b'[{"tag_name": "v0.51.0"}, {"tag_name": "v0.50.0"}, {"tag_name": "v0.49.2"}]'
+
+        def fake(url, accept=None):
+            seen.append(url)
+            return payload
+
+        monkeypatch.setattr(github_release, 'request', fake)
+
+        assert github_release.latest_version('owner/repo', '', '0.50') == 'v0.50.0'
+        assert seen == ['https://api.github.com/repos/owner/repo/releases?per_page=100']
+
     def test_a_prefix_nothing_matches_answers_nothing(self, monkeypatch):
         payload = b'[{"tag_name": "api/2.0.0", "draft": false}]'
         monkeypatch.setattr(github_release, 'request', lambda url, accept=None: payload)

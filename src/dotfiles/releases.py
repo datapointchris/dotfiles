@@ -136,12 +136,17 @@ class Wanted:
     python_project: str = ''
     """A project's page on a Python package index, asked instead of any repo, for a uv tool that installs from one."""
 
+    ceiling: str = ''
+    """A declared `max_version`, so the answer is the newest release at or below it rather than the newest."""
+
     @property
     def key(self) -> str:
         """What the cache is keyed on.
 
         The prefix is part of it: one monorepo releases four different CLIs, and
         keying on the repo alone would have them overwrite each other's answer.
+        The ceiling is part of it for the same reason: a capped answer and the
+        latest are two facts about one repo.
         """
         if self.version_file:
             return self.version_file
@@ -149,7 +154,8 @@ class Wanted:
             return self.python_project
         if self.crate:
             return crates_io.index_url(self.crate)
-        return f'{self.repo}#{self.tag_prefix}' if self.tag_prefix else self.repo
+        key = f'{self.repo}#{self.tag_prefix}' if self.tag_prefix else self.repo
+        return f'{key}<={self.ceiling}' if self.ceiling else key
 
 
 def load(path: Path | None = None) -> dict[str, Cached]:
@@ -288,7 +294,7 @@ def newest(wanted: Wanted, previous: Cached | None = None) -> github_release.New
         return python_index.newest_version(wanted.python_project, etag)
     if wanted.from_tags:
         return github_release.newest_tag(wanted.repo, wanted.tag_prefix, etag)
-    return github_release.newest_version(wanted.repo, wanted.tag_prefix, etag)
+    return github_release.newest_version(wanted.repo, wanted.tag_prefix, etag, wanted.ceiling)
 
 
 def current(wanted: Wanted, entries: dict[str, Cached], now: dt.datetime) -> Cached | None:
