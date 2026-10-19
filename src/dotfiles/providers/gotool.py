@@ -261,6 +261,15 @@ def bundled_binary(entry: catalog.GoTool) -> tuple[bundle.Staged | None, Path] |
     return None
 
 
+def module_query(entry: catalog.GoTool) -> str:
+    """What `go install` is handed: the package at its pinned version, or at `latest`.
+
+    A Go module version is always written with its `v`, and a declared constraint
+    never is, so the prefix is added here.
+    """
+    return f'{entry.package}@v{entry.version}' if entry.version else f'{entry.package}@latest'
+
+
 def from_proxy(entry: catalog.GoTool) -> Result:
     """`go install`, keeping what it said.
 
@@ -276,14 +285,15 @@ def from_proxy(entry: catalog.GoTool) -> Result:
     # install` shells out to git for a module the proxy will not serve, and git
     # is reached by name.
     toolchain.put_on_path(toolchain.GO_ROOT / 'bin')
-    completed = effects.run([go, 'install', f'{entry.package}@latest'], output=Output.QUIET)
+    query = module_query(entry)
+    completed = effects.run([go, 'install', query], output=Output.QUIET)
     if completed.ok:
         return Result(True, f'{entry.executable} installed from {entry.package}', kind=Kind.APPLIED)
 
     # `go: downloading` lines are progress, and they are most of the transcript
     # for a tool with a large dependency tree.
     said = '\n'.join(line for line in completed.transcript.splitlines() if not line.startswith('go: downloading'))
-    return Result(False, f'go install {entry.package}@latest exited {completed.returncode}: {said.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(False, f'go install {query} exited {completed.returncode}: {said.strip()}', kind=Kind.COMMAND_FAILED)
 
 
 def from_bundle(entry: catalog.GoTool, cached: Path) -> Result | None:

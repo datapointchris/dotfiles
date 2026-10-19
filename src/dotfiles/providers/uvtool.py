@@ -79,8 +79,9 @@ def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Res
     tool's receipt, which is where `uv tool upgrade` and a tool's own `update`
     read it back.
     """
+    wanted = f'{entry.name}=={entry.version}' if entry.version else entry.name
     if not entry.index_url:
-        return uv_tool_install(entry.name, entry.name, offline=offline, again=again)
+        return uv_tool_install(entry.name, wanted, offline=offline, again=again)
 
     page = python_index.project_url(entry.index_url, entry.name)
     try:
@@ -94,7 +95,7 @@ def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Res
             f'{entry.name}: the {entry.index} index lists no release at {page}, so uv would install the {entry.name} on PyPI instead',
             kind=Kind.DECLARATION_INVALID,
         )
-    return uv_tool_install(entry.name, entry.name, offline=offline, again=again, index=(entry.index, entry.index_url))
+    return uv_tool_install(entry.name, wanted, offline=offline, again=again, index=(entry.index, entry.index_url))
 
 
 def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False) -> Result:

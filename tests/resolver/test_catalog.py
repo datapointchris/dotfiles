@@ -254,17 +254,27 @@ def test_a_mas_app_id_stays_an_integer(tmp_path: Path) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_a_pin_is_accepted_where_its_installer_honors_it(tmp_path: Path) -> None:
-    loaded = catalog.load(write(tmp_path, {'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': '0.50.0'}]}))
+@pytest.mark.parametrize(
+    ('section', 'declared'),
+    [
+        ('github_releases', [{'name': 'fzf', 'repo': 'junegunn/fzf', 'version': '0.50.0'}]),
+        ('cargo_packages', [{'name': 'fzf', 'version': '0.50.0'}]),
+        ('go_tools', [{'name': 'fzf', 'package': 'github.com/junegunn/fzf', 'version': '0.50.0'}]),
+        ('npm_globals', {'group': [{'name': 'fzf', 'version': '0.50.0'}]}),
+        ('uv_tools', {'group': [{'name': 'fzf', 'version': '0.50.0'}]}),
+    ],
+)
+def test_a_pin_is_accepted_where_its_installer_honors_it(tmp_path: Path, section: str, declared: object) -> None:
+    loaded = catalog.load(write(tmp_path, {section: declared}))
 
-    assert loaded.find('github_releases', 'fzf').version == '0.50.0'
+    assert loaded.find(section, 'fzf').version == '0.50.0'
 
 
 def test_a_constraint_nothing_honors_is_refused(tmp_path: Path) -> None:
     """The failure this rule exists for: four version fields sat in packages.yml
     unread, one of them eight versions stale, because nothing objected."""
-    found = issues(tmp_path, {'cargo_packages': [{'name': 'fd', 'version': '10.0.0'}]})
-    assert_named(found, 'nothing honors for cargo_packages')
+    found = issues(tmp_path, {'shell_plugins': [{'name': 'fzf-tab', 'repo': 'Aloxaf/fzf-tab', 'version': '1.0.0'}]})
+    assert_named(found, 'nothing honors for shell_plugins')
 
 
 def test_a_pin_beside_a_bound_is_refused(tmp_path: Path) -> None:

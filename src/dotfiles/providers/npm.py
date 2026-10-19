@@ -50,16 +50,15 @@ def install(entry: catalog.NpmGlobal, *, offline: bool) -> Result:
     destination = prefix()
     destination.mkdir(parents=True, exist_ok=True)
 
+    spec = f'{entry.name}@{entry.version}' if entry.version else entry.name
     completed = effects.run(
-        ['npm', 'install', '-g', entry.name],
+        ['npm', 'install', '-g', spec],
         env={'NPM_CONFIG_PREFIX': str(destination)},
         output=Output.QUIET,
     )
     if completed.ok:
-        return Result(True, f'{entry.executable} installed from {entry.name}', kind=Kind.APPLIED)
+        return Result(True, f'{entry.executable} installed from {spec}', kind=Kind.APPLIED)
 
     said = '\n'.join(line for line in completed.transcript.splitlines() if not line.startswith('npm warn'))
     unreachable = ', and the offline bundle stages no npm packages to fall back on' if offline else ''
-    return Result(
-        False, f'npm install -g {entry.name} exited {completed.returncode}{unreachable}: {said.strip()}', kind=Kind.COMMAND_FAILED
-    )
+    return Result(False, f'npm install -g {spec} exited {completed.returncode}{unreachable}: {said.strip()}', kind=Kind.COMMAND_FAILED)

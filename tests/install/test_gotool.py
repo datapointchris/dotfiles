@@ -96,6 +96,16 @@ def test_an_online_run_takes_the_proxy_even_when_a_bundle_is_present(home, bundl
     assert called[0].endswith('/go'), f'{called[0]} is a PATH lookup, not the toolchain this repo installed'
 
 
+def test_a_pinned_tool_asks_the_proxy_for_that_module_version(home, bundle, proxy) -> None:
+    """A Go module version carries its `v`, and a declared pin never does."""
+    reached = proxy()
+
+    gotool.install(catalog.GoTool.from_mapping({'name': 'task', 'package': TASK.package, 'version': '3.40.0'}), offline=False, floor='')
+
+    (called,) = reached.calls
+    assert called[1:] == ('install', f'{TASK.package}@v3.40.0')
+
+
 def test_the_go_toolchain_is_placed_on_path_even_when_this_run_did_not_install_it(home, bundle, proxy, monkeypatch) -> None:
     """Placing `/usr/local/go/bin` on PATH only as a side effect of *installing* Go
     leaves a machine whose toolchain is already current without it, and every tool

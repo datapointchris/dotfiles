@@ -47,6 +47,14 @@ def test_the_package_is_installed_globally_by_its_declared_name(home, registry) 
     assert reached.calls[0] == ('npm', 'install', '-g', '@taplo/cli')
 
 
+def test_a_pinned_package_is_installed_at_its_version(home, registry) -> None:
+    reached = registry()
+
+    npm.install(catalog.NpmGlobal.from_mapping({'name': '@taplo/cli', 'command': 'taplo', 'version': '0.10.0'}), offline=False)
+
+    assert reached.calls[0] == ('npm', 'install', '-g', '@taplo/cli@0.10.0')
+
+
 def test_the_prefix_is_passed_rather_than_left_to_the_npmrc(home, registry) -> None:
     """The npmrc this repo deploys is a symlink the symlink phase creates, and that
     phase runs after this one — it needs `task`, which needs Go. On a first install

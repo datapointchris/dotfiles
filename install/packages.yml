@@ -827,8 +827,8 @@ runtimes:
 #
 # Latest is the default. An entry pins itself with `version:` — a bare version,
 # never a tag, because the same release is spelled v0.56.0 here and cli/v0.9.0
-# by the personal CLIs. This is the one section where a pin is honored today;
-# `dotfiles machines check` rejects one written anywhere it is not. Vocabulary and the
+# by the personal CLIs. A section honors a pin where its entry class lists `version`
+# in `honored_constraints`; `dotfiles machines check` rejects one written anywhere else. Vocabulary and the
 # reasoning: docs/architecture/package-management.md, "Version constraints".
 #
 # A verified checksum is the default, so a release that cannot supply one says so

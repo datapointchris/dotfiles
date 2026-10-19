@@ -649,7 +649,7 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
             ),
         )
 
-    pinned = item.entry.version if isinstance(item.entry, catalog.GithubRelease) else ''
+    pinned = item.entry.version if item.entry is not None and 'version' in item.entry.honored_constraints else ''
     if pinned:
         return compared(item, reported, pinned, versions.exactly(reported, pinned), f'pinned to {pinned}', observed.met)
 
