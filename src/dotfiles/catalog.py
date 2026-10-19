@@ -214,6 +214,40 @@ def repo_slug_of(value: str) -> str:
     return '/'.join(segments[:2]) if len(segments) >= 2 else ''
 
 
+def constraint_problems(cls: type[Entry], declared: Mapping[str, str]) -> tuple[str, ...]:
+    """What is wrong with a set of version constraints declared for one section.
+
+    A function of the section and the values rather than a method, because two
+    declarations carry constraints: a `packages.yml` row, and a machine manifest
+    overriding that row for one machine. Both are held to the same rules — bare
+    versions, `version` alone or a window, and only keys the section's provider
+    honors — so the manifest cannot declare what the catalog would refuse.
+    """
+    found = []
+    named = {key: value for key, value in declared.items() if value}
+
+    for key, value in named.items():
+        if key not in cls.honored_constraints:
+            found.append(
+                f"declares '{key}', which nothing honors for {cls.section}. Remove it, or make it real and "
+                f'widen honored_constraints on the same class in the same change.'
+            )
+        if value.startswith('v') or '/' in value:
+            found.append(
+                f"declares '{key}' as {value!r}, which is a tag. Constraints are bare versions — "
+                f"resolving one to this tool's tag spelling is the resolver's job."
+            )
+
+    floor, ceiling = named.get('min_version', ''), named.get('max_version', '')
+    if named.get('version') and (floor or ceiling):
+        found.append("declares 'version', which pins exactly, beside a floor or ceiling describing a window nobody can predict")
+
+    if floor and ceiling and versions.exceeds(floor, ceiling):
+        found.append(f"declares 'min_version' {floor} above 'max_version' {ceiling}, so no release satisfies both")
+
+    return tuple(found)
+
+
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class Entry:
     """One row of `packages.yml`. The subclass is the section's schema.
@@ -376,26 +410,7 @@ class Entry:
 
     def problems(self) -> tuple[str, ...]:
         """Cross-field rules a single field cannot express."""
-        found = []
-        declared = [key for key in CONSTRAINTS if getattr(self, key)]
-
-        for key in declared:
-            if key not in self.honored_constraints:
-                found.append(
-                    f"declares '{key}', which nothing honors for {self.section}. Remove it, or make it real and "
-                    f'widen honored_constraints on the same class in the same change.'
-                )
-            if getattr(self, key).startswith('v') or '/' in getattr(self, key):
-                found.append(
-                    f"declares '{key}' as {getattr(self, key)!r}, which is a tag. Constraints are bare versions — "
-                    f"resolving one to this tool's tag spelling is the resolver's job."
-                )
-
-        if self.version and (self.min_version or self.max_version):
-            found.append("declares 'version', which pins exactly, beside a floor or ceiling describing a window nobody can predict")
-
-        if self.min_version and self.max_version and versions.exceeds(self.min_version, self.max_version):
-            found.append(f"declares 'min_version' {self.min_version} above 'max_version' {self.max_version}, so no release satisfies both")
+        found = list(constraint_problems(type(self), {key: getattr(self, key) for key in CONSTRAINTS}))
 
         if self.version_source not in VERSION_SOURCES:
             found.append(f"declares 'version_source' as {self.version_source!r}, which is not one of {', '.join(sorted(VERSION_SOURCES))}")

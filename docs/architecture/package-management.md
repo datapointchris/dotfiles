@@ -189,6 +189,11 @@ catalog are neither PEP 440 nor consistent semver, so an expression parser over
 them would need a second comparator. Three keys map one-to-one onto three
 resolver behaviors over the one comparator in `versions.py`.
 
+A machine manifest overrides one entry's constraints by listing it as a mapping,
+`- {name: lazygit, max_version: "0.63.0"}`, under the same rules. Why that replaces
+the row's constraints rather than merging with them is `Subscription.constraints`
+in `src/dotfiles/machine.py`.
+
 Why a section whose provider honors none of the keys refuses them outright is
 the `Entry` docstring in `src/dotfiles/catalog.py`. Why an offline run reads the
 bundle before any constraint resolves is `resolve_tag` in
