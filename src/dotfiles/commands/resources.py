@@ -278,10 +278,14 @@ def validate_source(value: str | None) -> str | None:
     raise typer.BadParameter(f'unknown source {value!r}. Valid: {", ".join(available_sources())}')
 
 
+# The help names the sections from the catalog rather than `available_sources`.
+# A help string is built once at import, before a command knows which
+# packages.yml it reads, and `catalog.load` refuses a key outside these. So this
+# is every name the file can hold, and a refusal names the ones it does hold.
 SourceOption = typer.Option(
     None,
     '--source',
-    help='Narrow to one packages.yml section',
+    help=f'Narrow to one packages.yml section: {", ".join(sorted(catalog.SECTIONS))}',
     autocompletion=available_sources,
     callback=validate_source,
 )
