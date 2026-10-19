@@ -759,27 +759,51 @@ def cmd_apply() -> int:
     return subprocess.run(['bash', str(script)]).returncode
 
 
+EXAMPLES = """\
+examples:
+  tmux-rearrange show            this window's panes, what each runs, how it is split
+  tmux-rearrange plan            regroup only this window, as after spawning agents into it
+  tmux-rearrange plan server     regroup every pane, live Claude sessions left where they are
+  tmux-rearrange apply           run the script the last plan wrote, once you have read it
+"""
+
+VERB_EXAMPLES = {
+    'show': """\
+examples:
+  tmux-rearrange show            this window's panes, what each runs, how it is split
+  tmux-rearrange show server     every pane on the server, guarded ones marked
+  tmux-rearrange show --json     the same scan as JSON, with each pane's recent output
+""",
+    'plan': """\
+examples:
+  tmux-rearrange plan            regroup only this window, as after spawning agents into it
+  tmux-rearrange plan server     regroup every pane, live Claude sessions left where they are
+  tmux-rearrange plan --json     the model's grouping as JSON; the script is still written
+""",
+    'apply': """\
+examples:
+  tmux-rearrange apply           run the script the last plan wrote, once you have read it
+
+The script is $XDG_STATE_HOME/tmux-rearrange/plan.sh, under ~/.local/state
+when that is unset.
+""",
+}
+
 SCOPE_HELP = f"""\
 scope:
-  (none)             the window this command runs in
+  (none)             this window; every other window keeps its pane ids and sizes
   @5, work:2, %3     the window named, or the one holding that pane
   work, =work        every window in that session
   server             every pane on this tmux server
 
-`server` is a word a session may also be called, and it wins. Write `=server`
-to reach a session of that name; the `=` is tmux's own exact-match prefix and
-works on any session name.
+`server` wins over a session of that name. Write `=server` to reach that
+session; `=` is tmux's exact-match prefix and works on any session name.
 
 At session and server scope a pane running a live Claude session is left where
 it is. Scoping to its window is what says it may move.
 
 A window holds at most {MAX_PANES_PER_WINDOW} panes. A larger group is split across as many
 windows as it needs before the script is written, whatever the model proposed.
-
-Calling this from a dispatcher: after spawning agents into panes, run
-`tmux-rearrange plan` and then `tmux-rearrange apply` from a pane in that
-window. The bare form is scoped to that one window, so every other window on
-the server keeps its panes at the same ids and the same sizes.
 """
 
 
@@ -787,7 +811,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         prog='tmux-rearrange',
         description=__doc__.splitlines()[0],
-        epilog=SCOPE_HELP,
+        epilog=EXAMPLES + '\n' + SCOPE_HELP,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest='verb', required=True)
@@ -799,7 +823,7 @@ def main() -> int:
         p = sub.add_parser(
             verb,
             help=help_text,
-            epilog=SCOPE_HELP if verb != 'apply' else None,
+            epilog=VERB_EXAMPLES[verb] + ('\n' + SCOPE_HELP if verb != 'apply' else ''),
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         if verb != 'apply':
