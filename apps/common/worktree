@@ -1939,7 +1939,20 @@ def build_parser() -> argparse.ArgumentParser:
     spawn.add_argument('--json', action='store_true', dest='as_json', help='the session, pane, path, branch and brief for a script to read')
     spawn.set_defaults(subparser=spawn)
 
-    commands.add_parser('land', parents=[quiet], help='rebase, push onto the default branch, then clean up')
+    commands.add_parser(
+        'land',
+        parents=[quiet],
+        help='rebase, push onto the default branch, then clean up',
+        description=(
+            'Put the worktree you are standing in onto the default branch, with no pull request. '
+            'It refuses outside a worktree, on a dirty tree, and when the work is already on origin/<base>. '
+            'It fetches, rebases onto origin/<base> and pushes HEAD to <base>. '
+            'A rebase conflict stops it there: resolve it, then run land again. '
+            'It then removes the worktree and deletes its branch. '
+            'Last, it fetches and rebases the primary checkout, but only when that checkout is clean and on '
+            '<base>; otherwise it says so and leaves the checkout alone.'
+        ),
+    )
 
     drop = commands.add_parser('drop', parents=[quiet], help='abandon the worktree you are in, without landing it')
     drop.add_argument('--force', action='store_true', help='throw the work away, commits included')
