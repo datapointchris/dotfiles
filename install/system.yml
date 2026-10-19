@@ -72,19 +72,11 @@ systemd_units:
 
   # archlinux is the one machine that indexes; every other machine searches the
   # index it syncs. `display_stack: wayland` selects it because no other machine
-  # sits on that point, and it matches the directory deploying both unit files.
-  # A second wayland machine would need a narrower key before it takes these,
-  # or two machines would each swap a new index into the synced directory.
+  # sits on that point, and it matches the directory deploying the unit file.
+  # The full index has no timer here. A scheduled job runs it on that
+  # machine and reports each run's outcome.
   - name: indy-watch.service
     description: Index every save into indy's live overlay
-    display_stack: wayland
-    scope: user
-    needs_root: false
-    enabled: true
-    active: true
-
-  - name: indy-index.timer
-    description: Nightly full indy index, which also empties the overlay
     display_stack: wayland
     scope: user
     needs_root: false
