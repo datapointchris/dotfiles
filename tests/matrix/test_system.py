@@ -424,6 +424,7 @@ NARROWED: list[tuple[str, dict[str, Any], dict[str, Any], bool]] = [
     ('a-row-for-this-os-family', {'os_family': 'linux'}, {}, True),
     ('a-row-for-another-host', {'host': 'wsl'}, {}, False),
     ('a-row-for-another-display-stack', {'display_stack': 'wayland'}, {}, False),
+    ('a-row-for-another-package-manager', {'package_manager': 'pacman'}, {}, False),
     ('a-row-needing-a-package-this-machine-plans', {'requires_package': 'curl'}, {}, True),
     ('a-row-needing-a-package-nothing-declares', {'requires_package': 'docker'}, {}, False),
     ('a-row-behind-a-feature-the-manifest-sets', {'feature': 'configure_zsh'}, {'configure_zsh': True}, True),

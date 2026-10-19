@@ -21,8 +21,8 @@
 #   requires_package   a system package this machine's manifest installs
 #   feature            a manifest boolean
 #   <axis>             any coordinate SystemConfig carries a field for, today
-#                      os_family, host, display_stack and network_trust — plus
-#                      machine and platform
+#                      os_family, host, display_stack, network_trust and
+#                      package_manager
 # An entry with none of them applies to every machine.
 #
 # `scope: user` on a systemd unit narrows nothing. It says which manager reads
@@ -47,6 +47,15 @@ systemd_units:
     description: TTY auto-login into Hyprland replaces the display manager
     display_stack: wayland
     enabled: false
+
+  # pacman keeps every package version it ever downloaded, and pacman-contrib
+  # ships this timer disabled. It runs `paccache -r` weekly, which keeps the
+  # three newest versions of each package: enough history to downgrade.
+  - name: paccache.timer
+    description: Weekly trim of the pacman package cache to three versions
+    requires_package: pacman-contrib
+    enabled: true
+    active: true
 
   # The first user unit this repo declares, and the first row here whose write
   # needs no root. `display_stack: wayland` matches the one directory that
@@ -107,6 +116,18 @@ managed_files:
       [Service]
       ExecStart=
       ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin {user} %I $TERM
+
+  # journald's own cap is a tenth of the filesystem, up to 4 G, which on a
+  # workstation's root is room a package cache also wants. A drop-in rather than
+  # an edit to journald.conf, so the packaged file stays the package's.
+  # journald reads the drop-in at its next restart.
+  - name: journal-size
+    description: The systemd journal capped at 500 M on disk
+    package_manager: pacman
+    path: /etc/systemd/journald.conf.d/size.conf
+    content: |
+      [Journal]
+      SystemMaxUse=500M
 
   # Without this, ~/.config/zsh/.zshrc never loads at all, on any platform.
   # $HOME is deliberately unexpanded: zsh expands it when it reads the file, and
