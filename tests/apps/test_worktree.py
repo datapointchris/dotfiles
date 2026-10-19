@@ -474,6 +474,8 @@ def rig(tmp_path: Path, tmux_socket: Path, bin_dir: Path, spawn_state: Path):
 
     The server is started carrying the stub directory on PATH: a pane inherits the
     server's environment, and the pane is where the stub `claude` has to be found.
+    It reads no config file, because `XDG_CONFIG_HOME` still names the desk's, and
+    that tmux.conf clones its plugins into the rig's `$HOME` over the network.
 
     The socket sits outside `tmp_path`, which stays the rig's `$HOME` and working
     directory. `tmux_socket` holds the length limit that forces the split.
@@ -481,7 +483,23 @@ def rig(tmp_path: Path, tmux_socket: Path, bin_dir: Path, spawn_state: Path):
     socket = tmux_socket
     server = os.environ | {'PATH': f'{bin_dir}:{os.environ["PATH"]}', 'HOME': str(tmp_path)}
     subprocess.run(
-        [str(TMUX), '-S', str(socket), 'new-session', '-d', '-s', 'rig', '-x', str(RIG_COLUMNS), '-y', str(RIG_ROWS), '-c', str(tmp_path)],
+        [
+            str(TMUX),
+            '-S',
+            str(socket),
+            '-f',
+            os.devnull,
+            'new-session',
+            '-d',
+            '-s',
+            'rig',
+            '-x',
+            str(RIG_COLUMNS),
+            '-y',
+            str(RIG_ROWS),
+            '-c',
+            str(tmp_path),
+        ],
         check=True,
         capture_output=True,
         env=server,
