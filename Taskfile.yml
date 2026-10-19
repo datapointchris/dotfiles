@@ -31,7 +31,9 @@ tasks:
     cmds:
       # xdist reads this for `auto`, so the count is asked of the machine rather
       # than written down. One core stays free for whatever else is running.
-      - PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) uv run pytest -n auto
+      # worksteal lets an idle worker take tests queued on a busy one, so a block
+      # of slow tests in one file is shared out rather than run on one worker.
+      - PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) uv run pytest -n auto --dist worksteal
 
   test:e2e:
     desc: 'Raw pytest over every e2e level at once — prefer test:matrix, which orders and records them'

@@ -382,17 +382,17 @@ repos:
         stages: [pre-commit]
 
       # The whole suite, which since the bats tiers ported is every test the repo
-      # has that does not want Docker or a network. `addopts` deselects those.
+      # has that does not want Docker or a network. tests/conftest.py deselects
+      # those. `--dist worksteal` is the Taskfile test task's, for its reason.
       #
-      # It is the whole cost of a pre-commit run here, and there is no hot spot
-      # in it — thousands of tests at tens of milliseconds each. So it is scoped
-      # to what it measures: the Python application and the declaration it reads.
+      # It is the whole cost of a pre-commit run here, so it is scoped to what
+      # it measures: the Python application and the declaration it reads.
       # `apps/` is in here because tests/apps drives those scripts directly. The
       # two `configs/` subtrees are shell code the suite reads by absolute path,
       # from tests/cli, tests/resources and tests/shell.
       - id: pytest
         name: pytest
-        entry: bash -c 'PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) exec uv run pytest tests/ -n auto'
+        entry: bash -c 'PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) exec uv run pytest tests/ -n auto --dist worksteal'
         language: system
         pass_filenames: false
         files: '^(src/|tests/|install/|apps/|pyproject\.toml$|uv\.lock$|configs/common/\.config/zsh/|configs/common/\.local/shell/)'
@@ -408,7 +408,7 @@ repos:
       # between them they are also the whole of `shell/`'s coverage.
       - id: pytest-trees
         name: pytest (deployed trees)
-        entry: bash -c 'PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) exec uv run pytest tests/symlinks tests/shell tests/configs -n auto'
+        entry: bash -c 'PYTEST_XDIST_AUTO_NUM_WORKERS=$(($(nproc) - 1)) exec uv run pytest tests/symlinks tests/shell tests/configs -n auto --dist worksteal'
         language: system
         pass_filenames: false
         files: ^(configs/|shell/)
