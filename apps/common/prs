@@ -1148,9 +1148,9 @@ def help_screen() -> None:
     help_text('Pick an open PR and open its diff in a tmux window.')
     help_usage('prs', 'prs list')
 
-    help_section('Commands')
-    help_row('prs', '', 'pick a PR, then act on it')
-    help_row('prs list', '', 'print every open PR as a table instead of picking one')
+    help_section('Examples')
+    help_row('prs', '', 'a PR to review or merge: pick it, then act on it')
+    help_row('prs list', '', 'every open PR at once, as a table instead of a picker')
 
     help_section('Keys')
     help_text('On the list, and again in the action menu.')
