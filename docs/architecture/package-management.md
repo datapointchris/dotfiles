@@ -138,6 +138,11 @@ what `cargo binstall` resolves from, and it trails any project that tags ahead o
 publishing there. Comparing against the tag in that window reports drift `apply`
 cannot close. The repo names only the release asset binstall downloads.
 
+An offline bundle stages that same crates.io version. Offline, the bundle row is
+the upstream the check compares against. A row at a tag ahead of the crate reads
+as stale on every apply when the binary prints the crate's version, as sd's
+`v1.1.0` asset prints `sd 1.0.0`.
+
 An entry that cannot be asked declares so rather than being probed and hoped for.
 Which clauses have to hold, and the GUI whose probe blocked three `dotfiles plan`
 runs on its own event loop, are `has_currency` in

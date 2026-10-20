@@ -36,6 +36,7 @@ from typing import Any
 import httpx2
 
 from dotfiles import catalog
+from dotfiles import crates_io
 from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import paths
@@ -1107,7 +1108,7 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
 
     for entry in bundleable(items):
         assert isinstance(entry, catalog.CargoPackage)
-        version = fetch_latest_version(entry.github_repo)
+        version = cargo_release_tag(entry)
         if bundle.already_current('cargo', cargo.BUNDLE_CATEGORY, entry.name, version):
             log.info(f'  {entry.name} ({version}) is what the target already has')
             continue
@@ -1125,6 +1126,23 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
             filename = repackage_zip_as_tarball(destination, entry.executable, cargo.asset_target(entry, target), version.lstrip('v'))
 
         bundle.record(cargo.BUNDLE_CATEGORY, entry.name, version, filename)
+
+
+def cargo_release_tag(entry: catalog.CargoPackage) -> str:
+    """The release tag for the crate version a bare `cargo binstall` installs.
+
+    crates.io's newest, never the repo's latest tag. A repo can tag ahead of the
+    crate, and its binary may still print the crate's version: sd's v1.1.0 asset
+    prints `sd 1.0.0`. The offline currency check compares that output against
+    this row, so a tag-ahead row reads as stale on every apply and never converges.
+
+    Spelled with the prefix the repo's latest tag carries, `v` or none.
+    """
+    newest = crates_io.newest_version(entry.name).version
+    if not newest:
+        raise BundleError(f'could not read the newest version of {entry.name} from crates.io')
+    prefix = re.sub(r'\d.*', '', fetch_latest_version(entry.github_repo))
+    return f'{prefix}{newest}'
 
 
 UV_REPO = 'astral-sh/uv'

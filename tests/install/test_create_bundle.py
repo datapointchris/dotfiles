@@ -18,6 +18,7 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles import create_bundle
+from dotfiles import github_release
 from dotfiles import paths
 from dotfiles import status
 from dotfiles.coordinates import Arch
@@ -487,7 +488,7 @@ class TestBundleRoundTrip:
     way `add_cargo_binaries` does, then ask the provider for it.
     """
 
-    def stage(self, tmp_path, monkeypatch, entry, version='v10.4.2'):
+    def stage(self, tmp_path, monkeypatch, entry):
         target = Target(OSFamily.LINUX, Arch.X86_64)
         staging = tmp_path / 'installers'
         bundle = create_bundle.Bundle(staging, 'linux', 'x86_64', 'a-machine', BUILT_AT)
@@ -500,7 +501,9 @@ class TestBundleRoundTrip:
             with tarfile.open(destination, 'w:gz') as tar:
                 tar.add(payload, arcname=payload.name)
 
-        monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: version)
+        # The repo tags a release ahead of the crate, as chmln/sd does.
+        monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: 'v10.4.3')
+        monkeypatch.setattr(create_bundle.crates_io, 'newest_version', lambda crate: github_release.Newest(version='10.4.2'))
         monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', fetch)
         monkeypatch.setattr(create_bundle, 'verify_against_upstream', lambda *args: None)
 
@@ -729,6 +732,9 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
         bundle.plan_against(status_path, json.loads(status_path.read_text()))
 
         monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: self.VERSION)
+        monkeypatch.setattr(
+            create_bundle.crates_io, 'newest_version', lambda crate: github_release.Newest(version=self.VERSION.lstrip('v'))
+        )
         monkeypatch.setattr(create_bundle, 'verify_against_upstream', lambda *args: None)
 
         def refuse(*args, **kwargs):

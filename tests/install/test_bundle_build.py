@@ -44,6 +44,7 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
+from dotfiles import crates_io
 from dotfiles import create_bundle
 from dotfiles import github_release
 from dotfiles import paths
@@ -323,6 +324,10 @@ class Upstream:
     def serve(self, url: str, body: bytes) -> None:
         self.plain[url] = body
 
+    def publish_crate(self, name: str, version: str) -> None:
+        """One crate's index file on crates.io, holding the one version."""
+        self.serve(crates_io.index_url(name), json.dumps({'name': name, 'vers': version, 'yanked': False}).encode() + b'\n')
+
     def __call__(self, url: str, accept: str | None = None) -> bytes:
         self.fetched.append(url)
         remaining = self.flaky.get(url, 0)
@@ -400,6 +405,8 @@ def stock(upstream: Upstream) -> Upstream:
     upstream.publish(CHEAT_REPO, CHEAT_TAG, {'cheat.gz': gzipped(b'CHEAT')})
     upstream.publish(RIPGREP_REPO, RIPGREP_TAG, {'ripgrep.tar.gz': tarball('rg', b'RIPGREP'), 'rg.zip': zipped('rg.exe', b'RG.EXE')})
     upstream.publish(FNM_REPO, FNM_TAG, {'fnm.zip': zipped('fnm', b'FNM')})
+    upstream.publish_crate('ripgrep', RIPGREP_TAG.lstrip('v'))
+    upstream.publish_crate('fnm', FNM_TAG.lstrip('v'))
     upstream.publish(JQ_REPO, JQ_TAG, {'jq-windows-amd64.exe': b'JQ.EXE'})
     upstream.publish(THEME_REPO, THEME_TAG, {})
     uv_assets = {f'uv-{cargo.triple(target)}.tar.gz': tarball('uv', b'UV') for target in (LINUX, LINUX_ARM)}
@@ -431,15 +438,17 @@ def asset_named(tool: str, tag: str = LAZYGIT_TAG, target: Target = LINUX) -> st
 
 @pytest.fixture
 def upstream(monkeypatch: pytest.MonkeyPatch) -> Upstream:
-    """The one network seam, replaced, and every other route to a socket closed.
+    """The two network seams, replaced, and every other route to a socket closed.
 
-    The transport guard is not redundant with replacing `request`: it is what
-    makes an unstubbed path a failure rather than a real download. `httpx2.get`
-    and `HTTPTransport.handle_request` sit between every caller and the socket,
+    `request` carries every plain read and `revalidate` the crates.io index. The
+    transport guard is not redundant with replacing them: it is what makes an
+    unstubbed path a failure rather than a real download. `httpx2.get` and
+    `HTTPTransport.handle_request` sit between every caller and the socket,
     including a client built somewhere this module has never looked.
     """
     fake = stock(Upstream())
     monkeypatch.setattr(github_release, 'request', fake)
+    monkeypatch.setattr(github_release, 'revalidate', lambda url, etag='': github_release.Conditional(payload=fake(url), etag=''))
 
     def refuse(*_args: object, **_kwargs: object) -> None:
         raise ReachedTheNetwork('the build reached the network past github_release.request')
