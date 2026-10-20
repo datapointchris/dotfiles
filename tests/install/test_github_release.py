@@ -440,8 +440,8 @@ class TestLatestVersion:
 class TestLatestTag:
     """For a project that tags every build and publishes no release.
 
-    `aws/aws-cli` is the only one, and it is why this exists at all: its
-    `releases/latest` answers 404 while `tags` lists `2.36.19`.
+    `aws/aws-cli` and `git/git` are the ones: `releases/latest` answers 404
+    while `tags` lists the versions.
     """
 
     @staticmethod
@@ -468,6 +468,13 @@ class TestLatestTag:
         self.answering(monkeypatch, ['nightly', '2.36.19', 'latest'])
 
         assert github_release.latest_tag('aws/aws-cli') == '2.36.19'
+
+    def test_a_release_candidate_never_wins(self, monkeypatch):
+        """git/git's page leads with its rc tags, and `parse` reads `v2.57.0-rc0`
+        as 2.57.0, above the release a machine should be on."""
+        self.answering(monkeypatch, ['v2.57.0-rc0', 'v2.56.0', 'v2.56.0-rc2'])
+
+        assert github_release.latest_tag('git/git') == 'v2.56.0'
 
     def test_a_prefix_narrows_to_one_component_of_a_monorepo(self, monkeypatch):
         self.answering(monkeypatch, ['api/9.0.0', 'cli/1.2.0', 'cli/1.10.0'])

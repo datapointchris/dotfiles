@@ -601,10 +601,10 @@ requests against a rate limit `check` shares with every declared release.
 def latest_tag(repo: str, tag_prefix: str = '') -> str | None:
     """The newest *tag*, for a project that tags without publishing releases.
 
-    `aws/aws-cli` is the case and the only one: `releases/latest` answers 404
-    while `tags` lists `2.36.19`. Without this its entry could name no repo, and
-    an entry naming none is one nothing can say is behind — which for awscli means
-    a machine that never moves off whatever it first installed.
+    `aws/aws-cli` and `git/git` are the cases: `releases/latest` answers 404
+    while `tags` lists the versions. Without this their entries could name no
+    repo, and an entry naming none is one nothing can say is behind — a machine
+    that never moves off whatever it first installed.
 
     **The greatest by version, never the first.** GitHub documents no ordering for
     this endpoint — it answers newest-first in practice, and has for every
@@ -625,7 +625,12 @@ def tag_url(repo: str) -> str:
 
 
 def tag_from(payload: object, tag_prefix: str) -> str | None:
-    """The greatest tag by version in a decoded page, never the first in it."""
+    """The greatest tag by version in a decoded page, never the first in it.
+
+    A tag with a hyphen straight after its version is a pre-release, as semver
+    reads it, and is skipped the way `releases/latest` skips a release marked one.
+    git tags `v2.57.0-rc0` weeks before `v2.57.0`, and `parse` reads both as 2.57.0.
+    """
     if not isinstance(payload, list):
         return None
     best: str | None = None
@@ -633,6 +638,9 @@ def tag_from(payload: object, tag_prefix: str) -> str | None:
     for entry in payload:
         name = entry.get('name') or ''
         if not name.startswith(tag_prefix):
+            continue
+        found = versions.NUMBERS.search(name)
+        if found is None or name[found.end() :].startswith('-'):
             continue
         parsed = versions.parse(name)
         if parsed is not None and parsed > highest:
