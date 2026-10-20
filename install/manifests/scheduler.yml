@@ -55,7 +55,8 @@ github_releases:
   - duf         # disk-free at a glance
   - atuin       # shell history (zsh init expects it)
   - shellcheck  # debug shell scripts on the box
-  - syncthing   # replicates the shared directories this box serves
+  - yq          # the bats suites the fix job's commit hook runs read YAML through mikefarah's yq
+  - syncthing  # replicates the shared directories this box serves
   - icb         # reads and closes tracked issues as this box's service client, from service.env
   - ypl         # `ypl server status` as this box's ypl-svc- client, from service.env
 
