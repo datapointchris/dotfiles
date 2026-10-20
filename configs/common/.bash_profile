@@ -38,7 +38,12 @@ export INPUTRC="$XDG_CONFIG_HOME/readline/inputrc"
 # One file rather than a copy per os value: configs/ deploys whole files and
 # merges nothing, so moving a single line onto the os axis means three
 # .bash_profiles, two of them identical.
+#
+# A link is tested by where it leads. Arch links /sbin, /usr/sbin and /bin to
+# /usr/bin, so tested by name against a PATH carrying /usr/bin, all three would
+# land ahead of fnm, cargo and ~/.local/bin.
 for path_directory in /sbin /usr/sbin /bin /usr/bin /usr/local/bin "$HOME/.local/bin" "$HOME/bin" "$HOME/go/bin"; do
+  [[ -L "$path_directory" ]] && path_directory="$(cd -P -- "$path_directory" && pwd)"
   if [[ -d "$path_directory" && ":$PATH:" != *":$path_directory:"* ]]; then
     # The separator is conditional because an empty PATH would otherwise gain a
     # trailing colon, and an empty PATH entry means the current directory.
