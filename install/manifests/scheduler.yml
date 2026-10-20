@@ -24,6 +24,7 @@ flatpak: false
 
 go_tools:
   - fleet     # the sweep, the schedule, and the timer that fires them
+  - forge     # the scheduled version check asks it which files carry a version stamp
   - task      # Taskfile runner used across the repos
   - gdu       # the clones fill a disk, and this is how that gets diagnosed
   # The scheduled fix agent commits through the repo's own hooks, and a Go
