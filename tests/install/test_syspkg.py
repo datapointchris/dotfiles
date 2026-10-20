@@ -212,12 +212,12 @@ def test_a_removal_runs_the_managers_own_uninstall(fake_bin: Path, unprivileged)
     being asserted is the command the engine built, and brew's own answer is about
     the machine the suite happens to run on."""
     log = fake_bin / 'argv'
-    executable(fake_bin, 'brew', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit 0\n')
+    executable(fake_bin, 'brew', f'#!/bin/sh\nprintf "%s %s\\n" "$HOMEBREW_NO_AUTOREMOVE" "$*" >> {log}\nexit 0\n')
 
     result = syspkg.uninstall('brew', ['syncthing'], unprivileged)
 
     assert result.ok, result.detail
-    assert log.read_text().splitlines() == ['uninstall syncthing']
+    assert log.read_text().splitlines() == ['1 uninstall --force syncthing']
 
 
 def test_the_apt_removal_cannot_take_more_than_the_name_it_was_given(fake_bin: Path) -> None:

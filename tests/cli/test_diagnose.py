@@ -181,6 +181,7 @@ def test_a_binary_outside_every_language_directory_falls_to_the_os_manager(tmp_p
     removal = diagnose.removal_of(tmp_path / 'bin' / 'shellcheck', PackageManager.BREW, tmp_path)
 
     assert removal == diagnose.Removal('brew', 'brew uninstall shellcheck', 'shellcheck')
+    assert removal.path == str(tmp_path / 'bin' / 'shellcheck')
 
 
 def test_a_binary_no_manager_claims_is_still_given_a_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

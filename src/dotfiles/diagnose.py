@@ -216,6 +216,10 @@ class Removal:
     package: str = ''
     """The package the command removes, or '' where the command is an `rm`."""
 
+    path: str = dc.field(default='', compare=False)
+    """The copy of the binary this removes. Outside equality, because it is what
+    the rest was decided from rather than part of the answer."""
+
     @property
     def origin(self) -> str:
         """How the row says where this copy came from."""
@@ -322,22 +326,22 @@ def removal_of(path: Path, manager: PackageManager, home: Path) -> Removal:
         if path.parent != directory:
             continue
         if mechanism == 'cargo' and (crate := cargo_package_providing(path.name)):
-            return Removal('cargo', f'cargo uninstall {crate}', crate)
+            return Removal('cargo', f'cargo uninstall {crate}', crate, path=str(path))
         if mechanism == 'npm' and (package := npm_package_providing(path)):
-            return Removal('npm', f'npm uninstall -g {package}', package)
+            return Removal('npm', f'npm uninstall -g {package}', package, path=str(path))
         if mechanism == 'uv' and (tool := uv_tool_providing(path.name)):
-            return Removal('uv', f'uv tool uninstall {tool}', tool)
+            return Removal('uv', f'uv tool uninstall {tool}', tool, path=str(path))
         # go keeps no receipt, so its directory is the only evidence there is.
         # The other managers were asked and did not claim the file, and
         # `~/.local/bin` holds release binaries and vendor installs beside the uv
         # tools, so naming that manager would name the one thing known not to
         # have put it there.
-        return Removal(mechanism if mechanism == 'go' else '', f'rm {shown}')
+        return Removal(mechanism if mechanism == 'go' else '', f'rm {shown}', path=str(path))
 
     owner, _ = package_owning(path, manager)
     if owner:
-        return Removal(str(manager), removal_command(owner, manager), owner)
-    return Removal('', f'rm {shown}')
+        return Removal(str(manager), removal_command(owner, manager), owner, path=str(path))
+    return Removal('', f'rm {shown}', path=str(path))
 
 
 QUOTED_PATH = re.compile(r"'([^']+)'|\"([^\"]+)\"")

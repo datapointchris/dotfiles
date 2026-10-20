@@ -8,6 +8,8 @@ and left alone.
 
 from __future__ import annotations
 
+import os
+
 from dotfiles import effects
 from dotfiles.diagnose import Removal
 from dotfiles.effects import Output
@@ -32,7 +34,18 @@ def removable(removal: Removal) -> bool:
 
 
 def remove(removal: Removal, privilege: Escalates) -> Result:
-    """Take one superseded copy off the machine with the installer that put it there."""
+    """Take one superseded copy off the machine with the installer that put it there.
+
+    Done once the copy is gone, whatever the installer exited with: brew exits 0
+    from an uninstall it refused.
+    """
+    removed = uninstall(removal, privilege)
+    if removed.ok and os.path.lexists(removal.path):
+        return Result(False, f'{removal.command} exited 0 and left {removal.path} in place', kind=Kind.COMMAND_FAILED)
+    return removed
+
+
+def uninstall(removal: Removal, privilege: Escalates) -> Result:
     if removal.mechanism in syspkg.UNINSTALL:
         return syspkg.uninstall(removal.mechanism, [removal.package], privilege)
     command = [*UNINSTALL[removal.mechanism], removal.package]
