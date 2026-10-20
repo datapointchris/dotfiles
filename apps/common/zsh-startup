@@ -4,7 +4,7 @@
 # dependencies = []
 # ///
 """How long this machine takes to give you a prompt, and what is spending it.
-
+Examples:
   zsh-startup time              median, fastest, slowest over N starts
   zsh-startup time -n 30        more samples, for a change you expect to be small
   zsh-startup steps             one start broken down, slowest step first
@@ -302,13 +302,43 @@ def main() -> None:
     # third member of an exclusive group.
     reports = parser.add_subparsers(dest='report', metavar='<report>')
 
-    timing = reports.add_parser('time', help='median, fastest and slowest over N interactive starts')
+    timing = reports.add_parser(
+        'time',
+        help='median, fastest and slowest over N interactive starts',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            'Examples:\n'
+            f'  zsh-startup time              median, fastest, slowest over {DEFAULT_RUNS} starts\n'
+            '  zsh-startup time -n 30        more samples, for a change you expect to be small\n'
+            '  zsh-startup time --json       the same numbers, for something that will parse them'
+        ),
+    )
     timing.add_argument('-n', '--runs', type=int, default=DEFAULT_RUNS, help=f'measured starts (default {DEFAULT_RUNS})')
 
-    steps = reports.add_parser('steps', help='one start broken down, slowest step first')
+    steps = reports.add_parser(
+        'steps',
+        help='one start broken down, slowest step first',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            'Examples:\n'
+            '  zsh-startup steps             one start broken down, slowest step first\n'
+            '  zsh-startup steps --top 5     just the worst offenders\n'
+            '  zsh-startup steps --json      the same rows, for something that will parse them'
+        ),
+    )
     steps.add_argument('--top', type=int, default=15, help='rows to print (default 15)')
 
-    flags = reports.add_parser('flags', help='what each ~/.env feature flag costs on this machine')
+    flags = reports.add_parser(
+        'flags',
+        help='what each ~/.env feature flag costs on this machine',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            'Examples:\n'
+            '  zsh-startup flags             what each ~/.env feature flag costs here\n'
+            '  zsh-startup flags -n 3        a rough pass first, when the full one is too slow to wait on\n'
+            '  zsh-startup flags --json      the same rows, for something that will parse them'
+        ),
+    )
     flags.add_argument('-n', '--runs', type=int, default=DEFAULT_RUNS, help=f'starts per row (default {DEFAULT_RUNS})')
 
     for report in (timing, steps, flags):
