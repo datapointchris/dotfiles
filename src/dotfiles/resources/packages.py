@@ -44,6 +44,7 @@ from dotfiles.providers import bundle
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
+from dotfiles.providers import superseded
 from dotfiles.providers import syspkg
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
@@ -314,7 +315,10 @@ class PackagesResource:
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
-        """Whichever provider planned it repairs it, or says why it cannot."""
+        """Whichever provider planned it repairs it, or says why it cannot. A
+        superseded copy goes to the installer that put it there."""
+        if change.removes is not None:
+            return Outcome.from_result(change, superseded.remove(change.removes, privilege))
         return registry.install(session, change, privilege)
 
 
@@ -375,7 +379,8 @@ def shadowing(
     reporting every one of them names a handful of things on a healthy machine.
     Three explanations are legitimate, and none of them is a list here:
 
-    - the copy this item's own evidence names — whatever the provider installed;
+    - the copy this item's own evidence names — whatever the provider installed —
+      or a link into it, which is how a uv tool's script reaches PATH;
     - a copy an OS package manager attributes to a package *this manifest
       declares*. fnm owns node and npm while pacman's `nodejs` ships `/usr/bin/node`
       underneath it, and that second copy is the bootstrap npm the declaration asks
@@ -387,7 +392,8 @@ def shadowing(
 
     What is left over is a stray somebody installed by hand and then declared
     through another mechanism — `shellcheck` from pacman beside the release
-    binary. `Repair.BY_HAND` because removing one is a judgment about which: the
+    binary. `apply` removes it where the item's `supersedes` names it, and
+    `stray_change` decides that. Otherwise it is `Repair.BY_HAND`, because the
     declaration says what should be there and cannot say what else is safe to
     uninstall.
     """
@@ -398,7 +404,8 @@ def shadowing(
     declared: set[str] = set()
     for item in plan.items:
         if isinstance(item.entry, catalog.SystemPackage):
-            declared.update(filter(None, (item.entry.package_for(installer) for installer in syspkg.OWNER)))
+            # Every name `owner_of` answers with. pacman answers for what yay built.
+            declared.update(filter(None, (item.entry.package_for(installer) for installer in ('pacman', 'aur', 'apt', 'brew'))))
 
     candidates = [item for item in mine if item.executable and len(index.get(item.executable, ())) > 1]
     explained = declared | (syspkg.unchosen() if candidates else frozenset())
@@ -411,11 +418,23 @@ def shadowing(
         stray = tuple(
             Stray(path, runs_first=path == copies[0])
             for path in copies
-            if path != evidence[item.address].detail and syspkg.owner_of(path) not in explained
+            if not own_copy(path, evidence[item.address].detail) and syspkg.owner_of(path) not in explained
         )
         if stray:
             shadowed[item.address] = stray
     return shadowed
+
+
+def own_copy(path: str, detail: str) -> bool:
+    """Whether a copy on PATH is the one an item's evidence names, or resolves into it."""
+    if path == detail:
+        return True
+    if not detail.startswith('/'):
+        return False
+    try:
+        return Path(path).resolve().is_relative_to(Path(detail).resolve())
+    except OSError:
+        return False
 
 
 def has_currency(item: DesiredItem, *, offline: bool) -> bool:
@@ -980,19 +999,49 @@ def stray_change(item: DesiredItem, stray: Stray, observed: Observed, manager: P
     one tool are usually two packages, and one command covering both would be
     wrong for at least one. Changing the declaration is a repo edit rather than a
     repair of this machine, so it is not offered here.
+
+    A copy the item's `supersedes` names is `apply`'s to remove. The row is the
+    decision to replace it, and the declared copy is already installed.
     """
     shown = paths.under_home(Path(stray.path), observed.home)
     declared = paths.under_home(Path(observed.evidence[item.address].detail), observed.home)
     removal = diagnose.removal_of(Path(stray.path), manager, observed.home)
     order = 'ahead of' if stray.runs_first else 'behind'
+    detail = f'found: {shown} ({removal.origin}), {order} {item.address} at {declared}'
+    if supersedes(item, removal):
+        return Change(
+            NAME,
+            item.stage,
+            removal.package,
+            Verdict.UNDECLARED,
+            repair=Repair.AUTOMATIC,
+            detail=detail,
+            advice=f'superseded by {item.address} -> apply runs {removal.command}',
+            privileged=removal.mechanism in syspkg.REMOVES_AS_ROOT,
+            removes=removal,
+        )
     return Change(
         NAME,
         item.stage,
         removal.package or shown,
         Verdict.UNDECLARED,
         repair=Repair.BY_HAND,
-        detail=f'found: {shown} ({removal.origin}), {order} {item.address} at {declared}',
+        detail=detail,
         advice=f'undeclared: {item.address} already installs {item.executable} -> {removal.command}',
+    )
+
+
+def supersedes(item: DesiredItem, removal: diagnose.Removal) -> bool:
+    """Whether the item's `supersedes` names the installer and package of a copy.
+
+    A prefixed row names a user-space installer. A bare row names a system
+    package, under whichever manager this machine has.
+    """
+    if not superseded.removable(removal):
+        return False
+    return any(
+        package == removal.package and (installer == removal.mechanism if installer else removal.mechanism in syspkg.UNINSTALL)
+        for installer, package in map(catalog.superseded_row, getattr(item.entry, 'supersedes', ()))
     )
 
 

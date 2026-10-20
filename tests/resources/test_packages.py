@@ -1600,6 +1600,53 @@ def test_a_second_copy_is_not_something_apply_can_repair(tmp_path: Path, fake_bi
     assert change.drifted and not change.actionable
 
 
+LOGS_ITS_ARGUMENTS = '#!/bin/sh\necho "$*" >> "$0.log"\n'
+
+
+def superseding_release(tmp_path: Path, release_cache: Path, row: str, platform: str) -> Session:
+    """A current release whose `supersedes` names one other copy of it."""
+    released('frob', 'frob 1.0.0')
+    cached(release_cache, {'example/frob': 'v1.0.0'})
+    declared = {'github_releases': [{'name': 'frob', 'repo': 'example/frob', 'supersedes': [row]}]}
+    return session(tmp_path, declared, {'machine': 'box', 'platform': platform, 'github_releases': ['frob']})
+
+
+def test_apply_removes_an_npm_copy_the_release_supersedes(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, unprivileged: Privilege
+) -> None:
+    """The row is the authorization, so a plain apply removes it once the release is installed."""
+    package = npm.prefix() / 'lib' / 'node_modules' / '@example' / 'frob'
+    package.mkdir(parents=True)
+    (npm.prefix() / 'bin' / 'frob').symlink_to(executable(package, 'cli.js'))
+    executable(fake_bin, 'npm', LOGS_ITS_ARGUMENTS)
+    live = superseding_release(tmp_path, release_cache, 'npm:@example/frob', 'linux')
+
+    change = only_change(live)
+    outcome = packages.RESOURCE.perform(live, change, unprivileged)
+
+    assert (change.item, change.actionable) == ('@example/frob', True)
+    assert outcome.status is OutcomeStatus.DONE
+    assert (fake_bin / 'npm.log').read_text().splitlines()[-1] == 'uninstall -g @example/frob'
+
+
+def test_apply_removes_a_homebrew_copy_the_release_supersedes(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch, only_brew_answers: None, release_cache: Path, unprivileged: Privilege
+) -> None:
+    """A bare row names a system package, and Homebrew's is the formula its link resolves into."""
+    formula = tmp_path / 'Cellar' / 'frob' / '1.0.0' / 'bin'
+    formula.mkdir(parents=True)
+    (second_bin(tmp_path, monkeypatch) / 'frob').symlink_to(executable(formula, 'frob'))
+    executable(fake_bin, 'brew', LOGS_ITS_ARGUMENTS)
+    live = superseding_release(tmp_path, release_cache, 'frob', 'macos')
+
+    change = only_change(live)
+    outcome = packages.RESOURCE.perform(live, change, unprivileged)
+
+    assert (change.item, change.actionable) == ('frob', True)
+    assert outcome.status is OutcomeStatus.DONE
+    assert (fake_bin / 'brew.log').read_text().splitlines()[-1] == 'uninstall frob'
+
+
 def test_the_same_binary_reachable_twice_is_one_installation(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """`~/.local/bin/fd` pointing at `/usr/bin/fd` is one tool with two names.
     Counting paths rather than real paths reports every symlinked companion this

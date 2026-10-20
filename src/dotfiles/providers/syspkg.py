@@ -166,23 +166,29 @@ OWNER: dict[str, tuple[str, ...]] = {
 
 Only the two managers that own paths outside a prefix of their own, because this
 answers one question: whether a second copy of a declared binary is something the
-machine asked for. brew keeps its formulae in its own cellar and `Inventories`
-already speaks for it; a cask, an App Store app and a flatpak put nothing on PATH
-to attribute.
+machine asked for. brew needs no query, because `cellar_formula` reads its answer
+off the link. A cask, an App Store app and a flatpak put nothing on PATH to
+attribute.
 """
 
 
 UNCHOSEN: dict[str, tuple[str, ...]] = {
     'pacman': ('pacman', '-Qdq'),
     'apt': ('apt-mark', 'showauto'),
+    'brew': ('brew', 'list', '--formula', '--no-installed-on-request'),
 }
 """How to ask which packages are here to satisfy something else.
 
-The distinction both managers already keep, and the one that separates a second
+The distinction every manager here keeps, and the one that separates a second
 copy somebody installed from a second copy that arrived underneath one they did.
 Measured in the Arch container: `/usr/lib/go/bin/go` sits beside the tarball's Go
 because yay needs a compiler to build AUR packages, and on the personal
-workstation `ripgrep` and `fzf` are there for the same kind of reason.
+workstation `ripgrep` and `fzf` are there for the same kind of reason. On macOS,
+poppler pulls in `nss`, whose binaries carry generic names a declared tool can
+share without being the same program.
+
+brew's `--installed-as-dependency` is disabled, so its dependency set is asked
+for as the complement of `--installed-on-request`.
 """
 
 REQUESTED: dict[str, tuple[str, ...]] = {
@@ -292,6 +298,8 @@ def owner_of(path: str) -> str:
 
     The first manager that answers wins, and no machine here has two of them.
     """
+    if formula := cellar_formula(path):
+        return formula
     for manager, command in OWNER.items():
         if not answers(command[0]):
             continue
@@ -303,6 +311,24 @@ def owner_of(path: str) -> str:
         answer = found.stdout.splitlines()[0].strip()
         return answer.split(':')[0].split(',')[0].strip() if manager == 'apt' else answer
     return ''
+
+
+def cellar_formula(path: str) -> str:
+    """The Homebrew formula a file links into, or '' when it is not brew's.
+
+    brew links each formula's files from `<prefix>/Cellar/<formula>/<version>/`,
+    so the owner is on disk and no query is needed. `brew which-formula` answers
+    a different question, which formula would provide a command name, and took
+    five seconds to do it.
+    """
+    try:
+        parts = Path(path).resolve().parts
+    except OSError:
+        return ''
+    if 'Cellar' not in parts:
+        return ''
+    after = parts[parts.index('Cellar') + 1 :]
+    return after[0] if after else ''
 
 
 PREFERENCE: tuple[str, ...] = ('pacman', 'apt', 'brew', 'aur')
@@ -365,10 +391,11 @@ def stop_service(manager: str, package: str, unit: str) -> None:
 def uninstall(manager: str, names: Sequence[str], privilege: Escalates) -> Result:
     """Take named packages off the machine, for a caller that was authorized to.
 
-    Nothing here decides that it should happen. `evidence.superseded` measures the
-    package, an entry's `supersedes` names it, and `--force` authorizes it — so this
-    is handed a list somebody wrote down and confirmed, which is the whole of what
-    separates it from the inference `REMOVE` refuses to make.
+    Nothing here decides that it should happen. An entry's `supersedes` names the
+    package. `--force` authorizes removing it before the entry installs, and the
+    entry being installed already authorizes removing a copy left beside it. So
+    this is handed a list somebody wrote down and confirmed, which is the whole of
+    what separates it from the inference `REMOVE` refuses to make.
 
     Streamed on both branches for `install`'s reason: a removal that resolves reverse
     dependencies can take a while, and a silent transaction reads as a hung run.

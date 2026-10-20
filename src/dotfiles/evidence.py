@@ -623,7 +623,9 @@ def blocker(item: DesiredItem, installed: Inventory, answered: Sequence[str], *,
     answers are live, and a site that did not say which would
     silently answer for whichever caller was written first.
     """
-    taken_over = getattr(item.entry, 'supersedes', ())
+    # A prefixed row names a user-space copy, which never holds the name a system
+    # manager is asked about.
+    taken_over = [package for prefix, package in map(catalog.superseded_row, getattr(item.entry, 'supersedes', ())) if not prefix]
     for installer in answered:
         inventory = installed.get(INSTALLER_QUERIES[installer]) or frozenset()
         for name in taken_over:

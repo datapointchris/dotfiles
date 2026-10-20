@@ -38,6 +38,7 @@ from pathlib import Path
 from dotfiles import effects
 from dotfiles import paths
 from dotfiles.coordinates import PackageManager
+from dotfiles.providers import syspkg
 
 PROBE_TIMEOUT_SECONDS = 5.0
 """Long enough for a package database, short enough that four of them in a row
@@ -160,11 +161,15 @@ def package_owning(path: Path, manager: PackageManager) -> tuple[str, str]:
     what could not be checked instead of an owner nobody measured. Written out as
     an empty entry rather than left to a `.get` default, so a manager added later
     cannot fall through here unnoticed.
+
+    brew is read off the link rather than asked, for `syspkg.cellar_formula`'s
+    reason.
     """
+    if manager is PackageManager.BREW:
+        return syspkg.cellar_formula(str(path)), ''
     queries: dict[PackageManager, tuple[str, ...]] = {
         PackageManager.PACMAN: ('pacman', '-Qoq', str(path)),
         PackageManager.APT: ('dpkg', '-S', str(path)),
-        PackageManager.BREW: ('brew', 'which-formula', str(path)),
         PackageManager.WINGET: (),
     }
     query = queries[manager]

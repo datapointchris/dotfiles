@@ -37,7 +37,7 @@ Latest is the default, and almost every entry wants it.
 
 A `version:` earns its complexity operationally rather than theoretically. A
 machine has to be able to hold a known-good release while upstream is broken. An
-older distro has to be able to run an older build than the rest of the fleet.
+older distro has to be able to run an older build than every other machine.
 
 **Rejected:** always latest, with a pin spelled by editing the installer. The cost
 showed up in the data — constraint fields sat on four entries no code read, one of
@@ -47,7 +47,7 @@ them eight versions stale.
 
 A tool declared here while a package manager also ships it is not one install
 path. It is two, and a version check then agrees with whichever copy answers
-first. That was syncthing until 2026-08-16.
+first. syncthing was that case.
 
 Closing it needs two mechanisms, and no single module pairs them up because each
 knows only its own end. **Provenance** narrows the question from "is a syncthing
@@ -56,6 +56,16 @@ installed" to "is the one this declaration asks for installed", in
 over from, in `catalog.GithubRelease.supersedes`, and refuses to install beside
 it. Provenance alone reports the machine honestly and converges nothing.
 Displacement alone has no measurement to fire on.
+
+Displacement also runs after the install. A copy still on PATH that a
+`supersedes` row names is removed by a plain `apply`, with the installer that
+put it there. The row is the authorization, so no run has to judge it. A bare
+row names a system package (`syncthing`). A row naming a user-space install
+carries its installer (`cargo:abtop`, `npm:@taplo/cli`), because a crate or an
+npm package is named in that installer's namespace and no other. Only a system
+package can stand in the way before the install, so only a bare row blocks one,
+and `--force` clears it. Any other second copy on PATH is reported for a person
+to remove.
 
 ## Verification defends the transfer, not the publisher
 
