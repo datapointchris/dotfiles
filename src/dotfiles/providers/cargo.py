@@ -45,6 +45,7 @@ from dotfiles.providers import place
 from dotfiles.providers import releases
 from dotfiles.providers import staged_bundles
 from dotfiles.providers import toolchain
+from dotfiles.releases import Wanted
 
 BUNDLE_BINARIES = 'binaries'
 """Beside the GitHub release assets, because that is what these are: the bundler
@@ -256,6 +257,31 @@ BINSTALL_FORMATS = (('.tar.gz', 'tgz'), ('.tgz', 'tgz'), ('.tar.xz', 'txz'), ('.
 """binstall's `--pkg-fmt` name for each asset suffix a pattern ends in."""
 
 
+def wanted(entry: catalog.CargoPackage) -> Wanted:
+    """The crate on crates.io, the version a bare `cargo binstall` installs.
+
+    Currency measures against it and a bundle stages it. The repo's newest tag is
+    not the same answer. broot tagged `v1.61.0` while crates.io held `1.60.2`, and
+    sd's `v1.1.0` asset prints `sd 1.0.0`. Either half reading the tag reports a
+    version no install converges on.
+    """
+    return Wanted(repo='', crate=entry.name)
+
+
+def release_tag(entry: catalog.CargoPackage, version: str) -> str | None:
+    """The tag `version` is released under, spelled the way the repo spells its newest tag.
+
+    A repo tags `v1.2.3` or `1.2.3` and a crate version is bare, so only the
+    prefix is read from the tag. None where the repo publishes no release.
+
+    **Raises `github_release.Unreadable`**, where the release API cannot be read.
+    """
+    tag = github_release.latest_version(entry.github_repo)
+    if not tag:
+        return None
+    return f'{tag[: len(tag) - len(tag.lstrip("v"))]}{version}'
+
+
 def release_override(entry: catalog.CargoPackage, target: Target) -> tuple[str, ...]:
     """binstall's `--pkg-url` and `--pkg-fmt` for the asset `stage` names, or () where none can be named.
 
@@ -268,8 +294,7 @@ def release_override(entry: catalog.CargoPackage, target: Target) -> tuple[str, 
     fills with the crate version it resolved, so the binary and the version
     `.crates.toml` records cannot differ. Pinning the crate to GitHub's newest
     tag instead fails outright where crates.io lags the release, as it did for
-    broot. Only the tag's `v` prefix is read from that tag, since a repo tags
-    `v1.2.3` or `1.2.3` and binstall's version is bare.
+    broot.
 
     No `--bin-dir`. binstall uses one it is given in place of its own search, and
     a miss there compiles: an archive with the binary at its root and one with it
@@ -281,12 +306,11 @@ def release_override(entry: catalog.CargoPackage, target: Target) -> tuple[str, 
     if not entry.binary_pattern or not entry.github_repo:
         return ()
     try:
-        tag = github_release.latest_version(entry.github_repo)
+        prefixed = release_tag(entry, BINSTALL_VERSION)
     except github_release.Unreadable:
         return ()
-    if not tag:
+    if not prefixed:
         return ()
-    prefixed = f'{tag[: len(tag) - len(tag.lstrip("v"))]}{BINSTALL_VERSION}'
     asset = stage(entry, prefixed, target)
     url = ('--pkg-url', f'https://github.com/{entry.github_repo}/releases/download/{prefixed}/{asset}')
     fmt = next((fmt for suffix, fmt in BINSTALL_FORMATS if asset.endswith(suffix)), '')

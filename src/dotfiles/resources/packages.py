@@ -41,6 +41,7 @@ from dotfiles.plan import Preconditions
 from dotfiles.plan import Stage
 from dotfiles.privilege import Escalates
 from dotfiles.providers import bundle
+from dotfiles.providers import cargo
 from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
@@ -589,7 +590,7 @@ def wanted_release(item: DesiredItem) -> releases.Wanted:
     if isinstance(entry, catalog.GoTool):
         return releases.Wanted(repo=entry.github_repo)
     if isinstance(entry, catalog.CargoPackage):
-        return releases.Wanted(repo='', crate=entry.name)
+        return cargo.wanted(entry)
     if isinstance(entry, catalog.GitUvTool):
         # Through `repo_slug_of` because this section carries a clone URL where
         # every other one carries a bare `owner/name` — uv is handed the URL

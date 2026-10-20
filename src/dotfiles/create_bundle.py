@@ -36,11 +36,11 @@ from typing import Any
 import httpx2
 
 from dotfiles import catalog
-from dotfiles import crates_io
 from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import publishing
+from dotfiles import releases as upstream_releases
 from dotfiles import resolve
 from dotfiles import status
 from dotfiles import versions
@@ -1129,20 +1129,21 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
 
 
 def cargo_release_tag(entry: catalog.CargoPackage) -> str:
-    """The release tag for the crate version a bare `cargo binstall` installs.
+    """The tag of the version currency measures the package against.
 
-    crates.io's newest, never the repo's latest tag. A repo can tag ahead of the
-    crate, and its binary may still print the crate's version: sd's v1.1.0 asset
-    prints `sd 1.0.0`. The offline currency check compares that output against
-    this row, so a tag-ahead row reads as stale on every apply and never converges.
-
-    Spelled with the prefix the repo's latest tag carries, `v` or none.
+    Offline, this row is the upstream the check compares the installed binary
+    with, so staging any other version leaves the apply never converging.
     """
-    newest = crates_io.newest_version(entry.name).version
+    newest = upstream_releases.newest(cargo.wanted(entry)).version
     if not newest:
         raise BundleError(f'could not read the newest version of {entry.name} from crates.io')
-    prefix = re.sub(r'\d.*', '', fetch_latest_version(entry.github_repo))
-    return f'{prefix}{newest}'
+    try:
+        tag = cargo.release_tag(entry, newest)
+    except github_release.Unreadable as unreachable:
+        raise BundleError(str(unreachable)) from unreachable
+    if not tag:
+        raise BundleError(f'Could not fetch version for {entry.github_repo}')
+    return tag
 
 
 UV_REPO = 'astral-sh/uv'

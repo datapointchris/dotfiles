@@ -17,6 +17,7 @@ from itertools import product
 import pytest
 
 from dotfiles import catalog
+from dotfiles import crates_io
 from dotfiles import create_bundle
 from dotfiles import github_release
 from dotfiles import paths
@@ -502,8 +503,8 @@ class TestBundleRoundTrip:
                 tar.add(payload, arcname=payload.name)
 
         # The repo tags a release ahead of the crate, as chmln/sd does.
-        monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: 'v10.4.3')
-        monkeypatch.setattr(create_bundle.crates_io, 'newest_version', lambda crate: github_release.Newest(version='10.4.2'))
+        monkeypatch.setattr(github_release, 'latest_version', lambda repo, *rest: 'v10.4.3')
+        monkeypatch.setattr(crates_io, 'newest_version', lambda crate, etag='': github_release.Newest(version='10.4.2'))
         monkeypatch.setattr(create_bundle.DownloadCache, 'fetch', fetch)
         monkeypatch.setattr(create_bundle, 'verify_against_upstream', lambda *args: None)
 
@@ -732,9 +733,8 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
         bundle.plan_against(status_path, json.loads(status_path.read_text()))
 
         monkeypatch.setattr(create_bundle, 'fetch_latest_version', lambda repo: self.VERSION)
-        monkeypatch.setattr(
-            create_bundle.crates_io, 'newest_version', lambda crate: github_release.Newest(version=self.VERSION.lstrip('v'))
-        )
+        monkeypatch.setattr(github_release, 'latest_version', lambda repo, *rest: self.VERSION)
+        monkeypatch.setattr(crates_io, 'newest_version', lambda crate, etag='': github_release.Newest(version=self.VERSION.lstrip('v')))
         monkeypatch.setattr(create_bundle, 'verify_against_upstream', lambda *args: None)
 
         def refuse(*args, **kwargs):
