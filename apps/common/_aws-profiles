@@ -304,8 +304,20 @@ def confirm_selection(profile: str, cache: dict[str, dict[str, str]], color: boo
         print(paint(f'account {entry["account"]}  {entry["identity"]}', GREEN, color), file=sys.stderr)
 
 
+EXAMPLES = """examples:
+  aws-profiles               pick a profile and export it in this shell
+  aws-profiles --refresh     the same, after re-resolving every account through STS
+  _aws-profiles              the menu on stderr and the decision line on stdout, exporting nothing
+"""
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog='_aws-profiles', description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        prog='_aws-profiles',
+        description=__doc__.splitlines()[0],
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument('--refresh', action='store_true', help='re-resolve every account before listing')
     args = parser.parse_args(argv)
 
