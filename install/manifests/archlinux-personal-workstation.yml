@@ -109,6 +109,7 @@ uv_tools:
   - indy
   - logsift
   - dectl
+  - sparkxray-cli
   - safekeep
   - typos
   - runthrough

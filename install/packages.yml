@@ -1657,6 +1657,11 @@ uv_tools:
       index: datapointchris
       description: Build synthetic git histories from named scenarios, to see what merge, rebase, squash and worktrees produce
 
+    - name: sparkxray-cli
+      command: sparkxray
+      index: datapointchris
+      description: Find why a Spark run was slow from its event log, with no JVM
+
 # ================================================================
 # GIT UV TOOLS
 # ================================================================

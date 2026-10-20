@@ -93,6 +93,7 @@ uv_tools:
   - refcheck
   - syncer
   - dectl
+  - sparkxray-cli
   - safekeep
 
 shell_plugins: true
