@@ -180,6 +180,10 @@ class Change:
     for one — which is the half of the front-loaded design worth keeping now that
     root is acquired at the write."""
 
+    removes: diagnose.Removal | None = None
+    """The copy `apply` takes off the machine to repair this row, where the repair
+    is a removal. Set only where a declaration's `supersedes` names the copy."""
+
     def __post_init__(self) -> None:
         """Three invariants a signature cannot express, each conditional on another
         field's value."""
@@ -198,7 +202,7 @@ class Change:
     @property
     def actionable(self) -> bool:
         """Whether `apply` has something it can do about it."""
-        return self.repair is Repair.AUTOMATIC and self.verdict in (Verdict.MISSING, Verdict.STALE)
+        return self.repair is Repair.AUTOMATIC and (self.verdict in (Verdict.MISSING, Verdict.STALE) or self.removes is not None)
 
     @property
     def unmeasured(self) -> bool:

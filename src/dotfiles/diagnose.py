@@ -38,6 +38,7 @@ from pathlib import Path
 from dotfiles import effects
 from dotfiles import paths
 from dotfiles.coordinates import PackageManager
+from dotfiles.providers import syspkg
 
 PROBE_TIMEOUT_SECONDS = 5.0
 """Long enough for a package database, short enough that four of them in a row
@@ -160,11 +161,15 @@ def package_owning(path: Path, manager: PackageManager) -> tuple[str, str]:
     what could not be checked instead of an owner nobody measured. Written out as
     an empty entry rather than left to a `.get` default, so a manager added later
     cannot fall through here unnoticed.
+
+    brew is read off the link rather than asked, for `syspkg.cellar_formula`'s
+    reason.
     """
+    if manager is PackageManager.BREW:
+        return syspkg.cellar_formula(str(path)), ''
     queries: dict[PackageManager, tuple[str, ...]] = {
         PackageManager.PACMAN: ('pacman', '-Qoq', str(path)),
         PackageManager.APT: ('dpkg', '-S', str(path)),
-        PackageManager.BREW: ('brew', 'which-formula', str(path)),
         PackageManager.WINGET: (),
     }
     query = queries[manager]
@@ -210,6 +215,10 @@ class Removal:
     command: str
     package: str = ''
     """The package the command removes, or '' where the command is an `rm`."""
+
+    path: str = dc.field(default='', compare=False)
+    """The copy of the binary this removes. Outside equality, because it is what
+    the rest was decided from rather than part of the answer."""
 
     @property
     def origin(self) -> str:
@@ -317,22 +326,22 @@ def removal_of(path: Path, manager: PackageManager, home: Path) -> Removal:
         if path.parent != directory:
             continue
         if mechanism == 'cargo' and (crate := cargo_package_providing(path.name)):
-            return Removal('cargo', f'cargo uninstall {crate}', crate)
+            return Removal('cargo', f'cargo uninstall {crate}', crate, path=str(path))
         if mechanism == 'npm' and (package := npm_package_providing(path)):
-            return Removal('npm', f'npm uninstall -g {package}', package)
+            return Removal('npm', f'npm uninstall -g {package}', package, path=str(path))
         if mechanism == 'uv' and (tool := uv_tool_providing(path.name)):
-            return Removal('uv', f'uv tool uninstall {tool}', tool)
+            return Removal('uv', f'uv tool uninstall {tool}', tool, path=str(path))
         # go keeps no receipt, so its directory is the only evidence there is.
         # The other managers were asked and did not claim the file, and
         # `~/.local/bin` holds release binaries and vendor installs beside the uv
         # tools, so naming that manager would name the one thing known not to
         # have put it there.
-        return Removal(mechanism if mechanism == 'go' else '', f'rm {shown}')
+        return Removal(mechanism if mechanism == 'go' else '', f'rm {shown}', path=str(path))
 
     owner, _ = package_owning(path, manager)
     if owner:
-        return Removal(str(manager), removal_command(owner, manager), owner)
-    return Removal('', f'rm {shown}')
+        return Removal(str(manager), removal_command(owner, manager), owner, path=str(path))
+    return Removal('', f'rm {shown}', path=str(path))
 
 
 QUOTED_PATH = re.compile(r"'([^']+)'|\"([^\"]+)\"")

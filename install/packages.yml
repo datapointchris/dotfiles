@@ -871,10 +871,14 @@ github_releases:
     description: Markdown renderer for terminal
     tags: [cli]
 
+  # `supersedes` removes Homebrew's gh, which a macOS login shell puts ahead of
+  # this on PATH. Prefixed, because a bare row would hold the release back until
+  # `--force`, and the two copies conflict over nothing.
   - name: gh
     repo: cli/cli
     description: GitHub CLI
     tags: [cli, git, github]
+    supersedes: ['brew:gh']
 
   # Distributed both as a `gh` extension and as plain release binaries, and this
   # takes the binaries. `gh extension install` verifies no checksum, keeps its own
@@ -946,11 +950,13 @@ github_releases:
 
   # The datapointchris fork, which loads btop-format theme files and reloads them
   # on SIGUSR2. A release rather than a crate: crates.io carries only upstream,
-  # and binstall names the download from the crates.io version.
+  # and binstall names the download from the crates.io version. `supersedes`
+  # removes upstream's crate, which `~/.cargo/bin` puts ahead of this on PATH.
   - name: abtop
     repo: datapointchris/abtop
     description: htop for AI coding agents — sessions, tokens, context, quota
     tags: [cli, tui, development]
+    supersedes: ['cargo:abtop']
 
   # One bundled JavaScript file that runs on the fnm-managed node. A release
   # rather than an npm global, because it is not published to npm, and a single
@@ -991,12 +997,12 @@ github_releases:
   # minimal server in the fleet.
   #
   # `supersedes` names the same word under pacman and Homebrew, which is what makes
-  # this the fleet's one install path rather than a third one beside them. It is a
+  # this the one install path rather than a third one beside them. It is a
   # blocker rather than a duplicate because both of those ship a service: two
   # syncthings on one machine is two daemons over one config directory and one port,
-  # so the release has to displace the package rather than land next to it. The
-  # displacement needs `--force`; without it `check` names the package and the
-  # command.
+  # so the release has to displace the package rather than land next to it.
+  # Displacing the package before the release installs needs `--force`. Once the
+  # release is installed, `apply` removes a package left beside it.
   - name: syncthing
     repo: syncthing/syncthing
     supersedes: [syncthing]
@@ -1018,12 +1024,14 @@ github_releases:
 
   # The release rather than npm's @taplo/cli, which is built without the language
   # server: `taplo lsp stdio` exits with "the LSP is not part of this build", so
-  # Neovim's taplo server never started. The release binary carries it.
+  # Neovim's taplo server never started. The release binary carries it, and
+  # `supersedes` removes the npm copy, which runs first wherever it is left.
   - name: taplo
     repo: tamasfe/taplo
     checksum: unpublished
     description: TOML language server and formatter
     tags: [cli, development]
+    supersedes: ['npm:@taplo/cli']
 
   # WSL-only
   - name: win32yank

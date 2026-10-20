@@ -54,11 +54,10 @@ REMOVE: dict[str, str] = {
 
 Removal is inferred nowhere: a declaration names what a machine should have, and an
 uninstall worked out from what it does not name takes a package off the machine on
-the strength of a typo. The one removal this repo performs is the one that is
-*named* and then *authorized* — a release's `supersedes` row, reviewed in a commit,
-with `--force` typed on the apply — and `UNINSTALL` below is what performs it.
-Everything else measures the need and stops, with the sentence it stops with built
-from here.
+the strength of a typo. The removals this repo performs are the ones a `supersedes`
+row names, reviewed in the commit that wrote it. `UNINSTALL` below performs a system
+manager's, and `superseded.UNINSTALL` a user-space installer's. Everything else
+measures the need and stops, with the sentence it stops with built from here.
 
 `aur` removes as `pacman`, because an AUR package is a pacman package once it is
 installed. `mas` has no entry at all — the App Store ships no uninstall verb, so
@@ -73,7 +72,7 @@ UNINSTALL: dict[str, tuple[str, ...]] = {
     'pacman': ('pacman', '-R', '--noconfirm'),
     'aur': ('pacman', '-R', '--noconfirm'),
     'apt': ('dpkg', '--remove'),
-    'brew': ('brew', 'uninstall'),
+    'brew': ('brew', 'uninstall', '--force'),
     'cask': ('brew', 'uninstall', '--cask'),
     'flatpak': ('flatpak', 'uninstall', '-y'),
 }
@@ -95,10 +94,22 @@ state, and it refuses exactly where pacman does. What it does not do is resolve
 dependencies, which is the whole point here — this is only ever handed one name that a
 `supersedes` row already wrote down.
 
+**brew takes `--force`, and `UNINSTALL_ENV` turns its autoremove off, for the same
+one-name reason.** Without `--force` a pinned formula prints an error and exits 0, so
+the removal reads as done with the formula still installed. Without the variable,
+every uninstall also removes each formula nothing depends on any more, which is a set
+nobody wrote down.
+
 Keyed identically to `REMOVE`, and a manager missing from one is missing from both:
 `uninstall` reads this and `evidence.blocker` reads that, so a manager present in only
 one would offer a sentence nothing can run, or run something nobody was shown.
 """
+
+UNINSTALL_ENV: dict[str, dict[str, str]] = {
+    'brew': {'HOMEBREW_NO_AUTOREMOVE': '1'},
+    'cask': {'HOMEBREW_NO_AUTOREMOVE': '1'},
+}
+"""What a manager's environment needs for `UNINSTALL` to remove only the names it is handed."""
 
 REMOVES_AS_ROOT: frozenset[str] = frozenset({'pacman', 'aur', 'apt'})
 """Which removals escalate, which is not the same set as `ESCALATES`.
@@ -166,23 +177,29 @@ OWNER: dict[str, tuple[str, ...]] = {
 
 Only the two managers that own paths outside a prefix of their own, because this
 answers one question: whether a second copy of a declared binary is something the
-machine asked for. brew keeps its formulae in its own cellar and `Inventories`
-already speaks for it; a cask, an App Store app and a flatpak put nothing on PATH
-to attribute.
+machine asked for. brew needs no query, because `cellar_formula` reads its answer
+off the link. A cask, an App Store app and a flatpak put nothing on PATH to
+attribute.
 """
 
 
 UNCHOSEN: dict[str, tuple[str, ...]] = {
     'pacman': ('pacman', '-Qdq'),
     'apt': ('apt-mark', 'showauto'),
+    'brew': ('brew', 'list', '--formula', '--no-installed-on-request'),
 }
 """How to ask which packages are here to satisfy something else.
 
-The distinction both managers already keep, and the one that separates a second
+The distinction every manager here keeps, and the one that separates a second
 copy somebody installed from a second copy that arrived underneath one they did.
 Measured in the Arch container: `/usr/lib/go/bin/go` sits beside the tarball's Go
 because yay needs a compiler to build AUR packages, and on the personal
-workstation `ripgrep` and `fzf` are there for the same kind of reason.
+workstation `ripgrep` and `fzf` are there for the same kind of reason. On macOS,
+poppler pulls in `nss`, whose binaries carry generic names a declared tool can
+share without being the same program.
+
+brew's `--installed-as-dependency` is disabled, so its dependency set is asked
+for as the complement of `--installed-on-request`.
 """
 
 REQUESTED: dict[str, tuple[str, ...]] = {
@@ -292,6 +309,8 @@ def owner_of(path: str) -> str:
 
     The first manager that answers wins, and no machine here has two of them.
     """
+    if formula := cellar_formula(path):
+        return formula
     for manager, command in OWNER.items():
         if not answers(command[0]):
             continue
@@ -303,6 +322,24 @@ def owner_of(path: str) -> str:
         answer = found.stdout.splitlines()[0].strip()
         return answer.split(':')[0].split(',')[0].strip() if manager == 'apt' else answer
     return ''
+
+
+def cellar_formula(path: str) -> str:
+    """The Homebrew formula a file links into, or '' when it is not brew's.
+
+    brew links each formula's files from `<prefix>/Cellar/<formula>/<version>/`,
+    so the owner is on disk and no query is needed. `brew which-formula` answers
+    a different question, which formula would provide a command name, and took
+    five seconds to do it.
+    """
+    try:
+        parts = Path(path).resolve().parts
+    except OSError:
+        return ''
+    if 'Cellar' not in parts:
+        return ''
+    after = parts[parts.index('Cellar') + 1 :]
+    return after[0] if after else ''
 
 
 PREFERENCE: tuple[str, ...] = ('pacman', 'apt', 'brew', 'aur')
@@ -365,10 +402,11 @@ def stop_service(manager: str, package: str, unit: str) -> None:
 def uninstall(manager: str, names: Sequence[str], privilege: Escalates) -> Result:
     """Take named packages off the machine, for a caller that was authorized to.
 
-    Nothing here decides that it should happen. `evidence.superseded` measures the
-    package, an entry's `supersedes` names it, and `--force` authorizes it — so this
-    is handed a list somebody wrote down and confirmed, which is the whole of what
-    separates it from the inference `REMOVE` refuses to make.
+    Nothing here decides that it should happen. An entry's `supersedes` names the
+    package. `--force` authorizes removing it before the entry installs, and the
+    entry being installed already authorizes removing a copy left beside it. So
+    this is handed a list somebody wrote down and confirmed, which is the whole of
+    what separates it from the inference `REMOVE` refuses to make.
 
     Streamed on both branches for `install`'s reason: a removal that resolves reverse
     dependencies can take a while, and a silent transaction reads as a hung run.
@@ -378,7 +416,7 @@ def uninstall(manager: str, names: Sequence[str], privilege: Escalates) -> Resul
         completed = (
             privilege.run(command, reason=f'remove {", ".join(names)} with {manager}', output=Output.STREAM)
             if manager in REMOVES_AS_ROOT
-            else effects.run(command)
+            else effects.run(command, env=UNINSTALL_ENV.get(manager))
         )
     except PrivilegeUnavailable:
         return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)

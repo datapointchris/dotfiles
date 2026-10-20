@@ -167,6 +167,28 @@ def test_every_other_privileged_transaction_is_streamed_too(manager: str, name: 
     assert passed['output'] is Output.STREAM
 
 
+REMOVALS = [
+    ('pacman', ('pacman', '-R', '--noconfirm', 'ripgrep'), None),
+    ('apt', ('dpkg', '--remove', 'ripgrep'), None),
+    ('brew', ('brew', 'uninstall', '--force', 'ripgrep'), {'HOMEBREW_NO_AUTOREMOVE': '1'}),
+]
+
+
+@pytest.mark.parametrize(('manager', 'argv', 'env'), REMOVALS, ids=[row[0] for row in REMOVALS])
+def test_a_removal_takes_only_the_name_it_was_given_and_asks_nobody(manager: str, argv: tuple[str, ...], env, upstream) -> None:
+    """Unattended, pacman without `--noconfirm` stops at a prompt nobody answers.
+    `apt-get remove -y` takes reverse dependencies with the name. brew exits 0 from
+    refusing a pinned formula, and autoremoves orphaned formulae unless told not to."""
+    escalation = Escalation()
+    recorder = upstream()
+
+    result = syspkg.uninstall(manager, ['ripgrep'], escalation)
+
+    assert result.ok, result.detail
+    assert [call for call, _ in escalation.calls] + recorder.calls == [argv]
+    assert [passed.get('env') for passed in recorder.kwargs] == ([env] if env else [])
+
+
 def test_the_two_doors_a_transaction_can_take_default_to_opposite_output_modes() -> None:
     """What makes the explicit `Output.STREAM` above load-bearing rather than noise.
 

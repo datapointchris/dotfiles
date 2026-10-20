@@ -20,6 +20,7 @@ from __future__ import annotations
 import dataclasses as dc
 import datetime as dt
 import os
+import shlex
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,7 @@ from dotfiles import catalog
 from dotfiles import crates_io
 from dotfiles import evidence as ev
 from dotfiles import providers
+from dotfiles import registry
 from dotfiles import releases
 from dotfiles.coordinates import Target
 from dotfiles.privilege import Privilege
@@ -48,6 +50,7 @@ from dotfiles.providers import npm
 from dotfiles.providers import syspkg
 from dotfiles.providers import uvtool
 from dotfiles.resources import Change
+from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -1598,6 +1601,70 @@ def test_a_second_copy_is_not_something_apply_can_repair(tmp_path: Path, fake_bi
 
     assert change.repair is Repair.BY_HAND
     assert change.drifted and not change.actionable
+
+
+def uninstaller(stray: Path, *, removes: bool = True) -> str:
+    """An installer that logs its arguments, and deletes `stray` when told to uninstall."""
+    deletes = f'[ "$1" = uninstall ] && rm -f {shlex.quote(str(stray))}\n' if removes else ''
+    return f'#!/bin/sh\necho "$*" >> "$0.log"\n{deletes}exit 0\n'
+
+
+def superseding_release(tmp_path: Path, release_cache: Path, row: str, platform: str) -> Session:
+    """A release whose `supersedes` names one other copy of it."""
+    cached(release_cache, {'example/frob': 'v1.0.0'})
+    declared = {'github_releases': [{'name': 'frob', 'repo': 'example/frob', 'supersedes': [row]}]}
+    return session(tmp_path, declared, {'machine': 'box', 'platform': platform, 'github_releases': ['frob']})
+
+
+def test_the_apply_that_installs_a_release_removes_the_npm_copy_it_supersedes(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch, release_cache: Path, unprivileged: Privilege
+) -> None:
+    """In the same run, once the install is done. Otherwise that run reports the
+    machine converged with the npm copy still first on PATH."""
+    package = npm.prefix() / 'lib' / 'node_modules' / '@example' / 'frob'
+    package.mkdir(parents=True)
+    stray = npm.prefix() / 'bin' / 'frob'
+    stray.symlink_to(executable(package, 'cli.js'))
+    executable(fake_bin, 'npm', uninstaller(stray))
+    live = superseding_release(tmp_path, release_cache, 'npm:@example/frob', 'linux')
+    monkeypatch.setattr(
+        registry, 'install', lambda _, change, __: Outcome(change, OutcomeStatus.DONE, f'placed {released("frob", "frob 1.0.0")}')
+    )
+
+    change = only_change(live)
+    outcome = packages.RESOURCE.perform(live, change, unprivileged)
+
+    assert (change.verdict, outcome.status) == (Verdict.MISSING, OutcomeStatus.DONE)
+    assert (fake_bin / 'npm.log').read_text().splitlines()[-1] == 'uninstall -g @example/frob'
+
+
+@pytest.mark.parametrize(('removes', 'status'), [(True, OutcomeStatus.DONE), (False, OutcomeStatus.FAILED)], ids=['removed', 'refused'])
+def test_apply_removes_a_homebrew_copy_the_release_supersedes(
+    tmp_path: Path,
+    fake_bin: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    only_brew_answers: None,
+    release_cache: Path,
+    unprivileged: Privilege,
+    removes: bool,
+    status: OutcomeStatus,
+) -> None:
+    """Homebrew's copy is named by the formula its link resolves into, and is
+    removed only once it is gone: brew exits 0 from an uninstall it refused."""
+    formula = tmp_path / 'Cellar' / 'frob' / '1.0.0' / 'bin'
+    formula.mkdir(parents=True)
+    stray = second_bin(tmp_path, monkeypatch) / 'frob'
+    stray.symlink_to(executable(formula, 'frob'))
+    executable(fake_bin, 'brew', uninstaller(stray, removes=removes))
+    released('frob', 'frob 1.0.0')
+    live = superseding_release(tmp_path, release_cache, 'brew:frob', 'macos')
+
+    change = only_change(live)
+    outcome = packages.RESOURCE.perform(live, change, unprivileged)
+
+    assert (change.item, change.actionable) == ('frob', True)
+    assert outcome.status is status
+    assert (fake_bin / 'brew.log').read_text().splitlines()[-1] == 'uninstall --force frob'
 
 
 def test_the_same_binary_reachable_twice_is_one_installation(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:

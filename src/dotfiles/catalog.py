@@ -177,6 +177,34 @@ lookup quietly returning nothing. One entry declares `tags` — `aws/aws-cli`,
 which tags every build and publishes no release.
 """
 
+SUPERSEDABLE_INSTALLERS = ('apt', 'brew', 'cargo', 'npm', 'pacman', 'uv')
+"""The installers a `supersedes` row names with a prefix: `cargo:abtop`, `brew:gh`.
+
+A prefixed row names one installer's copy, which `apply` removes once the entry
+is installed and which never holds the install back. A bare row names a system
+package that conflicts with the entry, the same word under every OS manager: it
+blocks the install until `--force` removes it.
+
+These are the installers `diagnose.removal_of` attributes a copy to by package,
+which is what a row is matched against. An AUR build is pacman's to remove.
+"""
+
+
+def superseded_row(row: str) -> tuple[str, str]:
+    """One `supersedes` row as `(installer, package)`, the installer empty for a system package."""
+    installer, prefixed, package = row.partition(':')
+    return (installer, package) if prefixed else ('', row)
+
+
+def supersedes_problems(rows: tuple[str, ...]) -> tuple[str, ...]:
+    """A prefixed row naming an installer nothing here can remove from."""
+    unknown = sorted({installer for installer, _ in map(superseded_row, rows) if installer and installer not in SUPERSEDABLE_INSTALLERS})
+    return tuple(
+        f'supersedes a package under {installer!r}, which is not an installer a superseded copy is removed from. '
+        f'Known: {", ".join(SUPERSEDABLE_INSTALLERS)}, or a bare name for a system package.'
+        for installer in unknown
+    )
+
 
 def repo_segments(value: str) -> list[str]:
     """A `repo`, `github_repo` or `package` field reduced to its path segments.
@@ -473,7 +501,7 @@ class SystemPackage(Entry):
                 f'supersedes {", ".join(own)}, which is a name it installs under. An entry that supersedes itself '
                 f'reports itself blocked by its own installation, and never converges.'
             )
-        return (*found, *Entry.problems(self))
+        return (*found, *supersedes_problems(self.supersedes), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -501,14 +529,20 @@ class GithubRelease(Entry):
     The same field and the same declared-rather-than-discovered reasoning as
     `SystemPackage.supersedes`, and one thing is different: the name is held by a
     manager this entry has nothing to do with. syncthing is `syncthing` under both
-    pacman and Homebrew, and this entry is what says the release is now the fleet's
-    one install path for it.
+    pacman and Homebrew, and this entry is what says the release is now the one
+    install path for it.
 
     What makes it a blocker rather than a duplicate is the service. Two syncthings
     on one machine is two daemons over one config directory and one port, so an
     install that placed the release binary beside a running Homebrew service would
     make the machine worse — which is why this refuses instead of shadowing, and why
     `--force` removing the package is part of the same act as installing.
+
+    Once the release is installed, a copy still on PATH that a row names is the
+    move left half done, and `apply` removes it without `--force`: the row is the
+    authorization, reviewed in the commit that wrote it. A row prefixed with its
+    installer (`cargo:abtop`, `brew:gh`) is only ever that second case. It names a
+    copy that conflicts with nothing, so it never blocks the install.
     """
 
     @property
@@ -523,7 +557,7 @@ class GithubRelease(Entry):
         return owner_of(self.repo)
 
     def problems(self) -> tuple[str, ...]:
-        return (*checksum_problems(self, self.checksum), *Entry.problems(self))
+        return (*checksum_problems(self, self.checksum), *supersedes_problems(self.supersedes), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)

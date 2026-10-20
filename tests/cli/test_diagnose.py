@@ -86,14 +86,13 @@ def test_no_package_owning_a_file_is_an_answer_not_a_broken_probe(monkeypatch: p
     [
         (PackageManager.PACMAN, 'shellcheck\n', 'shellcheck'),
         (PackageManager.APT, 'shellcheck: /usr/bin/shellcheck\n', 'shellcheck'),
-        (PackageManager.BREW, 'shellcheck\n', 'shellcheck'),
     ],
 )
 def test_each_manager_answers_in_its_own_shape(
     manager: PackageManager, stdout: str, expected: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """dpkg answers `package: /path` and the others answer the name alone, so one
-    parser for all three would be wrong for exactly one of them."""
+    """dpkg answers `package: /path` and pacman the name alone, so one parser for
+    both would be wrong for one of them."""
     monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/tool')
     monkeypatch.setattr(effects, 'run', answering(0, stdout))
 
@@ -169,24 +168,29 @@ def test_a_uv_tool_is_told_apart_from_a_release_binary_beside_it(monkeypatch: py
     assert release == diagnose.Removal('', 'rm ~/.local/bin/lazygit')
 
 
-def test_a_binary_outside_every_language_directory_falls_to_the_os_manager(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_a_binary_outside_every_language_directory_falls_to_the_os_manager(tmp_path: Path) -> None:
     """The OS manager owns what the language directories do not, and it already
-    knows the command that removes one of its packages."""
-    monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/brew')
-    monkeypatch.setattr(effects, 'run', answering(0, 'shellcheck\n'))
+    knows the command that removes one of its packages. brew's owner is the
+    formula its link resolves into."""
+    formula = tmp_path / 'Cellar' / 'shellcheck' / '0.10.0' / 'bin'
+    formula.mkdir(parents=True)
+    (formula / 'shellcheck').touch()
+    (tmp_path / 'bin').mkdir()
+    (tmp_path / 'bin' / 'shellcheck').symlink_to(formula / 'shellcheck')
 
-    removal = diagnose.removal_of(Path('/usr/local/bin/shellcheck'), PackageManager.BREW, tmp_path)
+    removal = diagnose.removal_of(tmp_path / 'bin' / 'shellcheck', PackageManager.BREW, tmp_path)
 
     assert removal == diagnose.Removal('brew', 'brew uninstall shellcheck', 'shellcheck')
+    assert removal.path == str(tmp_path / 'bin' / 'shellcheck')
 
 
 def test_a_binary_no_manager_claims_is_still_given_a_command(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """A stray nobody owns is the case the row exists for, so it must not be the
     one that ends without something to type."""
-    monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/brew')
+    monkeypatch.setattr(diagnose.shutil, 'which', lambda _: '/usr/bin/pacman')
     monkeypatch.setattr(effects, 'run', answering(1, ''))
 
-    removal = diagnose.removal_of(Path('/usr/local/bin/stray'), PackageManager.BREW, tmp_path)
+    removal = diagnose.removal_of(Path('/usr/local/bin/stray'), PackageManager.PACMAN, tmp_path)
 
     assert removal.command == 'rm /usr/local/bin/stray'
 
