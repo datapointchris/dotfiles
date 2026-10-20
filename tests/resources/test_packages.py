@@ -1632,12 +1632,12 @@ def test_apply_removes_an_npm_copy_the_release_supersedes(
 def test_apply_removes_a_homebrew_copy_the_release_supersedes(
     tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch, only_brew_answers: None, release_cache: Path, unprivileged: Privilege
 ) -> None:
-    """A bare row names a system package, and Homebrew's is the formula its link resolves into."""
+    """Homebrew's copy is named by the formula its link resolves into."""
     formula = tmp_path / 'Cellar' / 'frob' / '1.0.0' / 'bin'
     formula.mkdir(parents=True)
     (second_bin(tmp_path, monkeypatch) / 'frob').symlink_to(executable(formula, 'frob'))
     executable(fake_bin, 'brew', LOGS_ITS_ARGUMENTS)
-    live = superseding_release(tmp_path, release_cache, 'frob', 'macos')
+    live = superseding_release(tmp_path, release_cache, 'brew:frob', 'macos')
 
     change = only_change(live)
     outcome = packages.RESOURCE.perform(live, change, unprivileged)

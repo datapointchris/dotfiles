@@ -872,12 +872,13 @@ github_releases:
     tags: [cli]
 
   # `supersedes` removes Homebrew's gh, which a macOS login shell puts ahead of
-  # this on PATH.
+  # this on PATH. Prefixed, because a bare row would hold the release back until
+  # `--force`, and the two copies conflict over nothing.
   - name: gh
     repo: cli/cli
     description: GitHub CLI
     tags: [cli, git, github]
-    supersedes: [gh]
+    supersedes: ['brew:gh']
 
   # Distributed both as a `gh` extension and as plain release binaries, and this
   # takes the binaries. `gh extension install` verifies no checksum, keeps its own

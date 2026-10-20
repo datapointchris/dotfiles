@@ -177,15 +177,16 @@ lookup quietly returning nothing. One entry declares `tags` — `aws/aws-cli`,
 which tags every build and publishes no release.
 """
 
-SUPERSEDABLE_INSTALLERS = ('cargo', 'npm', 'uv')
-"""The installers a `supersedes` row names with a prefix: `cargo:abtop`, `npm:@taplo/cli`.
+SUPERSEDABLE_INSTALLERS = ('apt', 'brew', 'cargo', 'npm', 'pacman', 'uv')
+"""The installers a `supersedes` row names with a prefix: `cargo:abtop`, `brew:gh`.
 
-A bare row names a system package, the same word under every OS manager. A
-user-space installer keeps its own namespace — a crate, an npm package and a uv
-tool are named by that installer and asked of no other — so its row carries the
-installer it belongs to. These three are the ones `diagnose.removal_of` attributes a
-copy to by package, which is what a row is matched against, and the keys of
-`providers.superseded.UNINSTALL`, which removes the copy.
+A prefixed row names one installer's copy, which `apply` removes once the entry
+is installed and which never holds the install back. A bare row names a system
+package that conflicts with the entry, the same word under every OS manager: it
+blocks the install until `--force` removes it.
+
+These are the installers `diagnose.removal_of` attributes a copy to by package,
+which is what a row is matched against. An AUR build is pacman's to remove.
 """
 
 
@@ -539,9 +540,9 @@ class GithubRelease(Entry):
 
     Once the release is installed, a copy still on PATH that a row names is the
     move left half done, and `apply` removes it without `--force`: the row is the
-    authorization, reviewed in the commit that wrote it. A row prefixed with a
-    user-space installer (`cargo:abtop`) is only ever that second case, because the
-    copy sits in a directory of its own and never stands in the release's way.
+    authorization, reviewed in the commit that wrote it. A row prefixed with its
+    installer (`cargo:abtop`, `brew:gh`) is only ever that second case. It names a
+    copy that conflicts with nothing, so it never blocks the install.
     """
 
     @property

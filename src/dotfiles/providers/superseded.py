@@ -22,8 +22,8 @@ UNINSTALL: dict[str, tuple[str, ...]] = {
     'npm': ('npm', 'uninstall', '-g'),
     'uv': ('uv', 'tool', 'uninstall'),
 }
-"""How each user-space installer removes one package, keyed by
-`catalog.SUPERSEDABLE_INSTALLERS`. A system manager's is `syspkg.UNINSTALL`."""
+"""How each user-space installer removes one package. A system manager's is
+`syspkg.UNINSTALL`."""
 
 
 def removable(removal: Removal) -> bool:

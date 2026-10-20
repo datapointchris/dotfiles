@@ -60,12 +60,11 @@ Displacement alone has no measurement to fire on.
 Displacement also runs after the install. A copy still on PATH that a
 `supersedes` row names is removed by a plain `apply`, with the installer that
 put it there. The row is the authorization, so no run has to judge it. A bare
-row names a system package (`syncthing`). A row naming a user-space install
-carries its installer (`cargo:abtop`, `npm:@taplo/cli`), because a crate or an
-npm package is named in that installer's namespace and no other. Only a system
-package can stand in the way before the install, so only a bare row blocks one,
-and `--force` clears it. Any other second copy on PATH is reported for a person
-to remove.
+row names a system package that conflicts with the release (`syncthing`), and
+blocks the install until `--force` removes it. A row prefixed with its installer
+names a copy that conflicts with nothing (`cargo:abtop`, `npm:@taplo/cli`,
+`brew:gh`), so the release installs beside it and the next `apply` removes it.
+Any other second copy on PATH is reported for a person to remove.
 
 ## Verification defends the transfer, not the publisher
 
