@@ -1,13 +1,13 @@
-"""The nine tools that ship themselves, one function each.
+"""The tools that ship themselves, one function each.
 
-`github_releases` is twenty-three spellings of one sequence, which is why
+`github_releases` is many spellings of one sequence, which is why
 `providers/ghrelease.py` is an engine with the variation pushed into a data
-class. These nine are the opposite, and that is what `custom_installers` means:
+class. These are the opposite, and that is what `custom_installers` means:
 a vendor install script, an S3 bucket with a GPG trust root, a HashiCorp mirror
-carrying its own checksums file, and three git repos with a build. No engine fits
-them, so this is nine functions and a dispatch table, and the only shared
-machinery is the part that genuinely is shared — staging a vendor script from the
-offline bundle or the network, and running it.
+carrying its own checksums file, git repos with a build, and git's own source
+compiled. No engine fits them, so this is a function each and a dispatch table,
+and the only shared machinery is the part that genuinely is shared — staging a
+vendor script from the offline bundle or the network, and running it.
 
 The install/update split goes the way it went for releases. Each script had two
 modes, and which one ran decided whether a tool already present was upgraded;
@@ -24,17 +24,19 @@ what converging means:
     bashselfupdate           the install script is the update, so always run it
     claude-code              the install script is the update, so run it
     bats, terraform-ls       clone or download at the tag upstream reports
+    git                      clone the tag upstream reports, and build it
     mount-s3                 the bucket serves `latest/`, so just fetch it
     awscli                   AWS's installer takes `--update`, so run it
 
 Every failure is returned, never raised: one broken vendor must not stop the
-eight after it, and the stage reports all of them together.
+ones after it, and the stage reports all of them together.
 """
 
 from __future__ import annotations
 
 import dataclasses as dc
 import enum
+import os
 import re
 import shutil
 import tempfile
@@ -91,8 +93,9 @@ def missing_parts(entry: catalog.CustomInstaller) -> tuple[str, ...]:
     is gone, which surfaces as a failing `load` line in a suite rather than in any
     verdict.
 
-    Empty for eight of the nine — most of these install one binary and nothing
-    else — so this is a lookup and not a protocol for each of them to implement.
+    Empty for all but bats — the rest install one binary and nothing else, or
+    a tree its own build lays out — so this is a lookup and not a protocol for
+    each of them to implement.
     """
     if entry.name != 'bats':
         return ()
@@ -175,6 +178,10 @@ def bats_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source
     return tuple(Source(url, Reach.CLONE) for url in bats_repos(entry))
 
 
+def git_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
+    return (Source(git_repo(entry), Reach.CLONE),)
+
+
 def awscli_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
     url = awscli_zip(entry, target)
     return (Source(url),) if url else ()
@@ -200,6 +207,7 @@ SOURCES: dict[str, Callable[[catalog.CustomInstaller, Target], tuple[Source, ...
     'bashselfupdate': script_and_clone,
     'claude-code': claude_code_sources,
     'bats': bats_sources,
+    'git': git_sources,
     'awscli': awscli_sources,
     'mount-s3': mount_s3_sources,
     'terraform-ls': terraform_ls_sources,
@@ -670,6 +678,63 @@ def clone_bats_helper(url: str, helper: str) -> None:
         shutil.move(str(checkout), destination)
 
 
+GIT_LEFT_OUT = ('NO_GETTEXT=YesPlease', 'NO_EXPAT=YesPlease', 'NO_RUST=YesPlease', 'NO_TCLTK=YesPlease')
+"""What the build leaves out, each for want of something a server lacks.
+
+gettext translates messages, and compiling them needs `msgfmt`. expat serves
+only `git http-push`, pushing over WebDAV, which GitHub does not speak. Rust
+builds parts that also exist in C, and needs cargo; git 3.0 makes it mandatory.
+Tcl/Tk is gitk and git gui, which need a display.
+"""
+
+
+def git_repo(entry: catalog.CustomInstaller) -> str:
+    return f'https://github.com/{entry.repo}.git'
+
+
+def git(request: Request) -> Result:
+    """git's newest release tag, compiled into `~/.local`.
+
+    For a machine whose OS packages a git too old for what it runs. git
+    publishes tags and source and no binaries, so a build is the one route that
+    follows upstream. The OS's git stays: it cloned this repo before anything
+    here ran, and it is what clones the source below.
+
+    `~/.local/bin/git` has to come before `/usr/bin/git` on PATH, so the last
+    check is which one PATH finds, not whether it finds one.
+    """
+    entry = request.entry
+    if offline := present_and_offline(request, evidence.reported_version(entry.executable) is not None):
+        return offline
+    if request.offline:
+        return Result(
+            False,
+            f'git builds from a clone of {git_repo(entry)}, which the offline bundle does not stage',
+            kind=Kind.NOT_IN_BUNDLE,
+            refused=True,
+        )
+
+    latest = github_release.latest_tag(entry.repo)
+    if latest is None:
+        return Result(False, f'could not read a release tag from {entry.repo}', kind=Kind.VERSION_UNRESOLVED)
+
+    with tempfile.TemporaryDirectory(prefix='dotfiles-git-') as scratch:
+        checkout = Path(scratch) / 'git'
+        err_console.print(f'git {latest}: {git_repo(entry)}', soft_wrap=True)
+        cloned = effects.run(['git', 'clone', '--quiet', '--depth', '1', '--branch', latest, git_repo(entry), str(checkout)])
+        if not cloned.ok:
+            return Result(False, f'could not clone {git_repo(entry)} at {latest}', kind=Kind.DOWNLOAD_FAILED)
+
+        built = effects.run(['make', f'-j{os.cpu_count() or 1}', f'prefix={local_dir()}', *GIT_LEFT_OUT, 'install'], cwd=checkout)
+        if not built.ok:
+            return Result(False, script.failure('git', built), kind=Kind.COMMAND_FAILED)
+
+    found = shutil.which(entry.executable)
+    if found is None or Path(found) != bin_dir() / entry.executable:
+        return Result(False, f'git {latest} is in {bin_dir()}, but PATH finds {found} first', kind=Kind.NOT_ON_PATH)
+    return Result(True, f'git {latest}', kind=Kind.APPLIED)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -698,6 +763,7 @@ INSTALLERS: dict[str, Installer] = {
     'mount-s3': mount_s3,
     'terraform-ls': terraform_ls,
     'bats': bats,
+    'git': git,
 }
 """Which function installs which entry.
 

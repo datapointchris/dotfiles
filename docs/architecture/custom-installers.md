@@ -37,6 +37,26 @@ carry the answer per tool:
 dotfiles network check --json | jq -r '.probes[] | select(.name == "theme") | .target'
 ```
 
+## git is compiled where the OS ships one too old
+
+git runs a hook declared in git config only from 2.54, and Debian's stable
+releases ship an older one. git publishes tags and source and no binaries, so
+the `git` entry clones the newest release tag and runs `make install` into
+`~/.local`. PATH searches `~/.local/bin` before `/usr/bin`, which is what makes
+the build the git every command finds. The OS package stays installed beside it,
+because it is the git that clones this repo, and the source, before anything can
+be built.
+
+The build leaves out Rust, which git 3.0 makes mandatory. From then the build
+needs cargo, which a machine gets by declaring a `cargo_packages` entry.
+
+**Rejected: pinning Debian unstable's git.** Its package needs a newer glibc
+than stable has, so the pin drags in unstable's C library with it.
+
+**Rejected: Homebrew on Linux, and conda-forge through pixi.** Both carry a
+current git prebuilt. Each is a second package manager on the machine, and each
+installs to a prefix nothing here puts on PATH.
+
 ## What is deliberately absent
 
 **Rejected: a `--print-url` protocol.** Having the offline bundler ask each script

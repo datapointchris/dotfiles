@@ -100,6 +100,19 @@ system_packages:
     pacman: openssl
     description: SSL development libraries
 
+  # The headers custom_installers' `git` compiles against, beside build-essential
+  # and libssl-dev above. Core because the machine building it is a server. apt
+  # alone: pacman's curl and zlib ship their headers.
+  - name: libcurl-dev
+    tier: core
+    apt: libcurl4-openssl-dev
+    description: curl development headers, for git's https transport
+
+  - name: zlib-dev
+    tier: core
+    apt: zlib1g-dev
+    description: zlib development headers
+
   # Core Development Tools
   - name: git
     tier: core
@@ -1106,7 +1119,7 @@ github_releases:
 
 custom_installers:
   # How each of these is installed is a function in src/dotfiles/providers/custom.py,
-  # for the same reason release asset naming is: nine distribution mechanisms with
+  # for the same reason release asset naming is: distribution mechanisms with
   # nothing in common do not survive being flattened into a schema. What stays here
   # is what is declarative — the host, the repo a version comes from, and where a
   # tool that puts nothing on PATH lands.
@@ -1150,6 +1163,17 @@ custom_installers:
     support_repo: bats-core/bats-support
     assert_repo: bats-core/bats-assert
     description: Bash Automated Testing System (cloned from GitHub, builds from source)
+
+  # For a machine whose OS packages a git older than 2.54, the first that runs a
+  # hook declared in git config. git publishes tags and source and no binaries,
+  # so this builds the newest release tag into ~/.local, which PATH searches
+  # before /usr/bin. `version_source: tags` for awscli's reason. The system
+  # package `git` stays installed beside it, because it is the git that clones
+  # this repo and the source before anything can be built.
+  - name: git
+    repo: git/git
+    version_source: tags
+    description: git built from its newest release tag, for an OS whose package is too old
 
   # `url` is where the install script downloads from. Its `latest` file names
   # the release the script installs, and currency reads that same file.

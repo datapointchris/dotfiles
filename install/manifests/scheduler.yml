@@ -38,6 +38,9 @@ git_uv_tools:
 
 custom_installers:
   - claude-code   # the grader
+  # The agent-trailers hook is declared in git config, which Debian 12's git is
+  # too old to run.
+  - git
   - bats          # the commit hook of a repo with tests/*.bats, for the fix job
 
 github_releases:

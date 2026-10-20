@@ -1,4 +1,4 @@
-"""The nine vendors that ship themselves: what each one decides, and when.
+"""The vendors that ship themselves: what each one decides, and when.
 
 No network and no subprocesses. What a custom installer *is* is a decision about
 whether to act and a handful of downloads and commands, so the seam is

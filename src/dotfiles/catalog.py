@@ -580,8 +580,8 @@ class CustomInstaller(Entry):
     """A tool with its own distribution mechanism, installed by its own function.
 
     Everything here is declarative — a host, a repo, a path. *How* the bytes are
-    fetched, verified and placed is `providers/custom.py`, because nine vendors
-    with nothing in common do not survive being flattened into fields.
+    fetched, verified and placed is `providers/custom.py`, because vendors with
+    nothing in common do not survive being flattened into fields.
     """
 
     section: ClassVar[str] = 'custom_installers'
