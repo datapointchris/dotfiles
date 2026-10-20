@@ -13,10 +13,12 @@ hl.on('hyprland.start', function()
   -- Polkit authentication agent
   hl.exec_cmd('/usr/lib/polkit-kde-authentication-agent-1')
 
-  -- Status bar. playerctld must own its bus name before waybar starts. In waybar 0.15.0, the mpris module
-  -- otherwise activates it, then leaks a player whose handlers outlive the module. After any bar teardown
-  -- (a monitor disconnect, a SIGUSR2 reload), the next player event segfaults waybar.
-  -- Upstream fixed this in Alexays/Waybar a8162186. Drop the busctl call once a release after 0.15.0 ships it.
+  -- Status bar. playerctld must own its bus name before waybar starts.
+  -- Otherwise waybar 0.15.0's mpris module activates it, then leaks a player
+  -- whose handlers outlive the module. After any bar teardown (a monitor
+  -- disconnect, a SIGUSR2 reload), the next player event segfaults waybar.
+  -- Upstream fixed this in Alexays/Waybar a8162186. Drop the busctl call once
+  -- a release after 0.15.0 ships it.
   local start_playerctld = 'busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus '
     .. 'StartServiceByName su org.mpris.MediaPlayer2.playerctld 0'
   hl.exec_cmd(start_playerctld .. '; waybar')

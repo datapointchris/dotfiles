@@ -962,8 +962,8 @@ FD_INDEX = crates_io.index_url('fd-find')
 
 def test_a_cargo_package_behind_its_crate_is_stale(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     """`cargo binstall` is the upgrade, so being behind the newest crate is drift
-    rather than someone else's schedule. Without this, converting the phase would
-    have silently removed the only thing that moved these."""
+    rather than someone else's schedule. Nothing else moves a cargo package
+    forward, so missing this leaves it behind for good."""
     cargo_installed('fd', 'fd 10.2.0')
     cached(release_cache, {FD_INDEX: '10.4.2'})
     live = session(tmp_path, CARGO_CURRENCY, DECLARES_FD)
@@ -978,8 +978,8 @@ def test_a_cargo_package_at_its_newest_crate_is_current_whatever_its_repo_tagged
     tmp_path: Path, fake_bin: Path, release_cache: Path
 ) -> None:
     """A repo can tag a release before publishing the crate, and `cargo binstall`
-    cannot install what crates.io does not hold. Measured against the tag, broot
-    read as behind after every apply that had just installed the newest crate."""
+    cannot install what crates.io does not hold. Measured against the tag, a
+    package reads as behind right after an apply installs the newest crate."""
     cargo_installed('fd', 'fd 10.2.0')
     cached(release_cache, {FD_INDEX: '10.2.0', 'sharkdp/fd': 'v10.4.2'})
     live = session(tmp_path, CARGO_CURRENCY, DECLARES_FD)
