@@ -49,6 +49,7 @@ from dotfiles.providers import syspkg
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
+from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
 from dotfiles.resources import advice_for
@@ -316,10 +317,40 @@ class PackagesResource:
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot. A
-        superseded copy goes to the installer that put it there."""
+        superseded copy goes to the installer that put it there.
+
+        An install is followed by removing the copies its `supersedes` names. A
+        removal that fails fails the row, so the run is not reported clean, and the
+        next `check` lists the copy as an automatic removal.
+        """
         if change.removes is not None:
             return Outcome.from_result(change, superseded.remove(change.removes, privilege))
-        return registry.install(session, change, privilege)
+        installed = registry.install(session, change, privilege)
+        if installed.status is not OutcomeStatus.DONE or change.desired is None:
+            return installed
+        removed = [superseded.remove(removal, privilege) for removal in left_beside(session, change.desired)]
+        said = '; '.join(filter(None, (installed.message, *(result.detail for result in removed))))
+        status = installed.status if all(result.ok for result in removed) else OutcomeStatus.FAILED
+        return dc.replace(installed, status=status, message=said)
+
+
+def left_beside(session: Session, item: DesiredItem) -> list[diagnose.Removal]:
+    """The copies an item's `supersedes` names that are still on PATH beside it.
+
+    Measured after the install rather than planned beside it. A removal planned
+    before the install lands takes the only copy if the install then fails.
+    `engine.remeasure` never asks again about an item it acted on, so without this
+    the run reports the machine converged with the old copy still first on PATH.
+    """
+    if not getattr(item.entry, 'supersedes', ()):
+        return []
+    evidence = {item.address: registry.evidence_for(item, session.inventories)}
+    manager = session.plan.machine.coordinates.package_manager
+    return [
+        removal
+        for stray in shadowing((item,), evidence, session.plan, session.repo).get(item.address, ())
+        if supersedes(item, removal := diagnose.removal_of(Path(stray.path), manager, session.home))
+    ]
 
 
 def undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
@@ -1016,7 +1047,7 @@ def stray_change(item: DesiredItem, stray: Stray, observed: Observed, manager: P
             Verdict.UNDECLARED,
             repair=Repair.AUTOMATIC,
             detail=detail,
-            advice=f'superseded by {item.address} -> apply runs {removal.command}',
+            advice=f'superseded by {item.address} -> apply runs {superseded.command_line(removal)}',
             privileged=removal.mechanism in syspkg.REMOVES_AS_ROOT,
             removes=removal,
         )
@@ -1034,8 +1065,8 @@ def stray_change(item: DesiredItem, stray: Stray, observed: Observed, manager: P
 def supersedes(item: DesiredItem, removal: diagnose.Removal) -> bool:
     """Whether the item's `supersedes` names the installer and package of a copy.
 
-    A prefixed row names a user-space installer. A bare row names a system
-    package, under whichever manager this machine has.
+    A prefixed row names one installer. A bare row names a system package, under
+    whichever manager this machine has.
     """
     if not superseded.removable(removal):
         return False

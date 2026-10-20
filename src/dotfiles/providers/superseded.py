@@ -9,6 +9,7 @@ and left alone.
 from __future__ import annotations
 
 import os
+import shlex
 
 from dotfiles import effects
 from dotfiles.diagnose import Removal
@@ -33,25 +34,48 @@ def removable(removal: Removal) -> bool:
     return bool(removal.package) and (removal.mechanism in UNINSTALL or removal.mechanism in syspkg.UNINSTALL)
 
 
+def argv(removal: Removal) -> list[str]:
+    """The command `uninstall` runs for a copy."""
+    table = syspkg.UNINSTALL if removal.mechanism in syspkg.UNINSTALL else UNINSTALL
+    return [*table[removal.mechanism], removal.package]
+
+
+def environment(removal: Removal) -> dict[str, str] | None:
+    """What the command's environment adds, which can change what it removes."""
+    if removal.mechanism == 'npm':
+        # The prefix `npm.install` wrote to, which no npmrc may be there yet to name.
+        return {'NPM_CONFIG_PREFIX': str(npm.prefix())}
+    return syspkg.UNINSTALL_ENV.get(removal.mechanism)
+
+
+def command_line(removal: Removal) -> str:
+    """The removal as a person would type it, for a row or a failure to show."""
+    assignments = [f'{name}={value}' for name, value in (environment(removal) or {}).items()]
+    typed = shlex.join([*assignments, *argv(removal)])
+    return f'sudo {typed}' if removal.mechanism in syspkg.REMOVES_AS_ROOT else typed
+
+
 def remove(removal: Removal, privilege: Escalates) -> Result:
     """Take one superseded copy off the machine with the installer that put it there.
 
     Done once the copy is gone, whatever the installer exited with: brew exits 0
     from an uninstall it refused.
+
+    A Homebrew service is stopped first, because `brew uninstall` leaves its daemon
+    running. The unit the entry declares is not: the entry is installed, so that unit
+    supervises the replacement.
     """
+    syspkg.stop_service(removal.mechanism, removal.package, unit='')
     removed = uninstall(removal, privilege)
     if removed.ok and os.path.lexists(removal.path):
-        return Result(False, f'{removal.command} exited 0 and left {removal.path} in place', kind=Kind.COMMAND_FAILED)
+        return Result(False, f'{command_line(removal)} exited 0 and left {removal.path} in place', kind=Kind.COMMAND_FAILED)
     return removed
 
 
 def uninstall(removal: Removal, privilege: Escalates) -> Result:
     if removal.mechanism in syspkg.UNINSTALL:
         return syspkg.uninstall(removal.mechanism, [removal.package], privilege)
-    command = [*UNINSTALL[removal.mechanism], removal.package]
-    # The prefix `npm.install` wrote to, which no npmrc may be there yet to name.
-    env = {'NPM_CONFIG_PREFIX': str(npm.prefix())} if removal.mechanism == 'npm' else None
-    completed = effects.run(command, env=env, output=Output.QUIET)
+    completed = effects.run(argv(removal), env=environment(removal), output=Output.QUIET)
     if completed.ok:
         return Result(True, f'{removal.mechanism}: removed {removal.package}', kind=Kind.APPLIED)
-    return Result(False, f'{removal.command} exited {completed.returncode}: {completed.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    return Result(False, f'{command_line(removal)} exited {completed.returncode}: {completed.transcript.strip()}', kind=Kind.COMMAND_FAILED)

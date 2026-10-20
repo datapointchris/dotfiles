@@ -37,6 +37,7 @@ from dotfiles import catalog
 from dotfiles import crates_io
 from dotfiles import evidence as ev
 from dotfiles import providers
+from dotfiles import registry
 from dotfiles import releases
 from dotfiles.coordinates import Target
 from dotfiles.privilege import Privilege
@@ -49,6 +50,7 @@ from dotfiles.providers import npm
 from dotfiles.providers import syspkg
 from dotfiles.providers import uvtool
 from dotfiles.resources import Change
+from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -1608,29 +1610,31 @@ def uninstaller(stray: Path, *, removes: bool = True) -> str:
 
 
 def superseding_release(tmp_path: Path, release_cache: Path, row: str, platform: str) -> Session:
-    """A current release whose `supersedes` names one other copy of it."""
-    released('frob', 'frob 1.0.0')
+    """A release whose `supersedes` names one other copy of it."""
     cached(release_cache, {'example/frob': 'v1.0.0'})
     declared = {'github_releases': [{'name': 'frob', 'repo': 'example/frob', 'supersedes': [row]}]}
     return session(tmp_path, declared, {'machine': 'box', 'platform': platform, 'github_releases': ['frob']})
 
 
-def test_apply_removes_an_npm_copy_the_release_supersedes(
-    tmp_path: Path, fake_bin: Path, release_cache: Path, unprivileged: Privilege
+def test_the_apply_that_installs_a_release_removes_the_npm_copy_it_supersedes(
+    tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch, release_cache: Path, unprivileged: Privilege
 ) -> None:
-    """The row is the authorization, so a plain apply removes it once the release is installed."""
+    """In the same run, once the install is done. Otherwise that run reports the
+    machine converged with the npm copy still first on PATH."""
     package = npm.prefix() / 'lib' / 'node_modules' / '@example' / 'frob'
     package.mkdir(parents=True)
     stray = npm.prefix() / 'bin' / 'frob'
     stray.symlink_to(executable(package, 'cli.js'))
     executable(fake_bin, 'npm', uninstaller(stray))
     live = superseding_release(tmp_path, release_cache, 'npm:@example/frob', 'linux')
+    monkeypatch.setattr(
+        registry, 'install', lambda _, change, __: Outcome(change, OutcomeStatus.DONE, f'placed {released("frob", "frob 1.0.0")}')
+    )
 
     change = only_change(live)
     outcome = packages.RESOURCE.perform(live, change, unprivileged)
 
-    assert (change.item, change.actionable) == ('@example/frob', True)
-    assert outcome.status is OutcomeStatus.DONE
+    assert (change.verdict, outcome.status) == (Verdict.MISSING, OutcomeStatus.DONE)
     assert (fake_bin / 'npm.log').read_text().splitlines()[-1] == 'uninstall -g @example/frob'
 
 
@@ -1652,6 +1656,7 @@ def test_apply_removes_a_homebrew_copy_the_release_supersedes(
     stray = second_bin(tmp_path, monkeypatch) / 'frob'
     stray.symlink_to(executable(formula, 'frob'))
     executable(fake_bin, 'brew', uninstaller(stray, removes=removes))
+    released('frob', 'frob 1.0.0')
     live = superseding_release(tmp_path, release_cache, 'brew:frob', 'macos')
 
     change = only_change(live)

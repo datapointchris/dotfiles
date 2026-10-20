@@ -63,8 +63,10 @@ put it there. The row is the authorization, so no run has to judge it. A bare
 row names a system package that conflicts with the release (`syncthing`), and
 blocks the install until `--force` removes it. A row prefixed with its installer
 names a copy that conflicts with nothing (`cargo:abtop`, `npm:@taplo/cli`,
-`brew:gh`), so the release installs beside it and the next `apply` removes it.
-Any other second copy on PATH is reported for a person to remove.
+`brew:gh`). The release installs beside it, and the same `apply` removes it
+once the install is done. A removal planned before the install would take the
+only copy if the install then failed. Any other second copy on PATH is reported
+for a person to remove.
 
 ## Verification defends the transfer, not the publisher
 
