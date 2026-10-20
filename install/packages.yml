@@ -1262,6 +1262,14 @@ cargo_packages:
     checksum: unpublished
     tags: [cli, search, files]
 
+  - name: sd
+    command: sd
+    description: find-and-replace with JavaScript/Python regex syntax (sed alternative)
+    github_repo: chmln/sd
+    binary_pattern: "sd-{version}-{target}.tar.gz"
+    checksum: unpublished
+    tags: [cli, text]
+
   - name: eza
     command: eza
     description: modern ls replacement

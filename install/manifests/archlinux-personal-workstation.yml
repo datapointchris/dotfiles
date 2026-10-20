@@ -75,7 +75,7 @@ custom_installers:
   - font
   - zmk
 
-cargo_packages: [fnm, ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker, broot, webviewrs, watchexec-cli, stylua]
+cargo_packages: [fnm, ripgrep, bat, fd-find, sd, eza, zoxide, git-delta, oxker, broot, webviewrs, watchexec-cli, stylua]
 
 npm_globals:
   - typescript-language-server
