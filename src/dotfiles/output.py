@@ -444,10 +444,10 @@ def render_summary_row(verdict: str, name: str, detail: str, stream: Console) ->
 def render_verdict(word: str, subject: str, standing: str, sentence: str, stream: Console) -> None:
     """The run's answer, as a sentence about the machine: `✓ archlinux is converged — nothing to change`.
 
-    `word` picks the mark and color and is never printed. Printed alone in front
-    of the sentence it read as a verb — `converged nothing to change` — so the
-    machine is the subject and `standing` is a predicate whose tense says whether
-    this run moved it.
+    `word` picks the mark and color and is never printed: alone in front of the
+    sentence it reads as a verb (`converged nothing to change`). The machine is
+    the subject, and `standing` is a predicate whose tense says whether this run
+    moved it.
 
     Takes the predicate and the sentence rather than the results behind them: only
     the fold knows what each verb keeps, and `apply` has no lens at all.

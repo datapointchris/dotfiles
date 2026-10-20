@@ -326,10 +326,10 @@ def test_an_install_that_left_the_item_absent_is_named_in_the_listing(sandbox: S
 
     `OutcomeStatus.ABSENT` means the install command exited 0 and the thing is
     still not there — `brew install pkg-config` landing a formula renamed to
-    `pkgconf`, thirteen times. `never_converged` says that case is now caught on
-    the first run rather than the third, because `transact` re-observes and
-    records `absent`. The listing is where a reader goes to find which run went
-    wrong, and it counted every unsuccessful action but this one.
+    `pkgconf`, thirteen times. `transact` re-observes after the install and
+    records `absent` on the first run. The listing is where a reader goes to
+    find which run went wrong, so it counts this beside every other
+    unsuccessful action.
     """
     record(sandbox, identifier='aaaaaaaaaaaa', absent=('packages:pkg-config',))
 

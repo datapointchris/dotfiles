@@ -91,11 +91,10 @@ def hidden_flag(path: Path) -> bool:
 def finder_info(path: Path) -> bool:
     """Read through `xattr`, not `os.listxattr`, which is Linux-only.
 
-    Asking CPython raised `AttributeError` on the one platform this row exists
-    for, and the `OSError` guard that was here could not catch it: every macOS
-    run reported the whole system resource unexaminable. `xattr` is what
-    `show_library` already writes through, so the pair now agrees on the
-    mechanism as well as the attribute.
+    On macOS, the one platform this row exists for, `os.listxattr` raises
+    `AttributeError`, which an `OSError` guard does not catch, and the whole
+    system resource reads unexaminable. `show_library` writes through `xattr`
+    as well, so the read and the write share one mechanism.
     """
     listed = run(['xattr', str(path)], output=Output.QUIET)
     return listed.ok and FINDER_INFO in listed.stdout.split()

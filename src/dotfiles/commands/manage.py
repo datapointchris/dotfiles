@@ -101,8 +101,9 @@ def update(
     **Measured from the commit the last update repaired at, never from the HEAD
     before this pull.** Commits reach the checkout by other routes first: a commit
     made in it, a second scheduled job, or a `git pull` by hand. This pull then
-    brings nothing, and measuring from it would skip commits nothing repaired. `paths.REPAIRED_FILE` holds that commit. It is written only
-    when every repair that ran succeeded, so the next update retries a failed one.
+    brings nothing, and measuring from it would skip commits nothing repaired.
+    `paths.REPAIRED_FILE` holds that commit. It is written only when every
+    repair that ran succeeded, so the next update retries a failed one.
 
     With nothing usable recorded, both repairs run. An absent record says nothing
     is known to have been repaired. Falling back to the HEAD before the pull would
@@ -126,7 +127,7 @@ def update(
     # git's return code, not this tool's: a refused pull exits 1, which here means
     # DRIFT — the machine differs from its declaration, and nothing is wrong.
     # `--quiet` because this command reports the outcome itself, and git's
-    # `Already up to date.` above a list of changes read as a contradiction. A
+    # `Already up to date.` above a list of changes reads as a contradiction. A
     # refusal still reaches stderr. The hint stands in for git's progress lines, so
     # a slow fetch does not read as a hang.
     hint('checking for updates')
