@@ -150,6 +150,21 @@ class Subscription:
     names: frozenset[str] = frozenset()
     tier: str = ''
 
+    constraints: Mapping[str, Mapping[str, str]] = dc.field(default_factory=dict)
+    """Version constraints this machine declares for entries it names, by entry name.
+
+    A manifest entry written as a mapping rather than a bare name carries them:
+
+        github_releases:
+          - fzf
+          - name: lazygit
+            max_version: "0.63.0"
+
+    They replace the catalog row's constraints whole and never merge with them. A
+    global floor beside a per-machine ceiling is a window neither file states, and
+    a reader has to assemble it from two places at the moment it matters.
+    """
+
     def wants(self, entry: catalog.Entry) -> bool:
         if self.coverage is Coverage.NONE:
             return False
@@ -158,6 +173,20 @@ class Subscription:
         if self.tier == 'core':
             return isinstance(entry, catalog.SystemPackage) and entry.tier == 'core'
         return True
+
+    def resolved[E: catalog.Entry](self, entry: E) -> E:
+        """The entry as this machine installs it: the catalog row, with this
+        machine's constraints in place of all three of the row's where it declares
+        any. A key the manifest leaves out is empty, never the catalog's value."""
+        declared = self.constraints.get(entry.name)
+        if declared is None:
+            return entry
+        return dc.replace(
+            entry,
+            version=declared.get('version', ''),
+            min_version=declared.get('min_version', ''),
+            max_version=declared.get('max_version', ''),
+        )
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -414,6 +443,7 @@ def load(name: str, root: Path | None = None) -> Machine:
     flags = resolved_flags(declared, flag_data or {}, issues)
     auth = declared_auth_tools(name, declared, issues)
     check_schedule = declared_check_schedule(name, declared, issues)
+    subscriptions = {section: subscribe(section, declared, name, issues) for section in catalog.SECTIONS}
 
     if issues:
         raise MachineError(tuple(issues))
@@ -421,7 +451,7 @@ def load(name: str, root: Path | None = None) -> Machine:
     return Machine(
         name=declared.get('machine') or name,
         coordinates=coordinates,
-        subscriptions={section: subscribe(section, declared) for section in catalog.SECTIONS},
+        subscriptions=subscriptions,
         features=frozenset(feature for feature in FEATURES if declared.get(feature) is True),
         flags=flags,
         requirements=requirements(flag_data or {}, declared.get('machine') or name, coordinates),
@@ -564,7 +594,7 @@ def from_axes(name: str, overrides: Mapping[str, Any], issues: list[DeclarationI
     return point
 
 
-def subscribe(section: str, declared: Mapping[str, Any]) -> Subscription:
+def subscribe(section: str, declared: Mapping[str, Any], name: str, issues: list[DeclarationIssue]) -> Subscription:
     spelling, key = SUBSCRIPTIONS[section]
 
     if spelling is Spelling.WHOLESALE:
@@ -592,7 +622,54 @@ def subscribe(section: str, declared: Mapping[str, Any]) -> Subscription:
         return Subscription(section, Coverage.ALL, declared=True)
     if not value:
         return Subscription(section, Coverage.NONE, declared=True)
-    return Subscription(section, Coverage.NAMED, declared=True, names=frozenset(value))
+    names, constraints = named_entries(section, value, name, issues)
+    return Subscription(section, Coverage.NAMED, declared=True, names=names, constraints=constraints)
+
+
+def named_entries(section: str, value: Any, name: str, issues: list[DeclarationIssue]) -> tuple[frozenset[str], dict[str, dict[str, str]]]:
+    """The names a NAMES section lists, and the constraints its mapping entries carry.
+
+    An entry is a bare name, or a mapping of `name` and the constraints overriding
+    the catalog's for this machine. The constraints are held to the catalog's own
+    rules through `catalog.constraint_problems`, so a key the section's provider
+    does not honor is refused here rather than read by nothing.
+    """
+    names: list[str] = []
+    constraints: dict[str, dict[str, str]] = {}
+    for item in value:
+        if isinstance(item, str):
+            names.append(item)
+            continue
+        if not isinstance(item, Mapping) or not isinstance(item.get('name'), str):
+            issues.append(DeclarationIssue(name, f'lists {item!r} under {section}, where a name or a mapping with a name is expected'))
+            continue
+
+        entry = item['name']
+        names.append(entry)
+        subject = f'{section} entry {entry}'
+        declared = {key: raw for key, raw in item.items() if key != 'name'}
+        if unknown := sorted(set(declared) - set(catalog.CONSTRAINTS)):
+            issues.append(
+                DeclarationIssue(
+                    name, f'{subject} declares {", ".join(unknown)}; a manifest overrides only {", ".join(catalog.CONSTRAINTS)}'
+                )
+            )
+        offered = {key: raw for key, raw in declared.items() if key in catalog.CONSTRAINTS}
+        if not offered:
+            issues.append(DeclarationIssue(name, f'{subject} is a mapping carrying no constraint; list it as a bare name'))
+        if mistyped := sorted(key for key, raw in offered.items() if not isinstance(raw, str)):
+            # An unquoted `0.63` is a YAML float, and `0.10` would arrive as 0.1.
+            issues.append(DeclarationIssue(name, f'{subject} declares {", ".join(mistyped)} unquoted; a version is a quoted string'))
+        spelled = {key: raw for key, raw in offered.items() if isinstance(raw, str)}
+        issues.extend(
+            DeclarationIssue(name, f'{subject} {problem}') for problem in catalog.constraint_problems(catalog.SECTIONS[section], spelled)
+        )
+        constraints[entry] = spelled
+
+    for entry in sorted(constraints):
+        if names.count(entry) > 1:
+            issues.append(DeclarationIssue(name, f'{section} lists {entry} more than once, so which constraints apply is ambiguous'))
+    return frozenset(names), constraints
 
 
 def resolved_flags(declared: Mapping[str, Any], flag_data: Mapping[str, Any], issues: list[DeclarationIssue]) -> dict[str, str]:

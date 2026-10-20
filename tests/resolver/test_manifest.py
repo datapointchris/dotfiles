@@ -148,6 +148,19 @@ def test_a_gate_covers_the_whole_section(tmp_path: Path) -> None:
     assert load(tmp_path, {**LINUX, 'flatpak': False}).subscription('flatpak_apps').coverage is machines.Coverage.NONE
 
 
+def test_a_manifest_constraint_is_refused_where_the_section_does_not_honor_it(tmp_path: Path) -> None:
+    """The same ceiling loads under a section whose provider reads it and is
+    refused under one whose provider never would, so it cannot sit in a
+    manifest doing nothing."""
+    capped = {'name': 'bat', 'max_version': '0.24.0'}
+
+    assert load(tmp_path, {**LINUX, 'github_releases': [capped]}).subscription('github_releases').constraints == {
+        'bat': {'max_version': '0.24.0'}
+    }
+    with pytest.raises(machines.MachineError):
+        load(tmp_path, {**LINUX, 'cargo_packages': [capped]})
+
+
 def test_a_derived_section_is_never_subscribed_to(tmp_path: Path) -> None:
     """A machine gets the Go toolchain because it declared `go_tools`, which is
     why no boolean gates it."""

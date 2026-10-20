@@ -183,6 +183,11 @@ class CatalogProvider(Provider):
     Subscription and availability are different questions and both are asked: a
     machine can decline flatpak, and a Mac simply cannot have it. Collapsing them
     would make `check` report a correctly-installed machine as broken.
+
+    The planned item carries the entry as `Subscription.resolved` gives it, so a
+    manifest's version constraints reach every reader of `item.entry` — the
+    release lookup, the comparison and the installer — without any of them
+    knowing a manifest exists.
     """
 
     def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
@@ -197,7 +202,7 @@ class CatalogProvider(Provider):
                 executable=executable_of(entry),
                 evidence_path=getattr(entry, 'installed_path', ''),
                 precondition=precondition_of(entry),
-                entry=entry,
+                entry=subscription.resolved(entry),
                 reason=Reason(self.section, selector_of(self.section, subscription)),
             )
             for entry in declaration.section(self.section)

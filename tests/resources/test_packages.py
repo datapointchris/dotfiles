@@ -661,6 +661,26 @@ def test_a_release_is_measured_against_its_floor_and_ceiling(
     assert [(change.verdict, change.repair, change.declined) for change in changes(live)] == expected
 
 
+@pytest.mark.parametrize(
+    ('listed', 'expected'),
+    [('lazygit', [Verdict.STALE]), ({'name': 'lazygit', 'max_version': '0.45'}, [])],
+    ids=['bare-name-resolves-latest', 'manifest-ceiling-resolves-below-it'],
+)
+def test_a_manifest_constraint_replaces_the_catalog_one_on_that_machine(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, listed: str | dict[str, str], expected: list[Verdict]
+) -> None:
+    """The catalog's floor sits above the manifest's ceiling. Merged, no release
+    would satisfy both and the capped machine would read as below its floor;
+    replaced, it is measured against its own ceiling alone while a machine naming
+    the entry bare still wants the latest."""
+    released('lazygit', 'lazygit version 0.45.0')
+    cached(release_cache, {'jesseduffield/lazygit<=0.45': 'v0.45.0', 'jesseduffield/lazygit': 'v0.46.0'})
+    declared = {'github_releases': [{'name': 'lazygit', 'repo': 'jesseduffield/lazygit', 'min_version': '0.46'}]}
+    live = session(tmp_path, declared, {**DECLARES_LAZYGIT, 'github_releases': [listed]})
+
+    assert [change.verdict for change in changes(live)] == expected
+
+
 def test_a_release_at_the_latest_reports_nothing(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
     released('lazygit', 'lazygit version 0.45.0')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
