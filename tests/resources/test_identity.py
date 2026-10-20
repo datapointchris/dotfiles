@@ -262,3 +262,14 @@ def test_the_config_chain_is_listed_tilde_rooted_and_in_the_order_git_reads_it(t
 
     assert listed['~/.config/git/config'] == 'read 1 of 2'
     assert listed['~/.config/git/personal.gitconfig'] == 'read 2 of 2'
+
+
+def test_a_hook_set_in_config_that_this_git_skips_is_reported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(identity, 'runs_configured_hooks', lambda: False)
+    chain = Layering((Setting(tmp_path / 'trust.gitconfig', 'hook.agent-trailers.command', '~/.local/bin/agent-commit-trailers'),))
+    address = {'user.name': 'Chris Birch', 'user.email': 'c@e.st'}
+    observed = identity.Observed(address, address, dict.fromkeys(address, ''), layering=chain, unrun_hooks=identity.unrun_hooks(chain))
+
+    rows = [(change.item, change.verdict, change.repair) for change in identity.layering_changes(observed)]
+
+    assert rows == [('hook.agent-trailers', Verdict.STALE, Repair.BY_HAND)]

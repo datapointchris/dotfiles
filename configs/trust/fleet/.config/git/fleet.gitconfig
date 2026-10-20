@@ -2,3 +2,13 @@
 # the default and nothing here needs a condition.
 [include]
 path = ~/.config/git/personal.gitconfig
+
+# Stamps the agent trailers on a commit made inside a Claude Code session. Set in
+# config, so it runs in every repo and leaves .git/hooks to the repo's own hook
+# manager. git appends the hook's arguments to the command. The test skips the
+# hook until `dotfiles symlinks apply` deploys the script, because a command that
+# is not there aborts the commit. A git too old to run a hook set in config skips
+# it silently, which `dotfiles check` reports.
+[hook "agent-trailers"]
+event = prepare-commit-msg
+command = [ ! -x ~/.local/bin/agent-commit-trailers ] || exec ~/.local/bin/agent-commit-trailers

@@ -225,6 +225,9 @@ if [[ "$(layer_value trust)" == fleet ]]; then
   # --help only: a bare run subscribes and never returns, which the 5s timeout
   # would report as a failure rather than the success it actually is.
   test_cmd "claude-ci-watch help" "claude-ci-watch --help"
+  # The git config skips the hook while the script is absent, so nothing else
+  # would notice it missing.
+  test_cmd "agent-commit-trailers deployed" "test -x \"\$HOME/.local/bin/agent-commit-trailers\""
 fi
 
 if deploys_layer os/darwin; then

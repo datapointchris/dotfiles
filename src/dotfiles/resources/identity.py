@@ -36,6 +36,10 @@ Drift is a value this checkout sets *for itself*: what `--local` reads and the o
 thing `--unset` can remove. A repo-local identity is legitimate in other clones —
 a non-personal address kept out of a personal repo — so only one inside `session.repo`
 counts, and nothing outside it is examined.
+
+A hook set in config, `hook.<name>`, is part of what a commit carries too. A git
+older than config-based hooks reads the section and runs nothing, without a word,
+so this asks git directly with a throwaway hook.
 """
 
 from __future__ import annotations
@@ -94,6 +98,9 @@ class Observed:
 
     home: Path = dc.field(default_factory=Path.home)
     """Whose configuration this is, so the advice below names real paths."""
+
+    unrun_hooks: tuple[str, ...] = ()
+    """Each `hook.<name>` the configuration declares, where this git runs none of them."""
 
     @property
     def who(self) -> str:
@@ -172,14 +179,16 @@ class IdentityResource:
     help = 'the git configuration this machine reads'
 
     def observe(self, session: Session, plan: Plan) -> Observed:
+        layering = gitconfig.read()
         return Observed(
             {field: global_git_config(field) for field in FIELDS},
             {field: effective(field, session.repo) for field in FIELDS},
             {field: override(field, session.repo) for field in FIELDS},
-            layering=gitconfig.read(),
+            layering=layering,
             masked=gitconfig.masking(session.home) is not None,
             linked_entry_point=gitconfig.entry_point(session.home).is_symlink(),
             home=session.home,
+            unrun_hooks=unrun_hooks(layering),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -288,7 +297,65 @@ def layering_changes(observed: Observed) -> tuple[Change, ...]:
         )
         for conflict in observed.layering.conflicts
     )
+
+    found.extend(
+        Change(
+            NAME,
+            Stage.IDENTITY,
+            f'hook.{hook}',
+            Verdict.STALE,
+            repair=Repair.BY_HAND,
+            detail='this git skips every hook set in config, so it never runs',
+            advice='install a newer git; `git hook list <event>` names the hook once one runs it',
+        )
+        for hook in observed.unrun_hooks
+    )
     return tuple(found)
+
+
+PROBE_STATUS = 3
+"""What the throwaway hook exits with, so its status is told apart from git's own."""
+
+
+def unrun_hooks(layering: gitconfig.Layering) -> tuple[str, ...]:
+    """Each hook the configuration declares a command for, where this git runs none."""
+    hooks = tuple(
+        dict.fromkeys(
+            setting.key.removeprefix('hook.').removesuffix('.command')
+            for setting in layering.settings
+            if setting.key.startswith('hook.') and setting.key.endswith('.command')
+        )
+    )
+    if not hooks or runs_configured_hooks():
+        return ()
+    return hooks
+
+
+def runs_configured_hooks() -> bool:
+    """Whether this git runs a hook set in config, asked with a throwaway one.
+
+    A git that runs it exits with the hook's status. One that skips it exits 0, and
+    one without `git hook` fails with its own. No other configuration is read and no
+    hook directory is searched, so nothing else runs.
+    """
+    result = run(
+        [
+            'git',
+            '-c',
+            'core.hooksPath=/dev/null',
+            '-c',
+            'hook.probe.event=pre-commit',
+            '-c',
+            f'hook.probe.command=exit {PROBE_STATUS}',
+            'hook',
+            'run',
+            '--ignore-missing',
+            'pre-commit',
+        ],
+        env={'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_NOSYSTEM': '1'},
+        output=Output.QUIET,
+    )
+    return result.returncode == PROBE_STATUS
 
 
 def global_git_config(field: str) -> str:

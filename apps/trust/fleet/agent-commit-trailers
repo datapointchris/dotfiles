@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# prepare-commit-msg hook, run from git config rather than .git/hooks. A commit
+# made inside a Claude Code session gets Agent-Name, Agent-Session and, under a
+# scheduled run, Agent-Run. A commit with no session in its environment is left
+# alone.
+#
+# It never refuses a commit. A message it cannot stamp is committed without the
+# trailers, with a line on stderr saying so.
+set -uo pipefail
+
+message_file=${1:?git passes the commit message file first}
+session=${CLAUDE_CODE_SESSION_ID:-}
+[[ -n $session ]] || exit 0
+
+if [[ -n ${ICB_ACTOR:-} ]]; then
+  # The scheduler sets <job>@<machine>. The machine stays out, because a project
+  # repo's history names no machine, and Agent-Run leads back to it.
+  agent="claude-code-unattended/${ICB_ACTOR%@*}"
+elif [[ ${CLAUDE_CODE_SESSION_ATTENDED:-} == 0 ]]; then
+  agent=claude-code-unattended
+else
+  agent=claude-code
+  if [[ -n ${TMUX_PANE:-} ]]; then
+    handle=$(tmux display-message -p -t "$TMUX_PANE" '#{@place_handle}' 2>/dev/null) || handle=
+    [[ -z $handle ]] || agent="claude-code/$handle"
+  fi
+fi
+
+trailers=(--trailer "Agent-Name: $agent" --trailer "Agent-Session: $session")
+[[ -z ${FLEET_RUN_ID:-} ]] || trailers+=(--trailer "Agent-Run: $FLEET_RUN_ID")
+
+# doNothing keeps the trailers already there, so an amend never doubles them.
+if ! git interpret-trailers --in-place --if-exists doNothing "${trailers[@]}" "$message_file"; then
+  echo "agent-commit-trailers: could not stamp $message_file, so this commit carries no agent trailers" >&2
+fi
+exit 0
