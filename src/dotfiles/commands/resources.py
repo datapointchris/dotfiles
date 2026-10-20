@@ -469,13 +469,13 @@ def packages_apply(
     owner: str = OwnerOption,
     package: list[str] = PackageOption,
     reinstall: bool = ReinstallOption,
-    force: bool = typer.Option(False, '--force', help='Remove a package that a declared release supersedes'),
+    force: bool = typer.Option(False, '--force', help='Remove a superseded system package that blocks a release from installing'),
     offline: bool = OfflineOption,
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Install every declared package that is missing.
+    """Install every declared package that is missing, and remove a copy a declared entry's `supersedes` names.
 
     Three flags narrow what a run covers, and they compose: `--source` to one
     `packages.yml` section (`--source uv_tools`), `--owner` to the entries

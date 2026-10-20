@@ -54,11 +54,10 @@ REMOVE: dict[str, str] = {
 
 Removal is inferred nowhere: a declaration names what a machine should have, and an
 uninstall worked out from what it does not name takes a package off the machine on
-the strength of a typo. The one removal this repo performs is the one that is
-*named* and then *authorized* — a release's `supersedes` row, reviewed in a commit,
-with `--force` typed on the apply — and `UNINSTALL` below is what performs it.
-Everything else measures the need and stops, with the sentence it stops with built
-from here.
+the strength of a typo. The removals this repo performs are the ones a `supersedes`
+row names, reviewed in the commit that wrote it. `UNINSTALL` below performs a system
+manager's, and `superseded.UNINSTALL` a user-space installer's. Everything else
+measures the need and stops, with the sentence it stops with built from here.
 
 `aur` removes as `pacman`, because an AUR package is a pacman package once it is
 installed. `mas` has no entry at all — the App Store ships no uninstall verb, so

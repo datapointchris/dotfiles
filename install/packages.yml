@@ -997,12 +997,12 @@ github_releases:
   # minimal server in the fleet.
   #
   # `supersedes` names the same word under pacman and Homebrew, which is what makes
-  # this the fleet's one install path rather than a third one beside them. It is a
+  # this the one install path rather than a third one beside them. It is a
   # blocker rather than a duplicate because both of those ship a service: two
   # syncthings on one machine is two daemons over one config directory and one port,
-  # so the release has to displace the package rather than land next to it. The
-  # displacement needs `--force`; without it `check` names the package and the
-  # command.
+  # so the release has to displace the package rather than land next to it.
+  # Displacing the package before the release installs needs `--force`. Once the
+  # release is installed, `apply` removes a package left beside it.
   - name: syncthing
     repo: syncthing/syncthing
     supersedes: [syncthing]
