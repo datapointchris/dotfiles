@@ -53,6 +53,11 @@ done
 unset path_directory
 export PATH
 
+# Claude Code builds its Bash tool's shell from a login bash, and everything below
+# is interactive setup its agents should not inherit. `.bashrc` stops itself too,
+# because Claude Code sources it directly.
+[[ -n "${CLAUDECODE:-}" ]] && return
+
 HISTSIZE=10000
 HISTFILESIZE=20000
 HISTCONTROL=ignoreboth:erasedups

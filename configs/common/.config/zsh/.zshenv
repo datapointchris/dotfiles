@@ -32,3 +32,11 @@ export DOTFILES_DIR="$HOME/dotfiles"
 
 # sops looks in ~/Library/Application Support on macOS, so a Mac decrypted nothing.
 export SOPS_AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/sops/age/keys.txt}"
+
+# Claude Code's Bash tool runs bash rather than the login shell. The model writes
+# bash, and two zsh defaults break it: an unquoted variable is not word-split, and
+# a glob matching nothing aborts the command. Here and not in .zshrc because a
+# tmux pane starts claude from non-interactive zsh. Below the PATH line, so a Mac
+# resolves Homebrew's bash ahead of its own 3.2.
+CLAUDE_CODE_SHELL="$(command -v bash)"
+export CLAUDE_CODE_SHELL

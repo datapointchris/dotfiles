@@ -1,6 +1,11 @@
 # shellcheck shell=bash
 # shellcheck disable=SC1091
 
+# Claude Code sources this file to build its Bash tool's shell, then copies every
+# alias, function and shopt it defines into each command an agent runs. Agents
+# get stock bash instead: `ls` as ls, `diff` as diff, globs matching case.
+[[ -n "${CLAUDECODE:-}" ]] && return
+
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 
 # Deployed by `dotfiles symlinks apply`, and sourced without testing for them.
