@@ -53,6 +53,9 @@ that is both unmeasurable and shadowed. What is different here is that only one
 of the two is repaired by installing something, so they cannot share an address.
 """
 
+UV_PYTHON_ITEM = 'uv-toolchain/python-pin'
+"""uv's global Python pin, addressed apart from uv for `GO_ENV_ITEM`'s reason."""
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Observed:
@@ -75,6 +78,14 @@ class Observed:
 
     uv_at: Path | None = None
     """Where the uv that answered lives. One outside `~/.local/bin` is a by-hand repair, because `install_uv` refuses it."""
+
+    python_pin: str | None = None
+    """The Python uv's global pin names, '' where none, or None where no uv answered.
+
+    Measured for `module_env`'s reason. `install_uv` writes it, and runs only
+    where uv is missing or off its pin, so a machine whose uv was already right
+    never had it written.
+    """
 
     module_env: str | None = None
     """What `go env GONOSUMDB` answers, or None where there is no Go to ask.
@@ -164,6 +175,7 @@ class ToolchainsResource:
             uv_pin=uv_pin,
             uv_unpinned=uv_unpinned,
             uv_at=uv_at,
+            python_pin=toolchain.pinned_python() if UV_RUNTIME in reported else None,
             module_env=module_env,
             examined=tuple(examined),
         )
@@ -237,16 +249,31 @@ class ToolchainsResource:
                     observed=observed.module_env,
                 )
             )
+        if observed.python_pin is not None and observed.python_pin != toolchain.DEFAULT_PYTHON:
+            changes.append(
+                Change(
+                    NAME,
+                    Stage.TOOLCHAIN,
+                    UV_PYTHON_ITEM,
+                    Verdict.STALE,
+                    repair=Repair.AUTOMATIC,
+                    detail=f'uv pins {observed.python_pin or "no python"}, so a tool installs on the newest python uv manages',
+                    advice=f'`uv python pin --global {toolchain.DEFAULT_PYTHON}`, which an apply does for you',
+                    observed=observed.python_pin,
+                )
+            )
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Whichever version manager planned it installs it, or says why it cannot.
 
-        The module env is the one change here that installs nothing, so it is the
-        one `registry.install` cannot answer for.
+        The module env and the Python pin install nothing, so they are the two
+        `registry.install` cannot answer for.
         """
         if change.item == GO_ENV_ITEM:
             return Outcome.from_result(change, toolchain.set_go_env())
+        if change.item == UV_PYTHON_ITEM:
+            return Outcome.from_result(change, toolchain.pin_default_python())
         return registry.install(session, change, privilege)
 
 

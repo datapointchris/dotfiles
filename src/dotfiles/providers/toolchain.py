@@ -80,7 +80,39 @@ UV_HOOK_REPO = 'https://github.com/astral-sh/uv-pre-commit'
 UV_PIN = re.compile(r'v?(\d+(?:\.\d+)*)')
 
 DEFAULT_PYTHON = '3.13'
-"""The interpreter `uv run` resolves against when a project pins nothing."""
+"""The interpreter `uv run` and `uv tool install` resolve against when a project pins nothing.
+
+Pinned in uv's global `.python-version`, because `--default` only links `python`
+into `~/.local/bin`. uv itself prefers the newest interpreter it manages, and a
+bootstrap `uv run` downloads the newest there is. A tool installed after that
+lands on a Python its locked dependencies may ship no wheels for, and uv then
+compiles them from source. A project whose `requires-python` excludes the pin
+gets a compatible interpreter, because uv sets an incompatible global pin aside.
+"""
+
+
+def python_pin_file() -> Path:
+    """uv's global `.python-version`, beside its `uv.toml`."""
+    return paths.xdg_home('XDG_CONFIG_HOME', '.config') / 'uv' / '.python-version'
+
+
+def pinned_python() -> str:
+    """The version uv's global pin names, or '' where nothing is pinned.
+
+    Read from the file rather than asked of `uv python pin --global`, which can
+    download the interpreter it names, and a check never reaches the network.
+    """
+    try:
+        return python_pin_file().read_text().strip()
+    except OSError:
+        return ''
+
+
+def pin_default_python() -> Result:
+    pinned = effects.run(['uv', 'python', 'pin', '--global', DEFAULT_PYTHON], output=Output.QUIET)
+    if not pinned.ok:
+        return Result(False, f'pinning python {DEFAULT_PYTHON} for uv exited {pinned.returncode}', kind=Kind.COMMAND_FAILED)
+    return Result(True, f'uv resolves python {DEFAULT_PYTHON} where a project pins nothing', kind=Kind.APPLIED)
 
 
 class UnpinnedUv(Exception):
@@ -151,6 +183,9 @@ def install_uv(config: Path, os_family: OSFamily, *, offline: bool) -> Result:
             f'uv {version} is installed but making python {DEFAULT_PYTHON} the default exited {chosen.returncode}',
             kind=Kind.COMMAND_FAILED,
         )
+    pinned = pin_default_python()
+    if not pinned.ok:
+        return pinned
     return Result(True, f'uv {version}, with python {DEFAULT_PYTHON} as the default', kind=Kind.APPLIED)
 
 

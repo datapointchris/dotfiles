@@ -103,7 +103,15 @@ def fixed_homes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
     The system package's `node` is pointed at a path nothing creates, since
     `/usr/bin/node` exists on any desk with Node installed.
+
+    uv's global Python pin is written at the declared default under a config
+    home of the test's own, so a stub uv is a converged one and the desk's
+    `~/.config/uv` is never read.
     """
+    config = tmp_path / 'config'
+    (config / 'uv').mkdir(parents=True)
+    (config / 'uv' / '.python-version').write_text(f'{installers.DEFAULT_PYTHON}\n')
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(config))
     original = registry.PROVIDERS
     swapped = relocate_homes(monkeypatch, tmp_path / 'bin')
     assert {provider.name for provider in swapped if provider not in original} >= {
@@ -305,6 +313,20 @@ def test_an_unset_go_module_env_is_stale_on_a_toolchain_that_is_otherwise_curren
     assert found[0].repair is Repair.AUTOMATIC, 'an apply can write this itself'
     assert 'GONOSUMDB is unset' in found[0].detail
     assert installers.GONOSUMDB in found[0].advice, 'and says the command when a person wants to do it'
+
+
+def test_a_uv_with_no_global_python_pin_is_stale(tmp_path: Path, bin_dir: Path) -> None:
+    """Without the pin uv installs a tool on the newest Python it manages, which
+    a bootstrap `uv run` made the newest there is, and the tool's locked
+    dependencies may ship no wheels for it."""
+    stub(bin_dir, 'uv')
+    (tmp_path / 'config' / 'uv' / '.python-version').unlink()
+    live = session(tmp_path, BARE)
+
+    found = changes(live)
+
+    assert [change.item for change in found] == ['uv-toolchain/python-pin']
+    assert found[0].repair is Repair.AUTOMATIC
 
 
 def test_a_toolchain_below_its_floor_is_stale(tmp_path: Path, bin_dir: Path) -> None:

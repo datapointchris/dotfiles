@@ -994,10 +994,12 @@ def test_a_first_apply_installs_the_timer_its_own_symlink_pass_turned_on(
     and plans nothing.
 
     `$XDG_CONFIG_HOME` names the sandbox's `~/.config` because that is where the
-    symlink pass deploys, and on a real machine the two are one directory.
+    symlink pass deploys, and on a real machine the two are one directory. uv's
+    Python pin moves with it, or the apply would run a real `uv python pin`.
     """
     monkeypatch.setattr(schedule, 'is_darwin', lambda: False)
     monkeypatch.setenv('XDG_CONFIG_HOME', str(sandbox.home / '.config'))
+    write(sandbox.home / '.config' / 'uv' / '.python-version', (sandbox.config / 'uv' / '.python-version').read_text())
     declare_system(sandbox, SCHEDULE_STEP)
     write(sandbox.repo / 'configs' / 'trust' / 'fleet' / '.config' / 'dotfiles' / 'config.toml', '[schedule]\nenabled = true\n')
     sandbox.shadow('systemctl', ANSWERS)

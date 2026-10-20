@@ -429,7 +429,8 @@ class Sandbox:
         as though the flag under test caused them.
 
         - **uv** is ungated and planned on every machine, because everything
-          installed later resolves through it. Absent, `toolchains` drifts.
+          installed later resolves through it. Absent, `toolchains` drifts. So
+          does a uv whose global Python pin is not the declared default.
         - **`~/.env`** is what `env` exists to write, so an unwritten one is drift
           by construction. Written through `envfile.write`, the function `env apply`
           calls, so this cannot render it differently from the tool.
@@ -445,6 +446,9 @@ class Sandbox:
         would take the test out before the command ran.
         """
         self.installed('uv', f'uv {UV_RELEASE}')
+        pin = self.config / 'uv' / '.python-version'
+        pin.parent.mkdir(parents=True, exist_ok=True)
+        pin.write_text(f'{toolchain.DEFAULT_PYTHON}\n')
         entry = self.config / 'git' / 'config'
         entry.parent.mkdir(parents=True, exist_ok=True)
         entry.write_text('[user]\n\tname = Synthetic Box\n\temail = box@example.invalid\n')
