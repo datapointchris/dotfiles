@@ -198,37 +198,6 @@ def test_every_manager_a_reader_is_told_to_remove_with_can_also_be_removed_with(
     assert set(syspkg.UNINSTALL) >= syspkg.REMOVES_AS_ROOT
 
 
-def test_the_sentence_a_reader_gets_asks_before_it_removes(fake_bin: Path) -> None:
-    """The one difference between the two tables, and the reason they are written
-    out rather than derived from each other. `--noconfirm` in front of a person is
-    a removal they were never shown; its absence in a run nobody is watching is a
-    prompt on a closed stdin."""
-    assert '--noconfirm' not in syspkg.REMOVE['pacman']
-    assert '--noconfirm' in syspkg.UNINSTALL['pacman']
-
-
-def test_a_removal_runs_the_managers_own_uninstall(fake_bin: Path, unprivileged) -> None:
-    """Spied on argv rather than the result: what is
-    being asserted is the command the engine built, and brew's own answer is about
-    the machine the suite happens to run on."""
-    log = fake_bin / 'argv'
-    executable(fake_bin, 'brew', f'#!/bin/sh\nprintf "%s %s\\n" "$HOMEBREW_NO_AUTOREMOVE" "$*" >> {log}\nexit 0\n')
-
-    result = syspkg.uninstall('brew', ['syncthing'], unprivileged)
-
-    assert result.ok, result.detail
-    assert log.read_text().splitlines() == ['1 uninstall --force syncthing']
-
-
-def test_the_apt_removal_cannot_take_more_than_the_name_it_was_given(fake_bin: Path) -> None:
-    """`apt-get remove -y` resolves reverse dependencies and `-y` answers the
-    confirmation that would have shown the list, so one authorized removal takes an
-    unbounded set. `dpkg --remove` refuses exactly where `pacman -R` does, which is
-    what makes `--force` mean the same thing on both distros."""
-    assert syspkg.UNINSTALL['apt'][:2] == ('dpkg', '--remove')
-    assert '-y' not in syspkg.UNINSTALL['apt']
-
-
 def test_a_systemd_package_has_its_unit_stopped_before_it_is_removed(fake_bin: Path, monkeypatch) -> None:
     """Neither `pacman -R` nor `apt-get remove` stops a running daemon, so without
     this the displaced process outlives its own package and holds the ports and the

@@ -21,6 +21,8 @@ the way is installed. These tests measure it.
 
 from __future__ import annotations
 
+import pytest
+
 from dotfiles import catalog
 from dotfiles import evidence as ev
 from dotfiles.plan import DesiredItem
@@ -125,12 +127,13 @@ def test_check_reports_a_blocked_package_that_plan_and_apply_leave_alone() -> No
     assert not unmeasured
 
 
-def test_supersedes_naming_this_entrys_own_package_is_a_declaration_error() -> None:
-    """A package does not supersede itself, and an entry saying so would report
-    itself permanently blocked by its own installation."""
-    entry = catalog.SystemPackage(name='sioyek', aur='sioyek-git', supersedes=('sioyek-git',))
+@pytest.mark.parametrize(('supersedes', 'refused'), [(('sioyek-git',), True), (('sioyek',), False)])
+def test_supersedes_naming_this_entrys_own_package_is_a_declaration_error(supersedes: tuple[str, ...], refused: bool) -> None:
+    """An entry superseding its own package would report itself permanently
+    blocked by its own installation."""
+    entry = catalog.SystemPackage(name='sioyek', aur='sioyek-git', supersedes=supersedes)
 
-    assert any('supersedes' in problem for problem in entry.problems())
+    assert bool(entry.problems()) is refused
 
 
 # ─────────────────────────────────────────────────────────────────────────────
