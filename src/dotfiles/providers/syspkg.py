@@ -94,22 +94,15 @@ state, and it refuses exactly where pacman does. What it does not do is resolve
 dependencies, which is the whole point here — this is only ever handed one name that a
 `supersedes` row already wrote down.
 
-**brew takes `--force`, and `UNINSTALL_ENV` turns its autoremove off, for the same
-one-name reason.** Without `--force` a pinned formula prints an error and exits 0, so
-the removal reads as done with the formula still installed. Without the variable,
-every uninstall also removes each formula nothing depends on any more, which is a set
-nobody wrote down.
+**brew takes `--force`.** Without it a pinned formula prints an error and exits 0, so
+the removal reads as done with the formula still installed. brew's autoremove is left
+on. It removes only formulae installed as dependencies that nothing needs any more,
+and nothing else would ever clean those up.
 
 Keyed identically to `REMOVE`, and a manager missing from one is missing from both:
 `uninstall` reads this and `evidence.blocker` reads that, so a manager present in only
 one would offer a sentence nothing can run, or run something nobody was shown.
 """
-
-UNINSTALL_ENV: dict[str, dict[str, str]] = {
-    'brew': {'HOMEBREW_NO_AUTOREMOVE': '1'},
-    'cask': {'HOMEBREW_NO_AUTOREMOVE': '1'},
-}
-"""What a manager's environment needs for `UNINSTALL` to remove only the names it is handed."""
 
 REMOVES_AS_ROOT: frozenset[str] = frozenset({'pacman', 'aur', 'apt'})
 """Which removals escalate, which is not the same set as `ESCALATES`.
@@ -416,7 +409,7 @@ def uninstall(manager: str, names: Sequence[str], privilege: Escalates) -> Resul
         completed = (
             privilege.run(command, reason=f'remove {", ".join(names)} with {manager}', output=Output.STREAM)
             if manager in REMOVES_AS_ROOT
-            else effects.run(command, env=UNINSTALL_ENV.get(manager))
+            else effects.run(command)
         )
     except PrivilegeUnavailable:
         return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)

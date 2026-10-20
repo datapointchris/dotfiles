@@ -45,7 +45,7 @@ def environment(removal: Removal) -> dict[str, str] | None:
     if removal.mechanism == 'npm':
         # The prefix `npm.install` wrote to, which no npmrc may be there yet to name.
         return {'NPM_CONFIG_PREFIX': str(npm.prefix())}
-    return syspkg.UNINSTALL_ENV.get(removal.mechanism)
+    return None
 
 
 def command_line(removal: Removal) -> str:
