@@ -31,6 +31,11 @@ go_tools:
   # repo's hooks call these two by name.
   - gofumpt
   - golangci-lint
+  - ifiles    # the remote's transport, for `dotfiles bundle serve`
+
+# Runs `dotfiles bundle serve` as a user unit, the builder restricted machines
+# request bundles from. It reads the token from the service environment.
+serve_bundles: true
 
 git_uv_tools:
   - claude-code-metrics  # `ccm`, for the weekly scan and friction-check jobs on this box

@@ -83,6 +83,18 @@ systemd_units:
     enabled: true
     active: true
 
+  # The builder that answers bundle requests from restricted machines. The unit
+  # file is deployed from configs/trust/fleet/ to every fleet machine, and only a
+  # manifest setting `serve_bundles` enables it. That file loads the fleet service
+  # environment, which carries the remote's token.
+  - name: dotfiles-bundle-serve.service
+    description: Build the offline bundles restricted machines request
+    feature: serve_bundles
+    scope: user
+    needs_root: false
+    enabled: true
+    active: true
+
   # systemd ships this user timer disabled, so no user-tmpfiles.d rule is ever
   # cleaned until something enables it. `display_stack: wayland` matches the
   # directory deploying claude-sessions.conf, the one rule that needs it.
