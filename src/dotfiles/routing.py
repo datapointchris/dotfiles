@@ -86,9 +86,20 @@ class ItemHosts:
     version: frozenset[str] = frozenset()
     download: frozenset[str] = frozenset()
 
+    update: frozenset[str] | None = None
+    """The hosts updating an installed copy reaches, where they are not `download`.
+
+    A checkout tool installs through a vendor script and updates over git, so a
+    blocked script host stops only its first install.
+    """
+
+    def fetching(self, installed: bool) -> frozenset[str]:
+        """The hosts this item's bytes come from, for a copy that is or is not installed."""
+        return self.update if installed and self.update is not None else self.download
+
     @property
     def every(self) -> frozenset[str]:
-        return self.version | self.download
+        return self.version | self.download | (self.update or frozenset())
 
 
 NONE = ItemHosts()
@@ -117,9 +128,10 @@ class Route:
         if not self.blocking:
             return ''
         named = [host for host in self.blocking if host not in GITHUB_ASSET_HOSTS]
-        if len(named) < len(self.blocking):
+        collapsed = len(named) < len(self.blocking)
+        if collapsed:
             named.insert(0, "GitHub's release-asset hosts")
-        verb = 'is' if len(self.blocking) == 1 else 'are'
+        verb = 'are' if collapsed or len(named) > 1 else 'is'
         return f'{" and ".join(named)} {verb} blocked'
 
 
@@ -141,6 +153,9 @@ class Routes:
     source: str = ''
     """The config file the list came from, `~`-rooted, or '' where none declared one."""
 
+    dropped: tuple[str, ...] = ()
+    """Entries of that list that are not hostnames, as written, which route nothing."""
+
     @property
     def restricts(self) -> bool:
         """Whether any item on this run can be routed to the bundle."""
@@ -150,13 +165,15 @@ class Routes:
         """Whether every one of these hosts answers on this run."""
         return not self.everything and not (self.blocked & frozenset(hosts))
 
-    def route(self, hosts: ItemHosts) -> Route:
+    def route(self, hosts: ItemHosts, *, installed: bool = False) -> Route:
         """Where an item reaching these hosts takes its version and its bytes from."""
         if not self.restricts:
             return NETWORK
-        blocking = tuple(sorted(hosts.every if self.everything else hosts.every & self.blocked))
+        download = hosts.fetching(installed)
+        reached = hosts.version | download
+        blocking = tuple(sorted(reached if self.everything else reached & self.blocked))
         return Route(
-            bundled=not self.reaches(hosts.download) if hosts.download else self.everything,
+            bundled=not self.reaches(download) if download else self.everything,
             measured=self.reaches(hosts.version) if hosts.version else not self.everything,
             blocking=blocking,
             everything=self.everything,
@@ -177,16 +194,29 @@ def declared_in(path: Path) -> frozenset[str] | None:
     """The hosts a config file declares blocked, or None where it declares no list.
 
     An entry that is not a hostname is dropped. `validate.network_declared` reports it
-    for the repo's copies, and a hand-edited file is answered by `dotfiles config show`.
+    for the repo's copies, and `dotfiles config show` names it for the file in use.
     """
+    listed = listed_in(path)
+    if listed is None:
+        return None
+    lowered = (host.lower() for host in listed if isinstance(host, str))
+    return frozenset(host for host in lowered if hostname(host))
+
+
+def dropped_from(path: Path) -> tuple[str, ...]:
+    """The entries of a config file's blocked list that `declared_in` drops, as written."""
+    kept = declared_in(path) or frozenset()
+    return tuple(str(entry) for entry in listed_in(path) or () if not (isinstance(entry, str) and entry.lower() in kept))
+
+
+def listed_in(path: Path) -> list[object] | None:
+    """A config file's `[network] blocked` list as written, or None where it holds none."""
     try:
         table = tomllib.loads(path.read_text()).get(TABLE)
     except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
         return None
     listed = table.get(KEY) if isinstance(table, dict) else None
-    if not isinstance(listed, list):
-        return None
-    return frozenset(host for host in listed if hostname(host))
+    return listed if isinstance(listed, list) else None
 
 
 def trust_copy(repo: Path, trust: object) -> Path:
@@ -206,5 +236,11 @@ def read(*, offline: bool, declared_at: Path | None = None) -> Routes:
             continue
         found = declared_in(candidate)
         if found is not None:
-            return Routes(blocked=found, everything=offline and not found, offline=offline, source=paths.under_home(candidate))
+            return Routes(
+                blocked=found,
+                everything=offline and not found,
+                offline=offline,
+                source=paths.under_home(candidate),
+                dropped=dropped_from(candidate),
+            )
     return Routes(everything=offline, offline=offline)

@@ -79,6 +79,13 @@ class Observed:
     uv_at: Path | None = None
     """Where the uv that answered lives. One outside `~/.local/bin` is a by-hand repair, because `install_uv` refuses it."""
 
+    uv_awaits_bundle: str = ''
+    """Why uv installs only from a bundle no staged one fills, or '' where its install can run.
+
+    Set where uv's download reaches a blocked host and no staged bundle holds the
+    pin, so an apply asks a builder for one beside the blocked packages.
+    """
+
     python_pin: str | None = None
     """The Python uv's global pin names, '' where none, or None where no uv answered.
 
@@ -175,12 +182,16 @@ class ToolchainsResource:
             uv_pin, uv_unpinned = toolchain.pinned_uv(session.repo / paths.PRE_COMMIT_CONFIG.name), ''
         except toolchain.UnpinnedUv as error:
             uv_pin, uv_unpinned = '', str(error)
+        uv_item = next((item for item in plan.for_resource(NAME) if item.name == UV_RUNTIME), None)
+        uv_route = registry.route(session, uv_item) if uv_item else None
+        awaits = uv_route.because if uv_route and uv_route.bundled and uv_pin and toolchain.bundled_uv(uv_pin) is None else ''
         return Observed(
             reported=reported,
             absent=absent,
             uv_pin=uv_pin,
             uv_unpinned=uv_unpinned,
             uv_at=uv_at,
+            uv_awaits_bundle=awaits,
             python_pin=toolchain.pinned_python() if UV_RUNTIME in reported else None,
             module_env=module_env,
             examined=tuple(examined),
@@ -200,6 +211,7 @@ class ToolchainsResource:
                         detail=observed.absent[item.name],
                         desired=item,
                         privileged=registry.needs_root(item),
+                        awaits_bundle=observed.uv_awaits_bundle if item.name == UV_RUNTIME else '',
                     )
                 )
                 continue
@@ -326,6 +338,7 @@ def against_pin(item: DesiredItem, reported: str, observed: Observed) -> tuple[C
             detail=f'pinned to {observed.uv_pin} by the uv-pre-commit hook, and any other release writes uv.lock in its own format',
             desired=item,
             observed=reported,
+            awaits_bundle=observed.uv_awaits_bundle,
         ),
     )
 

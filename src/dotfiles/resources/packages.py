@@ -241,7 +241,7 @@ class PackagesResource:
     def observe(self, session: Session, plan: Plan) -> Observed:
         mine = plan.for_resource(NAME)
         evidence = {item.address: registry.evidence_for(item, session.inventories) for item in mine}
-        routes = {item.address: registry.route(session, item) for item in mine}
+        routes = {item.address: registry.route(session, item, installed=evidence[item.address].verdict is Verdict.MATCHED) for item in mine}
 
         present = tuple(
             item
@@ -709,11 +709,14 @@ def through_bundle(change: Change, item: DesiredItem, observed: Observed) -> Cha
     staged bundle carries it, or carries nothing newer than what is installed, apply
     has nothing to install, so the row says a bundle is needed and names the host.
     Where the bundle carries a newer build that is still behind, apply installs it
-    and the row still asks for a newer bundle.
+    and the row still asks for a newer bundle. An item no bundle stages asks for
+    none, so it never joins a request the builder would refuse whole.
     """
     route = observed.route(item)
     if not route.bundled or not change.actionable or change.removes is not None:
         return change
+    if not bundle.bundlable(item.entry):
+        return dc.replace(change, repair=Repair.NONE, detail=f'{change.detail}; {route.because}, and no bundle stages it')
     version = observed.in_bundle.get(item.address)
     wanted = target_version(item, observed) if change.verdict is Verdict.STALE else ''
     if version is not None and (
@@ -725,7 +728,7 @@ def through_bundle(change: Change, item: DesiredItem, observed: Observed) -> Cha
 
     holds = f'the staged bundle carries {version}' if version else 'no staged bundle carries it'
     needed = f'a bundle carrying {item.name} {wanted}'.rstrip() if wanted else f'a bundle carrying {item.name}'
-    advice = f'{needed} is needed; build one where the network reaches it: dotfiles bundle create'
+    advice = f'{needed} is needed; ask a builder for it: dotfiles bundle request --entry {item.name}'
     if version and change.observed and versions.exceeds(version, change.observed):
         return dc.replace(change, awaits_bundle=route.because, detail=f'{change.detail}; {holds}, and {route.because}')
     return dc.replace(
@@ -751,8 +754,8 @@ def bundle_need(changes: Iterable[Change]) -> tuple[str, ...]:
 
     Each is an item whose download reaches a blocked host and whose change is one
     apply would act on, missing or behind, with no staged bundle carrying the
-    version it wants. Returned as entry names, the vocabulary `bundle create
-    --entry` takes.
+    version it wants. The toolchains resource marks uv the same way. Returned as
+    entry names, the vocabulary `bundle create --entry` takes.
     """
     return tuple(sorted({change.desired.name for change in changes if change.awaits_bundle and change.desired is not None}))
 

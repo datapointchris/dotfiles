@@ -1400,14 +1400,21 @@ def left_out_of(plan: Plan, entries: tuple[str, ...]) -> tuple[str, ...]:
 
     Refuses a name the plan bundles nothing under. A builder whose checkout is
     behind the requester's is the usual cause, and a bundle quietly missing the
-    one tool asked for would answer the request with nothing.
+    one tool asked for would answer the request with nothing. `uv` is accepted
+    alone, because every build carries it.
     """
     if not entries:
         return ()
     bundled = [item for item in plan.items if bundle_format.bundlable(item.entry)]
-    unknown = sorted(set(entries) - {item.name for item in bundled})
-    if unknown:
-        raise BundleError(f'--entry {", ".join(unknown)}: not in the plan this checkout resolves for {plan.machine.name}')
+    unknown = set(entries) - {item.name for item in bundled} - {toolchain.UV_BUNDLED}
+    planned = {item.name for item in plan.items}
+    refused = []
+    if undeclared := sorted(unknown - planned):
+        refused.append(f'--entry {", ".join(undeclared)}: not in the plan this checkout resolves for {plan.machine.name}')
+    if unstaged := sorted(unknown & planned):
+        refused.append(f'--entry {", ".join(unstaged)}: planned, and no bundle stages that kind of entry')
+    if refused:
+        raise BundleError('; '.join(refused))
     return tuple(sorted(f'{item.section}/{item.name}' for item in bundled if item.name not in entries))
 
 

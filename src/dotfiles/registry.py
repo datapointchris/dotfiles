@@ -1451,9 +1451,9 @@ def hosts(item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
     return provider.hosts(item, target) if provider else routing.NONE
 
 
-def route(session: MachineContext, item: DesiredItem) -> routing.Route:
+def route(session: MachineContext, item: DesiredItem, *, installed: bool = False) -> routing.Route:
     """Where this item takes its version and its bytes from on this run."""
-    return session.routes.route(hosts(item, coordinates.target_for(session.machine.coordinates)))
+    return session.routes.route(hosts(item, coordinates.target_for(session.machine.coordinates)), installed=installed)
 
 
 def clone_host(item: DesiredItem) -> str:

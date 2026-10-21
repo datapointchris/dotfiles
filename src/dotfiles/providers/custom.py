@@ -100,11 +100,14 @@ def hosts(entry: catalog.CustomInstaller, target: Target) -> routing.ItemHosts:
     """The hosts this tool's version check asks, and the hosts its install reaches.
 
     The download half is `sources`, the same list `dotfiles network check` probes.
+    A checkout tool's update is its own `update` over git, so its update half is
+    the clone alone.
     """
     version = {routing.GITHUB_API} if entry.repo else set()
     return routing.ItemHosts(
         version=frozenset(version) | routing.hosts_of(filter(None, [version_file(entry)])),
         download=routing.hosts_of(source.url for source in sources(entry, target)),
+        update=routing.hosts_of([git_repo(entry)]) if INSTALLERS.get(entry.name) is checkout_tool else None,
     )
 
 
@@ -194,7 +197,8 @@ def script_and_clone(entry: catalog.CustomInstaller, target: Target) -> tuple[So
 
 
 def claude_code_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
-    return (Source(entry.install_url),)
+    """The script, and the channel file on the host the script downloads the release from."""
+    return (Source(entry.install_url), Source(version_file(entry))) if entry.url else (Source(entry.install_url),)
 
 
 def bats_sources(entry: catalog.CustomInstaller, target: Target) -> tuple[Source, ...]:
