@@ -93,9 +93,9 @@ On a machine with no CLI yet the bootstrap comes first.
 `./install.sh --machine NAME --offline` finds the newest archive in the download
 cache, beside the checkout or in `$HOME`, unpacks it under
 `$XDG_CACHE_HOME/dotfiles/staged/`, installs uv and the CLI from it with no index
-at all, and prints the apply line above. The flag is needed on both and means a
-different thing on each: where the bootstrap gets uv and the wheels, and where
-the apply gets everything else.
+at all, and prints the apply line above. The flag means a different thing on
+each. The bootstrap takes uv and the wheels from the bundle. The apply takes only
+blocked items from it and contacts no remote.
 
 ## The config names what this network blocks, and one apply routes around it
 
