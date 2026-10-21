@@ -87,7 +87,7 @@ systemd_units:
   # cleaned until something enables it. `display_stack: wayland` matches the
   # directory deploying claude-sessions.conf, the one rule that needs it.
   - name: systemd-tmpfiles-clean.timer
-    description: Daily clean of the user tmpfiles rules, which ages out Claude's /tmp
+    description: Daily clean of the user tmpfiles rules, which ages out Claude's scratch
     display_stack: wayland
     scope: user
     needs_root: false

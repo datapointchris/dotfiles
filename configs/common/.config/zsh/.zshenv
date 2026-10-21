@@ -40,3 +40,8 @@ export SOPS_AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}
 # resolves Homebrew's bash ahead of its own 3.2.
 CLAUDE_CODE_SHELL="$(command -v bash)"
 export CLAUDE_CODE_SHELL
+
+# Claude Code puts each session's scratch under $CLAUDE_CODE_TMPDIR/claude-<uid>,
+# and /tmp by default. A session builds virtualenvs and clones there, and on a
+# tmpfs /tmp those are held in RAM. /var/tmp is on disk on every platform.
+export CLAUDE_CODE_TMPDIR=/var/tmp
