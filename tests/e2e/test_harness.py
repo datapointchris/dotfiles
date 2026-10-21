@@ -311,14 +311,16 @@ def test_the_shadow_refuses_and_says_why() -> None:
     assert f'/home/tester/{SHADOW_LOG}' in source
 
 
-def test_a_uv_probe_is_not_a_stranger() -> None:
-    """uv scanning PATH for an interpreter is expected; anything else calling
-    `python3` is the bug. Matched on basename, because `~/.local/share/uv` puts
-    the substring in paths that have nothing to do with uv running."""
-    assert ShadowCall(caller='/home/tester/.local/bin/uv tool install', argv='python3 -c ...').by_uv
-    assert not ShadowCall(caller='bash /home/tester/dotfiles/install/common/thing.sh', argv='python3 x.py').by_uv
-    assert not ShadowCall(caller='/home/tester/.local/share/uv/tools/dotfiles/bin/curl', argv='python3').by_uv
-    assert not ShadowCall(caller='', argv='python3').by_uv
+def test_an_interpreter_scan_is_not_a_stranger() -> None:
+    """uv or Neovim scanning PATH for an interpreter is expected; anything else
+    calling `python3` is the bug. Matched on basename, because `~/.local/share/uv`
+    puts the substring in paths that have nothing to do with uv running."""
+    assert ShadowCall(caller='/home/tester/.local/bin/uv tool install', argv='python3 -c ...').scans_path
+    assert ShadowCall(caller='nvim --headless -c Lazy! sync', argv='python3 -c x; find_spec("neovim")').scans_path
+    assert not ShadowCall(caller='nvim --headless', argv='python3 script.py').scans_path
+    assert not ShadowCall(caller='bash /home/tester/dotfiles/install/common/thing.sh', argv='python3 x.py').scans_path
+    assert not ShadowCall(caller='/home/tester/.local/share/uv/tools/dotfiles/bin/curl', argv='python3').scans_path
+    assert not ShadowCall(caller='', argv='python3').scans_path
 
 
 def test_a_probe_is_replayed_the_way_the_measurement_ran_it() -> None:

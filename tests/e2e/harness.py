@@ -578,7 +578,7 @@ def shadow_source(home: str) -> str:
     return (
         '#!/bin/sh\n'
         "caller=$(tr '\\0' ' ' < \"/proc/$PPID/cmdline\" 2>/dev/null || echo unknown)\n"
-        f'printf \'%s\\t%s\\n\' "$caller" "$0 $*" >> {home}/{SHADOW_LOG}\n'
+        f'printf \'%s\\t%s\\n\' "$caller" "$(printf \'%s \' "$0" "$@" | tr \'\\n\' \' \')" >> {home}/{SHADOW_LOG}\n'
         f'echo "{SHADOW_REFUSAL}: nothing may call it by name" >&2\n'
         'exit 1\n'
     )
@@ -592,17 +592,20 @@ class ShadowCall:
     argv: str
 
     @property
-    def by_uv(self) -> bool:
-        """uv scanning PATH for an interpreter, which is uv's business and not ours.
+    def scans_path(self) -> bool:
+        """uv, or Neovim's provider detection, scanning PATH for an interpreter.
 
         The offline path passes `--no-python-downloads`, so an interpreter uv can
         find is a documented requirement there; it finds this one first, rejects
-        it for exiting 1, and carries on to the real one. Matched on the parent's
-        basename rather than a substring, or every path containing `uv` — which
-        is most of them once `~/.local/share/uv` exists — would qualify.
+        it for exiting 1, and carries on to the real one. Neovim looks for a
+        python3 host the first time a plugin's `build` asks for `:python3`, and
+        rejects this one the same way. Matched on the parent's basename rather
+        than a substring, or every path containing `uv` — which is most of them
+        once `~/.local/share/uv` exists — would qualify.
         """
         first = self.caller.split()
-        return bool(first) and Path(first[0]).name == 'uv'
+        parent = Path(first[0]).name if first else ''
+        return parent == 'uv' or (parent == 'nvim' and 'find_spec("neovim")' in self.argv)
 
 
 def plant_python_shadow(machine: Machine) -> None:
@@ -1052,7 +1055,9 @@ def probe_of(item: DesiredItem) -> str:
     if registry_names(item):
         return ''
     if item.evidence_path:
-        target = item.evidence_path
+        # A toolchain's path is expanded where the plan was made, which is this host's home.
+        home = f'{Path.home()}/'
+        target = f'~/{item.evidence_path.removeprefix(home)}' if item.evidence_path.startswith(home) else item.evidence_path
     elif isinstance(item.entry, catalog.ShellPlugin | catalog.TmuxPlugin | catalog.YaziPlugin):
         target = str(clone.destination(item, Path('~')))
     elif item.executable:

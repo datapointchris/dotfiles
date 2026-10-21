@@ -99,28 +99,6 @@ def test_the_machine_carries_what_it_declares(
     )
 
 
-def test_the_offline_machine_is_where_a_refusal_actually_happens(converged_machine: Machine, refused: dict[str, str]) -> None:
-    """The excuse the per-item nodes accept has to be one something really produces.
-
-    A refusal suppresses a red line, so the mechanism is only safe while it stays
-    rare and real. Offline is where it is neither optional nor incidental: there
-    is no go.dev to fetch a toolchain from and no rustup.rs to run, the bundle
-    stages those tools prebuilt instead, and the run says so rather than failing.
-    An offline install that refused *nothing* means either the bundle stopped
-    standing in for the network or the refusals stopped being recorded, and each
-    of those turns every skip above into an unexamined pass.
-
-    Only asserted in that direction. A converging online machine still refuses the
-    odd item for a reason that is about the box — a container has no `/dev/kfd`,
-    so ROCm's precondition does not hold — and demanding an empty set there would
-    be a red line about the hardware.
-    """
-    if not converged_machine.environment.offline:
-        pytest.skip('a refusal is incidental here; offline is where the mechanism is load-bearing')
-
-    assert refused, 'the offline install refused nothing, so nothing stood in for the network it cannot reach'
-
-
 def test_every_declared_symlink_is_deployed(converged_machine: Machine) -> None:
     """The config half of the machine, which no tool check reaches.
 

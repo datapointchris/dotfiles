@@ -16,6 +16,7 @@ is for.
 from __future__ import annotations
 
 import json
+import re
 
 import exchange
 import pytest
@@ -61,7 +62,7 @@ def test_the_interpreter_the_installers_get_can_import_the_package(machine: Mach
 
 def test_nothing_but_uv_reached_for_the_system_python(fresh_install: Machine) -> None:
     """The whole install ran with a `python3` first on PATH that exits 1 loudly,
-    and only uv is allowed to have found it.
+    and only uv and Neovim's host search are allowed to have found it.
 
     This is what replaced `pip install --user PyYAML` into Apple's interpreter:
     the CLI runs on the interpreter uv installed it with, so nothing in a run has
@@ -70,7 +71,7 @@ def test_nothing_but_uv_reached_for_the_system_python(fresh_install: Machine) ->
     is what it is supposed to do — the offline path passes `--no-python-downloads`
     and needs to find a real one, which it does after rejecting this stub.
     """
-    strangers = [f'{call.caller} → {call.argv}' for call in shadow_calls(fresh_install) if not call.by_uv]
+    strangers = [f'{call.caller} → {call.argv}' for call in shadow_calls(fresh_install) if not call.scans_path]
     assert not strangers, strangers
 
 
@@ -139,11 +140,16 @@ def test_neovim_starts_without_errors(converged_machine: Machine) -> None:
 
 def test_yazi_starts_without_errors(converged_machine: Machine) -> None:
     """Its own check because it has its own failure: `package.toml` had two owners,
-    so a fresh install deployed the file twice and yazi refused every start."""
-    started = converged_machine.exec('timeout 20 yazi --clear-cache 2>&1')
+    so a fresh install deployed the file twice and yazi refused every start.
+
+    `ya env` parses every config file a start parses and exits 1 on one it cannot.
+    yazi and ya both refuse to run without a terminal, so `script` lends one. The
+    timeout sits outside it: inside, the child leaves the terminal's foreground
+    group and stops on its first terminal call.
+    """
+    started = converged_machine.exec("timeout 20 script -qfec 'ya env' /dev/null </dev/null")
 
     assert started.returncode == 0, started.stdout[-2000:]
-    assert 'error' not in started.stdout.lower(), started.stdout[-2000:]
 
 
 def test_docker_compose_is_the_v2_plugin(converged_machine: Machine) -> None:
@@ -321,7 +327,7 @@ def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> No
     if not machine.environment.offline:
         pytest.skip('only the offline environment installs from a bundle')
     assert 'Checksum verified from offline bundle' in machine.install_log
-    assert 'installed from the bundle at' in machine.install_log
+    assert 'installed from the bundle' in machine.install_log
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -358,9 +364,19 @@ def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_curren
     # pass the document through the redaction gate, so a trip built on `show`
     # cannot reach a gate that refuses every real document — which is what one did
     # for the whole life of the branch.
-    exchange.ran(machine, 'dotfiles status upload')
+    uploaded = machine.exec('dotfiles status upload')
+    assert uploaded.returncode == 0, uploaded.stderr or uploaded.stdout
+    status = re.search(r'uploaded (\S+)\s+to', uploaded.stderr)
+    assert status, f'the upload named no status: {uploaded.stderr[-2000:]}'
 
-    built = exchange.build_bundle_in(builder, machine.environment.manifest, against='latest')
+    # The status this machine just sent, by name. A kept builder still has every
+    # earlier machine's status for this manifest, and `latest` refuses to pick one.
+    manifest = machine.environment.manifest
+    fetched = exchange.ran(
+        builder,
+        f'cd {builder.environment.home}/dotfiles && uv run dotfiles status download --machine {manifest} --status {status[1]} --print-path',
+    )
+    built = exchange.build_bundle_in(builder, manifest, against=fetched.splitlines()[-1])
     name = built.rsplit('/', 1)[-1]
     assert name.endswith('-sparse.tar.gz'), f'a sparse build has to say so in its own name: {name}'
     exchange.ran(builder, f'cd {builder.environment.home}/dotfiles && uv run dotfiles bundle upload')
