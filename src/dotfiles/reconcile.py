@@ -31,6 +31,7 @@ from dotfiles import checkout
 from dotfiles import coordinates
 from dotfiles import deploy
 from dotfiles import engine
+from dotfiles import gitconfig
 from dotfiles import offline_bundle
 from dotfiles import output
 from dotfiles import paths
@@ -80,6 +81,9 @@ from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import auth
+from dotfiles.resources import credentials as git_credentials
+from dotfiles.resources import env as env_file
+from dotfiles.resources import identity as git_identity
 from dotfiles.resources import privileged
 from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
@@ -990,12 +994,6 @@ def apply_machine(
 
     planned, performed = perform(session, selection, planned)
 
-    changes = [event.payload for event in planned if isinstance(event.payload, Change)]
-    _, deferred, unmeasured = sift(changes)
-    report_untouched(deferred, unmeasured)
-    # A refused install wrote nothing, so the item is still not what was declared.
-    deferred = [*deferred, *refused_changes(performed)]
-
     # After the walk rather than inside it: the three jobs are consequences of a
     # deployment rather than measured drift, and nothing between the symlink stage
     # and here reads what they write. Run whether or not the pass changed
@@ -1009,6 +1007,18 @@ def apply_machine(
     # over files nobody wrote is a narrowing applied to the data and not the work.
     if 'symlinks' in selection.resources and selection.reaches(Stage.SYMLINKS):
         deploy.epilogue(session)
+
+    changes = [event.payload for event in planned if isinstance(event.payload, Change)]
+    _, deferred, unmeasured = sift(changes)
+    # Reported after the epilogue, which retires a `~/.gitconfig` holding no
+    # identity, so no row asks a reader to remove a file this run already removed.
+    if gitconfig.masking(session.home) is None:
+        deferred = [
+            change for change in deferred if not (change.resource == git_identity.NAME and change.item == git_identity.HOME_GITCONFIG_ITEM)
+        ]
+    report_untouched(deferred, unmeasured)
+    # A refused install wrote nothing, so the item is still not what was declared.
+    deferred = [*deferred, *refused_changes(performed)]
 
     # Both halves, which is what `sinks.record` is built for: a `Change` is what
     # was decided and an `Outcome` is what was done, so a record of an `apply`
@@ -1236,36 +1246,52 @@ def perform(session: Session, selection: engine.Selection, planned: Sequence[Eve
                 if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE:
                     changed = True
                     remeasuring = None
-    if changed and (again := auth_after_install(remeasuring or dc.replace(session, refresh=False), selection, decided)):
-        decided = [*(event for event in decided if event.resource != auth.NAME), *again]
+    if changed:
+        decided = settings_after_run(remeasuring or dc.replace(session, refresh=False), selection, decided)
     return decided, performed
 
 
-def auth_after_install(session: Session, selection: engine.Selection, decided: Sequence[Event]) -> list[Event]:
-    """Auth asked again where its first pass found a tool this run then installed.
+SETTINGS = (env_file.NAME, git_identity.NAME, auth.NAME, git_credentials.NAME)
+"""The resources reading what a run writes or installs: `~/.env` and the config it names, git's config, and each tool's login."""
 
-    Every auth row is BY_HAND, so `engine.remeasure` keeps none of them. Without
-    this a fresh machine closes with `aws` unmeasured because it was not on PATH
-    when auth was first asked, though the packages stage put it there since.
+
+def settings_after_run(session: Session, selection: engine.Selection, decided: Sequence[Event]) -> list[Event]:
+    """`decided`, with each settings resource's by-hand rows measured again after the run.
+
+    `engine.remeasure` keeps only rows apply acts on, so a row left to a person
+    stays as `assess` found it, before anything was written. Without this a fresh
+    machine closes without the `~/.env` values its own write leaves unset, or the
+    logins of tools this run put on PATH, and a second run reports them as new.
+    A resource is printed again only where what it found has changed.
     """
-    absent = [
-        event.payload.item
-        for event in decided
-        if event.resource == auth.NAME
-        and isinstance(event.payload, Change)
-        and event.payload.detail == auth.uninstalled(event.payload.item).detail
-    ]
-    if auth.NAME not in selection.resources or not any(shutil.which(tool) for tool in absent):
-        return []
-    again = list(engine.measure(session, auth.NAME, engine.resources()[auth.NAME], selection.plan_for(auth.NAME, session.plan)))
-    found = [event.payload for event in again if isinstance(event.payload, Change)]
-    for event in again:
-        if isinstance(event.payload, Summary):
-            mark, color = measured_mark(found)
-            render_section(
-                auth.NAME, f'{event.payload.detail}, asked again once the install put {", ".join(absent)} on PATH', mark=mark, color=color
-            )
-    return again
+    for name in (name for name in SETTINGS if name in selection.resources):
+        before = left_to_a_person(decided, name)
+        again = list(engine.measure(session, name, engine.resources()[name], selection.plan_for(name, session.plan)))
+        after = left_to_a_person(again, name)
+        if rows(before) == rows(after):
+            continue
+        installed = [
+            change.item for change in rows_of(before) if change.detail == auth.uninstalled(change.item).detail and shutil.which(change.item)
+        ]
+        because = f'asked again once the install put {", ".join(installed)} on PATH' if installed else 'measured again after this run'
+        for event in again:
+            if isinstance(event.payload, Summary):
+                mark, color = measured_mark(rows_of(after))
+                render_section(name, f'{event.payload.detail}, {because}', mark=mark, color=color)
+        decided = [*(event for event in decided if event not in before), *after]
+    return list(decided)
+
+
+def left_to_a_person(events: Sequence[Event], name: str) -> list[Event]:
+    return [event for event in events if event.resource == name and isinstance(event.payload, Change) and not event.payload.actionable]
+
+
+def rows_of(events: Sequence[Event]) -> list[Change]:
+    return [event.payload for event in events if isinstance(event.payload, Change)]
+
+
+def rows(events: Sequence[Event]) -> set[tuple[str, str]]:
+    return {(change.item, str(change.verdict)) for change in rows_of(events)}
 
 
 def without(decided: Sequence[Event], found: Sequence[Event]) -> list[Event]:
@@ -1328,7 +1354,10 @@ def render(event: Event) -> None:
         return
 
     label, color = OUTCOME_MARKS[payload.status]
-    cause, *diagnosed = (payload.message or payload.change.item).splitlines() or ['']
+    # A vendor script that streamed its own output reports nothing more, and its
+    # address already sits in the column beside an empty detail.
+    fallback = '' if payload.status is OutcomeStatus.DONE else payload.change.item
+    cause, *diagnosed = (payload.message or fallback).splitlines() or ['']
     render_row(label, payload.change.item, cause, color)
     # One row per line: a diagnosed failure carries the cause and the command that
     # fixes it under the provider's own message, and the command wants a line of its

@@ -109,8 +109,14 @@ class Observed:
     @property
     def summary(self) -> str:
         """Names the runtimes rather than counting them: which ones a machine
-        needs is derived from its tool lists, so the list itself is the finding."""
-        return ', '.join(sorted(self.reported)) or 'none needed'
+        needs is derived from its tool lists, so the list itself is the finding.
+        One that did not answer is named too, or a fresh box reads as needing
+        only the runtime it already has."""
+        present = ', '.join(sorted(self.reported))
+        if not self.absent:
+            return present or 'none needed'
+        missing = f'{", ".join(sorted(self.absent))} missing'
+        return f'{present} present; {missing}' if present else missing
 
     @property
     def inventory(self) -> tuple[Examined, ...]:

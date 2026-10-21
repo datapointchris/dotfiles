@@ -370,7 +370,12 @@ def section_line(mark: str, name: str, detail: str, color: str = '', trailer: st
     empty style tag renders as one.
     """
     marked = f'[{color}]{mark}[/]' if color else mark
-    return f'{marked} [bold]{name:<{ADDRESS_COLUMN}}[/] {detail}{trailer}'
+    # A summary may hold a newline where the resource measures more than one kind
+    # of thing. Continuations align under the first, so they read as the same
+    # sentence rather than as items, and the trailer rides on the last of them.
+    first, *rest = detail.split('\n')
+    continued = ''.join(f'\n  {"":<{ADDRESS_COLUMN}} {line}' for line in rest)
+    return f'{marked} [bold]{name:<{ADDRESS_COLUMN}}[/] {first}{continued}{trailer}'
 
 
 def render_section(address: str, detail: str, seconds: float = 0.0, mark: str = '✓', color: str = 'green') -> None:
@@ -402,16 +407,7 @@ def render_result(result: ResourceResult, stream: Console) -> None:
     """
     color = VERDICT_COLORS[str(result.verdict)]
     mark = VERDICT_MARKS[str(result.verdict)]
-    # A summary may hold a newline where the resource measures more than one kind
-    # of thing, and `system` joined its two with a comma into the longest row in
-    # the report. Continuations align under the first, so they read as the same
-    # sentence rather than as items — and the counts ride on the *last* of them,
-    # since a tally wedged between two halves of a sentence separates them.
-    lines = result.detail.split('\n')
-    trailer = f'{tallies(result)}{elapsed(result.seconds)}'
-    stream.print(section_line(mark, result.address, lines[0], color, trailer if len(lines) == 1 else ''))
-    for position, line in enumerate(lines[1:], start=2):
-        stream.print(f'  {"":<{ADDRESS_COLUMN}} {line}{trailer if position == len(lines) else ""}')
+    stream.print(section_line(mark, result.address, result.detail, color, f'{tallies(result)}{elapsed(result.seconds)}'))
 
     deferred, listed = section_listing(result)
     width = subject_width([change.item for change in result.findings] + [change.item for change in deferred] + [row.item for row in listed])

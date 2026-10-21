@@ -37,6 +37,7 @@ answer.
 from __future__ import annotations
 
 import dataclasses as dc
+import re
 import shlex
 import shutil
 from pathlib import Path
@@ -65,6 +66,9 @@ HELPER_PREFIX = 'credential.'
 HELPER_SUFFIX = '.helper'
 
 NO_PROMPT = {'GIT_TERMINAL_PROMPT': '0', 'GCM_INTERACTIVE': 'never'}
+
+SHELL_FUNCTION = re.compile(r'[A-Za-z_][\w-]*\s*\(\)')
+"""The `f() { ...; }; f` idiom git documents for a helper written inline, which names no program."""
 """What stops a probe turning into a login.
 
 Both halves are needed and they belong to different programs. git's own variable
@@ -279,6 +283,8 @@ def asked(helper: Helper) -> Found:
     underneath it is not, so the fix is nothing to do with git. `MISSING` would
     send a reader to `common.gitconfig` to fix a binfmt registration.
     """
+    if helper.shell_form and SHELL_FUNCTION.match(helper.value.strip()[1:].lstrip()):
+        return Found(helper, Verdict.MATCHED, 'a shell function, which git runs through sh')
     program = helper.program
     if not program:
         return Found(helper, Verdict.STALE, 'the value starts with `!` and names no command', advice='set a helper, or remove the line')

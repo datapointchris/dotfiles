@@ -633,7 +633,7 @@ def names_the_table(node: ast.expr) -> bool:
     return isinstance(node, ast.Attribute) and node.attr == TABLE
 
 
-def test_only_the_two_heading_builders_name_the_heading_width() -> None:
+def test_only_the_heading_builder_names_the_heading_width() -> None:
     """A function naming the width is laying out a heading of its own, whatever it
     draws it with.
 
@@ -641,7 +641,7 @@ def test_only_the_two_heading_builders_name_the_heading_width() -> None:
     render a section and neither names a width, because `section_line` hands them
     the geometry already.
     """
-    assert functions_naming('ADDRESS_COLUMN') == {'section_line', 'render_result'}
+    assert functions_naming('ADDRESS_COLUMN') == {'section_line'}
 
 
 def test_one_function_asks_a_yes_or_no_question() -> None:
