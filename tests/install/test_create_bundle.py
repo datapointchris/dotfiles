@@ -19,6 +19,7 @@ import pytest
 from dotfiles import catalog
 from dotfiles import crates_io
 from dotfiles import create_bundle
+from dotfiles import evidence as ev
 from dotfiles import github_release
 from dotfiles import paths
 from dotfiles import status
@@ -27,6 +28,7 @@ from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Precondition
+from dotfiles.plan import Preconditions
 from dotfiles.plan import Reason
 from dotfiles.plan import Stage
 from dotfiles.providers import bundle as bundle_manifest
@@ -35,6 +37,8 @@ from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import releases
 from dotfiles.providers import winget
+from dotfiles.resources import packages
+from dotfiles.session import Session
 
 
 def planned(entry, section):
@@ -496,7 +500,8 @@ class TestBundleRoundTrip:
 
         payload = tmp_path / 'build' / entry.executable
         payload.parent.mkdir(parents=True, exist_ok=True)
-        payload.write_bytes(b'#!/bin/sh\necho hi\n')
+        # Prints the crate's version, as a cargo-built binary does.
+        payload.write_bytes(b'#!/bin/sh\necho "fd 10.4.2"\n')
 
         def fetch(_cache, _asset, destination, _label):
             with tarfile.open(destination, 'w:gz') as tar:
@@ -540,6 +545,25 @@ class TestBundleRoundTrip:
 
         assert staged is not None
         assert staged.filename == 'fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz'
+
+    def test_an_offline_apply_reads_the_tool_it_just_installed_as_current(self, tmp_path, monkeypatch):
+        """Offline, the bundle is the only upstream, so the version it records is
+        the one the installed tool is measured against. With the tag ahead of the
+        crate, a bundler and a currency check reading different sources would call
+        a tool installed a moment ago behind, and plan to reinstall it every run."""
+        entry = catalog.CargoPackage.from_mapping(
+            {'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd', 'binary_pattern': 'fd-{version}-{target}.tar.gz'}
+        )
+        monkeypatch.setenv('HOME', str(tmp_path / 'home'))
+        self.stage(tmp_path, monkeypatch, entry)
+        assert cargo.install(entry, Target(OSFamily.LINUX, Arch.X86_64), offline=True, floor='', reinstall=False).ok
+
+        item = planned(entry, 'cargo_packages')
+        reported = ev.probe_version(str(tmp_path / 'home' / '.cargo' / 'bin' / 'fd')).version
+        latest, _ = packages.upstream(Session('a-machine', offline=True), (item,))
+        observed = packages.Observed(evidence={}, met=Preconditions(), reported={item.address: reported}, latest=latest, from_bundle=True)
+
+        assert packages.currency_of(item, observed) == ()
 
 
 class TestWingetBundling:
