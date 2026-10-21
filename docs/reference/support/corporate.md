@@ -153,6 +153,27 @@ Two `[remote]` keys close the loop with nothing typed:
 default off. `docs/architecture/offline-bundles.md` says why the defaults are one
 decision rather than several.
 
+## Ask the builder from the restricted box
+
+Where a builder runs `dotfiles bundle serve`, the restricted box asks for its own
+bundle in one command:
+
+```bash
+dotfiles bundle request                     # everything the status shows behind
+dotfiles bundle request --entry claude-code # or only what is named
+```
+
+It publishes this box's status, leaves a request on the remote, and waits. Each
+step is a log line: sent, acknowledged by the builder, bundle listed,
+downloading, verified, staged. The next `dotfiles apply --offline` installs from
+the staged bundle.
+
+When no builder acknowledges within two minutes, the warning names the
+`dotfiles-bundle-serve` unit to check on the builder. After fifteen minutes it
+stops and leaves the request in place, so `dotfiles bundle download` collects the
+bundle once the builder answers. A failed build prints the builder's error and the
+end of its log. `docs/architecture/offline-bundles.md` holds the protocol.
+
 **Nothing but packages and versions leaves that machine.**
 `src/dotfiles/publishing.py` is the account of both guards standing in front of
 the status document — why an allowlist, why a second gate behind it, and why one

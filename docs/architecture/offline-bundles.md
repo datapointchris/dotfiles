@@ -142,16 +142,95 @@ The bundle's own `checksums.txt` cannot stand in for it. That file records the
 digest of the file that was downloaded, and for an extracted binary or a repacked
 tarball the downloaded file is not what the bundle carries.
 
+## A restricted box requests its own bundle, and a builder answers on the same server
+
+The file server has no push, so both ends poll it. A request and its two answers
+live in `<root>/requests/<manifest>/`, and `src/dotfiles/bundle_requests.py`
+owns their shapes.
+
+```text
+  RESTRICTED BOX          REMOTE <root>/            BUILDER
+  bundle request          (m = manifest)            bundle serve
+
+  probe
+  status upload ────────→ status/m/<file>
+  write request ────────→ requests/m/<id>.json ◀─── poll every 20 s,
+                                                    newest per m,
+                                                    older deleted
+                          <id>.building.json ◀───── acknowledge
+                          status/m/<file> ────────→ download
+                                                    bundle create
+                                                     --against <file>
+                                                     --entry ...
+                          bundles/m/<archive> ◀──── upload, with a
+                                                    record naming <id>
+                          <id>.json, .building ◀─── delete
+  poll every 15 s ◀────── record naming <id>
+  download, verify,
+  stage
+```
+
+**Who writes and who deletes.**
+
+| File | Written by | Deleted by |
+| --- | --- | --- |
+| `<id>.json`, the request | restricted box | builder, after the upload, or when a newer request supersedes it |
+| `<id>.building.json` | builder, before it starts | builder, with the request or on failure |
+| `<id>.failed.json` | builder, when a build fails | builder, when a newer request supersedes it |
+
+An id is `<UTC stamp>-<box>`, where the box is the discriminator a status
+filename carries. The request names the exact status file, its machine, CPU,
+dotfiles commit and entries. Naming the file is what keeps two boxes sharing a
+manifest apart, which `--against latest` refuses to guess. The bundle's
+`bundle.json` carries `request`, and that field is how the waiting box knows the
+bundle is its own.
+
+**Timings.** The builder polls every 20 seconds. The requester polls every 15,
+warns after 2 minutes with no acknowledgement, and gives up after 15. The warning
+names the `dotfiles-bundle-serve` unit and the manifest that enables it, through
+`serve_bundles`. A timeout leaves the request in place, so a late builder still
+answers it and `bundle download` collects the result.
+
+**What goes wrong, and what each end says.**
+
+- *No builder running.* No acknowledgement arrives. The requester names the unit
+  at 2 minutes and stops at 15.
+- *The build fails.* The builder writes `<id>.failed.json` with the error and the
+  last 40 log lines, and the requester prints both and stops. The failed request
+  is not retried. The box's next request supersedes it.
+- *An entry the builder's checkout does not declare.* `bundle create --entry`
+  refuses the name, which arrives as a failed marker. The usual cause is a builder
+  checkout behind the requester's, and both commits are in the builder's log.
+- *Another box sharing the manifest asks later.* Its request supersedes this one.
+  The builder deletes the older request, and the requester reports that a newer
+  request took its place.
+- *The remote stops answering mid-wait.* Each end logs the poll that failed and
+  keeps polling. The builder never exits on it, and its unit restarts it if it
+  does.
+
+`--entry` scopes a build to the named entries plus uv and the wheelhouse. The
+rest of the plan is recorded as `left_out` rather than in `current`, because
+`current` means measured on the target and these were only not asked for. A
+scoped bundle is sparse, so it never becomes the base a stack reads through.
+
+Each build writes a run record under the verb `bundle-build`, and its event log
+holds the build's whole debug stream. `dotfiles report list` on the builder shows
+them, and its journal carries the console lines.
+
 ## The automatic legs are off by default
 
-Three `[remote]` settings close the loop with nothing typed: fetching a bundle,
-publishing a status, publishing a run's record. All three default false.
+Four `[remote]` settings close the loop with nothing typed: fetching a bundle,
+publishing a status, publishing a run's record, and requesting a bundle when
+blocked items are behind. All four default false.
 
-Read that as one decision rather than three. The restricted network is what
+Read that as one decision rather than four. The restricted network is what
 decides it: the fault worth avoiding there is a machine reaching a server nobody
 pointed it at. Each leg's module records what its own setting gates —
-`src/dotfiles/reconcile.py`, `src/dotfiles/commands/status.py` and
-`src/dotfiles/commands/report.py`.
+`src/dotfiles/reconcile.py`, `src/dotfiles/commands/status.py`,
+`src/dotfiles/commands/report.py` and `src/dotfiles/bundle_requests.py`.
+
+The nonfleet config turns the request on, because the box it serves cannot
+download what its network blocks. The other three stay off there too.
 
 ## Related
 
