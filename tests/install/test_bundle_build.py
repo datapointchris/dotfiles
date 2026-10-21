@@ -657,6 +657,28 @@ def a_uv_archive_without_uv_in_it(upstream: Upstream, _install: Path) -> None:
     upstream.publish(create_bundle.UV_REPO, UV_TAG, {f'uv-{cargo.triple(LINUX)}.tar.gz': tarball('uvx', b'THE OTHER BINARY')})
 
 
+def go_bytes_that_fail_against_upstream(upstream: Upstream, _install: Path) -> None:
+    upstream.tampered.add('task.tar.gz')
+    upstream.publish(TASK_REPO, TASK_TAG, {'task.tar.gz': tarball('task', b'TASK')})
+
+
+def a_repo_that_publishes_no_release(upstream: Upstream, _install: Path) -> None:
+    upstream.releases.pop(TASK_REPO)
+
+
+def a_download_that_never_answers(upstream: Upstream, _install: Path) -> None:
+    upstream.flaky[f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz'] = create_bundle.DOWNLOAD_ATTEMPTS + 1
+
+
+def a_checksums_file_listed_and_never_served(upstream: Upstream, _install: Path) -> None:
+    upstream.flaky[downloads_from(LAZYGIT_REPO, LAZYGIT_TAG) + 'checksums.txt'] = 1
+
+
+def an_installer_opting_into_bundling_without_a_url(_upstream: Upstream, install: Path) -> None:
+    opting_in = [{'name': 'theme', 'repo': THEME_REPO, 'bundle_install_script': True, 'description': 'Theming'}]
+    redeclare(install, packages={**PACKAGES, 'custom_installers': opting_in})
+
+
 @dc.dataclass(frozen=True)
 class Broken:
     """One way the input can be wrong, and the word the refusal has to carry."""
@@ -665,22 +687,46 @@ class Broken:
     arrange: Callable[[Upstream, Path], None]
     says: str
     machine: str = MACHINE
+    entry: str = ''
+    """The one entry left out, where the rest of the bundle still builds."""
+    leaves: str = ''
+    """A member the failed entry wrote before it failed, which must not ship."""
 
 
-BROKEN = (
+FATAL = (
     Broken('a manifest that will not parse', unparseable_manifest, 'atlantis'),
-    Broken('a release with no asset function', release_with_no_asset_function, 'asset function'),
-    Broken('a pin nothing published', a_pin_nothing_published, 'release tag'),
-    Broken('a windows asset in a third shape', a_windows_asset_in_a_third_shape, 'neither a .zip nor a .exe', WINDOWS_MACHINE),
-    Broken('a zip without the declared executable', a_zip_without_the_declared_executable, 'rg.exe', WINDOWS_MACHINE),
     Broken('a uv archive without uv in it', a_uv_archive_without_uv_in_it, 'no uv binary'),
 )
-"""Each row is a state, so a seventh is a row rather than a function.
+"""States no bundle can be built from: the build raises and `archive_dir` stays empty."""
 
-Kept as data because the assertion is identical for all of them — the build
-raises, the refusal names the thing that is wrong, and `archive_dir` stays empty.
-What varies is only the arrangement and the word.
-"""
+UNSTAGEABLE = (
+    Broken('a release with no asset function', release_with_no_asset_function, 'asset function', entry='nosuchtool'),
+    Broken('a pin nothing published', a_pin_nothing_published, 'release tag', entry='lazygit'),
+    Broken(
+        'a windows asset in a third shape',
+        a_windows_asset_in_a_third_shape,
+        'neither a .zip nor a .exe',
+        WINDOWS_MACHINE,
+        entry='ripgrep',
+        leaves=f'{winget.BUNDLE_BINARIES}/rg.tar.gz',
+    ),
+    Broken('a zip without the declared executable', a_zip_without_the_declared_executable, 'rg.exe', WINDOWS_MACHINE, entry='ripgrep'),
+    Broken(
+        'go bytes that fail against upstream',
+        go_bytes_that_fail_against_upstream,
+        'Checksum mismatch while bundling task.tar.gz',
+        entry='go-task',
+        leaves='go-binaries/task.tar.gz',
+    ),
+    Broken(
+        'a repo that publishes no release', a_repo_that_publishes_no_release, f'Could not fetch version for {TASK_REPO}', entry='go-task'
+    ),
+    Broken('a download that never answers', a_download_that_never_answers, 'Failed to download', entry='go-task'),
+    Broken('a checksums file listed and never served', a_checksums_file_listed_and_never_served, 'checksums.txt', entry='lazygit'),
+    Broken('an installer opting in without a url', an_installer_opting_into_bundling_without_a_url, 'install_url', entry='theme'),
+)
+"""States one entry cannot be staged from. The bundle ships without it, and its
+`unstaged` reason names the thing that is wrong."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -829,20 +875,6 @@ def test_a_go_or_cargo_asset_is_checked_on_the_side_that_can_still_ask_upstream(
     assert {'cheat', 'fnm'} <= staged, 'both are still carried; what they lack is a row, not a place in the bundle'
 
 
-def test_a_go_binary_whose_bytes_fail_against_upstream_ends_the_build(upstream: Upstream, cache: Path) -> None:
-    """The check is worth having only if it refuses. A Go tool is the loop that
-    had none, and it is staged into `go-binaries/` rather than `binaries/`, so
-    the refusal has to come from the loop rather than from where the file lands.
-    """
-    upstream.tampered.add('task.tar.gz')
-    upstream.publish(TASK_REPO, TASK_TAG, {'task.tar.gz': tarball('task', b'TASK')})
-
-    with pytest.raises(create_bundle.BundleError, match='Checksum mismatch while bundling task.tar.gz'):
-        build()
-
-    assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-
 @pytest.mark.parametrize(
     ('publishing', 'recorded'),
     [
@@ -928,15 +960,15 @@ def test_the_name_carries_the_manifest_and_the_platform_the_build_was_asked_for(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# What the build refuses
+# What the build refuses, and what it leaves out
 #
-# Each refusal is paired with the archive not existing.
+# A refusal is paired with the archive not existing, and an entry left out with
+# the reason `bundle.json` records for it.
 #
-# An assertion that nothing was built is satisfied by a crash, so every case
-# below names the reason it expects *and* checks that `archive_dir` is empty —
-# a half-written bundle is worse than none, because the machine reading it
-# cannot fetch what is missing and nothing in the archive says which tool was
-# lost.
+# An assertion that nothing was built is satisfied by a crash, so every refusal
+# below names the reason it expects *and* checks that `archive_dir` is empty.
+# An entry left out names its reason too, because a bundle missing a tool with
+# nothing saying which is worse than none.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -964,7 +996,8 @@ def test_a_refused_build_exits_issue_and_prints_no_path(upstream: Upstream, cach
     reason rather than restating the exit code. `--print-path` is what a
     pipeline reads, and a refused build must leave it empty rather than
     naming an archive that was never written."""
-    upstream.releases.pop(TASK_REPO)
+    name, _ = create_bundle.declared_closure()[0]
+    upstream.sdist_only.add(name)
 
     ran = run('--machine', MACHINE, '--arch', 'x86_64')
 
@@ -980,32 +1013,17 @@ def test_a_machine_with_no_manifest_is_named_rather_than_built_for(upstream: Ups
     assert upstream.fetched == []
 
 
-def test_a_repo_that_publishes_no_release_ends_the_build_naming_it(upstream: Upstream, cache: Path) -> None:
-    """A build cannot name the asset without the version, so a repo publishing
-    nothing is fatal here where an installer would leave the machine alone.
-
-    The refusal names `packages.yml`'s repo rather than the network, which is
-    what the 404 split in `latest_version` is for."""
-    upstream.releases.pop(TASK_REPO)
-
-    with pytest.raises(create_bundle.BundleError, match=f'Could not fetch version for {re.escape(TASK_REPO)}'):
-        build()
-
-    assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-
-def test_bytes_that_fail_against_the_published_checksum_end_the_build_and_leave_no_cache_entry(upstream: Upstream, cache: Path) -> None:
+def test_bytes_that_fail_against_the_published_checksum_leave_no_cache_entry(upstream: Upstream, cache: Path) -> None:
     """Bytes that failed against upstream must not be served to the next
     build, which is the whole reason the mismatch evicts rather than only
-    raising."""
+    leaving the entry out."""
     lazygit = asset_named('lazygit')
     upstream.tampered.add(lazygit)
     stock(upstream)
 
-    with pytest.raises(create_bundle.BundleError, match='Checksum mismatch'):
-        build(use_cache=True)
+    built = Built(ExitCode.CONVERGED, '', '', build(use_cache=True))
 
-    assert not list(paths.archive_dir().glob('*.tar.gz'))
+    assert 'Checksum mismatch' in built.described['unstaged']['lazygit']
     assert not list(create_bundle.cache_root().rglob(lazygit))
 
 
@@ -1034,45 +1052,40 @@ def test_a_dependency_with_no_wheel_for_the_target_ends_the_build(upstream: Upst
     assert not list(paths.archive_dir().glob('*.tar.gz'))
 
 
-def test_a_download_that_never_answers_ends_the_build_after_the_declared_attempts(upstream: Upstream, cache: Path) -> None:
-    url = f'https://github.com/{TASK_REPO}/releases/download/{TASK_TAG}/task.tar.gz'
-    upstream.flaky[url] = create_bundle.DOWNLOAD_ATTEMPTS + 1
-
-    with pytest.raises(create_bundle.BundleError, match='Failed to download'):
-        build()
-
-    assert upstream.fetched.count(url) == create_bundle.DOWNLOAD_ATTEMPTS
-    assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-
-def test_a_checksums_file_the_release_lists_and_will_not_serve_ends_the_build(upstream: Upstream, cache: Path) -> None:
-    """Different from a release publishing none, and it has to be: the API
-    said the file is there, so failing to read it is a fault rather than a
-    state — and staging the asset anyway would record it unverified while
-    upstream had a digest for it all along."""
-    upstream.flaky[downloads_from(LAZYGIT_REPO, LAZYGIT_TAG) + 'checksums.txt'] = 1
-
-    with pytest.raises(create_bundle.BundleError, match='checksums.txt'):
-        build()
-
-    assert not list(paths.archive_dir().glob('*.tar.gz'))
-
-
-@pytest.mark.parametrize('broken', BROKEN, ids=lambda one: one.id)
-def test_a_declaration_or_a_release_the_bundler_cannot_stage_is_named(
-    upstream: Upstream, cache: Path, declaration: Path, broken: Broken
-) -> None:
-    """Every way `BROKEN` names, each ending the build with a sentence rather
-    than a traceback, and none of them leaving an archive.
-
-    A declaration fault and a release fault are one test because the answer is
-    one answer: the build stops, the refusal names the thing that is wrong,
-    and nothing half-written survives for a machine to install from.
-    """
+@pytest.mark.parametrize('broken', FATAL, ids=lambda one: one.id)
+def test_a_state_no_bundle_can_be_built_from_is_named(upstream: Upstream, cache: Path, declaration: Path, broken: Broken) -> None:
+    """Each ends the build with a sentence rather than a traceback, and none
+    leaves an archive."""
     broken.arrange(upstream, declaration)
 
     with pytest.raises(create_bundle.BundleError, match=broken.says):
         build(machine=broken.machine)
+
+    assert not list(paths.archive_dir().glob('*.tar.gz'))
+
+
+@pytest.mark.parametrize('broken', UNSTAGEABLE, ids=lambda one: one.id)
+def test_an_entry_the_bundler_cannot_stage_is_left_out_with_its_reason(
+    upstream: Upstream, cache: Path, declaration: Path, broken: Broken
+) -> None:
+    """One entry upstream broke costs that entry alone. It has no row and no
+    file, and `unstaged` says why, so the target can say why it is behind."""
+    broken.arrange(upstream, declaration)
+
+    built = Built(ExitCode.CONVERGED, '', '', build(machine=broken.machine))
+
+    assert re.search(re.escape(broken.says), built.described['unstaged'][broken.entry])
+    assert broken.entry not in {name for _category, name, *_ in built.rows}
+    if broken.leaves:
+        assert f'{create_bundle.ARCHIVE_MEMBER}/{broken.leaves}' not in built.names()
+
+
+def test_a_build_that_stages_none_of_what_was_asked_writes_no_bundle(upstream: Upstream, cache: Path) -> None:
+    """uv and the wheelhouse alone install nothing the request asked for."""
+    upstream.releases.pop(TASK_REPO)
+
+    with pytest.raises(create_bundle.BundleError, match='nothing asked for could be staged.*go-task'):
+        create_bundle.build(MACHINE, 'x86_64', use_cache=False, entries=('go-task',))
 
     assert not list(paths.archive_dir().glob('*.tar.gz'))
 
@@ -1356,19 +1369,6 @@ def test_a_cargo_entry_with_no_release_repo_is_left_out_without_ending_the_build
 
     assert built.exit_code == ExitCode.CONVERGED, built.stderr
     assert [name for category, name, *_ in built.rows if category == 'cargo'] == ['ripgrep']
-
-
-def test_an_installer_that_opts_into_bundling_without_a_url_ends_the_build(upstream: Upstream, cache: Path, declaration: Path) -> None:
-    """The opt-in is a claim that a script can be staged, and an entry making
-    it with nothing to fetch would leave a `script` row naming a file the
-    archive does not hold."""
-    opting_in = [{'name': 'theme', 'repo': THEME_REPO, 'bundle_install_script': True, 'description': 'Theming'}]
-    redeclare(declaration, packages={**PACKAGES, 'custom_installers': opting_in})
-
-    with pytest.raises(create_bundle.BundleError, match='install_url'):
-        build()
-
-    assert not list(paths.archive_dir().glob('*.tar.gz'))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

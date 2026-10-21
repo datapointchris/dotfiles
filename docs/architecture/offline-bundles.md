@@ -206,9 +206,15 @@ Either way the request stays in place, so a late builder still answers it and
 
 - *No builder running.* No acknowledgement arrives. The requester names the unit
   and stops at the acknowledgement deadline, and the apply installs the rest.
-- *The build fails.* The builder writes `<id>.failed.json` with the error and the
-  tail of the build's log, and the requester prints both and stops. The failed
-  request is not retried. The box's next request supersedes it.
+- *One entry cannot be staged.* An asset upstream renamed, a checksum that does
+  not match, a release that will not resolve: the builder leaves that entry out
+  and builds the rest. `bundle.json` records it under `unstaged` with the reason.
+  The requester prints the reason, and the entry's row on the box repeats it
+  until a later bundle carries it.
+- *The build fails.* Nothing asked for could be staged, or uv, the wheelhouse or
+  the status could not be read. The builder writes `<id>.failed.json` with the
+  error and the tail of the build's log, and the requester prints both and
+  stops. The failed request is not retried. The box's next request supersedes it.
 - *The bundle uploads and the cleanup does not.* A bundle naming the request
   answers before any marker does, so the requester takes it. The builder logs the
   request it could not remove and does not build it again.

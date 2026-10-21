@@ -17,6 +17,7 @@ into whatever consumes the bundle.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import gzip
 import json
@@ -29,6 +30,7 @@ import tarfile
 import tempfile
 import tomllib
 import zipfile
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -459,7 +461,9 @@ class DownloadCache:
         missing = [path.name for path in self.entry_files(asset) if not path.is_file()]
         if not missing:
             return self.status_file(asset).read_text().strip()
-        if len(missing) < len(self.entry_files(asset)):
+        # Bytes and digest with no verdict is what `fetch` leaves on every fresh
+        # download, before the first check writes one.
+        if missing != [self.status_file(asset).name] and len(missing) < len(self.entry_files(asset)):
             # A partial entry is an anomaly and the only place the build meets
             # it. Silent, the next failure downstream names the release API for
             # a fault that is a cache entry short of a file.
@@ -607,6 +611,7 @@ class Bundle:
         self.requested: tuple[str, ...] = ()
         self.left_out: tuple[str, ...] = ()
         self.request = ''
+        self.unstaged: dict[str, str] = {}
         self.binaries = staging / 'binaries'
         self.go_binaries = staging / 'go-binaries'
         self.winget_binaries = staging / winget.BUNDLE_BINARIES
@@ -618,6 +623,29 @@ class Bundle:
 
         for directory in (self.binaries, self.go_binaries, self.winget_binaries, self.scripts, self.bin, self.wheels):
             directory.mkdir(parents=True, exist_ok=True)
+
+    @contextlib.contextmanager
+    def entry(self, name: str) -> Iterator[None]:
+        """Stage one declared entry, or record why it could not be and take back what it wrote.
+
+        One entry upstream broke, such as an asset renamed in a new release, then
+        costs that entry alone rather than the bundle every other entry is in.
+        """
+        before = set(self.staging.rglob('*'))
+        rows, sums = len(self.entries), len(self.checksums)
+        try:
+            yield
+        except BundleError as refused:
+            for path in sorted(set(self.staging.rglob('*')) - before, reverse=True):
+                if path.is_dir() and not path.is_symlink():
+                    path.rmdir()
+                else:
+                    path.unlink()
+            del self.entries[rows:]
+            del self.checksums[sums:]
+            reason = ' '.join(line.strip() for line in str(refused).splitlines() if line.strip())
+            self.unstaged[name] = reason
+            log.warning(f'  {name} is left out: {reason}')
 
     def plan_against(self, path: Path, document: dict[str, Any]) -> None:
         """Build sparsely, against what one machine reported it already had."""
@@ -691,6 +719,7 @@ class Bundle:
             requested=self.requested,
             left_out=self.left_out,
             request=self.request,
+            unstaged=dict(self.unstaged),
         )
 
     @property
@@ -953,32 +982,33 @@ def add_winget_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
 
     for entry in bundleable(items):
         assert isinstance(entry, catalog.WingetPackage)
-        version = fetch_latest_version(entry.repo)
-        if bundle.already_current('winget', 'winget', entry.name, version):
-            log.info(f'  {entry.name} ({version}) is what the target already has')
-            continue
-        asset = github_asset(entry.repo, version, winget.stage(entry, version))
+        with bundle.entry(entry.name):
+            version = fetch_latest_version(entry.repo)
+            if bundle.already_current('winget', 'winget', entry.name, version):
+                log.info(f'  {entry.name} ({version}) is what the target already has')
+                continue
+            asset = github_asset(entry.repo, version, winget.stage(entry, version))
 
-        downloaded = bundle.winget_binaries / asset.filename
-        cache.fetch(asset, downloaded, f'  {entry.name} ({version})')
-        verify_against_upstream(bundle, cache, downloaded, asset)
+            downloaded = bundle.winget_binaries / asset.filename
+            cache.fetch(asset, downloaded, f'  {entry.name} ({version})')
+            verify_against_upstream(bundle, cache, downloaded, asset)
 
-        # Staged under the name it has to land on PATH as, so the install is a
-        # copy. A zip or the bare exe, and which one is a fact about the asset
-        # rather than about the tool — so the whole vocabulary is written out and
-        # a third shape is refused. Renaming an unopened `.tar.gz` to `rg.exe`
-        # records it staged, and Windows declines to run it on the one machine
-        # with no other way to get the tool.
-        executable = bundle.winget_binaries / entry.filename
-        if asset.filename.endswith('.zip'):
-            extract_windows_exe(downloaded, entry.filename, executable)
-        elif asset.filename.endswith('.exe'):
-            if downloaded != executable:
-                downloaded.replace(executable)
-        else:
-            raise BundleError(f'{entry.name} declares the asset {asset.filename}, which is neither a .zip nor a .exe')
+            # Staged under the name it has to land on PATH as, so the install is a
+            # copy. A zip or the bare exe, and which one is a fact about the asset
+            # rather than about the tool — so the whole vocabulary is written out and
+            # a third shape is refused. Renaming an unopened `.tar.gz` to `rg.exe`
+            # records it staged, and Windows declines to run it on the one machine
+            # with no other way to get the tool.
+            executable = bundle.winget_binaries / entry.filename
+            if asset.filename.endswith('.zip'):
+                extract_windows_exe(downloaded, entry.filename, executable)
+            elif asset.filename.endswith('.exe'):
+                if downloaded != executable:
+                    downloaded.replace(executable)
+            else:
+                raise BundleError(f'{entry.name} declares the asset {asset.filename}, which is neither a .zip nor a .exe')
 
-        bundle.record('winget', entry.name, version, entry.filename)
+            bundle.record('winget', entry.name, version, entry.filename)
 
 
 def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
@@ -1000,47 +1030,47 @@ def add_github_releases(bundle: Bundle, cache: DownloadCache, items: tuple[Desir
         entry = item.entry
         assert isinstance(entry, catalog.GithubRelease)
         tool = entry.name
+        with bundle.entry(tool):
+            build = releases.ASSETS.get(tool)
+            if build is None:
+                raise BundleError(f"packages.yml github_releases entry '{tool}' has no asset function in providers/releases.py")
 
-        build = releases.ASSETS.get(tool)
-        if build is None:
-            raise BundleError(f"packages.yml github_releases entry '{tool}' has no asset function in providers/releases.py")
+            try:
+                tag = ghrelease.resolve_tag(entry)
+            except github_release.Unreadable as unreachable:
+                raise BundleError(str(unreachable)) from unreachable
+            if tag is None:
+                raise BundleError(f'Could not resolve a release tag for {tool} from {entry.repo}')
+            version = tag.removeprefix(entry.release_tag_prefix)
 
-        try:
-            tag = ghrelease.resolve_tag(entry)
-        except github_release.Unreadable as unreachable:
-            raise BundleError(str(unreachable)) from unreachable
-        if tag is None:
-            raise BundleError(f'Could not resolve a release tag for {tool} from {entry.repo}')
-        version = tag.removeprefix(entry.release_tag_prefix)
+            # A tool that owes companions is carried whatever the target reported.
+            # `already_current` records only `binary/<tool>` in `current`, and the
+            # `continue` skips the companion loop below — so a sparse bundle drops
+            # both the binary and its companions and says nothing about either.
+            # `missing_companions` exists because a companion can go missing while the
+            # binary is current, and it runs on the target after the status was taken.
+            # Hit that on the one machine that cannot fetch anything and there is no
+            # recovery: the binary is not in the bundle either.
+            #
+            # The `not COMPANIONS` test short-circuits first, deliberately, because
+            # `already_current` mutates `current` as it answers.
+            if not releases.COMPANIONS.get(tool) and bundle.already_current('ghrelease', 'binary', tool, version):
+                log.info(f'  {tool} ({version}) is what the target already has')
+                continue
 
-        # A tool that owes companions is carried whatever the target reported.
-        # `already_current` records only `binary/<tool>` in `current`, and the
-        # `continue` skips the companion loop below — so a sparse bundle drops
-        # both the binary and its companions and says nothing about either.
-        # `missing_companions` exists because a companion can go missing while the
-        # binary is current, and it runs on the target after the status was taken.
-        # Hit that on the one machine that cannot fetch anything and there is no
-        # recovery: the binary is not in the bundle either.
-        #
-        # The `not COMPANIONS` test short-circuits first, deliberately, because
-        # `already_current` mutates `current` as it answers.
-        if not releases.COMPANIONS.get(tool) and bundle.already_current('ghrelease', 'binary', tool, version):
-            log.info(f'  {tool} ({version}) is what the target already has')
-            continue
+            published = build(tag, target)
+            asset = github_asset(entry.repo, tag, published.name)
+            destination = bundle.binaries / asset.filename
+            cache.fetch(asset, destination, f'  {tool} ({version})')
+            verify_against_upstream(bundle, cache, destination, asset)
+            bundle.record('binary', tool, version, asset.filename)
 
-        published = build(tag, target)
-        asset = github_asset(entry.repo, tag, published.name)
-        destination = bundle.binaries / asset.filename
-        cache.fetch(asset, destination, f'  {tool} ({version})')
-        verify_against_upstream(bundle, cache, destination, asset)
-        bundle.record('binary', tool, version, asset.filename)
-
-        for companion in releases.COMPANIONS.get(tool, ()):
-            extra = url_asset(companion.url(tag))
-            extra_destination = bundle.binaries / companion.name
-            cache.fetch(extra, extra_destination, f'    extra: {companion.name} ({version})')
-            verify_against_upstream(bundle, cache, extra_destination, extra)
-            bundle.record('extra', companion.name, version, companion.name)
+            for companion in releases.COMPANIONS.get(tool, ()):
+                extra = url_asset(companion.url(tag))
+                extra_destination = bundle.binaries / companion.name
+                cache.fetch(extra, extra_destination, f'    extra: {companion.name} ({version})')
+                verify_against_upstream(bundle, cache, extra_destination, extra)
+                bundle.record('extra', companion.name, version, companion.name)
 
 
 def bundleable(items: tuple[DesiredItem, ...]) -> list[catalog.GoTool | catalog.CargoPackage | catalog.WingetPackage]:
@@ -1095,27 +1125,28 @@ def add_go_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredIt
 
     for entry in bundleable(items):
         assert isinstance(entry, catalog.GoTool)
-        version = fetch_latest_version(entry.github_repo)
-        # `entry.name`, because the target reported itself under the plan address
-        # `go/<name>`. The `record` below keeps `entry.executable`, which is what
-        # `gotool` opens the staged file as — the two are different questions, and
-        # a Go tool declaring `command` is where they diverge.
-        if bundle.already_current('go', gotool.BUNDLE_CATEGORY, entry.name, version):
-            log.info(f'  {entry.executable} ({version}) is what the target already has')
-            continue
-        asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
+        with bundle.entry(entry.name):
+            version = fetch_latest_version(entry.github_repo)
+            # `entry.name`, because the target reported itself under the plan address
+            # `go/<name>`. The `record` below keeps `entry.executable`, which is what
+            # `gotool` opens the staged file as — the two are different questions, and
+            # a Go tool declaring `command` is where they diverge.
+            if bundle.already_current('go', gotool.BUNDLE_CATEGORY, entry.name, version):
+                log.info(f'  {entry.executable} ({version}) is what the target already has')
+                continue
+            asset = github_asset(entry.github_repo, version, gotool.stage(entry, version, target))
 
-        archive_path = bundle.go_binaries / asset.filename
-        cache.fetch(asset, archive_path, f'  {entry.executable} ({version})')
-        # Before the extraction, because the archive is the file upstream
-        # published a digest for and the extraction consumes it.
-        verify_against_upstream(bundle, cache, archive_path, asset)
-        extract_go_binary(archive_path, entry.executable, bundle.go_binaries / entry.executable)
-        # Keyed by `name` and filed under `executable`. Every version lookup asks
-        # by the declared name — `packages._bundled` reads `item.name` — while
-        # `gotool.bundled` opens `binaries/<executable>`, so the row answers both
-        # only if the two halves carry the two different facts.
-        bundle.record(gotool.BUNDLE_CATEGORY, entry.name, version, entry.executable)
+            archive_path = bundle.go_binaries / asset.filename
+            cache.fetch(asset, archive_path, f'  {entry.executable} ({version})')
+            # Before the extraction, because the archive is the file upstream
+            # published a digest for and the extraction consumes it.
+            verify_against_upstream(bundle, cache, archive_path, asset)
+            extract_go_binary(archive_path, entry.executable, bundle.go_binaries / entry.executable)
+            # Keyed by `name` and filed under `executable`. Every version lookup asks
+            # by the declared name — `packages._bundled` reads `item.name` — while
+            # `gotool.bundled` opens `binaries/<executable>`, so the row answers both
+            # only if the two halves carry the two different facts.
+            bundle.record(gotool.BUNDLE_CATEGORY, entry.name, version, entry.executable)
 
 
 def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[DesiredItem, ...]) -> None:
@@ -1135,24 +1166,25 @@ def add_cargo_binaries(bundle: Bundle, cache: DownloadCache, items: tuple[Desire
 
     for entry in bundleable(items):
         assert isinstance(entry, catalog.CargoPackage)
-        version = cargo_release_tag(entry)
-        if bundle.already_current('cargo', cargo.BUNDLE_CATEGORY, entry.name, version):
-            log.info(f'  {entry.name} ({version}) is what the target already has')
-            continue
-        filename = cargo.stage(entry, version, target)
-        asset = github_asset(entry.github_repo, version, filename)
+        with bundle.entry(entry.name):
+            version = cargo_release_tag(entry)
+            if bundle.already_current('cargo', cargo.BUNDLE_CATEGORY, entry.name, version):
+                log.info(f'  {entry.name} ({version}) is what the target already has')
+                continue
+            filename = cargo.stage(entry, version, target)
+            asset = github_asset(entry.github_repo, version, filename)
 
-        destination = bundle.binaries / filename
-        cache.fetch(asset, destination, f'  {entry.name} ({version})')
-        # Before the repack, for the reason `add_go_binaries` records: the zip is
-        # what the digest was published for, and the tarball written in its place
-        # is this bundler's own file that no release ever named.
-        verify_against_upstream(bundle, cache, destination, asset)
+            destination = bundle.binaries / filename
+            cache.fetch(asset, destination, f'  {entry.name} ({version})')
+            # Before the repack, for the reason `add_go_binaries` records: the zip is
+            # what the digest was published for, and the tarball written in its place
+            # is this bundler's own file that no release ever named.
+            verify_against_upstream(bundle, cache, destination, asset)
 
-        if filename.endswith('.zip'):
-            filename = repackage_zip_as_tarball(destination, entry.executable, cargo.asset_target(entry, target), version.lstrip('v'))
+            if filename.endswith('.zip'):
+                filename = repackage_zip_as_tarball(destination, entry.executable, cargo.asset_target(entry, target), version.lstrip('v'))
 
-        bundle.record(cargo.BUNDLE_CATEGORY, entry.name, version, filename)
+            bundle.record(cargo.BUNDLE_CATEGORY, entry.name, version, filename)
 
 
 def cargo_release_tag(entry: catalog.CargoPackage) -> str:
@@ -1338,7 +1370,10 @@ def add_wheels(bundle: Bundle, cache: DownloadCache) -> None:
         for file in wheels:
             asset = url_asset(file['url'])
             destination = bundle.wheels / file['filename']
-            cache.fetch(asset, destination, f'  {name} {version}')
+            # One wheel per CPython ABI where the package is compiled, cp314 and
+            # free-threaded cp314t among them, so the ABI tag tells the lines apart.
+            abi_tag = f' ({file["filename"].split("-")[-2]})' if len(wheels) > 1 else ''
+            cache.fetch(asset, destination, f'  {name} {version}{abi_tag}')
 
             # PyPI publishes the digest alongside the file, so an unverified
             # wheel here would be a supply-chain hole the release assets beside
@@ -1398,11 +1433,12 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...]) -> None:
         assert isinstance(entry, catalog.CustomInstaller)
         if not entry.bundle_install_script:
             continue
-        if not entry.install_url:
-            raise BundleError(f"packages.yml custom_installers entry '{entry.name}' opts into bundling but declares no install_url")
-        log.info(f'  {entry.name}...')
-        download(entry.install_url, bundle.scripts / f'{entry.name}-install.sh')
-        bundle.record('script', entry.name, version_the_script_installs(entry), f'{entry.name}-install.sh')
+        with bundle.entry(entry.name):
+            if not entry.install_url:
+                raise BundleError(f"packages.yml custom_installers entry '{entry.name}' opts into bundling but declares no install_url")
+            log.info(f'  {entry.name}...')
+            download(entry.install_url, bundle.scripts / f'{entry.name}-install.sh')
+            bundle.record('script', entry.name, version_the_script_installs(entry), f'{entry.name}-install.sh')
 
 
 def left_out_of(plan: Plan, entries: tuple[str, ...]) -> tuple[str, ...]:
@@ -1524,6 +1560,10 @@ def build(
         add_cargo_binaries(bundle, cache, within(plan.for_section('cargo_packages'), entries))
         add_winget_binaries(bundle, cache, within(plan.for_section('winget_packages'), entries))
         add_install_scripts(bundle, within(plan.for_section('custom_installers'), entries))
+        bootstrap = {'wheel', toolchain.UV_BUNDLED}
+        if bundle.unstaged and not any(row.split('|', 1)[0] not in bootstrap for row in bundle.entries):
+            reasons = '; '.join(f'{name}: {reason}' for name, reason in sorted(bundle.unstaged.items()))
+            raise BundleError(f'nothing asked for could be staged, so no bundle was written: {reasons}')
         bundle.write_metadata()
 
         log.info('Creating tarball...')
@@ -1539,6 +1579,8 @@ def build(
         log.info(f'  Left out as already current: {len(bundle.current)}')
     if bundle.left_out:
         log.info(f'  Left out as not requested: {len(bundle.left_out)}')
+    if bundle.unstaged:
+        log.warning(f'  Left out as unstageable: {", ".join(sorted(bundle.unstaged))}')
     # `cache.enabled` and never `use_cache`: the flag is what the run asked for
     # and the attribute is what it got, and they part company when the root could
     # not be opened. Reporting the flag prints `From cache: 0` beside a directory

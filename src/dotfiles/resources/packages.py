@@ -155,6 +155,9 @@ class Observed:
     absent here is one no staged bundle carries.
     """
 
+    unstaged: Mapping[str, str] = dc.field(default_factory=dict)
+    """Address → why the newest staged bundle that tried could not stage it, for bundle-routed items."""
+
     home: Path = dc.field(default_factory=Path.home)
     """The home whose bin directories a stray copy is located against.
 
@@ -250,6 +253,8 @@ class PackagesResource:
         )
         latest, consulted, from_bundle = upstream(session, present, routes)
         probed = reported_versions(present, evidence)
+        bundled = [item for item in mine if routes[item.address].bundled]
+        described = bundle.descriptions() if bundled else ()
 
         return Observed(
             evidence=evidence,
@@ -262,7 +267,8 @@ class PackagesResource:
             consulted_network=consulted,
             from_bundle=from_bundle,
             routes=routes,
-            in_bundle=carried(item for item in mine if routes[item.address].bundled),
+            in_bundle=carried(bundled),
+            unstaged={item.address: reason for item in bundled if (reason := bundle.unstaged_in(described, item.name))},
             home=session.home,
             force=session.force,
             reinstall=session.reinstall,
@@ -728,7 +734,10 @@ def through_bundle(change: Change, item: DesiredItem, observed: Observed) -> Cha
 
     holds = f'the staged bundle carries {version}' if version else 'no staged bundle carries it'
     needed = f'a bundle carrying {item.name} {wanted}'.rstrip() if wanted else f'a bundle carrying {item.name}'
-    advice = f'{needed} is needed; ask a builder for it: dotfiles bundle request --entry {item.name}'
+    if reason := observed.unstaged.get(item.address):
+        advice = f'{needed} is needed; the builder could not stage it in the last bundle: {reason}'
+    else:
+        advice = f'{needed} is needed; ask a builder for it: dotfiles bundle request --entry {item.name}'
     if version and change.observed and versions.exceeds(version, change.observed):
         return dc.replace(change, awaits_bundle=route.because, detail=f'{change.detail}; {holds}, and {route.because}')
     return dc.replace(

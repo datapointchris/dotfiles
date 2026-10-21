@@ -292,6 +292,11 @@ def requested_and_staged(machine: str | None, entries: tuple[str, ...]) -> Path 
     record = waited_for(where, request, already_listed)
     if record is None:
         return None
+    current = sorted(name for key in record.description.current if (name := key.split('/', 1)[-1]) in entries)
+    if current:
+        said(f'{", ".join(current)} already current on this box, so the bundle leaves them out')
+    for name, reason in sorted(record.description.unstaged.items()):
+        said(f'the builder could not stage {name}, so it stays as it is: {reason}', warning=True)
     said('downloading it')
     archive = offline_bundle.fetch(where, named, record.name, record)
     said(f'verified it against its record, sha256 {record.sha256[:12] or "unpublished"}')
@@ -333,7 +338,7 @@ def waited_for(where: transport.Remote, request: Request, already_listed: set[st
                 tail = failure.get('log_tail')
                 for line in tail if isinstance(tail, list) else []:
                     said(f'  {line}')
-                pointed('fix what the error names, then run: dotfiles bundle request')
+                pointed('the cause is on the builder, so asking again fails the same way until it is fixed there')
                 return None
             if acknowledged is None and request.id in found.building:
                 document = read_object(where, directory, f'{request.id}{BUILDING_SUFFIX}')

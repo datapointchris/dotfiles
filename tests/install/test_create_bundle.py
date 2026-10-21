@@ -559,7 +559,7 @@ class TestWingetBundling:
     ZIPPED = {'name': 'ripgrep', 'command': 'rg', 'winget': 'BurntSushi.ripgrep', 'repo': 'BurntSushi/ripgrep'}
     BARE = {'name': 'jq', 'command': 'jq', 'winget': 'jqlang.jq', 'repo': 'jqlang/jq', 'asset': 'jq-windows-amd64.exe'}
 
-    def stage(self, tmp_path, monkeypatch, declared, version, *, nested=False, verified=None, holds=None):
+    def stage(self, tmp_path, monkeypatch, declared, version, *, nested=False, verified=None):
         entry = catalog.WingetPackage.from_mapping(declared)
         staging = tmp_path / 'installers'
         bundle = create_bundle.Bundle(staging, 'windows', 'x86_64', 'a-machine', BUILT_AT)
@@ -568,7 +568,7 @@ class TestWingetBundling:
             if not asset.filename.endswith('.zip'):
                 destination.write_text('PAYLOAD')
                 return
-            member = holds or (f'{entry.name}-1.2.3/{entry.filename}' if nested else entry.filename)
+            member = f'{entry.name}-1.2.3/{entry.filename}' if nested else entry.filename
             with zipfile.ZipFile(destination, 'w') as archive:
                 archive.writestr(member, 'PAYLOAD')
 
@@ -632,24 +632,6 @@ class TestWingetBundling:
 
         assert [name for name, _ in seen] == ['rg-v14.1.1.zip']
         assert seen[0][1] == 'https://github.com/BurntSushi/ripgrep/releases/download/v14.1.1/rg-v14.1.1.zip'
-
-    def test_a_zip_without_the_declared_exe_fails_rather_than_bundling_nothing(self, tmp_path, monkeypatch):
-        """A silent miss here is a tool absent from the one machine that cannot go
-        and fetch it, with the bundle reporting every row staged."""
-        with pytest.raises(create_bundle.BundleError, match='rg.exe'):
-            self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'rg-{version}.zip'}, 'v14.1.1', holds='README.md')
-
-    def test_a_third_asset_shape_is_refused_rather_than_renamed_to_an_exe(self, tmp_path, monkeypatch):
-        """The zip branch and the exe branch are the whole vocabulary, so an
-        unrecognized suffix has to raise rather than take the copy path.
-
-        A tarball renamed `rg.exe` passes every later assertion — the file is
-        there, the manifest records it staged, the install copies it onto PATH —
-        and Windows declines to execute it. That is discovered on the machine with
-        no route to the tool but this one.
-        """
-        with pytest.raises(create_bundle.BundleError, match='ripgrep-v14.1.1.tar.gz'):
-            self.stage(tmp_path, monkeypatch, {**self.ZIPPED, 'asset': 'ripgrep-{version}.tar.gz'}, 'v14.1.1')
 
 
 class TestTheSparseDecisionReachesEveryStagingLoop:

@@ -174,6 +174,12 @@ class Description:
     """
     request: str = ''
     """The id of the `bundle_requests` request this bundle answers, where one asked for it."""
+    unstaged: Mapping[str, str] = dc.field(default_factory=dict)
+    """Entry name → why the bundler could not stage it, such as an asset upstream did not publish.
+
+    The rest of the bundle was built without it, so one failed download costs that
+    entry alone, and the target can say why it is still behind.
+    """
 
     version: int = VERSION
 
@@ -194,6 +200,7 @@ class Description:
             'requested': list(self.requested),
             'left_out': list(self.left_out),
             'request': self.request,
+            'unstaged': dict(self.unstaged),
         }
 
 
@@ -212,6 +219,7 @@ def description_from(document: Any) -> Description:
     current = document.get('current')
     requested = document.get('requested')
     left_out = document.get('left_out')
+    unstaged = document.get('unstaged')
     return Description(
         created=str(document.get('created', '')),
         machine=str(document.get('machine', '')),
@@ -223,6 +231,7 @@ def description_from(document: Any) -> Description:
         requested=tuple(str(name) for name in requested) if isinstance(requested, list) else (),
         left_out=tuple(str(name) for name in left_out) if isinstance(left_out, list) else (),
         request=str(document.get('request', '')),
+        unstaged={str(key): str(value) for key, value in unstaged.items()} if isinstance(unstaged, dict) else {},
         version=int(document['version']) if isinstance(document.get('version'), int) else VERSION,
     )
 
@@ -341,6 +350,11 @@ def measured_in(described: tuple[Description, ...], name: str, *categories: str)
         if found:
             return found
     return None
+
+
+def unstaged_in(described: tuple[Description, ...], name: str) -> str | None:
+    """Why the newest bundle that tried to stage an entry could not, or None."""
+    return next((description.unstaged[name] for description in described if name in description.unstaged), None)
 
 
 def published(name: str, *categories: str) -> str | None:
