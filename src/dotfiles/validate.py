@@ -38,6 +38,7 @@ from dotfiles import catalog as catalogs
 from dotfiles import coordinates as axes
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import remote as transport
 from dotfiles import routing
 from dotfiles.providers import custom
 from dotfiles.providers import releases
@@ -527,6 +528,9 @@ def remote_tables(root: Path) -> list[Finding]:
     Omission is checked as well as disagreement, and it is the likelier fault. One
     variant edited and the other forgotten leaves the declared copies trivially in
     agreement while the machine that was forgotten has no remote at all.
+
+    The automatic flags must be stated in every copy, and only their values may
+    differ. They say what each side does on its own, which is a fact about the side.
     """
     declared: dict[str, Any] = {}
     absent: list[str] = []
@@ -557,7 +561,8 @@ def remote_tables(root: Path) -> list[Finding]:
     # Compared as parsed values rather than as text, so whitespace and key order
     # are not a difference and a retyped table is only reported when it says
     # something else.
-    if not all(table == next(iter(declared.values())) for table in declared.values()):
+    addressed = [{key: key if key in transport.FLAGS else value for key, value in table.items()} for table in declared.values()]
+    if not all(table == addressed[0] for table in addressed):
         findings.append(Finding(REMOTE_TABLE, Severity.ERROR, f'{", ".join(sorted(declared))} declare different {REMOTE_TABLE} tables'))
     return findings
 
