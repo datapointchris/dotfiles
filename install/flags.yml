@@ -166,10 +166,12 @@ required:
 
   # The domain the homelab serves its APIs and its identity provider under. Each
   # product CLI's config.toml names its API and the provider as subdomains of
-  # it, and this public repo must not carry the domain itself.
+  # it, ifiles' names its file server, and this public repo must not carry the
+  # domain itself.
   #
-  # Each consumer holds the three keys goclilogin's login writes, in its order,
-  # and no comment. A file a CLI wrote at login before this machine set these
+  # Each consumer holds the keys its CLI's login writes, in its order, and no
+  # comment: goclilogin's three, or the url and source `ifiles auth login`
+  # writes. A file a CLI wrote at login before this machine set these
   # values is then a rendering, so the next apply overwrites it rather than
   # refusing it as somebody else's. Change a value here in ~/.env, since apply
   # overwrites an edit made in the rendered file.
@@ -183,6 +185,7 @@ required:
     consumers:
       - configs/trust/fleet/.config/homelab/config.toml.tmpl
       - configs/trust/fleet/.config/icb/config.toml.tmpl
+      - configs/trust/fleet/.config/ifiles/config.toml.tmpl
       - configs/trust/fleet/.config/learning/config.toml.tmpl
       - configs/trust/fleet/.config/meso/config.toml.tmpl
       - configs/trust/fleet/.config/nomad/config.toml.tmpl
