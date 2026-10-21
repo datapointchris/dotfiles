@@ -99,22 +99,23 @@ filesystem in one command and there is nothing to carry at all.
 
 ```bash
 ./install.sh --machine wsl-work-workstation --offline
-dotfiles plan  --machine wsl-work-workstation --offline
-dotfiles apply --machine wsl-work-workstation --offline
+dotfiles plan  --machine wsl-work-workstation
+dotfiles apply --machine wsl-work-workstation
 ```
 
-`--offline` belongs on all three, and on the `plan` for a reason of its own: every
-read verb measures upstream unless told not to, so a bare `plan` here asks GitHub
-about every declared release, fetches every plugin clone and refreshes a copy of
-the apt index — none of which this box can reach. `--offline` measures against the
-staged bundle instead, and `--cached` is the same decline where there is no bundle.
+The bootstrap needs `--offline`, because uv and the wheels come from the bundle.
+The plan and the apply do not. The config this box deploys names the hosts its
+network blocks, so each run takes those items from the staged bundle and measures
+and installs the rest from the network. The apply asks a builder for any blocked
+item no staged bundle carries. `--offline` on either keeps the run off every
+remote and takes blocked items only from what is staged.
 
 The `plan` in between matters most on this box, where a run started without one
 has sat on a blocked cargo download having never said what it meant to fetch.
 
 Neither of the last two lines needs the bootstrap again. A bundle that arrives
 later — a newer one carried over to a machine already built — is unpacked by the
-next `apply --offline`, which stages the newest archive in the download cache,
+next `apply`, which stages the newest archive in the download cache,
 `./` or `~/` unless that archive is the one already staged. `dotfiles bundle
 stage` unpacks without installing, for looking at a bundle before it lands.
 

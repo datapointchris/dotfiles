@@ -83,9 +83,10 @@ the staged directories. So downloading and applying is the whole sequence, and a
 bundle fetched to replace an out-of-date one takes effect on the next run.
 
 With no archive anywhere the run goes on. Everything the network serves still
-installs, and each item the bundle would have supplied gets a row naming its
-blocked host and the bundle it needs. The one exception is `--offline` with no
-list declared, where nothing could install, so the run refuses before measuring.
+installs. An apply that may ask a builder asks for what the bundle would have
+supplied. Otherwise each such item gets a row naming its blocked host and the
+bundle it needs. The one exception is `--offline` with no list declared and no
+request, where nothing could install, so the run refuses before measuring.
 
 `bundle stage` unpacks without installing anything, which is what `bundle check`
 and `bundle show` read. Reach for it to see what a bundle covers before letting
@@ -147,6 +148,14 @@ tarball the downloaded file is not what the bundle carries.
 The file server has no push, so both ends poll it. A request and its two answers
 live in `<root>/requests/<manifest>/`, and `src/dotfiles/bundle_requests.py`
 owns their shapes.
+
+An apply runs the restricted box's half itself, between its measure pass and its
+walk. It asks for the entries `packages.bundle_need` names: blocked items missing
+or behind that no staged bundle carries. Once the bundle is staged it measures
+those resources again, so the same run installs them. It asks where
+`request_bundle_when_blocked_items_are_behind` is on or `--request-bundle` is
+given, and `--offline` alone never asks. `bundle request` is the same half with
+no apply around it.
 
 ```text
   RESTRICTED BOX          REMOTE <root>/            BUILDER

@@ -112,23 +112,23 @@ installs from the network, as it would anywhere. A release tool's assets are
 blocked, but its version check goes to `api.github.com`. So it is measured against
 the newest release while its bytes come from the bundle.
 
-That makes the whole box one command:
+That makes the whole box one command, after the checkout is current:
 
 ```bash
 dotfiles update
-dotfiles apply --machine wsl-work-workstation --offline
-dotfiles status upload
+dotfiles apply --machine wsl-work-workstation
 ```
 
-`--offline` keeps the list and contacts no remote. apt is asked what is behind,
-plugin checkouts are pulled, and TPM and lazy sync over git. rustup, Go and node
-install from their own hosts, and uv comes from the bundle. The run opens with a
-`network` line counting the blocked hosts and saying how many items go to the
-bundle and how many to the network.
+apt is asked what is behind, plugin checkouts are pulled, and TPM and lazy sync
+over git. rustup, Go and node install from their own hosts, and uv comes from the
+bundle. The run opens with a `network` line counting the blocked hosts and saying
+how many items go to the bundle and how many to the network. An item routed to
+the bundle that is missing or behind, with no staged bundle carrying it, is asked
+of a builder in the same run, as the section below describes.
 
-An item routed to the bundle that is missing or behind, with no staged bundle
-carrying what it wants, gets a row naming the blocked host. Its advice says which
-bundle is needed. Where no list is declared at all, `--offline` counts every host
+`--offline` keeps the list, installs blocked items only from what is staged, and
+contacts no remote. Such an item then gets a row naming the blocked host and the
+bundle it needs. Where no list is declared at all, `--offline` counts every host
 as blocked and asks no network.
 
 ## Carry only what changed
@@ -153,26 +153,30 @@ Two `[remote]` keys close the loop with nothing typed:
 default off. `docs/architecture/offline-bundles.md` says why the defaults are one
 decision rather than several.
 
-## Ask the builder from the restricted box
+## The apply asks a builder for what no staged bundle carries
 
-Where a builder runs `dotfiles bundle serve`, the restricted box asks for its own
-bundle in one command:
+This box's config turns on `request_bundle_when_blocked_items_are_behind`. When
+the apply finds blocked items missing or behind and no staged bundle carrying
+them, it publishes this box's status and leaves a request on the remote naming
+those items. Then it waits for a builder running `dotfiles bundle serve`. Each
+step is a log line: sent, acknowledged by the builder, still waiting each minute,
+bundle listed, downloading, verified, staged. The apply measures those items
+again against the new bundle and installs them in the same run.
+
+`dotfiles apply --request-bundle` asks on a box whose config leaves the key off,
+and asks under `--offline` too. `dotfiles bundle request` asks without applying:
 
 ```bash
 dotfiles bundle request                     # everything the status shows behind
 dotfiles bundle request --entry claude-code # or only what is named
 ```
 
-It publishes this box's status, leaves a request on the remote, and waits. Each
-step is a log line: sent, acknowledged by the builder, bundle listed,
-downloading, verified, staged. The next `dotfiles apply --offline` installs from
-the staged bundle.
-
 When no builder acknowledges within two minutes, the warning names the
-`dotfiles-bundle-serve` unit to check on the builder. After fifteen minutes it
-stops and leaves the request in place, so `dotfiles bundle download` collects the
-bundle once the builder answers. A failed build prints the builder's error and the
-end of its log. `docs/architecture/offline-bundles.md` holds the protocol.
+`dotfiles-bundle-serve` unit to check on the builder. After fifteen minutes the
+apply stops waiting and installs the rest. The request stays in place, so
+`dotfiles bundle download` collects the bundle once the builder answers. A failed
+build prints the builder's error and the end of its log.
+`docs/architecture/offline-bundles.md` holds the protocol.
 
 **Nothing but packages and versions leaves that machine.**
 `src/dotfiles/publishing.py` is the account of both guards standing in front of
