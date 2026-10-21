@@ -167,7 +167,7 @@ def peer_address(peer: Machine) -> str:
     return f'{peer.environment.user}@{peer.container}'
 
 
-def declare_transport(machine: Machine, peer: Machine) -> None:
+def declare_transport(machine: Machine, peer: Machine, *, extra: str = '') -> None:
     """Install the transport script and the config that names it.
 
     The config is written the way a person writes one, into
@@ -175,14 +175,18 @@ def declare_transport(machine: Machine, peer: Machine) -> None:
     real: TOML sections are positional, so a key written after
     `[remote.transport]` belongs to that table. A fixture that got this wrong is
     what made the automatic-path tests pass against a machine that had turned
-    nothing on.
+    nothing on. `extra` is `[remote]` keys a test turns on.
+
+    The deployed symlink is removed first. Written through, it replaced the repo's
+    trust copy, which carries the `[network]` table routing falls back to and which
+    the declaration check compares with the other trust variant.
     """
     home = machine.environment.home
     docker('cp', str(TRANSPORT_SOURCE), f'{machine.container}:{TRANSPORT}', check=True)
     machine.exec(f'chmod 755 {TRANSPORT}', user='root', check=True)
 
-    config = CONFIG.format(root=SHELF_ROOT, program=TRANSPORT)
-    machine.exec(f'mkdir -p {home}/.config/dotfiles', check=True)
+    config = CONFIG.format(root=SHELF_ROOT, program=TRANSPORT, extra=extra)
+    machine.exec(f'mkdir -p {home}/.config/dotfiles && rm -f {home}/.config/dotfiles/config.toml', check=True)
     machine.exec(f'printf %s {shlex.quote(config)} > {home}/.config/dotfiles/config.toml', check=True)
 
     # Which peer to reach, in a file rather than the script, so one script serves
@@ -197,7 +201,7 @@ root = "{root}"
 keep_bundles = 5
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
-
+{extra}
 [remote.transport]
 program  = "{program}"
 probe    = ["probe"]

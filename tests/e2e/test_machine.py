@@ -15,8 +15,10 @@ is for.
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import re
+import time
 
 import exchange
 import pytest
@@ -398,3 +400,48 @@ def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_curren
 
     assert not left_out & set(checked['uncovered']), f'omitted and reported missing: {sorted(left_out & set(checked["uncovered"]))}'
     assert left_out <= accounted, f'omitted and unaccounted for: {sorted(left_out - accounted)}'
+
+
+def test_one_apply_asks_a_builder_for_the_blocked_tool_no_bundle_carries_and_installs_it(
+    exchanging: tuple[Machine, Machine],
+) -> None:
+    """The restricted box's whole loop in one plain `apply`, both ends unattended.
+
+    glow's release asset is blocked and nothing staged or on disk carries it, so
+    the apply publishes a status, leaves a request, waits while `bundle serve`
+    builds against that status, then stages the answer and installs glow.
+    """
+    machine, builder = exchanging
+    home = machine.environment.home
+    aside = f'{home}/bundles-set-aside'
+    requests = f'{exchange.SHELF_ROOT}/requests/{machine.environment.manifest}'
+    exchange.declare_transport(machine, builder, extra='request_bundle_when_blocked_items_are_behind = true\n')
+    machine.exec(
+        f'mkdir -p {aside} && mv {home}/.cache/dotfiles/staged {home}/.cache/dotfiles/bundles {home}/dotfiles-offline-*.tar.gz {aside}/',
+        check=True,
+    )
+    machine.exec('rm -f "$(command -v glow)"', check=True)
+
+    def listed() -> set[str]:
+        return set(builder.read(f'{exchange.TRANSPORT} list {requests} 2>/dev/null').split())
+
+    try:
+        before = listed()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            applying = pool.submit(machine.exec, 'dotfiles apply --entry glow')
+            deadline = time.monotonic() + 300
+            while not listed() - before:
+                assert not applying.done(), applying.result().stderr[-4000:]
+                assert time.monotonic() < deadline, f'no request reached {requests}'
+                time.sleep(2)
+            served = builder.exec(f'cd {builder.environment.home}/dotfiles && uv run dotfiles bundle serve --once')
+            applied = applying.result(timeout=600)
+    finally:
+        cache = f'{home}/.cache/dotfiles'
+        machine.exec(f'mkdir -p {cache} && cp -a {aside}/staged {aside}/bundles {cache}/ && mv {aside}/*.tar.gz {home}/')
+        exchange.declare_transport(machine, builder)
+
+    assert served.returncode == 0, served.stderr[-4000:]
+    assert applied.returncode == 0, applied.stderr[-4000:]
+    assert 'staged at' in applied.stderr, applied.stderr[-4000:]
+    assert machine.succeeds('command -v glow'), applied.stderr[-4000:]
