@@ -71,9 +71,9 @@ dotfiles status upload
 what it found and asks before the transfer. The apply unpacks that archive
 itself, and skips the unpacking only when it is already staged — so there is no
 staging step to remember and a bundle fetched to replace an old one takes effect
-on the next run. `--offline` sends every provider to the staged bundle instead of
-the network. `status upload` publishes what the box now has, so the next bundle
-can be built against it.
+on the next run. `--offline` sends every provider the bundle carries to the staged
+bundle instead of the network. `status upload` publishes what the box now has, so
+the next bundle can be built against it.
 
 `dotfiles bundle stage PATH` is still there for unpacking without installing,
 which is what `bundle check` and `bundle show` read, and for a tarball carried
@@ -91,6 +91,30 @@ cache, beside the checkout or in `$HOME`, unpacks it under
 at all, and prints the apply line above. The flag is needed on both and means a
 different thing on each: where the bootstrap gets uv and the wheels, and where
 the apply gets everything else.
+
+## A second apply picks up what `--offline` leaves undone
+
+`--offline` is one switch for the whole run, and this box is only partly
+blocked. apt, `pypi.org` and `git clone` from GitHub answer here. No bundle
+carries an apt package or a tool from a private index, so an offline run still
+installs a missing one over the network. It declines every currency question,
+though, so apt reports nothing behind and nothing is upgraded. It also refuses
+every plugin transfer, because the bundle stages no plugin.
+
+A networked apply that skips `packages` and `toolchains` picks those up. Those
+two are the resources that reach release assets and `proxy.golang.org`, so
+skipping them keeps the run to git and apt:
+
+```bash
+dotfiles update
+dotfiles apply --machine wsl-work-workstation --offline
+dotfiles apply --machine wsl-work-workstation --skip packages --skip toolchains
+dotfiles status upload
+```
+
+The second apply upgrades apt, pulls any plugin checkout that is behind, and
+installs what TPM and lazy have pending. Both applies converge to the same state
+when run again, so either can be repeated on its own.
 
 ## Carry only what changed
 
