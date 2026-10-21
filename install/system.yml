@@ -121,6 +121,51 @@ managed_files:
       [Journal]
       SystemMaxUse=500M
 
+  # zram is the first swap, compressed in RAM at priority 100. It holds only what
+  # compression saves, and /tmp is a tmpfs whose pages can leave RAM only by
+  # being swapped. So this disk swapfile, at priority 10, takes what zram cannot.
+  # Three files and no `systemd_units` row, because units are enabled before files
+  # are written, and enabling a unit whose file is not there yet fails. The
+  # swap.target drop-in pulls the swap in at boot, and the service makes the file
+  # the first time.
+  - name: swapfile-create
+    description: Creates /swapfile the first time the disk swap starts
+    display_stack: wayland
+    path: /etc/systemd/system/swapfile-create.service
+    content: |
+      [Unit]
+      Description=Create /swapfile for the disk swap
+      ConditionPathExists=!/swapfile
+      # Swap starts before sysinit.target, which every service is ordered after by default.
+      DefaultDependencies=no
+      After=systemd-remount-fs.service
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/mkswap --file /swapfile --size 16GiB
+
+  - name: swapfile-swap
+    description: A 16 GiB disk swap below zram, for what zram cannot hold
+    display_stack: wayland
+    path: /etc/systemd/system/swapfile.swap
+    content: |
+      [Unit]
+      Description=Disk swap below zram
+      Requires=swapfile-create.service
+      After=swapfile-create.service
+
+      [Swap]
+      What=/swapfile
+      Priority=10
+
+  - name: swapfile-at-boot
+    description: swap.target wants the disk swap, so it starts at every boot
+    display_stack: wayland
+    path: /etc/systemd/system/swap.target.d/swapfile.conf
+    content: |
+      [Unit]
+      Wants=swapfile.swap
+
   # Without this, ~/.config/zsh/.zshrc never loads at all, on any platform.
   # $HOME is deliberately unexpanded: zsh expands it when it reads the file, and
   # baking this user's home into a system-wide file would be wrong for every
