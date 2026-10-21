@@ -1002,6 +1002,7 @@ def rendered_lines(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
         "apply's closing line, having done nothing": reconcile.applied_line(0, [], [], []),
         "apply's closing line, narrowed and current": reconcile.applied_line(0, [], [], [], ['custom/theme theme v7.1.0']),
         'the heading over a group of work': reconcile.converging_line([a_change(privileged=True)]),
+        'the heading over blocked items a builder is asked for': reconcile.bundle_need_line(('glow',)),
         'the headings over what apply walked past': untouched,
         'the machines row, sound but not silent': reconcile.declaration_row([warning], []).detail,
         'the machines row, refusing': reconcile.declaration_row([fatal], [fatal]).detail,

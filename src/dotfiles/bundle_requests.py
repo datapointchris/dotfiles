@@ -25,6 +25,7 @@ import logging as stdlib_logging
 import os
 import tempfile
 import time
+from collections.abc import Callable
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,7 @@ from dotfiles import create_bundle
 from dotfiles import logging
 from dotfiles import machine as machines
 from dotfiles import offline_bundle
+from dotfiles import output
 from dotfiles import paths
 from dotfiles import publishing
 from dotfiles import remote as transport
@@ -175,28 +177,64 @@ def dotfiles_commit() -> str:
 def obtain_bundle(machine: str | None, entries: Sequence[str]) -> Path | None:
     """Ask a builder for a bundle carrying `entries`, wait for it, then download, verify and stage it.
 
-    Returns the staged directory, or None once the log has said why there is none:
-    the remote did not answer, the builder failed, a newer request took this one's
-    place, or nothing arrived within `REQUEST_TIMEOUT_SECONDS`.
+    Returns the archive it staged, or None once the output has said why there is
+    none: the remote did not answer, the builder failed, a newer request took this
+    one's place, or nothing arrived within `REQUEST_TIMEOUT_SECONDS`.
     """
     try:
         return requested_and_staged(machine, tuple(sorted(set(entries))))
     except Refusal as refused:
-        log.error(f'no bundle was obtained: {refused}')
+        said(f'no bundle was obtained: {refused}', warning=True)
         if refused.advice:
-            log.info(refused.advice)
+            pointed(refused.advice)
         return None
+
+
+def said(message: str, *, warning: bool = False) -> None:
+    """One step on the restricted box's side, as a line of the run's output and of its log file.
+
+    Debug in the file, so the console sink does not print it a second time beside
+    the rendered line.
+    """
+    if warning:
+        log.debug(message, warning=True)
+        output.warn(message)
+        return
+    log.debug(message)
+    output.render_note(message)
+
+
+def pointed(advice: str) -> None:
+    """What to do next, as the run's advice line and a line of its log file."""
+    log.debug(advice)
+    output.hint(advice)
+
+
+def requester(*, offline: bool, forced: bool) -> Callable[[str | None, Sequence[str]], Path | None] | None:
+    """`obtain_bundle` where an apply may ask a builder for what it is missing, or None.
+
+    `--request-bundle` always may, `--offline` included. Otherwise the box's config
+    decides, and `--offline` never reaches the remote on its own.
+    """
+    if forced:
+        return obtain_bundle
+    if offline:
+        return None
+    found = transport.read()
+    if found.remote is None or not found.remote.request_bundle_when_blocked_items_are_behind:
+        return None
+    return obtain_bundle
 
 
 def requested_and_staged(machine: str | None, entries: tuple[str, ...]) -> Path | None:
     where = transport.reachable()
-    log.info(f'the remote at {where.root} answers')
+    said(f'the remote at {where.root} answers')
 
     session = Session.resolve(machine)
     named = session.machine_name
     box = publishing.discriminator(session.machine.coordinates.network_trust)
     published = status_document.publish(where, machine)
-    log.info(f'published status {published.name}')
+    said(f'published status {published.name}')
 
     request = Request(
         id=f'{dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")}-{box}',
@@ -211,17 +249,17 @@ def requested_and_staged(machine: str | None, entries: tuple[str, ...]) -> Path 
     already_listed = set(offline_bundle.on_remote(where, named))
     put(where, directory, request.filename, request.as_dict())
     wanted = ', '.join(entries) if entries else 'every bundled entry this status shows behind'
-    log.info(f'sent request {request.id} for {wanted} to {directory}')
+    said(f'sent request {request.id} for {wanted} to {directory}')
 
     record = waited_for(where, request, already_listed)
     if record is None:
         return None
-    log.info('downloading')
+    said('downloading it')
     archive = offline_bundle.fetch(where, named, record.name, record)
-    log.info(f'verified {archive.name} against its record, sha256 {record.sha256[:12] or "unpublished"}')
+    said(f'verified it against its record, sha256 {record.sha256[:12] or "unpublished"}')
     staged = offline_bundle.stage(archive, named, box)
-    log.info(f'staged at {paths.under_home(staged)}')
-    return staged
+    said(f'staged at {paths.under_home(staged)}')
+    return archive
 
 
 def waited_for(where: transport.Remote, request: Request, already_listed: set[str]) -> offline_bundle.Record | None:
@@ -239,46 +277,43 @@ def waited_for(where: transport.Remote, request: Request, already_listed: set[st
             found = shelf_of(transport.listed(where, directory) or ())
             if request.id in found.failed:
                 failure = read_remote(where, directory, f'{request.id}{FAILED_SUFFIX}')
-                log.error(f'{failure.get("builder", "the builder")} could not build request {request.id}: {failure.get("error", "")}')
+                said(
+                    f'{failure.get("builder", "the builder")} could not build request {request.id}: {failure.get("error", "")}',
+                    warning=True,
+                )
                 for line in failure.get('log_tail') or []:
-                    log.error(f'  {line}')
-                log.info('fix what the error names, then run: dotfiles bundle request')
+                    said(f'  {line}')
+                pointed('fix what the error names, then run: dotfiles bundle request')
                 return None
             if acknowledged is None and request.id in found.building:
                 document = read_remote(where, directory, f'{request.id}{BUILDING_SUFFIX}')
                 acknowledged = Acknowledgement(**{field.name: document.get(field.name, '') for field in dc.fields(Acknowledgement)})
-                log.info(f'acknowledged by {acknowledged.builder} at {acknowledged.started_at}')
-                log.info('building')
+                said(f'{acknowledged.builder} acknowledged it at {acknowledged.started_at} and is building')
             answered = answering(where, request.machine, request.id, already_listed)
             if answered is not None:
-                log.info(f'bundle listed: {answered.name}')
+                if acknowledged is None:
+                    said('a builder acknowledged and built it between two polls')
+                said(f'bundle listed: {answered.name}')
                 return answered
             if request.id not in found.requests:
-                log.error(
-                    f'request {request.id} left the remote with no bundle answering it, '
-                    f'so a newer request for {request.machine} took its place'
-                )
+                said(f'request {request.id} left the remote with no bundle answering it, so a newer request took its place', warning=True)
                 return None
         except transport.RemoteError as unanswered:
-            log.warning(f'the remote did not answer this poll, still waiting: {unanswered}')
+            said(f'the remote did not answer this poll, still waiting: {unanswered}', warning=True)
             continue
 
         if acknowledged is None and not warned and waited >= ACKNOWLEDGE_DEADLINE_SECONDS:
-            log.warning(
-                f'no builder has acknowledged request {request.id} after {ACKNOWLEDGE_DEADLINE_SECONDS // 60} minutes. '
-                f'The builder is the {SERVE_UNIT} user unit on the machine running the {builder_manifests()} manifest: '
-                f'check it there with systemctl --user status {SERVE_UNIT}, and journalctl --user -u {SERVE_UNIT}'
-            )
+            said(f'no builder has acknowledged request {request.id} after {ACKNOWLEDGE_DEADLINE_SECONDS // 60} minutes', warning=True)
+            said(f'the builder is the {SERVE_UNIT} user unit on the machine running the {builder_manifests()} manifest')
+            pointed(f'check it there: systemctl --user status {SERVE_UNIT}; journalctl --user -u {SERVE_UNIT}')
             warned = True
         if waited - said_waiting >= STILL_WAITING_EVERY_SECONDS:
-            log.info(f'still {"building" if acknowledged else "waiting for a builder"}, {int(waited) // 60}m{int(waited) % 60:02d}s in')
+            said(f'still {"building" if acknowledged else "waiting for a builder"}, {int(waited) // 60}m{int(waited) % 60:02d}s in')
             said_waiting = waited
 
-    log.error(f'no bundle answered request {request.id} within {REQUEST_TIMEOUT_SECONDS // 60} minutes')
-    log.info(
-        'the request stays on the remote, so the builder can still answer it. '
-        'Look again with: dotfiles bundle list, then dotfiles bundle download. Or ask again with: dotfiles bundle request'
-    )
+    said(f'no bundle answered request {request.id} within {REQUEST_TIMEOUT_SECONDS // 60} minutes', warning=True)
+    said('the request stays on the remote, so the builder can still answer it')
+    pointed('collect it later: dotfiles bundle list, then dotfiles bundle download; or ask again: dotfiles bundle request')
     return None
 
 

@@ -123,6 +123,9 @@ class Phrase(StrEnum):
     NEED_A_PASSWORD = 'need a password'
     """Items whose repair acquires root, warned about before the write asks."""
 
+    NEED_A_BUNDLE = 'need a bundle no staged one carries'
+    """Blocked items missing or behind, named before an `apply` asks a builder for them."""
+
     NEEDING_ROOT = 'needing root'
     """The same items, worded to hang off a drift sentence rather than a tally.
 

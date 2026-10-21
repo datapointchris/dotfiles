@@ -84,6 +84,7 @@ from dotfiles.resources import auth
 from dotfiles.resources import credentials as git_credentials
 from dotfiles.resources import env as env_file
 from dotfiles.resources import identity as git_identity
+from dotfiles.resources import packages
 from dotfiles.resources import privileged
 from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
@@ -655,7 +656,7 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def stage_bundle(machine: str, box: str, *, offline: bool = False, required: bool = True) -> ExitCode | None:
+def stage_bundle(machine: str, box: str, *, offline: bool = False, required: bool = True, requesting: bool = False) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
 
     Called whenever this run routes an item to the bundle. With nothing staged and
@@ -663,7 +664,8 @@ def stage_bundle(machine: str, box: str, *, offline: bool = False, required: boo
     and each item the bundle would have supplied says a bundle is needed. `required`
     is the exception, where every host counts as blocked and so nothing could
     install. `offline` keeps the remote out of it, since `--offline` contacts no
-    remote.
+    remote. `requesting` says this run asks a builder for what it lacks once it has
+    measured, so an empty stack is a note rather than a warning.
 
     **Both identities are passed in, never resolved from the ambient environment.**
     `machine` is the manifest and `box` is the discriminator telling two machines
@@ -715,6 +717,9 @@ def stage_bundle(machine: str, box: str, *, offline: bool = False, required: boo
         advice = f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH'
         if required:
             return output.report(NoBundle(because, advice=advice))
+        if requesting and not unusable:
+            render_note(f'no bundle is staged at {paths.under_home(paths.staging_dir())}, so this run asks a builder for what it needs')
+            return None
         warn(because)
         hint(advice)
         return None
@@ -881,6 +886,7 @@ def apply_machine(
     reinstall: bool = False,
     flags: dict | None = None,
     as_json: bool = False,
+    request_bundle: RequestBundle | None = None,
 ) -> ExitCode:
     """Measure the machine, then act on what was decided, in stage order.
 
@@ -892,6 +898,11 @@ def apply_machine(
     reaches.** Where `[network] blocked` names hosts, an item whose download reaches
     one installs from the staged bundle and the rest install from the network. An
     `--offline` run with no list declared drops the refresh and reaches no network.
+
+    **A blocked item no staged bundle can satisfy is asked for, where
+    `request_bundle` is given.** The builder's bundle is staged between the measure
+    pass and the walk, and the resources waiting on it are measured again, so one
+    apply installs it.
 
     **A whole-machine apply refuses on any error; a scoped one refuses on the errors
     concerning what it was asked to converge.** Keyed on what the fault is, never on
@@ -963,26 +974,19 @@ def apply_machine(
     if session.routes.restricts:
         report_routes(session)
         box = publishing.discriminator(session.machine.coordinates.network_trust)
-        if unstaged := stage_bundle(session.machine_name, box, offline=session.routes.offline, required=session.routes.everything):
+        requesting = request_bundle is not None
+        if unstaged := stage_bundle(
+            session.machine_name,
+            box,
+            offline=session.routes.offline,
+            required=session.routes.everything and not requesting,
+            requesting=requesting,
+        ):
             return unstaged
 
-    # Streamed rather than collected, for the reason `survey` is: an `apply`
-    # measures the whole machine before it writes anything, and on WSL
-    # that stretch is minutes of blank screen.
-    planned = []
-    measured: dict[str, list[Change]] = {}
-    for event in engine.assess(session, selection):
-        if isinstance(event.payload, Started):
-            announce(event.resource, event.payload.detail)
-        elif isinstance(event.payload, Change):
-            measured.setdefault(event.resource, []).append(event.payload)
-        elif isinstance(event.payload, Summary) and event.timing is not None:
-            # Same pairing the read-only verbs make: the progress line is a
-            # statement in the present tense, and what replaces it is the answer.
-            retract()
-            mark, color = measured_mark(measured.get(event.resource, []))
-            render_section(event.resource, event.payload.detail, event.timing.duration_seconds, mark=mark, color=color)
-        planned.append(event)
+    planned = measured_walk(session, selection)
+    if again := requested_bundle(session, planned, request_bundle):
+        planned = remeasured(session, selection, planned, again)
 
     # Before acting, because a resource nothing could examine is a part of the
     # machine this run is about to skip without touching. Folded rather than
@@ -1054,6 +1058,78 @@ def apply_machine(
         # this line was already holding.
         hint(f'the full record is {recorded}')
     return ExitCode.ISSUE if unsuccessful else ExitCode.CONVERGED
+
+
+RequestBundle = Callable[[str | None, Sequence[str]], Path | None]
+"""`bundle_requests.obtain_bundle`, answering the archive it staged. Handed in by
+the command layer, because what it calls imports this module."""
+
+
+def measured_walk(session: Session, selection: engine.Selection) -> list[Event]:
+    """Measure what `selection` covers, rendering each section as it lands.
+
+    Streamed rather than collected, for the reason `survey` is: an `apply` measures
+    the whole machine before it writes anything, and on WSL that stretch is minutes
+    of blank screen.
+    """
+    planned = []
+    measured: dict[str, list[Change]] = {}
+    for event in engine.assess(session, selection):
+        if isinstance(event.payload, Started):
+            announce(event.resource, event.payload.detail)
+        elif isinstance(event.payload, Change):
+            measured.setdefault(event.resource, []).append(event.payload)
+        elif isinstance(event.payload, Summary) and event.timing is not None:
+            # Same pairing the read-only verbs make: the progress line is a
+            # statement in the present tense, and what replaces it is the answer.
+            retract()
+            mark, color = measured_mark(measured.get(event.resource, []))
+            render_section(event.resource, event.payload.detail, event.timing.duration_seconds, mark=mark, color=color)
+        planned.append(event)
+    return planned
+
+
+def requested_bundle(session: Session, planned: Sequence[Event], request: RequestBundle | None) -> frozenset[str]:
+    """The resources to measure again because a bundle this run asked a builder for is staged.
+
+    Empty when nothing routed to the bundle is missing or behind, when this run may
+    not ask, or when no bundle arrived. The log says which.
+    """
+    changes = [event.payload for event in planned if isinstance(event.payload, Change)]
+    need = packages.bundle_need(changes)
+    if not need:
+        return frozenset()
+    render_section('bundle', bundle_need_line(need), mark=PROGRESS_MARK, color='blue')
+    render_note(', '.join(need))
+    if request is None:
+        hint('ask a builder for one: dotfiles apply --request-bundle')
+        return frozenset()
+    archive = request(session.machine_name, need)
+    if archive is None:
+        warn('no bundle arrived, so those items stay as they are and the rest of the run goes ahead')
+        return frozenset()
+    report_bundle(offline_bundle.describe(archive), session.machine_name)
+    again = frozenset(change.resource for change in changes if change.awaits_bundle)
+    render_note(f'measuring {", ".join(sorted(again))} again against it')
+    return again
+
+
+def bundle_need_line(need: Sequence[str]) -> str:
+    """The heading over the blocked items an apply is about to ask a builder for."""
+    return counted_phrase(len(need), Phrase.NEED_A_BUNDLE, noun='blocked item')
+
+
+def remeasured(session: Session, selection: engine.Selection, planned: Sequence[Event], resources: frozenset[str]) -> list[Event]:
+    """`planned` with `resources` measured again against the bundle just staged, in place."""
+    again = dc.replace(selection, resources=tuple(name for name in selection.resources if name in resources))
+    fresh = measured_walk(session, again)
+    walk: list[Event] = []
+    for event in planned:
+        if event.resource not in resources:
+            walk.append(event)
+        elif not any(kept.resource == event.resource for kept in walk):
+            walk.extend(one for one in fresh if one.resource == event.resource)
+    return walk
 
 
 def matched_under_entries(planned: Sequence[Event], entries: frozenset[str]) -> tuple[str, ...]:

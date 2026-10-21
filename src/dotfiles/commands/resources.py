@@ -18,6 +18,7 @@ import typer
 import yaml
 
 from dotfiles import bridge
+from dotfiles import bundle_requests
 from dotfiles import catalog
 from dotfiles import deploy
 from dotfiles import engine
@@ -354,6 +355,7 @@ def apply_resource(
             force=force,
             reinstall=reinstall,
             as_json=as_json,
+            request_bundle=bundle_requests.requester(offline=offline, forced=False),
             # The same three the composite records, for the same reason: a row is
             # read back against what the run covered and why it was actionable.
             # `selection` is this door's `skip`, spelled as the addresses the noun
