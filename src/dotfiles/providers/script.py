@@ -117,8 +117,9 @@ def run(
     env: Mapping[str, str] | None = None,
     interpreter: Interpreter = BASH,
     from_bundle: bool = True,
+    because: str = '',
 ) -> Result:
-    """Fetch and run one vendor install script.
+    """Fetch and run one vendor install script, naming where its bytes come from.
 
     An empty detail on success: the script's own output was streamed as it ran,
     and it knows what it did in a way nothing here can restate. Summarizing it
@@ -127,7 +128,8 @@ def run(
     one above it.
     """
     with tempfile.TemporaryDirectory(prefix=f'dotfiles-{name}-') as scratch:
-        err_console.print(f'{name}: {url}', soft_wrap=True)
+        source = f', from the bundle because {because}' if because else ', from the bundle' if offline else ''
+        err_console.print(f'{name}: {url}{source}', soft_wrap=True)
         script = staged(name, url, Path(scratch), offline=offline, interpreter=interpreter, from_bundle=from_bundle)
         if not script:
             # Offline is a refusal and a failed download is not, which is the whole

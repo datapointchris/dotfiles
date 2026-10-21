@@ -378,7 +378,7 @@ def from_bundle(entry: catalog.CargoPackage, row: bundle.Staged, archive: Path) 
         except OSError as refused:
             return Result(False, f'could not install {entry.executable} from {archive}: {refused}', kind=Kind.WRITE_FAILED)
 
-    return Result(True, f'{entry.executable} {row.version} installed from the bundle at {archive}', kind=Kind.APPLIED)
+    return Result(True, f'{entry.executable} {row.version} installed from the bundle, out of {row.filename}', kind=Kind.APPLIED)
 
 
 def inside(unpacked: Path, executable: str) -> Path | None:

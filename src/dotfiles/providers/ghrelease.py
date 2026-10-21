@@ -132,7 +132,7 @@ def install(
         # soft_wrap so a long URL stays one selectable line: Rich's default wrap
         # inserts real newlines, and a download URL is the first thing anyone
         # copies out of a failed install.
-        err_console.print(f'{entry.name} {tag}: {url}', soft_wrap=True)
+        err_console.print(f'{entry.name} {tag}: {url}{", from the bundle" if offline else ""}', soft_wrap=True)
         staged = stage(download, url, entry.repo, tag, asset.name, offline=offline)
         if staged is None:
             return Result(False, f'could not download {asset.name}', kind=Kind.DOWNLOAD_FAILED)

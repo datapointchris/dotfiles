@@ -253,9 +253,8 @@ def run_vendor_script(request: Request, url: str) -> Result:
     script.py` holds it, and an empty detail on success is its rule as much as
     `delegate_update`'s below.
     """
-    if why := request.blocked(url):
-        err_console.print(f'{request.entry.name}: from the bundle, because {why}', soft_wrap=True)
-    return script.run(request.entry.name, url, offline=bool(request.blocked(url)))
+    why = request.blocked(url)
+    return script.run(request.entry.name, url, offline=bool(why), because=why)
 
 
 def unstaged(request: Request, url: str, reason: str = '') -> str:
@@ -781,7 +780,7 @@ def confirm_on_path(what: str, executable: str) -> Result:
     """Everything above ends here: installed is a claim PATH has to agree with."""
     if not shutil.which(executable):
         return Result(False, f'{executable} installed but is not on PATH — is {bin_dir()} in it?', kind=Kind.NOT_ON_PATH)
-    return Result(True, what, kind=Kind.APPLIED)
+    return Result(True, f'{what} installed', kind=Kind.APPLIED)
 
 
 INSTALLERS: dict[str, Installer] = {
