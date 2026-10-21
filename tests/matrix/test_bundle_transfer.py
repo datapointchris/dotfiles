@@ -585,12 +585,16 @@ class TestTheAutomaticPaths:
         assert ran.exit_code == ExitCode.ISSUE
         assert not (sandbox.cache / 'dotfiles' / 'bundles').exists()
 
+    def blocking(self, config: Path) -> None:
+        """Declare GitHub's asset hosts blocked, so the release tool routes to the bundle."""
+        config.write_text(config.read_text() + '\n[network]\nblocked = ["release-assets.githubusercontent.com"]\n')
+
     def test_it_fetches_where_the_machine_asked_for_that(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         self.staged_nothing(sandbox)
         published(server, NEWEST)
-        declare(sandbox.config, extra='fetch_bundle_when_none_is_staged = true\n')
+        self.blocking(declare(sandbox.config, extra='fetch_bundle_when_none_is_staged = true\n'))
 
-        cli('apply', '--offline', catch_exceptions=True)
+        cli('apply', catch_exceptions=True)
 
         assert (sandbox.cache / 'dotfiles' / 'bundles' / f'{NEWEST}.tar.gz').is_file()
         assert (sandbox.staging / NEWEST / bundle.MANIFEST).is_file()
@@ -600,12 +604,11 @@ class TestTheAutomaticPaths:
         "there is no bundle" — the second is what the caller can act on, and it is
         true either way."""
         self.staged_nothing(sandbox)
-        declare(sandbox.config, program='nothing-installed-here', extra='fetch_bundle_when_none_is_staged = true\n')
+        self.blocking(declare(sandbox.config, program='nothing-installed-here', extra='fetch_bundle_when_none_is_staged = true\n'))
 
-        ran = cli('apply', '--offline', catch_exceptions=True)
+        ran = cli('apply', catch_exceptions=True)
 
-        assert ran.exit_code == ExitCode.ISSUE
-        assert 'needs a staged bundle' in ran.stderr
+        assert 'no bundle is staged' in ran.stderr
 
     def test_an_offline_apply_publishes_nothing_by_default(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """Paired with the exit code and a positive fact. An apply that died while

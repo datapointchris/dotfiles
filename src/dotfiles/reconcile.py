@@ -18,6 +18,7 @@ import dataclasses as dc
 import datetime as dt
 import difflib
 import functools
+import shutil
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
@@ -27,6 +28,7 @@ from itertools import chain
 from pathlib import Path
 
 from dotfiles import checkout
+from dotfiles import coordinates
 from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import offline_bundle
@@ -50,6 +52,7 @@ from dotfiles.output import NOTICE_MARK
 from dotfiles.output import PROGRESS_MARK
 from dotfiles.output import SUBJECT_CEILING
 from dotfiles.output import SUBJECT_COLUMN
+from dotfiles.output import VERDICT_MARKS
 from dotfiles.output import Phrase
 from dotfiles.output import announce
 from dotfiles.output import console
@@ -76,6 +79,7 @@ from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
 from dotfiles.resources import OutcomeStatus
+from dotfiles.resources import auth
 from dotfiles.resources import privileged
 from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
@@ -647,8 +651,15 @@ def exit_code(results: list[ResourceResult]) -> ExitCode:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def stage_bundle(machine: str, box: str) -> ExitCode | None:
+def stage_bundle(machine: str, box: str, *, offline: bool = False, required: bool = True) -> ExitCode | None:
     """Put a bundle where the providers read one, and say which bundle that is.
+
+    Called whenever this run routes an item to the bundle. With nothing staged and
+    nothing on disk the run goes on: everything the network serves still installs,
+    and each item the bundle would have supplied says a bundle is needed. `required`
+    is the exception, where every host counts as blocked and so nothing could
+    install. `offline` keeps the remote out of it, since `--offline` contacts no
+    remote.
 
     **Both identities are passed in, never resolved from the ambient environment.**
     `machine` is the manifest and `box` is the discriminator telling two machines
@@ -663,23 +674,23 @@ def stage_bundle(machine: str, box: str) -> ExitCode | None:
     being non-empty — which is also what keeps a machine part way through an
     offline install from re-unpacking the same tarball on every run.
 
-    The remote is consulted only when nothing is staged and nothing is on disk,
-    which is the one moment the run is about to refuse anyway.
+    The remote is consulted only when nothing is staged and nothing is on disk.
 
-    **Both branches report**, because the bundle is the upstream under this flag and
-    the already-staged branch is the one every run after the first takes.
+    **Both branches report**, because the bundle is the upstream for every item
+    routed to it, and the already-staged branch is the one every run after the
+    first takes.
 
-    **All three ways this ends a run are a `Refusal`**, so a walk that never happened
-    closes in the grammar `apply_machine` keeps for that. The unreadable branch
-    refuses on top of `report_bundle`'s warning rather than instead of it: that
-    warning is shared with `plan` and `check`, where it is a caveat rather than a
-    stop.
+    **An unreadable or foreign bundle ends the run as a `Refusal`**, so a walk that
+    never happened closes in the grammar `apply_machine` keeps for that. The
+    unreadable branch refuses on top of `report_bundle`'s warning rather than
+    instead of it: that warning is shared with `plan` and `check`, where it is a
+    caveat rather than a stop.
     """
     already = {path.name for path in providers.staged_bundles()}
     # A resolved machine name is what makes a peer's archive skippable, so without
     # one nothing is staged on top of a stack that already works.
     archive = offline_bundle.newest(machine=machine) if machine or not already else None
-    if archive is None and not already:
+    if archive is None and not already and not offline:
         archive = fetched_bundle(machine)
 
     if archive is None and not already:
@@ -694,13 +705,15 @@ def stage_bundle(machine: str, box: str) -> ExitCode | None:
             f'nothing under {paths.staging_dir()} is a bundle: {", ".join(sorted(unusable))} carries no {providers.MANIFEST}'
             if unusable
             else f'offline needs a staged bundle at {paths.staging_dir()}, and there is none'
+            if required
+            else f'no bundle is staged at {paths.staging_dir()}, so what this network blocks cannot be installed'
         )
-        return output.report(
-            NoBundle(
-                because,
-                advice=f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH',
-            )
-        )
+        advice = f'copy a {offline_bundle.ARCHIVES} to {Path.cwd()} or {Path.home()}, or name one: dotfiles bundle stage PATH'
+        if required:
+            return output.report(NoBundle(because, advice=advice))
+        warn(because)
+        hint(advice)
+        return None
 
     extracted = None
     # Ordering rather than membership. An archive on disk older than the top of the
@@ -741,11 +754,9 @@ def fetched_bundle(machine: str) -> Path | None:
     capability, so an apply that reaches a server unasked is a change in posture
     and not a convenience — it has to be something somebody turned on.
 
-    Reached only when nothing is staged and no archive was found locally, which is
-    the one moment the run is about to refuse anyway. A failure here answers None
-    and lets that refusal happen, because "the remote would not answer" is a worse
-    thing to end an apply on than "there is no bundle" — the second is what the
-    caller can act on and is true either way.
+    Reached only when nothing is staged and no archive was found locally. A failure
+    here answers None, and the run warns that no bundle is staged, because that is
+    what the caller can act on and is true either way.
     """
     found = remote.read()
     if found.remote is None or not found.remote.fetch_bundle_when_none_is_staged:
@@ -873,9 +884,10 @@ def apply_machine(
     before the walk: a run measured against a declaration that will not hold
     together installs whatever survived the parse and reports success.
 
-    **An apply always asks to refresh, and `Session.resolve` drops that ask when the
-    run is offline.** So `--offline` spends nothing on GitHub, on a plugin remote, or
-    on a manager in `syspkg.NETWORKED`.
+    **An apply always asks to refresh, and each item asks only the hosts its route
+    reaches.** Where `[network] blocked` names hosts, an item whose download reaches
+    one installs from the staged bundle and the rest install from the network. An
+    `--offline` run with no list declared drops the refresh and reaches no network.
 
     **A whole-machine apply refuses on any error; a scoped one refuses on the errors
     concerning what it was asked to converge.** Keyed on what the fault is, never on
@@ -944,23 +956,28 @@ def apply_machine(
     identity = runs.begin(session.machine_name, 'apply', began)
     sinks.open_log(identity)
 
-    if offline:
+    if session.routes.restricts:
+        report_routes(session)
         box = publishing.discriminator(session.machine.coordinates.network_trust)
-        if unstaged := stage_bundle(session.machine_name, box):
+        if unstaged := stage_bundle(session.machine_name, box, offline=session.routes.offline, required=session.routes.everything):
             return unstaged
 
     # Streamed rather than collected, for the reason `survey` is: an `apply`
     # measures the whole machine before it writes anything, and on WSL
     # that stretch is minutes of blank screen.
     planned = []
+    measured: dict[str, list[Change]] = {}
     for event in engine.assess(session, selection):
         if isinstance(event.payload, Started):
             announce(event.resource, event.payload.detail)
+        elif isinstance(event.payload, Change):
+            measured.setdefault(event.resource, []).append(event.payload)
         elif isinstance(event.payload, Summary) and event.timing is not None:
             # Same pairing the read-only verbs make: the progress line is a
             # statement in the present tense, and what replaces it is the answer.
             retract()
-            render_section(event.resource, event.payload.detail, event.timing.duration_seconds)
+            mark, color = measured_mark(measured.get(event.resource, []))
+            render_section(event.resource, event.payload.detail, event.timing.duration_seconds, mark=mark, color=color)
         planned.append(event)
 
     # Before acting, because a resource nothing could examine is a part of the
@@ -976,6 +993,8 @@ def apply_machine(
     changes = [event.payload for event in planned if isinstance(event.payload, Change)]
     _, deferred, unmeasured = sift(changes)
     report_untouched(deferred, unmeasured)
+    # A refused install wrote nothing, so the item is still not what was declared.
+    deferred = [*deferred, *refused_changes(performed)]
 
     # After the walk rather than inside it: the three jobs are consequences of a
     # deployment rather than measured drift, and nothing between the symlink stage
@@ -1011,7 +1030,7 @@ def apply_machine(
     unsuccessful = unsuccessful_items(planned) + unsuccessful_items(performed)
     changed = len([event for event in performed if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE])
     render_verdict(
-        str(ResourceVerdict.ISSUE if unsuccessful else ResourceVerdict.CONVERGED),
+        str(applied_verdict(unsuccessful, deferred, unmeasured)),
         session.machine_name,
         applied_standing(changed, unsuccessful, deferred, unmeasured),
         applied_line(changed, unsuccessful, deferred, unmeasured, matched_under_entries(planned, entries)),
@@ -1075,6 +1094,43 @@ def applied_line(
     head = sentence(repaired, failed) or idle
     attention = counted_phrase(len(deferred), Phrase.NEED_ATTENTION) if deferred else ''
     return sentence(head, attention, clause([change.item for change in unmeasured], Phrase.COULD_NOT_BE_MEASURED))
+
+
+def applied_verdict(unsuccessful: Sequence[str], deferred: Sequence[Change], unmeasured: Sequence[Change]) -> ResourceVerdict:
+    """The mark the closing line carries, read off the same sets as its standing.
+
+    A tick beside `is not fully converged` contradicted the sentence it stood in
+    front of, so a run that left work behind closes on the drift mark.
+    """
+    if unsuccessful:
+        return ResourceVerdict.ISSUE
+    if deferred or unmeasured:
+        return ResourceVerdict.DRIFT
+    return ResourceVerdict.CONVERGED
+
+
+def measured_mark(changes: Sequence[Change]) -> tuple[str, str]:
+    """The mark in front of a section on an apply's measure pass.
+
+    A tick only where nothing differs. Work about to happen takes the progress mark,
+    and drift apply will walk past takes the notice mark, so no section claims to be
+    converged beside the rows saying it is not.
+    """
+    if any(change.actionable for change in changes):
+        return PROGRESS_MARK, 'blue'
+    if any(change.drifted for change in changes):
+        return NOTICE_MARK, 'yellow'
+    return VERDICT_MARKS[str(ResourceVerdict.CONVERGED)], 'green'
+
+
+def report_routes(session: Session) -> None:
+    """The line an apply opens with on a network that blocks hosts: how many, from where, and what goes where."""
+    target = coordinates.target_for(session.machine.coordinates)
+    reaching = [item for item in session.plan.items if registry.hosts(item, target).every]
+    bundled = sum(1 for item in reaching if registry.route(session, item).bundled)
+    render_section('network', session.routes.opening(), mark=PROGRESS_MARK, color='blue')
+    networked = len(reaching) - bundled
+    render_note(f'{bundled} of the {len(reaching)} items that reach a network install from the bundle, and {networked} from the network')
 
 
 def applied_standing(changed: int, unsuccessful: Sequence[str], deferred: Sequence[Change], unmeasured: Sequence[Change]) -> str:
@@ -1180,7 +1236,36 @@ def perform(session: Session, selection: engine.Selection, planned: Sequence[Eve
                 if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.DONE:
                     changed = True
                     remeasuring = None
+    if changed and (again := auth_after_install(remeasuring or dc.replace(session, refresh=False), selection, decided)):
+        decided = [*(event for event in decided if event.resource != auth.NAME), *again]
     return decided, performed
+
+
+def auth_after_install(session: Session, selection: engine.Selection, decided: Sequence[Event]) -> list[Event]:
+    """Auth asked again where its first pass found a tool this run then installed.
+
+    Every auth row is BY_HAND, so `engine.remeasure` keeps none of them. Without
+    this a fresh machine closes with `aws` unmeasured because it was not on PATH
+    when auth was first asked, though the packages stage put it there since.
+    """
+    absent = [
+        event.payload.item
+        for event in decided
+        if event.resource == auth.NAME
+        and isinstance(event.payload, Change)
+        and event.payload.detail == auth.uninstalled(event.payload.item).detail
+    ]
+    if auth.NAME not in selection.resources or not any(shutil.which(tool) for tool in absent):
+        return []
+    again = list(engine.measure(session, auth.NAME, engine.resources()[auth.NAME], selection.plan_for(auth.NAME, session.plan)))
+    found = [event.payload for event in again if isinstance(event.payload, Change)]
+    for event in again:
+        if isinstance(event.payload, Summary):
+            mark, color = measured_mark(found)
+            render_section(
+                auth.NAME, f'{event.payload.detail}, asked again once the install put {", ".join(absent)} on PATH', mark=mark, color=color
+            )
+    return again
 
 
 def without(decided: Sequence[Event], found: Sequence[Event]) -> list[Event]:
@@ -1273,6 +1358,13 @@ which is a difference its own docstring spells out and the mark erased.
 A refusal keeps a color that is not red: it wrote nothing and did nothing wrong,
 and an offline machine skipping a source the bundle was never built to stage must
 not read as a broken install."""
+
+
+def refused_changes(events: Iterable[Event]) -> list[Change]:
+    """The changes a provider refused at apply time, which left the item as it was."""
+    return [
+        event.payload.change for event in events if isinstance(event.payload, Outcome) and event.payload.status is OutcomeStatus.REFUSED
+    ]
 
 
 def unsuccessful_items(events: Iterable[Event]) -> list[str]:
