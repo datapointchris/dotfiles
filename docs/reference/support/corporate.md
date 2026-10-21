@@ -101,10 +101,9 @@ blocked items from it and contacts no remote.
 
 This box is only partly blocked. Its config, deployed from
 `configs/trust/nonfleet/.config/dotfiles/config.toml`, lists the hosts it refuses
-under `[network] blocked`. GitHub's release-asset hosts, `proxy.golang.org`,
-`raw.githubusercontent.com` and `claude.ai` are on it. apt, `pypi.org`, npm,
-`api.github.com`, `git clone` from GitHub, rustup, `go.dev` and nodejs.org answer,
-so they are not.
+under `[network] blocked`. `dotfiles network check` probes the hosts the plan
+reaches. It names a refused host the list leaves out, and a listed host that
+answers.
 
 Each item reaches two hosts, and the apply routes them apart. An item whose
 download reaches a listed host installs from the staged bundle. Everything else
@@ -128,7 +127,7 @@ of a builder in the same run, as the section below describes.
 
 `--offline` keeps the list, installs blocked items only from what is staged, and
 contacts no remote. Such an item then gets a row naming the blocked host and the
-bundle it needs. Where no list is declared at all, `--offline` counts every host
+bundle it needs. Where the list is empty or absent, `--offline` counts every host
 as blocked and asks no network.
 
 ## Carry only what changed
@@ -159,23 +158,24 @@ This box's config turns on `request_bundle_when_blocked_items_are_behind`. When
 the apply finds blocked items missing or behind and no staged bundle carrying
 them, it publishes this box's status and leaves a request on the remote naming
 those items. Then it waits for a builder running `dotfiles bundle serve`. Each
-step is a log line: sent, acknowledged by the builder, still waiting each minute,
-bundle listed, downloading, verified, staged. The apply measures those items
+step is a log line: sent, acknowledged by the builder, still waiting, bundle
+listed, downloading, verified, staged. The apply measures those items
 again against the new bundle and installs them in the same run.
 
 `dotfiles apply --request-bundle` asks on a box whose config leaves the key off,
 and asks under `--offline` too. `dotfiles bundle request` asks without applying:
 
 ```bash
-dotfiles bundle request                     # everything the status shows behind
-dotfiles bundle request --entry claude-code # or only what is named
+dotfiles bundle request              # everything the status shows behind
+dotfiles bundle request --entry glow # or only what is named
 ```
 
-When no builder acknowledges within two minutes, the warning names the
-`dotfiles-bundle-serve` unit to check on the builder. After fifteen minutes the
-apply stops waiting and installs the rest. The request stays in place, so
-`dotfiles bundle download` collects the bundle once the builder answers. A failed
-build prints the builder's error and the end of its log.
+When no builder acknowledges the request in time, the apply names the
+`dotfiles-bundle-serve` unit to check on the builder, stops waiting and installs
+the rest. A build that started gets a longer deadline. Either way the request
+stays in place, so `dotfiles bundle download` collects the bundle once the
+builder answers. A failed build prints the builder's error and the end of its
+log.
 `docs/architecture/offline-bundles.md` holds the protocol.
 
 **Nothing but packages and versions leaves that machine.**

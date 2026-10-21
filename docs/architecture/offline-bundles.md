@@ -71,9 +71,9 @@ the bundle, so apt was never asked what was behind and no plugin was pulled,
 though both answer on this network. Converging the box took a second, networked
 apply that skipped the resources reaching blocked hosts.
 
-`--offline` keeps the list and contacts no remote. Where no list is declared, it
-counts every host as blocked, which is the only reading available to a box that
-says nothing about its network.
+`--offline` keeps the list and contacts no remote. Where the list is empty or
+absent, it counts every host as blocked, which is the only reading available to
+a box that names nothing its network refuses.
 
 ## The apply unpacks; `bundle stage` is for looking first
 
@@ -85,8 +85,8 @@ bundle fetched to replace an out-of-date one takes effect on the next run.
 With no archive anywhere the run goes on. Everything the network serves still
 installs. An apply that may ask a builder asks for what the bundle would have
 supplied. Otherwise each such item gets a row naming its blocked host and the
-bundle it needs. The one exception is `--offline` with no list declared and no
-request, where nothing could install, so the run refuses before measuring.
+bundle it needs. The one exception is `--offline` with an empty or absent list
+and no request, where nothing could install, so the run refuses before measuring.
 
 `bundle stage` unpacks without installing anything, which is what `bundle check`
 and `bundle show` read. Reach for it to see what a bundle covers before letting
@@ -163,9 +163,9 @@ no apply around it.
 
   probe
   status upload ────────→ status/m/<file>
-  write request ────────→ requests/m/<id>.json ◀─── poll every 20 s,
-                                                    newest per m,
-                                                    older deleted
+  write request ────────→ requests/m/<id>.json ◀─── poll, newest
+                                                    per box, older
+                                                    deleted
                           <id>.building.json ◀───── acknowledge
                           status/m/<file> ────────→ download
                                                     bundle create
@@ -174,7 +174,7 @@ no apply around it.
                           bundles/m/<archive> ◀──── upload, with a
                                                     record naming <id>
                           <id>.json, .building ◀─── delete
-  poll every 15 s ◀────── record naming <id>
+  poll ◀───────────────── record naming <id>
   download, verify,
   stage
 ```
@@ -183,9 +183,9 @@ no apply around it.
 
 | File | Written by | Deleted by |
 | --- | --- | --- |
-| `<id>.json`, the request | restricted box | builder, after the upload, or when a newer request supersedes it |
+| `<id>.json`, the request | restricted box | builder, after the upload, or when a newer request from the same box supersedes it |
 | `<id>.building.json` | builder, before it starts | builder, with the request or on failure |
-| `<id>.failed.json` | builder, when a build fails | builder, when a newer request supersedes it |
+| `<id>.failed.json` | builder, when a build fails | builder, when a newer request from the same box supersedes it |
 
 An id is `<UTC stamp>-<box>`, where the box is the discriminator a status
 filename carries. The request names the exact status file, its machine, CPU,
@@ -194,25 +194,33 @@ manifest apart, which `--against latest` refuses to guess. The bundle's
 `bundle.json` carries `request`, and that field is how the waiting box knows the
 bundle is its own.
 
-**Timings.** The builder polls every 20 seconds. The requester polls every 15,
-warns after 2 minutes with no acknowledgement, and gives up after 15. The warning
-names the `dotfiles-bundle-serve` unit and the manifest that enables it, through
-`serve_bundles`. A timeout leaves the request in place, so a late builder still
-answers it and `bundle download` collects the result.
+**Timings.** Both ends poll, on the intervals `src/dotfiles/bundle_requests.py`
+declares. With no acknowledgement by `ACKNOWLEDGE_DEADLINE_SECONDS` no builder is
+running, so the requester stops waiting there. It names the
+`dotfiles-bundle-serve` unit and the manifest that enables it, through
+`serve_bundles`. An acknowledged build gets until `REQUEST_TIMEOUT_SECONDS`.
+Either way the request stays in place, so a late builder still answers it and
+`bundle download` collects the result.
 
 **What goes wrong, and what each end says.**
 
 - *No builder running.* No acknowledgement arrives. The requester names the unit
-  at 2 minutes and stops at 15.
+  and stops at the acknowledgement deadline, and the apply installs the rest.
 - *The build fails.* The builder writes `<id>.failed.json` with the error and the
-  last 40 log lines, and the requester prints both and stops. The failed request
-  is not retried. The box's next request supersedes it.
+  tail of the build's log, and the requester prints both and stops. The failed
+  request is not retried. The box's next request supersedes it.
+- *The bundle uploads and the cleanup does not.* A bundle naming the request
+  answers before any marker does, so the requester takes it. The builder logs the
+  request it could not remove and does not build it again.
 - *An entry the builder's checkout does not declare.* `bundle create --entry`
   refuses the name, which arrives as a failed marker. The usual cause is a builder
   checkout behind the requester's, and both commits are in the builder's log.
-- *Another box sharing the manifest asks later.* Its request supersedes this one.
-  The builder deletes the older request, and the requester reports that a newer
-  request took its place.
+- *Two boxes share the manifest.* The builder answers each box's newest request.
+  A box's later request supersedes only its own earlier one, and that requester
+  reports that a newer request took its place.
+- *A file on the shelf does not parse.* A request that is not JSON, or whose id
+  or status is a path rather than a filename, becomes a failed marker. A marker
+  or acknowledgement the requester cannot parse is read again on the next poll.
 - *The remote stops answering mid-wait.* Each end logs the poll that failed and
   keeps polling. The builder never exits on it, and its unit restarts it if it
   does.
@@ -222,24 +230,24 @@ rest of the plan is recorded as `left_out` rather than in `current`, because
 `current` means measured on the target and these were only not asked for. A
 scoped bundle is sparse, so it never becomes the base a stack reads through.
 
-Each build writes a run record under the verb `bundle-build`, and its event log
-holds the build's whole debug stream. `dotfiles report list` on the builder shows
+Each build writes a run record under the verb `build`, and its event log holds
+the build's whole debug stream. A build leaves `latest` on the builder's own last
+run. `dotfiles report list` on the builder shows
 them, and its journal carries the console lines.
 
 ## The automatic legs are off by default
 
-Four `[remote]` settings close the loop with nothing typed: fetching a bundle,
+The `[remote]` settings close the loop with nothing typed: fetching a bundle,
 publishing a status, publishing a run's record, and requesting a bundle when
-blocked items are behind. All four default false.
+blocked items are behind. Each defaults to false.
 
-Read that as one decision rather than four. The restricted network is what
-decides it: the fault worth avoiding there is a machine reaching a server nobody
+Read that as one decision. The restricted network is what decides it: the fault worth avoiding there is a machine reaching a server nobody
 pointed it at. Each leg's module records what its own setting gates —
 `src/dotfiles/reconcile.py`, `src/dotfiles/commands/status.py`,
 `src/dotfiles/commands/report.py` and `src/dotfiles/bundle_requests.py`.
 
 The nonfleet config turns the request on, because the box it serves cannot
-download what its network blocks. The other three stay off there too.
+download what its network blocks. The rest stay off there too.
 
 ## Related
 

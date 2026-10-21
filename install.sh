@@ -84,7 +84,8 @@ is `dotfiles apply`, which this prints and never runs; selectors and every other
 flag belong to the CLI: `dotfiles apply --help`.
 
   --machine NAME   Which manifest this machine is (or set MACHINE)
-  --offline        Stage the bundle from ./ or ~/ and install with no network
+  --offline        Stage the bundle from ./ or ~/ and install uv and the CLI from it
+                   with no network, then print the apply line with --offline
 EOF
   exit 0
 }

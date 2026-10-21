@@ -432,8 +432,8 @@ def survey(
     **Reported a resource at a time, not once at the end**, because the walk is a
     generator and materializing it makes a slow resource look like a hung one.
 
-    `offline` swaps the upstream for the staged bundle and never stages one, and
-    `Session.resolve` drops `refresh` alongside it.
+    `offline` takes blocked items from the staged bundle and never stages one.
+    `Session.resolve` says when it drops `refresh`.
     """
     # `announce_bundle` is off for a caller that is not rehearsing an install.
     # `status show` walks offline to get versions rather than to install anything,
@@ -1185,8 +1185,8 @@ def applied_line(
 def applied_verdict(unsuccessful: Sequence[str], deferred: Sequence[Change], unmeasured: Sequence[Change]) -> ResourceVerdict:
     """The mark the closing line carries, read off the same sets as its standing.
 
-    A tick beside `is not fully converged` contradicted the sentence it stood in
-    front of, so a run that left work behind closes on the drift mark.
+    A run that left work behind closes on the drift mark, so no tick stands beside
+    `is not fully converged`.
     """
     if unsuccessful:
         return ResourceVerdict.ISSUE

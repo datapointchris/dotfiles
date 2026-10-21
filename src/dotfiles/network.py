@@ -239,11 +239,12 @@ def entries[E: catalog.Entry](plan: planning.Plan, kind: type[E]) -> tuple[E, ..
 
 
 def release_probes(plan: planning.Plan) -> tuple[Probe, ...]:
-    """`/releases/latest` per tool, then the API and an asset off the first one.
+    """`/releases/latest` per tool, then the API off the first one.
 
     Release pages live on github.com but assets redirect to a separate host, so a
-    reachable `/releases/latest` does not prove a release can be downloaded. The
-    API row is the same distinction again: a firewall that allows the web UI and
+    reachable `/releases/latest` does not prove a release can be downloaded.
+    `asset_probe` discovers a real asset for that, in `measure_all`. The API row is
+    the same distinction again: a firewall that allows the web UI and
     blocks `api.github.com` breaks every release install while looking fine.
 
     `/releases/latest` redirects to the newest tag, so there is no version to pin —

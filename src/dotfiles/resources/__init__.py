@@ -347,8 +347,7 @@ class Outcome:
         if result.refused:
             return cls(carrying, OutcomeStatus.REFUSED, result.detail)
         if result.ok and result.kind is providers.Kind.UNCHANGED:
-            # Nothing was written, so the run did not change it. Counted as done,
-            # the closing line called a tool left alone a change.
+            # Nothing was written, so the closing line does not count it as a change.
             return cls(carrying, OutcomeStatus.SKIPPED, result.detail)
         if result.ok:
             return cls(carrying, OutcomeStatus.DONE, result.detail)

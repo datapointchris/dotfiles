@@ -82,22 +82,15 @@ def composed(machine: str | None) -> Composed:
     session = Session.resolve(machine)
     named = session.machine_name
     withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
-    # No run record, which is the same choice `commands/resources.py` made for the
-    # resource-scoped read doors. `runs.write` re-points `latest` at whatever it
-    # wrote, so composing a document after an offline apply took that pointer off
-    # the apply and put it on a two-resource plan — on the box whose run records
-    # are the only account of what happened there, and where `report path` exists
-    # so a failed apply's record can be uploaded. It also ran before the gate
-    # could refuse, so a document that never left still cost the apply its
-    # pointer.
+    # No run record, as in the resource-scoped read doors in `commands/resources.py`.
+    # `runs.write` points `latest` at whatever it wrote, and after an apply that
+    # pointer stays on the apply: its record is the only account of the run on a
+    # restricted box, and `report path` hands it over for upload.
     began = dt.datetime.now(dt.UTC)
-    # Offline, and that is what makes the document useful rather than a
-    # convenience. This says what the machine *has*, which is measured by running
-    # each tool — never by asking upstream. The online lens resolves every release
-    # against GitHub first, so on the firewalled box this exists for those lookups
-    # fail and the rows vanish: 25 examined entries, none of them a version, none
-    # of them a release binary. Offline the same walk reports 36, with versions,
-    # which is exactly what a builder diffs against.
+    # Offline, because the document says what the machine has, measured by running
+    # each tool. The online lens resolves every release against GitHub first, and
+    # on a firewalled box those lookups fail and the rows a builder diffs against
+    # vanish.
     walked = reconcile.survey(Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
     trust = session.machine.coordinates.network_trust
     composition = document(walked.results, named, began, verb='plan', written_by=publishing.discriminator(trust))

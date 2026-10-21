@@ -55,13 +55,13 @@ blocked = [
 # The flags are stated rather than left to the defaults, for the reason [schedule]
 # is: a machine that reaches a server unasked should say so in its own config, and
 # a reader should not have to know a compiled-in default to know what this box
-# does. Turning one on for a while is a local edit to this file.
+# does. A flag one box needs only for a while is a local edit to its deployed copy.
 #
-# One is on. A box outside the fleet cannot download what its network blocks, so
-# an apply that finds a blocked item missing or behind publishes this box's status,
-# asks the builder for a bundle carrying those items, waits for it, and installs
-# it. The other three stay off: a bundle or a run record moves on its own only
-# inside that exchange.
+# The request is on. A box on a restricted network cannot download what it
+# blocks, so an apply that finds a blocked item missing or behind publishes this
+# box's status, asks the builder for a bundle carrying those items, waits for it,
+# and installs it. The rest stay off: a bundle or a run record moves on its own
+# only inside that exchange.
 [remote]
 root = "/dotfiles"
 fetch_bundle_when_none_is_staged = false

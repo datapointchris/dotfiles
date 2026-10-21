@@ -127,7 +127,10 @@ MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 OfflineOption = typer.Option(
     False,
     '--offline',
-    help='Install what the config blocks from the staged bundle and contact no remote; with nothing blocked, reach no network',
+    help=(
+        'Install what the config blocks from the staged bundle and contact no remote unless --request-bundle is given; '
+        'with nothing blocked, reach no network'
+    ),
 )
 RequestBundleOption = typer.Option(
     False,
