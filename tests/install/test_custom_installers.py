@@ -31,6 +31,7 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import plan as planning
 from dotfiles import providers
+from dotfiles import routing
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -40,6 +41,7 @@ from dotfiles.providers import custom
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
 DARWIN = Target(OSFamily.DARWIN, Arch.ARM64)
+OFFLINE = routing.Routes(everything=True, offline=True)
 
 SCRIPT = b'#!/bin/sh\necho installed\n'
 
@@ -328,7 +330,7 @@ class TestCheckoutTools:
         stub_binary(home, 'theme')
         runs, fetches = effected()
 
-        result = custom.install(declared.find('custom_installers', 'theme'), LINUX, offline=True)
+        result = custom.install(declared.find('custom_installers', 'theme'), LINUX, routes=OFFLINE)
 
         assert result.ok
         assert result.kind is Kind.UNCHANGED
@@ -337,7 +339,7 @@ class TestCheckoutTools:
     def test_offline_with_nothing_installed_says_what_the_bundle_lacks(self, declared, home, bundle, effected):
         runs, _ = effected()
 
-        result = custom.install(declared.find('custom_installers', 'theme'), LINUX, offline=True)
+        result = custom.install(declared.find('custom_installers', 'theme'), LINUX, routes=OFFLINE)
 
         assert not result.ok
         assert result.kind is Kind.NOT_IN_BUNDLE
@@ -350,7 +352,7 @@ class TestCheckoutTools:
         (bundle / 'scripts' / 'theme-install.sh').write_bytes(b'#!/bin/sh\necho from-bundle\n')
         runs, fetches = effected()
 
-        result = custom.install(declared.find('custom_installers', 'theme'), LINUX, offline=True)
+        result = custom.install(declared.find('custom_installers', 'theme'), LINUX, routes=OFFLINE)
 
         assert result.ok, result.detail
         assert fetches.urls == []
@@ -415,7 +417,7 @@ class TestClaudeCode:
         reports(monkeypatch, claude='2.1.278 (Claude Code)')
         runs, fetches = effected()
 
-        result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX, offline=True)
+        result = custom.install(declared.find('custom_installers', 'claude-code'), LINUX, routes=OFFLINE)
 
         assert result.ok
         assert result.kind is Kind.UNCHANGED
@@ -482,7 +484,7 @@ class TestAwscli:
         reports(monkeypatch, aws='aws-cli/2.36.19 Python/3.14.6')
         runs, fetches = effected()
 
-        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, offline=True)
+        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, routes=OFFLINE)
 
         assert result.ok
         assert fetches.urls == [] and runs.calls == []
@@ -494,7 +496,7 @@ class TestAwscli:
         reports(monkeypatch, aws=None)
         runs, fetches = effected()
 
-        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, offline=True)
+        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX, routes=OFFLINE)
 
         assert not result.ok
         assert result.refused
@@ -588,7 +590,7 @@ class TestTerraformLs:
         """
         _, fetches = effected()
 
-        result = custom.install(declared.find('custom_installers', 'terraform-ls'), LINUX, offline=True)
+        result = custom.install(declared.find('custom_installers', 'terraform-ls'), LINUX, routes=OFFLINE)
 
         assert not result.ok
         assert result.refused

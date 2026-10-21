@@ -40,6 +40,7 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import plan as planning
 from dotfiles import providers
+from dotfiles import routing
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Reason
 from dotfiles.plan import Stage
@@ -145,6 +146,14 @@ class Provider:
         """The provider's own rule. A binary on PATH, unless it says otherwise."""
         return ev.by_command(item)
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        """The hosts this item's version check asks, and the hosts its download fetches from.
+
+        The one answer both the routing and `dotfiles network check` read. Empty for
+        a provider that reaches no network of its own.
+        """
+        return routing.NONE
+
     def needs_root(self, item: DesiredItem) -> bool:
         """Whether repairing this item escalates, known before anything runs.
 
@@ -247,6 +256,9 @@ class VendoredProvider(CatalogProvider):
 @dc.dataclass(frozen=True, slots=True)
 class ReleaseProvider(VendoredProvider):
     """A binary published as a GitHub release asset, and the files that ship beside it."""
+
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(version=frozenset({routing.GITHUB_API}), download=routing.RELEASE_DOWNLOAD)
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         """The binary at the path this provider chose, and what still holds its name.
@@ -362,7 +374,7 @@ class ReleaseProvider(VendoredProvider):
         return ghrelease.install(
             entry,
             coordinates.target_for(session.machine.coordinates),
-            offline=session.offline,
+            offline=route(session, item).bundled,
             before_place=before_place,
         )
 
@@ -370,6 +382,11 @@ class ReleaseProvider(VendoredProvider):
 @dc.dataclass(frozen=True, slots=True)
 class CustomProvider(VendoredProvider):
     """A vendor that ships its own installer, and whatever else that installer places."""
+
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        if not isinstance(item.entry, catalogs.CustomInstaller):
+            return routing.NONE
+        return custom.hosts(item.entry, target)
 
     def evidence(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         """The binary, and then the pieces beside it that are not binaries.
@@ -391,7 +408,7 @@ class CustomProvider(VendoredProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.CustomInstaller):
             return providers.Result(False, f'{item.name} is not a custom_installers entry', kind=providers.Kind.DECLARATION_INVALID)
-        return custom.install(entry, coordinates.target_for(session.machine.coordinates), offline=session.offline)
+        return custom.install(entry, coordinates.target_for(session.machine.coordinates), routes=session.routes)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -431,7 +448,7 @@ class WingetProvider(VendoredProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.WingetPackage):
             return providers.Result(False, f'{item.name} is not a winget_packages entry', kind=providers.Kind.DECLARATION_INVALID)
-        return winget.install(entry, providers.bin_dir(), offline=session.offline)
+        return winget.install(entry, providers.bin_dir(), offline=route(session, item).bundled)
 
 
 def version_floor(session: MachineContext, change: Change) -> str:
@@ -458,6 +475,9 @@ class CargoProvider(CatalogProvider):
     source. It resolves the crate's version and places the binary.
     """
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(version=frozenset({routing.CRATES_IO}), download=routing.RELEASE_DOWNLOAD)
+
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.in_provider_dir(item, cargo.cargo_bin())
 
@@ -468,7 +488,7 @@ class CargoProvider(CatalogProvider):
         result = cargo.install(
             entry,
             coordinates.target_for(session.machine.coordinates),
-            offline=session.offline,
+            offline=route(session, item).bundled,
             floor=version_floor(session, change),
             reinstall=session.reinstall,
         )
@@ -484,6 +504,11 @@ class GoToolProvider(CatalogProvider):
     only alternative source is the prebuilt binary an offline bundle carries.
     """
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        repo = item.entry.github_repo if isinstance(item.entry, catalogs.GoTool) else ''
+        version = routing.GITHUB_API if repo else routing.GO_PROXY
+        return routing.ItemHosts(version=frozenset({version}), download=frozenset({routing.GO_PROXY}))
+
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.in_provider_dir(item, gotool.gobin())
 
@@ -491,7 +516,7 @@ class GoToolProvider(CatalogProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.GoTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a go_tools entry')
-        result = gotool.install(entry, offline=session.offline, floor=version_floor(session, change))
+        result = gotool.install(entry, offline=route(session, item).bundled, floor=version_floor(session, change))
         return Outcome.from_result(change, result)
 
 
@@ -505,6 +530,9 @@ class NpmProvider(CatalogProvider):
     answers for itself — which is what `resources/packages.CURRENCY` says.
     """
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(download=frozenset({routing.NPM_REGISTRY}))
+
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.in_provider_dir(item, npm.prefix() / 'bin')
 
@@ -512,7 +540,7 @@ class NpmProvider(CatalogProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.NpmGlobal):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not an npm_globals entry')
-        result = npm.install(entry, offline=session.offline)
+        result = npm.install(entry, offline=route(session, item).bundled)
         return Outcome.from_result(change, result)
 
 
@@ -578,6 +606,13 @@ class UvToolProvider(CatalogProvider):
     not move, which is the one uv would otherwise decline to repair forever.
     """
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        index = item.entry.index_url if isinstance(item.entry, catalogs.UvTool) else ''
+        if index:
+            served = frozenset({routing.host_of(index)})
+            return routing.ItemHosts(version=served, download=served | routing.PYPI)
+        return routing.ItemHosts(download=routing.PYPI)
+
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
         return ev.by_uv_tool(item)
 
@@ -585,7 +620,7 @@ class UvToolProvider(CatalogProvider):
         entry = item.entry
         if not isinstance(entry, catalogs.UvTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a uv_tools entry')
-        result = uvtool.install(entry, offline=session.offline, again=change.verdict is Verdict.STALE)
+        result = uvtool.install(entry, offline=route(session, item).bundled, again=change.verdict is Verdict.STALE)
         return Outcome.from_result(change, result)
 
 
@@ -598,11 +633,14 @@ class GitUvToolProvider(UvToolProvider):
     as a PyPI one.
     """
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(version=frozenset({routing.GITHUB_API}), download=frozenset({routing.GITHUB}) | routing.PYPI)
+
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
         entry = item.entry
         if not isinstance(entry, catalogs.GitUvTool):
             return Outcome(change, OutcomeStatus.REFUSED, f'{item.name} is not a git_uv_tools entry')
-        result = uvtool.install_git(entry, offline=session.offline, again=change.verdict is Verdict.STALE)
+        result = uvtool.install_git(entry, offline=route(session, item).bundled, again=change.verdict is Verdict.STALE)
         return Outcome.from_result(change, result)
 
 
@@ -687,24 +725,26 @@ class CloneProvider(CatalogProvider):
     the resource applying it is not yet worth a second protocol.
     """
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        served = frozenset({clone_host(item)})
+        return routing.ItemHosts(version=served, download=served)
+
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
-        """Clone what is missing, pull what is behind, and reach no network offline.
+        """Clone what is missing, pull what is behind, and reach no blocked host.
 
         Two repairs behind one verb because the verdict already separates them,
         and the alternative was `update.sh` pulling every plugin on every run to
         find out whether any of them had moved.
 
-        Both repairs are a git transfer and the bundle stages no checkout, so an
-        offline run refuses rather than attempting one — the answer rustup and Node
-        already give one resource over. Without this, `--offline` on a fresh
-        machine ran `git clone https://github.com/...` for every declared plugin
-        and reached the network the flag exists to promise it would not.
+        Both repairs are a git transfer and the bundle stages no checkout, so a run
+        whose git host is blocked refuses rather than attempting one.
         """
         landed = clone.destination(item, session.home)
         if change.verdict is not Verdict.STALE and landed.is_dir():
             return Outcome(change, OutcomeStatus.SKIPPED, f'{landed} appeared since the check')
-        if session.offline:
-            unstaged = f'{item.name} is a checkout of {clone.repository(item)}, and the offline bundle stages no plugin'
+        routed = route(session, item)
+        if routed.bundled:
+            unstaged = f'{item.name} is a checkout of {clone.repository(item)}; {routed.because}, and no bundle stages a plugin'
             return Outcome(change, OutcomeStatus.REFUSED, unstaged)
         result = clone.pull(item, session.home) if change.verdict is Verdict.STALE else clone.clone(item, session.home)
         return Outcome.from_result(change, result)
@@ -770,6 +810,16 @@ class PluginSyncProvider(Provider):
             ),
         )
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(download=frozenset({routing.GITHUB}))
+
+    def unreachable(self, session: MachineContext, change: Change, item: DesiredItem, what: str) -> Outcome | None:
+        """A refusal where this run cannot reach the host the manager clones from."""
+        routed = route(session, item)
+        if not routed.bundled:
+            return None
+        return Outcome(change, OutcomeStatus.REFUSED, f'{what}; {routed.because}, and no bundle stages a plugin')
+
     def pending(self, session: MachineContext) -> str:
         """What still needs this manager run, or '' where nothing does.
 
@@ -809,11 +859,10 @@ class TmuxSyncProvider(PluginSyncProvider):
         directory = tmux_plugins_dir(session)
         if directory is None:
             return Outcome(change, OutcomeStatus.REFUSED, 'nothing declares TPM, so there is nowhere to install its plugins')
-        if session.offline:
-            # Ahead of `blocked`, which names a precondition an earlier stage of
-            # this run could still supply. Being offline is settled for the run.
-            unstaged = 'TPM clones the plugins tmux.conf declares, and the offline bundle stages none of them'
-            return Outcome(change, OutcomeStatus.REFUSED, unstaged)
+        # Ahead of `blocked`, which names a precondition an earlier stage of this
+        # run could still supply. A blocked host is settled for the run.
+        if refused := self.unreachable(session, change, item, 'TPM clones the plugins tmux.conf declares'):
+            return refused
         if reason := pluginsync.blocked(session.home, directory):
             return Outcome(change, OutcomeStatus.REFUSED, f'{reason}, and the stage that supplies it has not')
         result = pluginsync.sync_tmux(session.home, directory)
@@ -844,13 +893,13 @@ class NvimSyncProvider(PluginSyncProvider):
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
         """Refused rather than failed where nvim is absent, because it is a package
-        an earlier stage of this same run installs — and refused offline, because a
-        sync is lazy cloning from GitHub and the bundle stages no plugin."""
+        an earlier stage of this same run installs — and refused where github.com is
+        blocked, because a sync is lazy cloning from GitHub and no bundle stages a
+        plugin."""
         if not shutil.which('nvim'):
             return Outcome(change, OutcomeStatus.REFUSED, 'neovim is not installed, and the stage that installs it has not')
-        if session.offline:
-            unstaged = 'lazy clones the plugins the Neovim config declares, and the offline bundle stages none of them'
-            return Outcome(change, OutcomeStatus.REFUSED, unstaged)
+        if refused := self.unreachable(session, change, item, 'lazy clones the plugins the Neovim config declares'):
+            return refused
         result = pluginsync.sync_nvim()
         return Outcome.from_result(change, result)
 
@@ -1052,6 +1101,11 @@ class ToolchainProvider(Provider):
             ),
         )
 
+    def routed(self, session: MachineContext) -> routing.Route:
+        """Where this runtime installs from on this run, read off its own planned row."""
+        planned = session.plan.for_provider(self.name)
+        return route(session, planned[0]) if planned else session.routes.route(routing.NONE)
+
     def located(self, item: DesiredItem, session: MachineContext) -> ev.Evidence:
         """Where this run finds the runtime.
 
@@ -1079,11 +1133,14 @@ class ToolchainProvider(Provider):
 class UvToolchain(ToolchainProvider):
     """uv at the release the session's uv-pre-commit hook pins, then the default interpreter it manages."""
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(download=routing.hosts_of([toolchain.UV_INSTALL_URL]) | routing.RELEASE_DOWNLOAD)
+
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
         return toolchain.install_uv(
             session.repo / paths.PRE_COMMIT_CONFIG.name,
             session.machine.coordinates.os_family,
-            offline=session.offline,
+            offline=self.routed(session).bundled,
         )
 
 
@@ -1091,8 +1148,11 @@ class UvToolchain(ToolchainProvider):
 class RustToolchain(ToolchainProvider):
     """rustup, which brings `rustc` and `cargo` together."""
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(download=routing.hosts_of([toolchain.RUSTUP_URL]) | {routing.RUST_DIST})
+
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
-        return toolchain.install_rust(offline=session.offline)
+        return toolchain.install_rust(offline=self.routed(session).bundled)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -1105,8 +1165,14 @@ class GoToolchain(ToolchainProvider):
     already built.
     """
 
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(
+            version=routing.hosts_of([toolchain.GO_VERSION_URL]),
+            download=routing.hosts_of([toolchain.GO_DOWNLOAD_URL]) | {routing.GO_DOWNLOADS},
+        )
+
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
-        return toolchain.install_go(coordinates.target_for(session.machine.coordinates), privilege, offline=session.offline)
+        return toolchain.install_go(coordinates.target_for(session.machine.coordinates), privilege, offline=self.routed(session).bundled)
 
     def needs_root(self, item: DesiredItem) -> bool:
         return True
@@ -1127,15 +1193,18 @@ winget has no row, so a machine on it with no fnm alias reads node missing.
 class NodeToolchain(ToolchainProvider):
     """fnm's default alias, which is what a bare `node` resolves to.
 
-    An offline run also accepts the system package's `node` where fnm has linked
-    no default. fnm downloads Node from nodejs.org and no bundle stages it, so the
-    system package's is the only Node such a machine can run.
+    A run that cannot reach nodejs.org also accepts the system package's `node`
+    where fnm has linked no default. fnm downloads Node from there and no bundle
+    stages it, so the system package's is the only Node such a machine can run.
 
-    An online run accepts the alias alone. A machine with the system package and
-    no alias has never had fnm's Node, and an online apply installs it. Accepting
-    the system copy there would leave every non-interactive shell on whatever
-    Node the package manager last upgraded to, with this row reading clean.
+    A run that reaches it accepts the alias alone. A machine with the system
+    package and no alias has never had fnm's Node, and that run installs it.
+    Accepting the system copy there would leave every non-interactive shell on
+    whatever Node the package manager last upgraded to, with this row reading clean.
     """
+
+    def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+        return routing.ItemHosts(download=frozenset({routing.NODEJS}))
 
     def located(self, item: DesiredItem, session: MachineContext) -> ev.Evidence:
         # Named explicitly: `slots=True` rebuilds the class, so a bare `super()` raises.
@@ -1146,15 +1215,15 @@ class NodeToolchain(ToolchainProvider):
         packaged = next((home for home in homes if home.is_file()), None)
         if packaged is None:
             return found
-        if session.offline:
+        if self.routed(session).bundled:
             return ev.Evidence(Verdict.MATCHED, str(packaged), binary=packaged)
         return ev.Evidence(
             Verdict.MISSING,
-            f"{item.evidence_path} does not exist; {packaged} is the system package's, which only an offline run accepts",
+            f"{item.evidence_path} does not exist; {packaged} is the system package's, accepted only where nodejs.org is blocked",
         )
 
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
-        return toolchain.install_node(session.home, offline=session.offline)
+        return toolchain.install_node(session.home, offline=self.routed(session).bundled)
 
 
 def declared_runtime(declaration: catalogs.Catalog, name: str) -> catalogs.Runtime | None:
@@ -1374,6 +1443,23 @@ A toolchain plans from no section, and indexing four of them under '' would make
 
 def named(name: str) -> Provider | None:
     return BY_NAME.get(name)
+
+
+def hosts(item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
+    """The hosts one planned item reaches, from the provider that planned it."""
+    provider = BY_NAME.get(item.provider)
+    return provider.hosts(item, target) if provider else routing.NONE
+
+
+def route(session: MachineContext, item: DesiredItem, *, installed: bool = False) -> routing.Route:
+    """Where this item takes its version and its bytes from on this run."""
+    return session.routes.route(hosts(item, coordinates.target_for(session.machine.coordinates)), installed=installed)
+
+
+def clone_host(item: DesiredItem) -> str:
+    """The host a plugin is cloned from: its URL's, or github.com for an `owner/name`."""
+    repository = clone.repository(item)
+    return routing.host_of(repository) if '://' in repository else routing.GITHUB
 
 
 def for_section(section: str) -> Provider | None:

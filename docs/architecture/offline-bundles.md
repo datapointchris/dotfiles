@@ -47,12 +47,46 @@ Each round is planned against the last. The blocked box publishes what it has,
 the builder leaves out everything already current, and the next bundle is
 smaller than the one before it. A box that has never published gets everything.
 
+## Each item is routed to the bundle or the network, so one apply converges the box
+
+The restricted box is only partly blocked, and its config says which part:
+`[network] blocked` lists the hosts it refuses. `src/dotfiles/routing.py` reads
+the list once per run, from the deployed config or, on a first apply, from the
+trust copy the symlink stage will deploy.
+
+Every item reaches two kinds of host, and they are routed apart. The version
+check asks one and the download fetches from another. A release tool on this
+network asks `api.github.com` for its newest version and takes its bytes from the
+bundle, because only the asset hosts are blocked. So it is measured against
+upstream and installed from what the bundle carries. An item whose download
+reaches no blocked host installs from the network, exactly as on an open one.
+
+`registry.Provider.hosts` is the one answer to which hosts an item reaches. The
+routing reads it, and so does `dotfiles network check` when it names the items a
+declared host affects. A second table of hosts would let the two disagree about
+one item.
+
+*Rejected:* one `--offline` switch for the whole run. It sent every provider to
+the bundle, so apt was never asked what was behind and no plugin was pulled,
+though both answer on this network. Converging the box took a second, networked
+apply that skipped the resources reaching blocked hosts.
+
+`--offline` keeps the list and contacts no remote. Where the list is empty or
+absent, it counts every host as blocked, which is the only reading available to
+a box that names nothing its network refuses.
+
 ## The apply unpacks; `bundle stage` is for looking first
 
-`apply --offline` stages the newest archive it finds for this machine, and skips
-the unpacking only when that archive is already among the staged directories. So
-downloading and applying is the whole sequence, and a bundle fetched to replace
-an out-of-date one takes effect on the next run.
+An apply that routes any item to the bundle stages the newest archive it finds
+for this machine. It skips the unpacking only when that archive is already among
+the staged directories. So downloading and applying is the whole sequence, and a
+bundle fetched to replace an out-of-date one takes effect on the next run.
+
+With no archive anywhere the run goes on. Everything the network serves still
+installs. An apply that may ask a builder asks for what the bundle would have
+supplied. Otherwise each such item gets a row naming its blocked host and the
+bundle it needs. The one exception is `--offline` with an empty or absent list
+and no request, where nothing could install, so the run refuses before measuring.
 
 `bundle stage` unpacks without installing anything, which is what `bundle check`
 and `bundle show` read. Reach for it to see what a bundle covers before letting
@@ -109,16 +143,111 @@ The bundle's own `checksums.txt` cannot stand in for it. That file records the
 digest of the file that was downloaded, and for an extracted binary or a repacked
 tarball the downloaded file is not what the bundle carries.
 
+## A restricted box requests its own bundle, and a builder answers on the same server
+
+The file server has no push, so both ends poll it. A request and its two answers
+live in `<root>/requests/<manifest>/`, and `src/dotfiles/bundle_requests.py`
+owns their shapes.
+
+An apply runs the restricted box's half itself, between its measure pass and its
+walk. It asks for the entries `packages.bundle_need` names: blocked items missing
+or behind that no staged bundle carries. Once the bundle is staged it measures
+those resources again, so the same run installs them. It asks where
+`request_bundle_when_blocked_items_are_behind` is on or `--request-bundle` is
+given, and `--offline` alone never asks. `bundle request` is the same half with
+no apply around it.
+
+```text
+  RESTRICTED BOX          REMOTE <root>/            BUILDER
+  bundle request          (m = manifest)            bundle serve
+
+  probe
+  status upload ────────→ status/m/<file>
+  write request ────────→ requests/m/<id>.json ◀─── poll, newest
+                                                    per box, older
+                                                    deleted
+                          <id>.building.json ◀───── acknowledge
+                          status/m/<file> ────────→ download
+                                                    bundle create
+                                                     --against <file>
+                                                     --entry ...
+                          bundles/m/<archive> ◀──── upload, with a
+                                                    record naming <id>
+                          <id>.json, .building ◀─── delete
+  poll ◀───────────────── record naming <id>
+  download, verify,
+  stage
+```
+
+**Who writes and who deletes.**
+
+| File | Written by | Deleted by |
+| --- | --- | --- |
+| `<id>.json`, the request | restricted box | builder, after the upload, or when a newer request from the same box supersedes it |
+| `<id>.building.json` | builder, before it starts | builder, with the request or on failure |
+| `<id>.failed.json` | builder, when a build fails | builder, when a newer request from the same box supersedes it |
+
+An id is `<UTC stamp>-<box>`, where the box is the discriminator a status
+filename carries. The request names the exact status file, its machine, CPU,
+dotfiles commit and entries. Naming the file is what keeps two boxes sharing a
+manifest apart, which `--against latest` refuses to guess. The bundle's
+`bundle.json` carries `request`, and that field is how the waiting box knows the
+bundle is its own.
+
+**Timings.** Both ends poll, on the intervals `src/dotfiles/bundle_requests.py`
+declares. With no acknowledgement by `ACKNOWLEDGE_DEADLINE_SECONDS` no builder is
+running, so the requester stops waiting there. It names the
+`dotfiles-bundle-serve` unit and the manifest that enables it, through
+`serve_bundles`. An acknowledged build gets until `REQUEST_TIMEOUT_SECONDS`.
+Either way the request stays in place, so a late builder still answers it and
+`bundle download` collects the result.
+
+**What goes wrong, and what each end says.**
+
+- *No builder running.* No acknowledgement arrives. The requester names the unit
+  and stops at the acknowledgement deadline, and the apply installs the rest.
+- *The build fails.* The builder writes `<id>.failed.json` with the error and the
+  tail of the build's log, and the requester prints both and stops. The failed
+  request is not retried. The box's next request supersedes it.
+- *The bundle uploads and the cleanup does not.* A bundle naming the request
+  answers before any marker does, so the requester takes it. The builder logs the
+  request it could not remove and does not build it again.
+- *An entry the builder's checkout does not declare.* `bundle create --entry`
+  refuses the name, which arrives as a failed marker. The usual cause is a builder
+  checkout behind the requester's, and both commits are in the builder's log.
+- *Two boxes share the manifest.* The builder answers each box's newest request.
+  A box's later request supersedes only its own earlier one, and that requester
+  reports that a newer request took its place.
+- *A file on the shelf does not parse.* A request that is not JSON, or whose id
+  or status is a path rather than a filename, becomes a failed marker. A marker
+  or acknowledgement the requester cannot parse is read again on the next poll.
+- *The remote stops answering mid-wait.* Each end logs the poll that failed and
+  keeps polling. The builder never exits on it, and its unit restarts it if it
+  does.
+
+`--entry` scopes a build to the named entries plus uv and the wheelhouse. The
+rest of the plan is recorded as `left_out` rather than in `current`, because
+`current` means measured on the target and these were only not asked for. A
+scoped bundle is sparse, so it never becomes the base a stack reads through.
+
+Each build writes a run record under the verb `build`, and its event log holds
+the build's whole debug stream. A build leaves `latest` on the builder's own last
+run. `dotfiles report list` on the builder shows
+them, and its journal carries the console lines.
+
 ## The automatic legs are off by default
 
-Three `[remote]` settings close the loop with nothing typed: fetching a bundle,
-publishing a status, publishing a run's record. All three default false.
+The `[remote]` settings close the loop with nothing typed: fetching a bundle,
+publishing a status, publishing a run's record, and requesting a bundle when
+blocked items are behind. Each defaults to false.
 
-Read that as one decision rather than three. The restricted network is what
-decides it: the fault worth avoiding there is a machine reaching a server nobody
+Read that as one decision. The restricted network is what decides it: the fault worth avoiding there is a machine reaching a server nobody
 pointed it at. Each leg's module records what its own setting gates —
-`src/dotfiles/reconcile.py`, `src/dotfiles/commands/status.py` and
-`src/dotfiles/commands/report.py`.
+`src/dotfiles/reconcile.py`, `src/dotfiles/commands/status.py`,
+`src/dotfiles/commands/report.py` and `src/dotfiles/bundle_requests.py`.
+
+The nonfleet config turns the request on, because the box it serves cannot
+download what its network blocks. The rest stay off there too.
 
 ## Related
 

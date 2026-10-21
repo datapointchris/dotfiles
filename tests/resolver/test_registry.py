@@ -17,6 +17,7 @@ from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import providers
 from dotfiles import registry
+from dotfiles import routing
 from dotfiles import vocabulary
 from dotfiles.effects import Completed
 from dotfiles.plan import DesiredItem
@@ -252,6 +253,7 @@ class TestUvToolRepair:
 
         monkeypatch.setattr(effects, 'run', uv)
         monkeypatch.setattr(github_release, 'latest_version', lambda repo, tag_prefix='': 'v6.0.0')
+        monkeypatch.setattr(registry, 'route', lambda session, item: routing.NETWORK)
 
         planned = item(provider, name, entry)
         change = Change('packages', planned.stage, planned.address, verdict, repair=Repair.AUTOMATIC, desired=planned)

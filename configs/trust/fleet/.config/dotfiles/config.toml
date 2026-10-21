@@ -37,17 +37,27 @@ workstations_json = "~/.local/share/terminal-library-fleet/workstations.json"
 [schedule]
 enabled = true
 
-# Both trust variants declare this table identically; a validator holds them to it.
+# The hosts this network refuses. None here, so every item installs from the
+# network. Stated for the reason [schedule] is: a validator
+# holds both variants to naming it. `apply --offline` treats an empty list as
+# every host refused.
+[network]
+blocked = []
+
+# Both trust variants declare this table with the same keys and the same server;
+# a validator holds them to it. Only the flags' values may differ.
 #
-# The three flags are stated rather than left to the defaults they match, for the
-# reason [schedule] is: a machine that reaches a server unasked should say so in
-# its own config. Every one is off, so a bundle or a run record moves when
-# somebody types the verb and never as a side effect of converging.
+# The flags are stated rather than left to the defaults they match, for the reason
+# [schedule] is: a machine that reaches a server unasked should say so in its own
+# config. Every one is off, so a bundle or a run record moves when somebody types
+# the verb and never as a side effect of converging. A fleet machine reaches every
+# source itself, so it never needs to request a bundle.
 [remote]
 root = "/dotfiles"
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
 publish_reports_after_apply = false
+request_bundle_when_blocked_items_are_behind = false
 
 [remote.transport]
 program  = "ifiles"

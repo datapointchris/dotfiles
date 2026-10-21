@@ -36,6 +36,7 @@ from dotfiles import machine as machines
 from dotfiles import network
 from dotfiles import paths
 from dotfiles import resolve
+from dotfiles import routing
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Precondition
 from dotfiles.providers import clone
@@ -120,30 +121,26 @@ be re-taken from the network it describes, so it goes stale between runs and the
 rehearsal drifts from the declaration it is supposed to be testing.
 """
 
-BLOCKED_HOSTS = (
-    'awscli.amazonaws.com',
-    'proxy.golang.org',
-    'objects.githubusercontent.com',
-    'release-assets.githubusercontent.com',
-    'github-releases.githubusercontent.com',
+BLOCKED_HOSTS = tuple(
+    sorted(routing.declared_in(routing.trust_copy(UNDER_TEST, machines.load(RESTRICTED_MANIFEST).coordinates.network_trust)) or ())
 )
-"""The hosts this rig's firewall blackholes — a scenario, not a measurement.
+"""The hosts this rig's firewall blackholes: the `[network] blocked` list the
+restricted manifest's config declares.
 
-Chosen for the install paths each one closes, because that is what the rehearsal
-is for. A blocked registry kills a whole section and is what makes `go_tools`
-prove the bundle path. A blocked vendor host kills one custom installer while its
-neighbors keep working — `awscli` plays that part, and terraform-ls or mount-s3
-would do as well, each being a custom installer with a vendor host to itself. What
-the part needs is any one of those three; theme, font and bashselfupdate cannot
-take it, since they share `raw.githubusercontent.com` and blocking it fails all
-three at once. The three CDNs are the case a host blocklist otherwise
-cannot express: github.com has to stay reachable for clones and the API, so the
-only way to rehearse a refused release download is to take down the hosts an
-asset redirects to.
+Read from that file rather than restated, so the rehearsal blocks exactly what an
+apply on that machine routes around. The three githubusercontent CDNs are how a
+path-scoped block becomes a host rule: github.com has to stay reachable for clones
+and the API, so the only way to refuse a release download is to take down the
+hosts an asset redirects to.
+"""
 
-github.com is deliberately absent, and that is the whole reason the CDNs are
-named. Blackholing it takes theme, font, bashselfupdate and all four zsh plugins
-with it, which manufactures failures and reads as a real firewall in a log.
+UNDECLARED_BLOCK = 'awscli.amazonaws.com'
+"""Blocked in `restricted` and declared nowhere, so an install there really fails.
+
+A declared host routes its items to the bundle, and with no bundle they wait on one
+rather than fail. The failure reporting needs a failure, so `restricted` also
+refuses a host the config does not name. `awscli` plays that part because it is a
+custom installer with a vendor host to itself, so its neighbors keep working.
 """
 
 SHADOW_BIN = '.dotfiles-shadow-bin'
@@ -237,7 +234,13 @@ class Probe:
         return f'{head} || {ranged}'
 
 
-def measured_probes() -> tuple[Probe, ...]:
+def blocked_in(environment: Environment | None = None) -> tuple[str, ...]:
+    """The declared hosts, plus the one `restricted` refuses without declaring it."""
+    extra = (UNDECLARED_BLOCK,) if environment is not None and environment.undeclared_block else ()
+    return tuple(sorted({*BLOCKED_HOSTS, *extra}))
+
+
+def measured_probes(environment: Environment | None = None) -> tuple[Probe, ...]:
     """Every source the restricted manifest's plan reaches, verdict included.
 
     Resolved from the declaration through `network.derive`, which is the same
@@ -246,15 +249,16 @@ def measured_probes() -> tuple[Probe, ...]:
     measurement could only ever be re-taken behind the firewall it described, and
     went stale between every one of those runs.
 
-    The verdict is this rig's, from `BLOCKED_HOSTS`. A container that blocks more
+    The verdict is this rig's, from `blocked_in`. A container that blocks more
     than intended manufactures failures no machine has, and they read as real ones
     in a log — clone-based installers dying is the shape it takes, since theme,
     font, bashselfupdate and every zsh plugin come down that way.
     """
     derived = network.derive(machines.load(RESTRICTED_MANIFEST))
+    blocked = blocked_in(environment)
     return tuple(
         Probe(
-            verdict='NO' if probe.host in BLOCKED_HOSTS else 'YES',
+            verdict='NO' if probe.host in blocked else 'YES',
             section=probe.section,
             name=probe.name,
             target=probe.target,
@@ -264,7 +268,7 @@ def measured_probes() -> tuple[Probe, ...]:
     )
 
 
-def measured_network() -> tuple[tuple[str, ...], tuple[str, ...]]:
+def measured_network(environment: Environment | None = None) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """`(blocked, reachable)` hosts, for building the container's `--add-host` set.
 
     The blocklist is declared and the reachable set is everything else the plan
@@ -275,11 +279,12 @@ def measured_network() -> tuple[tuple[str, ...], tuple[str, ...]]:
     Subtracted rather than intersected, so a blocked host never also arrives as an
     `--add-host` pair pointing at the real address.
     """
-    reachable = {probe.host for probe in measured_probes() if probe.host} - set(BLOCKED_HOSTS)
-    return tuple(sorted(BLOCKED_HOSTS)), tuple(sorted(reachable))
+    blocked = blocked_in(environment)
+    reachable = {probe.host for probe in measured_probes(environment) if probe.host} - set(blocked)
+    return blocked, tuple(sorted(reachable))
 
 
-def reachable_probes() -> tuple[Probe, ...]:
+def reachable_probes(environment: Environment | None = None) -> tuple[Probe, ...]:
     """One probe per reachable host *per method*.
 
     Per host alone would be cheaper and would silently drop every clone: the
@@ -290,7 +295,7 @@ def reachable_probes() -> tuple[Probe, ...]:
     """
     seen: set[tuple[str, bool]] = set()
     chosen = []
-    for probe in measured_probes():
+    for probe in measured_probes(environment):
         key = (probe.host, probe.cloned)
         if probe.reachable and probe.host and key not in seen:
             seen.add(key)
@@ -337,6 +342,9 @@ class Environment:
 
     offline: bool = False
     """Stage a bundle and pass `--offline`. Implies `firewalled`."""
+
+    undeclared_block: bool = False
+    """Also blackhole `UNDECLARED_BLOCK`, a host the config does not declare blocked."""
 
     converges: bool = True
     """Whether a finished install here is expected to have installed everything.
@@ -419,6 +427,7 @@ RESTRICTED = Environment(
     home='/home/testuser',
     manifest='wsl-work-workstation',
     firewalled=True,
+    undeclared_block=True,
     converges=False,
     build_image=('bash', str(DOCKER_DIR / 'build-base.sh')),
 )
@@ -569,7 +578,7 @@ def shadow_source(home: str) -> str:
     return (
         '#!/bin/sh\n'
         "caller=$(tr '\\0' ' ' < \"/proc/$PPID/cmdline\" 2>/dev/null || echo unknown)\n"
-        f'printf \'%s\\t%s\\n\' "$caller" "$0 $*" >> {home}/{SHADOW_LOG}\n'
+        f'printf \'%s\\t%s\\n\' "$caller" "$(printf \'%s \' "$0" "$@" | tr \'\\n\' \' \')" >> {home}/{SHADOW_LOG}\n'
         f'echo "{SHADOW_REFUSAL}: nothing may call it by name" >&2\n'
         'exit 1\n'
     )
@@ -583,17 +592,20 @@ class ShadowCall:
     argv: str
 
     @property
-    def by_uv(self) -> bool:
-        """uv scanning PATH for an interpreter, which is uv's business and not ours.
+    def scans_path(self) -> bool:
+        """uv, or Neovim's provider detection, scanning PATH for an interpreter.
 
         The offline path passes `--no-python-downloads`, so an interpreter uv can
         find is a documented requirement there; it finds this one first, rejects
-        it for exiting 1, and carries on to the real one. Matched on the parent's
-        basename rather than a substring, or every path containing `uv` — which
-        is most of them once `~/.local/share/uv` exists — would qualify.
+        it for exiting 1, and carries on to the real one. Neovim looks for a
+        python3 host the first time a plugin's `build` asks for `:python3`, and
+        rejects this one the same way. Matched on the parent's basename rather
+        than a substring, or every path containing `uv` — which is most of them
+        once `~/.local/share/uv` exists — would qualify.
         """
         first = self.caller.split()
-        return bool(first) and Path(first[0]).name == 'uv'
+        parent = Path(first[0]).name if first else ''
+        return parent == 'uv' or (parent == 'nvim' and 'find_spec("neovim")' in self.argv)
 
 
 def plant_python_shadow(machine: Machine) -> None:
@@ -838,7 +850,7 @@ def reaches(machine: Machine, command: str, attempts: int = 3) -> bool:
 def blocked_host_args(environment: Environment) -> list[str]:
     if not environment.firewalled:
         return []
-    blocked, _ = measured_network()
+    blocked, _ = measured_network(environment)
     return list(chain.from_iterable(('--add-host', f'{host}:127.0.0.1') for host in blocked))
 
 
@@ -1043,7 +1055,9 @@ def probe_of(item: DesiredItem) -> str:
     if registry_names(item):
         return ''
     if item.evidence_path:
-        target = item.evidence_path
+        # A toolchain's path is expanded where the plan was made, which is this host's home.
+        home = f'{Path.home()}/'
+        target = f'~/{item.evidence_path.removeprefix(home)}' if item.evidence_path.startswith(home) else item.evidence_path
     elif isinstance(item.entry, catalog.ShellPlugin | catalog.TmuxPlugin | catalog.YaziPlugin):
         target = str(clone.destination(item, Path('~')))
     elif item.executable:

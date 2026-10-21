@@ -6,8 +6,8 @@ value alone does not say which one won, so a machine pointed at a stale registry
 by an export somebody made in October behaves perfectly and reports nothing. A
 resolved value reports which layer set it.
 
-Only `check` printed the attribution before, and only on a finding, so a machine
-where everything resolved had no way to ask which rung it resolved through.
+`check` prints the attribution only on a finding, so this is how a machine where
+everything resolved asks which rung it resolved through.
 """
 
 from __future__ import annotations
@@ -17,7 +17,9 @@ from pathlib import Path
 import typer
 
 from dotfiles import machine as machines
+from dotfiles import paths
 from dotfiles import remote as transport
+from dotfiles import routing
 from dotfiles import session
 from dotfiles import settings
 from dotfiles.output import console
@@ -47,6 +49,9 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     its own, and it is the one setting whose effect is invisible from the terminal
     that set it — so the question "does this box run a timer" has to be answerable
     without reading a unit file. `schedule.INTERVAL_SECONDS` is how often.
+
+    The network row is the blocked list every apply routes by, read the way an
+    apply reads it, with any entry it drops for not being a hostname.
     """
     config = settings.read_config()
     path = settings.config_file()
@@ -57,6 +62,8 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
     described = settings.describe(config, Path.home() / '.env')
     machine, unread = this_machine()
     decided = schedule.answer(machine, config)
+    copy = routing.trust_copy(paths.REPO_ROOT, machine.coordinates.network_trust) if machine else None
+    routes = routing.read(offline=False, declared_at=copy)
 
     if as_json:
         emit_json(
@@ -84,6 +91,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
                     'from_table': sorted(remote.remote.from_table) if remote.remote else [],
                     **{name: bool(remote.remote and getattr(remote.remote, name)) for name in transport.FLAGS},
                 },
+                'network': {'blocked': sorted(routes.blocked), 'source': routes.source, 'dropped': list(routes.dropped)},
                 'schedule': {'enabled': decided.wanted, 'setting': decided.setting, 'source': decided.where, 'manifest_problem': unread},
             }
         )
@@ -114,6 +122,12 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
         # least as worth seeing as a retention count.
         for name in transport.FLAGS:
             console.print(f'  {"":<{width}}  {name} {"on" if getattr(remote.remote, name) else "off"} ({layer(remote.remote, name)})')
+
+    console.print()
+    console.print(f'  {"NETWORK":<{width}}  {"blocks " + ", ".join(sorted(routes.blocked)) if routes.blocked else "blocks no host"}')
+    console.print(f'  {"":<{width}}  {"from " + routes.source if routes.source else "no config declares [network] blocked"}')
+    if routes.dropped:
+        console.print(f'  {"":<{width}}  [yellow]not hostnames, so they route nothing[/] — {", ".join(routes.dropped)}')
 
     console.print()
     console.print(f'  {"SCHEDULE":<{width}}  {"a check every " + schedule.cadence() if decided.wanted else "no periodic check"}')

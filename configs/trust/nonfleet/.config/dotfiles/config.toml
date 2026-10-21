@@ -31,19 +31,43 @@ repos_registry = "~/.config/repos.json"
 [schedule]
 enabled = false
 
-# Both trust variants declare this table identically; a validator holds them to it.
+# The hosts this network refuses, by name. An apply takes what an item downloads
+# from one of them out of the staged bundle, and installs everything else from the
+# network as usual. `dotfiles network check` measures the same hosts and says
+# where this list and the network disagree.
 #
-# The three flags are stated rather than left to the defaults they match, for the
-# reason [schedule] is: a machine that reaches a server unasked should say so in
-# its own config, and a reader should not have to know a compiled-in default to
-# know what this box does. Every one is off, so nothing here contacts the remote
-# on its own — a bundle or a run record moves when somebody types the verb.
-# Turning one on for a while is a local edit to this file.
+# GitHub serves a release asset from the three githubusercontent hosts after a
+# redirect, so blocking them blocks every release download while github.com still
+# answers clones and the API.
+[network]
+blocked = [
+  "release-assets.githubusercontent.com",
+  "objects.githubusercontent.com",
+  "github-releases.githubusercontent.com",
+  "raw.githubusercontent.com",
+  "proxy.golang.org",
+  "claude.ai",
+]
+
+# Both trust variants declare this table with the same keys and the same server;
+# a validator holds them to it. Only the flags' values may differ.
+#
+# The flags are stated rather than left to the defaults, for the reason [schedule]
+# is: a machine that reaches a server unasked should say so in its own config, and
+# a reader should not have to know a compiled-in default to know what this box
+# does. A flag one box needs only for a while is a local edit to its deployed copy.
+#
+# The request is on. A box on a restricted network cannot download what it
+# blocks, so an apply that finds a blocked item missing or behind publishes this
+# box's status, asks the builder for a bundle carrying those items, waits for it,
+# and installs it. The rest stay off: a bundle or a run record moves on its own
+# only inside that exchange.
 [remote]
 root = "/dotfiles"
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
 publish_reports_after_apply = false
+request_bundle_when_blocked_items_are_behind = true
 
 [remote.transport]
 program  = "ifiles"

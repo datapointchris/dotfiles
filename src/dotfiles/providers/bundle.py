@@ -164,6 +164,17 @@ class Description:
     never measured, and reporting it as current would be a guess.
     """
 
+    requested: tuple[str, ...] = ()
+    """The entry names `bundle create --entry` scoped this build to. Empty carries the whole plan."""
+    left_out: tuple[str, ...] = ()
+    """Plan entries outside `requested`, keyed `section/name`.
+
+    Apart from `current` because nothing measured them. A key there reads as
+    matched on the target, and these were only not asked for.
+    """
+    request: str = ''
+    """The id of the `bundle_requests` request this bundle answers, where one asked for it."""
+
     version: int = VERSION
 
     @property
@@ -180,6 +191,9 @@ class Description:
             'built_from': self.built_from,
             'built_for': self.built_for,
             'current': dict(self.current),
+            'requested': list(self.requested),
+            'left_out': list(self.left_out),
+            'request': self.request,
         }
 
 
@@ -196,6 +210,8 @@ def description_from(document: Any) -> Description:
         return Description()
     named = str(document.get('completeness', ''))
     current = document.get('current')
+    requested = document.get('requested')
+    left_out = document.get('left_out')
     return Description(
         created=str(document.get('created', '')),
         machine=str(document.get('machine', '')),
@@ -204,6 +220,9 @@ def description_from(document: Any) -> Description:
         built_from=str(document.get('built_from', '')),
         built_for=str(document.get('built_for', '')),
         current={str(key): str(value) for key, value in current.items()} if isinstance(current, dict) else {},
+        requested=tuple(str(name) for name in requested) if isinstance(requested, list) else (),
+        left_out=tuple(str(name) for name in left_out) if isinstance(left_out, list) else (),
+        request=str(document.get('request', '')),
         version=int(document['version']) if isinstance(document.get('version'), int) else VERSION,
     )
 

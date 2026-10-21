@@ -315,4 +315,4 @@ def from_bundle(entry: catalog.GoTool, cached: Path) -> Result | None:
         place(cached, destination)
     except OSError as refused:
         return Result(False, f'could not install {entry.executable} from {cached}: {refused}', kind=Kind.WRITE_FAILED)
-    return Result(True, f'{entry.executable} installed from the bundle at {cached}', kind=Kind.APPLIED)
+    return Result(True, f'{entry.executable} installed from the bundle', kind=Kind.APPLIED)

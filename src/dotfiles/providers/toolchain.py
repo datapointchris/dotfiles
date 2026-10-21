@@ -213,12 +213,11 @@ def uv_installer_url(version: str, os_family: OSFamily) -> str:
     return (UV_WINDOWS_INSTALL_URL if os_family is OSFamily.WINDOWS else UV_INSTALL_URL).format(version=version)
 
 
-def uv_from_bundle(version: str) -> Result | None:
-    """`bin/uv` out of the newest staged bundle whose own row names `version`, or None.
+def bundled_uv(version: str) -> Path | None:
+    """`bin/uv` in the newest staged bundle whose own row names `version`, or None.
 
     The row and the binary come out of one bundle, so a newer bundle's row cannot
-    vouch for an older bundle's binary. An online run takes it too, since the
-    bytes are the pinned release's and need no download.
+    vouch for an older bundle's binary.
     """
     for root in staged_bundles():
         row = bundle.row_in(root, UV_BUNDLED, UV_BUNDLED)
@@ -226,10 +225,22 @@ def uv_from_bundle(version: str) -> Result | None:
             continue
         binary = root / BUNDLE_BIN / row.filename
         if binary.is_file():
-            err_console.print(f'uv: {binary}', soft_wrap=True)
-            place(binary, bin_dir() / row.filename)
-            return Result(True, '', kind=Kind.APPLIED)
+            return binary
     return None
+
+
+def uv_from_bundle(version: str) -> Result | None:
+    """`bundled_uv(version)` placed in `bin_dir()`, or None where no staged bundle holds it.
+
+    An online run takes it too, since the bytes are the pinned release's and need
+    no download.
+    """
+    binary = bundled_uv(version)
+    if binary is None:
+        return None
+    err_console.print(f'uv: {binary}', soft_wrap=True)
+    place(binary, bin_dir() / binary.name)
+    return Result(True, '', kind=Kind.APPLIED)
 
 
 def uv_from_vendor(version: str, os_family: OSFamily, *, offline: bool) -> Result:

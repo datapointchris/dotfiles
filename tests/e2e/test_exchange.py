@@ -13,7 +13,9 @@ the build on the host and moved bundles with `docker cp`.
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
+import time
 
 import exchange
 import pytest
@@ -100,3 +102,32 @@ def test_an_unreachable_peer_is_told_apart_from_an_empty_shelf(builder: Machine)
         builder.exec(f'printf %s {exchange.peer_address(builder)} > /etc/shelf-host', user='root', check=True)
 
     assert builder.succeeds(f'{exchange.TRANSPORT} probe'), 'the peer was not restored'
+
+
+def test_a_request_is_built_by_serve_and_staged_by_the_box_that_asked(builder: Machine) -> None:
+    """The exchange both ends run unattended, over the real transport.
+
+    One container plays both ends, which the shelf allows: `bundle request`
+    publishes a status and a request, `bundle serve --once` builds against that
+    status and uploads, and the waiting request stages the bundle naming it.
+    """
+    cli = f'cd {builder.environment.home}/dotfiles && uv run dotfiles'
+    requests = f'{exchange.SHELF_ROOT}/requests/{builder.environment.manifest}'
+
+    def listed() -> set[str]:
+        return set(builder.read(f'{exchange.TRANSPORT} list {requests} 2>/dev/null').split())
+
+    before = listed()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        requested = pool.submit(builder.exec, f'{cli} bundle request --entry fzf')
+        deadline = time.monotonic() + 300
+        while not listed() - before:
+            assert not requested.done(), requested.result().stderr[-3000:]
+            assert time.monotonic() < deadline, f'no request reached {requests}'
+            time.sleep(2)
+        served = builder.exec(f'{cli} bundle serve --once')
+        answered = requested.result(timeout=600)
+
+    assert served.returncode == 0, served.stderr[-3000:]
+    assert answered.returncode == 0, answered.stderr[-3000:]
+    assert not listed(), 'serve left a request on the shelf it answered or superseded'

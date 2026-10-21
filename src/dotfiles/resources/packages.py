@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import datetime as dt
+from collections.abc import Iterable
 from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
@@ -33,6 +34,7 @@ from dotfiles import paths
 from dotfiles import python_index
 from dotfiles import registry
 from dotfiles import releases
+from dotfiles import routing
 from dotfiles import versions
 from dotfiles.coordinates import PackageManager
 from dotfiles.plan import DesiredItem
@@ -133,13 +135,24 @@ class Observed:
 
     consulted_network: bool = False
 
-    from_bundle: bool = False
-    """Whether `latest` came from a staged bundle rather than the release cache.
+    from_bundle: frozenset[str] = frozenset()
+    """The addresses whose `latest` came from a staged bundle rather than the release cache.
 
-    Carried so an unanswerable row can say which upstream had nothing to say. The
-    two are different findings on a machine that cannot reach GitHub: a cache with
-    no entry means nobody has asked, while a bundle with no row for a tool means
-    the bundle does not carry it and never will until a newer one is built.
+    An item lands here where its version host is blocked. Carried so an
+    unanswerable row can say which upstream had nothing to say. The two are
+    different findings on a machine that cannot reach GitHub: a cache with no
+    entry means nobody has asked, while a bundle with no row for a tool means the
+    bundle does not carry it and never will until a newer one is built.
+    """
+
+    routes: Mapping[str, routing.Route] = dc.field(default_factory=dict)
+    """Address → where that item takes its version and its bytes from on this run."""
+
+    in_bundle: Mapping[str, str] = dc.field(default_factory=dict)
+    """Address → the version the staged bundle carries, for each bundle-routed item it carries.
+
+    '' where the bundle carries the item and records no version for it. An item
+    absent here is one no staged bundle carries.
     """
 
     home: Path = dc.field(default_factory=Path.home)
@@ -174,9 +187,15 @@ class Observed:
     time and free to disagree with the first.
     """
 
-    @property
-    def measured_upstream(self) -> bool:
-        """Whether `latest` was established this run rather than read from a cache.
+    def route(self, item: DesiredItem) -> routing.Route:
+        return self.routes.get(item.address, routing.NETWORK)
+
+    def bundled_figure(self, item: DesiredItem) -> bool:
+        """Whether this item's `latest` is what a staged bundle carries."""
+        return item.address in self.from_bundle
+
+    def measured_upstream(self, item: DesiredItem) -> bool:
+        """Whether this item's `latest` was established this run rather than read from a cache.
 
         A refresh asked GitHub just now and a staged bundle holds the bytes a
         fresh install would use; both are current by construction. The plain cache
@@ -184,7 +203,7 @@ class Observed:
         whole of the difference — it decides whether an installed version newer
         than `latest` is drift or just an answer nobody has refreshed.
         """
-        return self.consulted_network or self.from_bundle
+        return self.consulted_network or self.bundled_figure(item)
 
     @property
     def summary(self) -> str:
@@ -222,11 +241,14 @@ class PackagesResource:
     def observe(self, session: Session, plan: Plan) -> Observed:
         mine = plan.for_resource(NAME)
         evidence = {item.address: registry.evidence_for(item, session.inventories) for item in mine}
+        routes = {item.address: registry.route(session, item, installed=evidence[item.address].verdict is Verdict.MATCHED) for item in mine}
 
         present = tuple(
-            item for item in mine if evidence[item.address].verdict is Verdict.MATCHED and has_currency(item, offline=session.offline)
+            item
+            for item in mine
+            if evidence[item.address].verdict is Verdict.MATCHED and has_currency(item, offline=not routes[item.address].measured)
         )
-        latest, consulted = upstream(session, present)
+        latest, consulted, from_bundle = upstream(session, present, routes)
         probed = reported_versions(present, evidence)
 
         return Observed(
@@ -238,7 +260,9 @@ class PackagesResource:
             undeclared=undeclared_own_tools(session, plan),
             latest=latest,
             consulted_network=consulted,
-            from_bundle=session.offline,
+            from_bundle=from_bundle,
+            routes=routes,
+            in_bundle=carried(item for item in mine if routes[item.address].bundled),
             home=session.home,
             force=session.force,
             reinstall=session.reinstall,
@@ -261,21 +285,21 @@ class PackagesResource:
         changes = []
         for item in plan.for_resource(NAME):
             evidence = observed.evidence[item.address]
+            route = observed.route(item)
             if evidence.verdict is not Verdict.MATCHED:
                 blocking = evidence.blocked_by.standing(observed.force) if evidence.blocked_by else None
                 repair = repair_for(item, evidence.verdict, observed.met, blocking)
-                changes.append(
-                    Change(
-                        NAME,
-                        item.stage,
-                        item.address,
-                        evidence.verdict,
-                        repair=repair,
-                        detail=evidence.detail,
-                        advice=advice_for(item, repair, blocking),
-                        desired=item,
-                    )
+                missing = Change(
+                    NAME,
+                    item.stage,
+                    item.address,
+                    evidence.verdict,
+                    repair=repair,
+                    detail=evidence.detail,
+                    advice=advice_for(item, repair, blocking),
+                    desired=item,
                 )
+                changes.append(through_bundle(missing, item, observed))
             elif observed.reinstall:
                 repair = repair_for(item, Verdict.STALE, observed.met)
                 changes.append(
@@ -291,10 +315,10 @@ class PackagesResource:
                         observed=observed.reported.get(item.address, ''),
                     )
                 )
-            elif not observed.from_bundle and (elsewhere := installed_elsewhere(item, observed)) is not None:
+            elif not route.bundled and (elsewhere := installed_elsewhere(item, observed)) is not None:
                 changes.append(elsewhere)
-            elif has_currency(item, offline=observed.from_bundle):
-                changes.extend(currency_of(item, observed))
+            elif has_currency(item, offline=not route.measured):
+                changes.extend(through_bundle(change, item, observed) for change in currency_of(item, observed))
 
             changes.extend(
                 stray_change(item, stray, observed, plan.machine.coordinates.package_manager)
@@ -601,30 +625,37 @@ def wanted_release(item: DesiredItem) -> releases.Wanted:
     return releases.Wanted(repo='')
 
 
-def upstream(session: Session, present: tuple[DesiredItem, ...]) -> tuple[dict[str, releases.Cached], bool]:
-    """What each present tool should be at, from whichever upstream this run has.
+def upstream(
+    session: Session,
+    present: tuple[DesiredItem, ...],
+    routes: Mapping[str, routing.Route],
+) -> tuple[dict[str, releases.Cached], bool, frozenset[str]]:
+    """What each present tool should be at, and which tools the bundle answered for.
 
-    Offline never asks GitHub, whatever `--refresh` says: the flag means "spend the
-    network on being current", and there is no network to spend.
+    Each tool is asked where its version host answers. A release tool whose assets
+    are blocked still answers through `api.github.com`, so it is measured against
+    the newest release while its bytes come from the bundle.
 
-    **Offline, the bundle is the upstream.** It has to be: the release cache is
-    empty on a machine that has never reached GitHub, so reading it there answers
-    `UNKNOWN` for every installed tool and leaves nothing repairable — a newer
-    bundle extracted onto a built machine would upgrade nothing at all. The bundle
-    records a version per staged file, which is the same fact `resolve_tag` reads to
-    name a tag with no network.
+    **Where the version host is blocked, the bundle is the upstream.** It has to
+    be: the release cache is empty on a machine that has never reached GitHub, so
+    reading it there answers `UNKNOWN` for every installed tool and leaves nothing
+    repairable. The bundle records a version per staged file, which is the same
+    fact `resolve_tag` reads to name a tag with no network.
     """
-    if session.offline:
-        return staged(present), False
+    asked = tuple(item for item in present if routes[item.address].measured)
+    answered = tuple(item for item in present if not routes[item.address].measured)
+    from_bundle = frozenset(item.address for item in answered)
+    figures = staged(answered)
+    bundle_keys = {wanted_release(item).key for item in answered}
 
-    entries = releases.load()
-    if not session.refresh or not present:
-        return entries, False
+    entries = {key: cached for key, cached in releases.load().items() if key not in bundle_keys}
+    if not session.refresh or not asked:
+        return entries | figures, False, from_bundle
 
     now = dt.datetime.now(dt.UTC)
-    entries = releases.refresh(tuple({wanted_release(item) for item in present}), entries, now)
-    releases.save(entries)
-    return entries, True
+    refreshed = releases.refresh(tuple({wanted_release(item) for item in asked}), releases.load(), now)
+    releases.save(refreshed)
+    return {key: cached for key, cached in refreshed.items() if key not in bundle_keys} | figures, True, from_bundle
 
 
 def staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
@@ -650,6 +681,83 @@ def staged(present: tuple[DesiredItem, ...]) -> dict[str, releases.Cached]:
         if version:
             found[wanted_release(item).key] = releases.Cached(version=version, checked=now)
     return found
+
+
+def carried(items: Iterable[DesiredItem]) -> dict[str, str]:
+    """Address → the version a staged bundle carries, for each of these items it carries."""
+    found = {}
+    for item in items:
+        row = bundle.staged(item.name, *bundle.CATEGORIES)
+        if row is not None:
+            found[item.address] = row.version
+    return found
+
+
+VERSIONED_IN_BUNDLE = (catalog.GithubRelease, catalog.CargoPackage, catalog.GoTool)
+"""The kinds whose bundle row is the version an install from it lands.
+
+A custom installer's row is a script. Run, `theme`'s updates over git and
+claude-code's downloads the newest release, so the row's version says nothing
+about what an update from it reaches.
+"""
+
+
+def through_bundle(change: Change, item: DesiredItem, observed: Observed) -> Change:
+    """A change to an item installed from the bundle, held to what the staged bundle carries.
+
+    An item whose download is blocked can only become what a bundle holds. Where no
+    staged bundle carries it, or carries nothing newer than what is installed, apply
+    has nothing to install, so the row says a bundle is needed and names the host.
+    Where the bundle carries a newer build that is still behind, apply installs it
+    and the row still asks for a newer bundle. An item no bundle stages asks for
+    none, so it never joins a request the builder would refuse whole.
+    """
+    route = observed.route(item)
+    if not route.bundled or not change.actionable or change.removes is not None:
+        return change
+    if not bundle.bundlable(item.entry):
+        return dc.replace(change, repair=Repair.NONE, detail=f'{change.detail}; {route.because}, and no bundle stages it')
+    version = observed.in_bundle.get(item.address)
+    wanted = target_version(item, observed) if change.verdict is Verdict.STALE else ''
+    if version is not None and (
+        change.verdict is Verdict.MISSING or not isinstance(item.entry, VERSIONED_IN_BUNDLE) or not wanted or not version
+    ):
+        return change
+    if version is not None and versions.at_least(version, wanted):
+        return change
+
+    holds = f'the staged bundle carries {version}' if version else 'no staged bundle carries it'
+    needed = f'a bundle carrying {item.name} {wanted}'.rstrip() if wanted else f'a bundle carrying {item.name}'
+    advice = f'{needed} is needed; ask a builder for it: dotfiles bundle request --entry {item.name}'
+    if version and change.observed and versions.exceeds(version, change.observed):
+        return dc.replace(change, awaits_bundle=route.because, detail=f'{change.detail}; {holds}, and {route.because}')
+    return dc.replace(
+        change,
+        repair=Repair.NONE,
+        awaits_bundle=route.because,
+        detail=f'{change.detail}; {route.because}, and {holds}',
+        advice=advice,
+    )
+
+
+def target_version(item: DesiredItem, observed: Observed) -> str:
+    """The version a behind item should reach: its pin, or the newest upstream figure."""
+    entry = item.entry
+    if entry is not None and 'version' in entry.honored_constraints and entry.version:
+        return entry.version
+    cached = releases.current(wanted_release(item), observed.latest, dt.datetime.now(dt.UTC))
+    return cached.version if cached else ''
+
+
+def bundle_need(changes: Iterable[Change]) -> tuple[str, ...]:
+    """The entries this run installs from the bundle that no staged bundle can install as wanted.
+
+    Each is an item whose download reaches a blocked host and whose change is one
+    apply would act on, missing or behind, with no staged bundle carrying the
+    version it wants. The toolchains resource marks uv the same way. Returned as
+    entry names, the vocabulary `bundle create --entry` takes.
+    """
+    return tuple(sorted({change.desired.name for change in changes if change.awaits_bundle and change.desired is not None}))
 
 
 def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
@@ -735,13 +843,13 @@ def currency_of(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 Verdict.UNKNOWN,
                 repair=Repair.NONE,
                 detail=unmeasurable(item, observed),
-                advice=unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
+                advice=unmeasurable_advice(observed, item, bundlable=bundle.bundlable(item.entry)),
                 desired=item,
                 observed=reported,
             ),
         )
 
-    if observed.measured_upstream and versions.exceeds(reported, cached.version):
+    if observed.measured_upstream(item) and versions.exceeds(reported, cached.version):
         repair = repair_for(item, Verdict.STALE, observed.met)
         return (
             Change(
@@ -879,7 +987,7 @@ def ahead_of(version: str, observed: Observed, item: DesiredItem) -> str:
     calls a bundle's row the newest release reads as an ordinary repair — measured
     on a box whose bundle was a fortnight stale, where broot went 1.59.0 to 1.58.0.
     """
-    if observed.from_bundle:
+    if observed.bundled_figure(item):
         return f'ahead of {version}, which is what the staged bundle carries — applying installs that older build'
     return f'ahead of {version}, which is {newest_upstream(item)} and what a fresh install produces'
 
@@ -891,7 +999,11 @@ def behind(version: str, observed: Observed, item: DesiredItem) -> str:
     upstream publishes now, and a machine that cannot reach GitHub has no way to
     tell the two apart from the sentence alone.
     """
-    return f'{version} is what the staged bundle carries' if observed.from_bundle else f'{version} is {newest_upstream(item)}'
+    if not observed.bundled_figure(item):
+        return f'{version} is {newest_upstream(item)}'
+    if observed.in_bundle.get(item.address) == version:
+        return f'{version} is what the staged bundle carries'
+    return f'{version} is the newest the staged bundle recorded'
 
 
 def newest_upstream(item: DesiredItem) -> str:
@@ -928,7 +1040,7 @@ def unpinned_git(item: DesiredItem, observed: Observed) -> tuple[Change, ...]:
                 Verdict.UNKNOWN,
                 repair=Repair.NONE,
                 detail=unmeasurable(item, observed),
-                advice=unmeasurable_advice(observed, bundlable=bundle.bundlable(item.entry)),
+                advice=unmeasurable_advice(observed, item, bundlable=bundle.bundlable(item.entry)),
                 desired=item,
             ),
         )
@@ -951,7 +1063,7 @@ def unmeasurable(item: DesiredItem, observed: Observed) -> str:
     """Why nothing can say whether this one is current, in the terms of the upstream
     that was asked. A bundle carrying no row for a tool and a cache nobody has
     filled are different problems with different fixes."""
-    if observed.from_bundle:
+    if observed.bundled_figure(item):
         # A kind no bundle is built to carry is not a gap in the staged one, so it
         # is answered before any question about which bundle. Read the other way it
         # advised extracting a newer bundle to fix something no bundle will ever
@@ -970,7 +1082,8 @@ def unmeasurable(item: DesiredItem, observed: Observed) -> str:
         described = bundle.descriptions()
         if described and all(one.sparse for one in described):
             return f'the sparse bundle neither carries {item.name} nor measured it, so it was never considered'
-        return f'the staged bundle carries no version for {item.name}, so an offline run has nothing to compare against'
+        because = observed.route(item).because or 'its version host is blocked'
+        return f'{because}, and the staged bundle carries no version for {item.name} to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
     wanted = wanted_release(item)
     if wanted.crate:
@@ -993,7 +1106,7 @@ def never_bundled(item: DesiredItem) -> str:
     return f'no bundle carries a {kind}, so an offline run cannot say whether {item.name} is current'
 
 
-def unmeasurable_advice(observed: Observed, *, bundlable: bool) -> str:
+def unmeasurable_advice(observed: Observed, item: DesiredItem, *, bundlable: bool) -> str:
     """The fix for `unmeasurable`, which is not always a command.
 
     Four states, and only two of them have a next step.
@@ -1010,9 +1123,9 @@ def unmeasurable_advice(observed: Observed, *, bundlable: bool) -> str:
     permanent instruction that never resolves, which is the state a reader reads as
     a fault in the machine.
     """
-    if observed.from_bundle and not bundlable:
+    if observed.bundled_figure(item) and not bundlable:
         return ''
-    if observed.from_bundle:
+    if observed.bundled_figure(item):
         return 'extract a newer offline bundle; this one has nothing to compare against'
     if not observed.consulted_network:
         return 'this run answered from cache; drop `--cached` to measure upstream'

@@ -18,6 +18,7 @@ import typer
 import yaml
 
 from dotfiles import bridge
+from dotfiles import bundle_requests
 from dotfiles import catalog
 from dotfiles import deploy
 from dotfiles import engine
@@ -291,7 +292,11 @@ SourceOption = typer.Option(
 )
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
-OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
+OfflineOption = typer.Option(
+    False,
+    '--offline',
+    help='Install what the config blocks from the staged bundle and contact no remote; with nothing blocked, reach no network',
+)
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 EntryOption = typer.Option(
     None,
@@ -350,6 +355,7 @@ def apply_resource(
             force=force,
             reinstall=reinstall,
             as_json=as_json,
+            request_bundle=bundle_requests.requester(offline=offline, forced=False),
             # The same three the composite records, for the same reason: a row is
             # read back against what the run covered and why it was actionable.
             # `selection` is this door's `skip`, spelled as the addresses the noun

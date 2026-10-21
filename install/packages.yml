@@ -1873,6 +1873,10 @@ go_tools:
     package: github.com/esimov/triangle/v2/cmd/triangle
     github_repo: esimov/triangle
     binary_pattern: "triangle-{version_num}-{os}-{go_arch}.tar.gz"
+    # reports_version: it defines no version flag. `--version` prints its usage, and
+    # `version` runs a triangulation and reports its execution time, so currency is a
+    # question the binary cannot answer.
+    reports_version: false
     checksum: unpublished
     description: Delaunay triangulation of images (used for theme lowpoly wallpaper backgrounds)
 

@@ -1,0 +1,18 @@
+[Unit]
+Description=Build the offline bundles restricted machines request through the remote
+After=network-online.target
+
+[Service]
+# The builder's service environment carries IFILES_TOKEN, which the remote's
+# transport reads. The leading dash tolerates the file being absent: the unit then
+# starts, and every pass logs that the remote did not answer.
+EnvironmentFile=-%h/.config/fleet/service.env
+# A user manager inherits no login PATH, and a build shells out to uv, go and the
+# transport program.
+Environment=PATH=%h/.local/bin:%h/.cargo/bin:%h/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=%h/.local/bin/dotfiles bundle serve
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

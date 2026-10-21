@@ -153,6 +153,12 @@ def test_a_path_helper_keeps_the_arguments_it_was_configured_with() -> None:
     assert helper.invocation('get') == ['/usr/local/bin/gcm', '--config', '/etc/gcm.toml', 'get']
 
 
+def test_an_inline_shell_function_names_no_program_to_find() -> None:
+    helper = Helper('', '!f() { echo username=x; echo "password=$TOKEN"; }; f', Path('/dev/null'))
+
+    assert credentials.asked(helper).verdict is Verdict.MATCHED
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The three faults, told apart
 # ─────────────────────────────────────────────────────────────────────────────

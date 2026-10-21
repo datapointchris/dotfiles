@@ -274,7 +274,7 @@ class TestWhatTheTargetDecides:
         sandbox.installed('lazygit', INSTALLED)
 
         ran = cli('plan', '--offline', '--json', catch_exceptions=True)
-        rows = list(chain.from_iterable(resource['findings'] for resource in ran.document['resources']))
+        rows = list(chain.from_iterable(resource['findings'] + resource['others'] for resource in ran.document['resources']))
 
         assert [row['verdict'] for row in rows if 'lazygit' in row['item']] == ['stale']
 

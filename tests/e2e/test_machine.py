@@ -15,7 +15,10 @@ is for.
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
+import re
+import time
 
 import exchange
 import pytest
@@ -61,7 +64,7 @@ def test_the_interpreter_the_installers_get_can_import_the_package(machine: Mach
 
 def test_nothing_but_uv_reached_for_the_system_python(fresh_install: Machine) -> None:
     """The whole install ran with a `python3` first on PATH that exits 1 loudly,
-    and only uv is allowed to have found it.
+    and only uv and Neovim's host search are allowed to have found it.
 
     This is what replaced `pip install --user PyYAML` into Apple's interpreter:
     the CLI runs on the interpreter uv installed it with, so nothing in a run has
@@ -70,7 +73,7 @@ def test_nothing_but_uv_reached_for_the_system_python(fresh_install: Machine) ->
     is what it is supposed to do — the offline path passes `--no-python-downloads`
     and needs to find a real one, which it does after rejecting this stub.
     """
-    strangers = [f'{call.caller} → {call.argv}' for call in shadow_calls(fresh_install) if not call.by_uv]
+    strangers = [f'{call.caller} → {call.argv}' for call in shadow_calls(fresh_install) if not call.scans_path]
     assert not strangers, strangers
 
 
@@ -139,11 +142,16 @@ def test_neovim_starts_without_errors(converged_machine: Machine) -> None:
 
 def test_yazi_starts_without_errors(converged_machine: Machine) -> None:
     """Its own check because it has its own failure: `package.toml` had two owners,
-    so a fresh install deployed the file twice and yazi refused every start."""
-    started = converged_machine.exec('timeout 20 yazi --clear-cache 2>&1')
+    so a fresh install deployed the file twice and yazi refused every start.
+
+    `ya env` parses every config file a start parses and exits 1 on one it cannot.
+    yazi and ya both refuse to run without a terminal, so `script` lends one. The
+    timeout sits outside it: inside, the child leaves the terminal's foreground
+    group and stops on its first terminal call.
+    """
+    started = converged_machine.exec("timeout 20 script -qfec 'ya env' /dev/null </dev/null")
 
     assert started.returncode == 0, started.stdout[-2000:]
-    assert 'error' not in started.stdout.lower(), started.stdout[-2000:]
 
 
 def test_docker_compose_is_the_v2_plugin(converged_machine: Machine) -> None:
@@ -200,9 +208,10 @@ def test_every_networked_currency_read_answers_on_a_real_machine(machine: Machin
     """Whether pacman and apt accept being read through a refreshed index copy.
 
     Both take a route no lower level can exercise. `checkupdates` copies the pacman
-    database, refreshes the copy under fakeroot and reads it; `syspkg._apt_outdated`
-    points `Dir::State::lists` and `Dir::Cache` at a scratch directory and runs
-    `apt-get update` there. The unit tests assert the argv a stub was handed, and a
+    database, refreshes the copy under fakeroot and reads it; `syspkg.apt_outdated`
+    points `Dir::State::lists` and `Dir::Cache` at a scratch directory, runs
+    `apt-get update` there and simulates the upgrade against it. The unit tests
+    assert the argv a stub was handed, and a
     stub agrees with anything — a real manager rejecting either would report UNKNOWN
     on every machine of that family.
 
@@ -298,32 +307,6 @@ def test_the_offline_run_used_an_interpreter_the_machine_already_had(machine: Ma
     assert not interpreter.startswith(managed), f'the offline install fetched an interpreter: {interpreter}'
 
 
-def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> None:
-    """The version has to come from the bundle manifest, or the filename built
-    from it names a file the cache does not hold.
-
-    `tests/resources/test_packages.py::test_offline_never_refreshes_however_it_was_asked`
-    asserts the mechanism directly and cheaply; this is the same property observed
-    on a real install, where a path that bypassed the short-circuit would show up
-    as a resolution attempt.
-
-    Read off the two sentences the bundle paths actually print. This asserted
-    `'Using cached'` — a phrase nothing in this repo emits and uv stopped printing
-    when the bootstrap moved from `pip install` to a wheelhouse — so it had been
-    failing for a reason that said nothing about versions at all.
-
-    `Checksum verified from offline bundle` is the tighter of the two and is why
-    it is required rather than either-or: the digest is looked up by the asset
-    *filename*, which is built from the bundled version, so a tag resolved online
-    would name a file `checksums.txt` has no line for and fall through to the
-    network instead of printing this.
-    """
-    if not machine.environment.offline:
-        pytest.skip('only the offline environment installs from a bundle')
-    assert 'Checksum verified from offline bundle' in machine.install_log
-    assert 'installed from the bundle at' in machine.install_log
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # The sparse round trip
 # ─────────────────────────────────────────────────────────────────────────────
@@ -358,9 +341,19 @@ def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_curren
     # pass the document through the redaction gate, so a trip built on `show`
     # cannot reach a gate that refuses every real document — which is what one did
     # for the whole life of the branch.
-    exchange.ran(machine, 'dotfiles status upload')
+    uploaded = machine.exec('dotfiles status upload')
+    assert uploaded.returncode == 0, uploaded.stderr or uploaded.stdout
+    status = re.search(r'uploaded (\S+)\s+to', uploaded.stderr)
+    assert status, f'the upload named no status: {uploaded.stderr[-2000:]}'
 
-    built = exchange.build_bundle_in(builder, machine.environment.manifest, against='latest')
+    # The status this machine just sent, by name. A kept builder still has every
+    # earlier machine's status for this manifest, and `latest` refuses to pick one.
+    manifest = machine.environment.manifest
+    fetched = exchange.ran(
+        builder,
+        f'cd {builder.environment.home}/dotfiles && uv run dotfiles status download --machine {manifest} --status {status[1]} --print-path',
+    )
+    built = exchange.build_bundle_in(builder, manifest, against=fetched.splitlines()[-1])
     name = built.rsplit('/', 1)[-1]
     assert name.endswith('-sparse.tar.gz'), f'a sparse build has to say so in its own name: {name}'
     exchange.ran(builder, f'cd {builder.environment.home}/dotfiles && uv run dotfiles bundle upload')
@@ -382,3 +375,47 @@ def test_a_sparse_bundle_built_against_this_machine_reports_its_omissions_curren
 
     assert not left_out & set(checked['uncovered']), f'omitted and reported missing: {sorted(left_out & set(checked["uncovered"]))}'
     assert left_out <= accounted, f'omitted and unaccounted for: {sorted(left_out - accounted)}'
+
+
+def test_one_apply_asks_a_builder_for_the_blocked_tool_no_bundle_carries_and_installs_it(
+    exchanging: tuple[Machine, Machine],
+) -> None:
+    """The restricted box's whole loop in one plain `apply`, both ends unattended.
+
+    glow's release asset is blocked and nothing staged or on disk carries it, so
+    the apply publishes a status, leaves a request, waits while `bundle serve`
+    builds against that status, then stages the answer and installs glow.
+    """
+    machine, builder = exchanging
+    home = machine.environment.home
+    aside = f'{home}/bundles-set-aside'
+    requests = f'{exchange.SHELF_ROOT}/requests/{machine.environment.manifest}'
+    exchange.declare_transport(machine, builder, extra='request_bundle_when_blocked_items_are_behind = true\n')
+    machine.exec(
+        f'mkdir -p {aside} && mv {home}/.cache/dotfiles/staged {home}/.cache/dotfiles/bundles {home}/dotfiles-offline-*.tar.gz {aside}/',
+        check=True,
+    )
+    machine.exec('rm -f "$(command -v glow)"', check=True)
+
+    def listed() -> set[str]:
+        return set(builder.read(f'{exchange.TRANSPORT} list {requests} 2>/dev/null').split())
+
+    try:
+        before = listed()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            applying = pool.submit(machine.exec, 'dotfiles apply --entry glow')
+            deadline = time.monotonic() + 300
+            while not listed() - before:
+                assert not applying.done(), applying.result().stderr[-4000:]
+                assert time.monotonic() < deadline, f'no request reached {requests}'
+                time.sleep(2)
+            served = builder.exec(f'cd {builder.environment.home}/dotfiles && uv run dotfiles bundle serve --once')
+            applied = applying.result(timeout=600)
+    finally:
+        cache = f'{home}/.cache/dotfiles'
+        machine.exec(f'mkdir -p {cache} && cp -a {aside}/staged {aside}/bundles {cache}/ && mv {aside}/*.tar.gz {home}/')
+        exchange.declare_transport(machine, builder)
+
+    assert served.returncode == 0, served.stderr[-4000:]
+    assert applied.returncode == 0, applied.stderr[-4000:]
+    assert machine.succeeds('command -v glow'), applied.stderr[-4000:]

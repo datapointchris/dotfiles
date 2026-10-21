@@ -93,11 +93,17 @@ machine that says nothing.
 """
 
 
-FLAGS = ('fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply', 'publish_reports_after_apply')
+FLAGS = (
+    'fetch_bundle_when_none_is_staged',
+    'publish_status_after_offline_apply',
+    'publish_reports_after_apply',
+    'request_bundle_when_blocked_items_are_behind',
+)
 """The boolean settings in the `[remote]` table, in the order they are shown.
 
-One list, read by the parser and by `config show`, so a setting added later is
-rendered and attributed without a second place to remember. A renderer holding its
+One list, read by `config show` and, through `KEYS`, by the parser's check for
+unknown keys. A setting added here is then rendered and accepted without a second
+place to remember, and `read` still names each one. A renderer holding its
 own copy shows every flag but the newest, and a setting that is on reads as a
 machine that does not have it.
 """
@@ -180,6 +186,12 @@ class Remote:
     fetch_bundle_when_none_is_staged: bool = False
     publish_status_after_offline_apply: bool = False
     publish_reports_after_apply: bool = False
+    request_bundle_when_blocked_items_are_behind: bool = False
+    """Whether `apply` asks a builder for the blocked items it lacks, then waits for the bundle.
+
+    `bundle_requests.obtain_bundle` is the exchange. Off by default for the reason
+    every flag here is: the box this serves reaches the server only when told to.
+    """
 
     def directory(self, *parts: str) -> str:
         """A remote path under the configured root, always absolute from it.
@@ -219,14 +231,18 @@ class Remote:
 BUNDLES = 'bundles'
 STATUSES = 'status'
 REPORTS = 'reports'
-"""The three kinds of artifact under `root`, and dotfiles decides all of them.
+REQUESTS = 'requests'
+"""The kinds of artifact under `root`, and dotfiles decides all of them.
 
 A *shelf* is one machine's directory inside one of these — `<root>/bundles/<manifest>`
 — which is what every `--machine` flag here reads and what `bundles_for`,
-`statuses_for` and `reports_for` build. These are kinds, not shelves: one word for
+`statuses_for`, `reports_for` and `requests_for` build. These are kinds, not shelves: one word for
 both would leave the term with two referents on one help screen.
 
-`reports` differs from the other two in who reads it. A bundle and a status are
+`requests` is the one kind written by both ends. A restricted box leaves a request
+there, the builder answers beside it, and `bundle_requests` owns the shapes.
+
+`reports` differs from the others in who reads it. A bundle and a status are
 consumed by this tool, on the other end of the offline loop. A report is consumed
 by a person, which is why it is the one kind whose contents are masked rather than
 row-screened — `publishing.masked` records why.
@@ -255,6 +271,10 @@ def statuses_for(remote: Remote, machine: str) -> str:
 
 def reports_for(remote: Remote, machine: str) -> str:
     return remote.directory(REPORTS, machine)
+
+
+def requests_for(remote: Remote, machine: str) -> str:
+    return remote.directory(REQUESTS, machine)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -391,6 +411,8 @@ def read(config: settings.Config | None = None) -> Configured:
     problems.extend([problem] if problem else [])
     reports, problem = flag(table, 'publish_reports_after_apply')
     problems.extend([problem] if problem else [])
+    requesting, problem = flag(table, 'request_bundle_when_blocked_items_are_behind')
+    problems.extend([problem] if problem else [])
 
     transport, faults = declared_transport(table.get('transport'))
     problems.extend(faults)
@@ -406,6 +428,7 @@ def read(config: settings.Config | None = None) -> Configured:
             fetch_bundle_when_none_is_staged=fetch,
             publish_status_after_offline_apply=publish,
             publish_reports_after_apply=reports,
+            request_bundle_when_blocked_items_are_behind=requesting,
         )
     )
 
@@ -502,16 +525,34 @@ def reachable() -> Remote:
     return where
 
 
-def run_transport(remote: Remote, operation: Operation, output: effects.Output, substitutions: Mapping[str, str]) -> effects.Completed:
+SMALL_OPERATION_SECONDS = 60
+"""How long a probe, listing, mkdir or delete may take before it counts as unanswered.
+
+A polling loop is bounded only as far as each call inside it is, and a stalled
+transport would otherwise hold an apply forever. An upload or download moves an
+archive of any size, so a caller bounds one only where it knows the file is small.
+"""
+
+SMALL_OPERATIONS = frozenset({Operation.PROBE, Operation.LIST, Operation.MKDIR, Operation.DELETE})
+
+
+def run_transport(
+    remote: Remote, operation: Operation, output: effects.Output, substitutions: Mapping[str, str], *, timeout: float | None = None
+) -> effects.Completed:
     """One transport invocation, with the substitutions as a mapping.
 
     A mapping for the same reason `Transport.argv` takes one: `remote` is both a
     placeholder name and this parameter's name, so a keyword form binds the config
     object to the placeholder and raises on the argument it already had.
+
+    `timeout` defaults to `SMALL_OPERATION_SECONDS` for `SMALL_OPERATIONS` and to
+    none for a transfer. An expiry is a failed run like any other.
     """
     argv = remote.transport.argv(operation, substitutions)
     log.debug('remote.invoke', operation=str(operation), program=remote.transport.program)
-    return effects.run(list(argv), output=output)
+    if timeout is None and operation in SMALL_OPERATIONS:
+        timeout = SMALL_OPERATION_SECONDS
+    return effects.run(list(argv), output=output, timeout=timeout)
 
 
 def names(remote: Remote, directory: str) -> tuple[str, ...]:
@@ -632,8 +673,12 @@ def push(remote: Remote, local: Path, directory: str) -> str:
     return f'{directory.rstrip("/")}/{local.name}'
 
 
-def pull(remote: Remote, path: str, local: Path) -> Path:
+def pull(remote: Remote, path: str, local: Path, *, timeout: float | None = None) -> Path:
     """Fetch one remote file to a local path, and answer where it landed.
+
+    `timeout` bounds the download, for a caller that knows the file is small. A
+    bounded download runs quiet, because `effects.run` refuses a deadline on a
+    streaming child and a small file has no progress worth showing.
 
     The destination directory is created first because the local cache legitimately
     does not exist yet on a machine that has never fetched anything, and a
@@ -646,7 +691,8 @@ def pull(remote: Remote, path: str, local: Path) -> Path:
     command that caused it.
     """
     local.parent.mkdir(parents=True, exist_ok=True)
-    ran = run_transport(remote, Operation.DOWNLOAD, effects.Output.STREAM, {'remote': path, 'local': str(local)})
+    output = effects.Output.STREAM if timeout is None else effects.Output.QUIET
+    ran = run_transport(remote, Operation.DOWNLOAD, output, {'remote': path, 'local': str(local)}, timeout=timeout)
     if not ran.ok:
         raise RemoteError(f'{remote.transport.program} could not download {path}', code=ExitCode.ISSUE)
     if not local.is_file():
@@ -657,9 +703,10 @@ def pull(remote: Remote, path: str, local: Path) -> Path:
 def remove(remote: Remote, path: str) -> None:
     """Delete one remote artifact, where the machine declared how to.
 
-    Never reached from an upload. Retention runs from `bundle prune` alone, so
-    nothing this tool does on a schedule can remove bytes from a server — see
-    `superseded` for the split.
+    Never reached from an upload. Retention runs from `bundle prune` alone, so no
+    bundle, status or report leaves a server unless somebody typed that — see
+    `superseded` for the split. `bundle serve` is the one unattended caller, and it
+    deletes only the request files it answered or superseded.
     """
     if not remote.transport.declares(Operation.DELETE):
         raise RemoteError(

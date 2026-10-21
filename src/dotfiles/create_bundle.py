@@ -48,6 +48,7 @@ from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
 from dotfiles.plan import DesiredItem
+from dotfiles.plan import Plan
 from dotfiles.providers import bundle as bundle_format
 from dotfiles.providers import cargo
 from dotfiles.providers import ghrelease
@@ -593,6 +594,9 @@ class Bundle:
         self.built_for = ''
         self.current: dict[str, str] = {}
         self.installed: dict[str, str] = {}
+        self.requested: tuple[str, ...] = ()
+        self.left_out: tuple[str, ...] = ()
+        self.request = ''
         self.binaries = staging / 'binaries'
         self.go_binaries = staging / 'go-binaries'
         self.winget_binaries = staging / winget.BUNDLE_BINARIES
@@ -662,16 +666,26 @@ class Bundle:
         whether a sparse bundle's omissions are true of the box unpacking it — and
         the builder never knows which box it is building for. Recorded here so the
         target, which does know, can refuse it.
+
+        A build scoped by `--entry` is sparse too. It carries less than the plan,
+        and a full one would be pinned as the base the stack reads through.
         """
         return bundle_format.Description(
             created=self.when.astimezone(dt.UTC).isoformat().replace('+00:00', 'Z'),
             machine=self.machine,
             platform=f'{self.os_name}/{self.arch}',
-            completeness=bundle_format.Completeness.SPARSE if self.built_from else bundle_format.Completeness.FULL,
+            completeness=bundle_format.Completeness.SPARSE if self.scoped else bundle_format.Completeness.FULL,
             built_from=self.built_from,
             built_for=self.built_for,
             current=dict(self.current),
+            requested=self.requested,
+            left_out=self.left_out,
+            request=self.request,
         )
+
+    @property
+    def scoped(self) -> bool:
+        return bool(self.built_from or self.requested)
 
     def write_metadata(self) -> None:
         """The four files at the bundle root, each answering one question.
@@ -1381,7 +1395,43 @@ def add_install_scripts(bundle: Bundle, items: tuple[DesiredItem, ...]) -> None:
         bundle.record('script', entry.name, version_the_script_installs(entry), f'{entry.name}-install.sh')
 
 
-def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | None = None, against: Path | None = None) -> Path:
+def left_out_of(plan: Plan, entries: tuple[str, ...]) -> tuple[str, ...]:
+    """Every bundlable plan entry outside `entries`, keyed `section/name`.
+
+    Refuses a name the plan bundles nothing under. A builder whose checkout is
+    behind the requester's is the usual cause, and a bundle quietly missing the
+    one tool asked for would answer the request with nothing. `uv` is accepted
+    alone, because every build carries it.
+    """
+    if not entries:
+        return ()
+    bundled = [item for item in plan.items if bundle_format.bundlable(item.entry)]
+    unknown = set(entries) - {item.name for item in bundled} - {toolchain.UV_BUNDLED}
+    planned = {item.name for item in plan.items}
+    refused = []
+    if undeclared := sorted(unknown - planned):
+        refused.append(f'--entry {", ".join(undeclared)}: not in the plan this checkout resolves for {plan.machine.name}')
+    if unstaged := sorted(unknown & planned):
+        refused.append(f'--entry {", ".join(unstaged)}: planned, and no bundle stages that kind of entry')
+    if refused:
+        raise BundleError('; '.join(refused))
+    return tuple(sorted(f'{item.section}/{item.name}' for item in bundled if item.name not in entries))
+
+
+def within(items: tuple[DesiredItem, ...], entries: tuple[str, ...]) -> tuple[DesiredItem, ...]:
+    """The items `--entry` asked for, or all of them where it named none."""
+    return tuple(item for item in items if not entries or item.name in entries)
+
+
+def build(
+    manifest_name: str,
+    arch: str,
+    use_cache: bool,
+    when: dt.datetime | None = None,
+    against: Path | None = None,
+    entries: tuple[str, ...] = (),
+    request: str = '',
+) -> Path:
     """Build the bundle and return the tarball's path.
 
     A return value, not a printed side effect: that is the whole reason this
@@ -1427,11 +1477,17 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
             'a sparse bundle diffs one machine against its own report, never against another one'
         )
 
+    left_out = left_out_of(plan, entries)
+
     built_at = when or dt.datetime.now(dt.UTC)
-    name = bundle_name(manifest_name, os_name, arch, built_at, sparse=reported is not None)
+    name = bundle_name(manifest_name, os_name, arch, built_at, sparse=reported is not None or bool(entries))
     log.info(f'Creating offline bundle: {name}')
     log.info(f'Target platform: {os_name}/{arch}')
     log.info(f'Manifest filter: {manifest_name}')
+    if entries:
+        log.info(f'Scoped to {", ".join(sorted(entries))}, leaving out {len(left_out)} other entry(s)')
+    if request:
+        log.info(f'Answering request {request}')
 
     cache = DownloadCache(enabled=use_cache)
     # Into the cache the rest of the lifecycle reads, not the checkout. `newest`
@@ -1447,14 +1503,17 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
             bundle.built_for = publishing.published_by(reported, against.name)
             bundle.plan_against(against, reported)
             log.info(f'Sparse: against {against.name}, which reports {len(bundle.installed)} installed tool(s)')
+        bundle.requested = tuple(sorted(entries))
+        bundle.left_out = left_out
+        bundle.request = request
 
         add_uv(bundle, cache)
         add_wheels(bundle, cache)
-        add_github_releases(bundle, cache, plan.for_section('github_releases'))
-        add_go_binaries(bundle, cache, plan.for_section('go_tools'))
-        add_cargo_binaries(bundle, cache, plan.for_section('cargo_packages'))
-        add_winget_binaries(bundle, cache, plan.for_section('winget_packages'))
-        add_install_scripts(bundle, plan.for_section('custom_installers'))
+        add_github_releases(bundle, cache, within(plan.for_section('github_releases'), entries))
+        add_go_binaries(bundle, cache, within(plan.for_section('go_tools'), entries))
+        add_cargo_binaries(bundle, cache, within(plan.for_section('cargo_packages'), entries))
+        add_winget_binaries(bundle, cache, within(plan.for_section('winget_packages'), entries))
+        add_install_scripts(bundle, within(plan.for_section('custom_installers'), entries))
         bundle.write_metadata()
 
         log.info('Creating tarball...')
@@ -1468,16 +1527,20 @@ def build(manifest_name: str, arch: str, use_cache: bool, when: dt.datetime | No
     log.info(f'  Downloads: {cache.downloads}')
     if bundle.built_from:
         log.info(f'  Left out as already current: {len(bundle.current)}')
+    if bundle.left_out:
+        log.info(f'  Left out as not requested: {len(bundle.left_out)}')
     # `cache.enabled` and never `use_cache`: the flag is what the run asked for
     # and the attribute is what it got, and they part company when the root could
     # not be opened. Reporting the flag prints `From cache: 0` beside a directory
     # that does not exist, hundreds of lines below the one warning that said so.
     if cache.enabled:
         log.info(f'  From cache: {cache.hits} ({cache_root()})')
-    log.info('To use this bundle:')
-    log.info('  1. Copy the tarball to ~/ or ~/dotfiles/ on the target machine')
-    log.info('  2. Bootstrap: ./install.sh --machine <name> --offline')
-    log.info('  3. Install:   dotfiles apply --machine <name> --offline')
+    # A requested bundle is collected and staged by the box that asked for it.
+    if not request:
+        log.info('To use this bundle:')
+        log.info('  1. Copy the tarball to ~/ or ~/dotfiles/ on the target machine')
+        log.info('  2. Bootstrap: ./install.sh --machine <name> --offline')
+        log.info('  3. Install:   dotfiles apply --machine <name> --offline')
 
     # After the tarball, so a build is never delayed or failed by housekeeping.
     if cache.enabled:

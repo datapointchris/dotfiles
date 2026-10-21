@@ -18,10 +18,14 @@ refreshes what a later reader sees.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import datetime as dt
 import json
+import tempfile
 from collections.abc import Sequence
+from pathlib import Path
 
+from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles import publishing
 from dotfiles import reconcile
@@ -29,7 +33,94 @@ from dotfiles import remote as transport
 from dotfiles import vocabulary
 from dotfiles.output import hint
 from dotfiles.output import warn
+from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
+from dotfiles.session import Session
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Composed:
+    """The publishable document and the rows it was folded from.
+
+    Both, because the two surfaces want different halves: `--json` wants the
+    document exactly as it will travel, and the terminal wants the typed results,
+    which reading them back out of the document would only cast to `object`.
+    """
+
+    document: dict[str, object]
+    results: tuple[ResourceResult, ...]
+    machine: str
+    trust: axes.NetworkTrust
+    """Which answer `discriminator` gives, resolved here because the session is here.
+
+    Carried rather than re-read at the two call sites, so the name a document is
+    published under and the name reported afterwards cannot come from different
+    reads of the same machine.
+    """
+
+    @property
+    def scope(self) -> str:
+        return ', '.join(publishing.PUBLISHABLE)
+
+
+def composed(machine: str | None) -> Composed:
+    """The publishable document, and the machine it is about.
+
+    Composed by walking with everything outside `publishing.PUBLISHABLE` skipped,
+    which is the allowlist expressed through the narrowing the engine already has.
+    A resource added to `vocabulary.RESOURCES` later is skipped here without anyone
+    editing this, which is the direction the boundary has to fail in.
+
+    `plan` rather than `check`: what a bundle builder wants is what would *change*,
+    and `check` deliberately keeps a different set of findings.
+
+    Rewritten `~`-rooted before it is returned. A row's evidence is usually the
+    path a tool was found at, which carries the account name, and the account name
+    is what the gate refuses — so an unrooted document refuses itself. A builder
+    wants the version rather than which home it sat in, so nothing is lost.
+    """
+    session = Session.resolve(machine)
+    named = session.machine_name
+    withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
+    # No run record, as in the resource-scoped read doors in `commands/resources.py`.
+    # `runs.write` points `latest` at whatever it wrote, and after an apply that
+    # pointer stays on the apply: its record is the only account of the run on a
+    # restricted box, and `report path` hands it over for upload.
+    began = dt.datetime.now(dt.UTC)
+    # Offline, because the document says what the machine has, measured by running
+    # each tool. The online lens resolves every release against GitHub first, and
+    # on a firewalled box those lookups fail and the rows a builder diffs against
+    # vanish.
+    walked = reconcile.survey(Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
+    trust = session.machine.coordinates.network_trust
+    composition = document(walked.results, named, began, verb='plan', written_by=publishing.discriminator(trust))
+    return Composed(publishing.rooted(composition, str(Path.home())), tuple(walked.results), named, trust)
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Published:
+    """A status that reached the remote, under the exact name a builder is told to read."""
+
+    name: str
+    directory: str
+    composition: Composed
+    withheld: tuple[str, ...]
+
+
+def publish(where: transport.Remote, machine: str | None) -> Published:
+    """Compose, screen and upload this machine's status.
+
+    The gate runs before anything moves, so a refusal leaves nothing on the server.
+    """
+    found = composed(machine)
+    screen = publishing.publishable(found.document, found.trust)
+    name = publishing.filename(found.machine, dt.datetime.now(dt.UTC), found.trust)
+    directory = transport.statuses_for(where, found.machine)
+    with tempfile.TemporaryDirectory() as workspace:
+        local = Path(workspace) / name
+        local.write_text(json.dumps(screen.document, indent=2) + '\n')
+        transport.push(where, local, directory)
+    return Published(name, directory, found, tuple(screen.withheld))
 
 
 def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:

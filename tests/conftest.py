@@ -240,7 +240,7 @@ REDIRECTED_STATE = 'Dir::State::lists='
 
 `('apt-get', 'update')` is on the list above because the bare form rewrites
 `/var/lib/apt/lists` and needs root for it. Pointed at a scratch directory it
-writes only there, which is how `syspkg._apt_outdated` measures apt currency
+writes only there, which is how `syspkg.apt_outdated` measures apt currency
 without escalating — a read, and the guard has to be able to tell them apart.
 """
 

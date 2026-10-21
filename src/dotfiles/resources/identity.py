@@ -67,6 +67,8 @@ NAME = 'identity'
 
 FIELDS = ('user.name', 'user.email')
 
+HOME_GITCONFIG_ITEM = '~/.gitconfig'
+
 
 @dc.dataclass(frozen=True, slots=True)
 class Observed:
@@ -249,7 +251,7 @@ def layering_changes(observed: Observed) -> tuple[Change, ...]:
             Change(
                 NAME,
                 Stage.IDENTITY,
-                '~/.gitconfig',
+                HOME_GITCONFIG_ITEM,
                 Verdict.UNDECLARED,
                 repair=Repair.BY_HAND,
                 detail='git prefers it over the XDG entry point, so it silently outranks every include below',

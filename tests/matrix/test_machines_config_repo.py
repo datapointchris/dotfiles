@@ -1056,7 +1056,7 @@ PLAN_KEYS = {'machine', 'platform', 'coordinates', 'features', 'flags', 'auth', 
 ITEM_KEYS = {'section', 'provider', 'resource', 'stage', 'name', 'executable', 'evidence_path', 'precondition', 'selector'}
 REGISTER_KEYS = {'name', 'kind', 'path', 'description', 'restore', 'tags', 'consumers', 'narrowing', 'requires_values', 'file_must_exist'}
 FINDING_KEYS = {'section', 'severity', 'message'}
-SETTINGS_KEYS = {'config_file', 'exists', 'problem', 'settings', 'remote', 'schedule'}
+SETTINGS_KEYS = {'config_file', 'exists', 'problem', 'settings', 'remote', 'network', 'schedule'}
 SETTING_KEYS = {'name', 'value', 'source', 'exists', 'advice'}
 REMOTE_KEYS = {'declared', 'problem', 'root', 'program', 'operations', 'keep_bundles', 'from_table', *transport.FLAGS}
 """The shape of the `remote` block, with the flags read from where they are named.

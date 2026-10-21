@@ -20,6 +20,7 @@ import typer
 
 import dotfiles
 from dotfiles import banner
+from dotfiles import bundle_requests
 from dotfiles import commands
 from dotfiles import engine
 from dotfiles import logging
@@ -123,7 +124,19 @@ def root(
 
 SkipOption = typer.Option(None, '--skip', help='Address to leave alone; repeatable (e.g. --skip system --skip plugins/tpm)')
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
-OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
+OfflineOption = typer.Option(
+    False,
+    '--offline',
+    help=(
+        'Install what the config blocks from the staged bundle and contact no remote unless --request-bundle is given; '
+        'with nothing blocked, reach no network'
+    ),
+)
+RequestBundleOption = typer.Option(
+    False,
+    '--request-bundle',
+    help='Ask a builder, through the remote, for the blocked items no staged bundle carries, and install them this run',
+)
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 EntryOption = resources.EntryOption
@@ -327,6 +340,7 @@ def apply_command(
     entry: list[str] = EntryOption,
     reinstall: bool = resources.ReinstallOption,
     offline: bool = OfflineOption,
+    request_bundle: bool = RequestBundleOption,
     through: str = typer.Option(None, '--through', help='Converge only as far as this stage (dotfiles machines show names them)'),
     as_json: bool = JsonOption,
     verbose: int = VerboseOption,
@@ -372,6 +386,7 @@ def apply_command(
             owner=owner,
             entries=frozenset(entry or ()),
             reinstall=reinstall,
+            request_bundle=request_bundle,
             # `skip`, `offline`, `entry` and `reinstall` unconditionally; `through`
             # only when given. The first four each decide how a row in the record is
             # read back — what the currency verdicts were measured against, which
@@ -386,6 +401,7 @@ def apply_command(
                 'offline': offline,
                 'entry': sorted(entry or ()),
                 'reinstall': reinstall,
+                'request_bundle': request_bundle,
                 **({'through': through} if through else {}),
             },
             as_json=as_json,
@@ -401,6 +417,7 @@ def converged(
     owner: str | None,
     entries: frozenset[str],
     reinstall: bool,
+    request_bundle: bool,
     flags: dict[str, object],
     as_json: bool,
 ) -> ExitCode:
@@ -424,6 +441,7 @@ def converged(
         reinstall=reinstall,
         flags=flags,
         as_json=as_json,
+        request_bundle=bundle_requests.requester(offline=offline, forced=request_bundle),
     )
     if offline and code is ExitCode.CONVERGED:
         status_commands.publish_after_apply(machine)

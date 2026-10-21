@@ -360,10 +360,34 @@ def record_on_remote(where: transport.Remote, directory: str, name: str) -> Reco
     with tempfile.TemporaryDirectory() as workspace:
         local = Path(workspace) / sidecar
         try:
-            transport.pull(where, f'{directory}/{sidecar}', local)
+            transport.pull(where, f'{directory}/{sidecar}', local, timeout=transport.SMALL_OPERATION_SECONDS)
             return record_from(json.loads(local.read_text()))
         except (transport.RemoteError, OSError, ValueError):
             return Record(name, 0, '')
+
+
+def publish(where: transport.Remote, archive: Path) -> Record:
+    """Upload an archive and its record to the shelf of the machine it was built for.
+
+    The record carries size, digest and what the bundle says it is, which `download`
+    reads to describe a bundle before spending the transfer on it. The archive goes
+    first, because a record arriving before its bytes is a row `bundle list` shows
+    and `bundle download` then fails to fetch.
+    """
+    record = described_record(archive)
+    machine = record.description.machine
+    if not machine:
+        raise StagingError(
+            f'{archive.name} does not say which machine it is for, so there is no shelf to put it on',
+            advice='rebuild it: dotfiles bundle create --machine NAME --arch ARCH',
+        )
+    directory = transport.bundles_for(where, machine)
+    with tempfile.TemporaryDirectory() as workspace:
+        sidecar = Path(workspace) / f'{archive.name}{SIDECAR_SUFFIX}'
+        sidecar.write_text(json.dumps(record.as_dict(), indent=2) + '\n')
+        transport.push(where, archive, directory)
+        transport.push(where, sidecar, directory)
+    return record
 
 
 def verified(archive: Path, record: Record) -> bool:

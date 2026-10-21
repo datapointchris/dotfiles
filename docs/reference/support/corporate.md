@@ -11,6 +11,12 @@ pass/fail line per host. Run it on the restricted machine first. The answer is
 rarely "the internet is blocked" and usually "GitHub release assets are blocked
 but the API is not", which changes what you have to carry in.
 
+The check then reads the machine's `[network] blocked` list and says where the two
+disagree. A `declared` row names each listed host and the items whose version
+check or download reaches it. An `undeclared` row is a host that refused but is
+not listed, so an apply would ask it and fail. An `answered` row is a listed host
+that answered, so an apply takes from the bundle what the network would serve.
+
 Pass `--output <path>` to render the run somewhere outside the repo. Keep it
 under `$XDG_STATE_HOME` to diff two runs after the firewall rules change.
 `src/dotfiles/commands/network.py` holds why that flag has no default, and
@@ -71,9 +77,8 @@ dotfiles status upload
 what it found and asks before the transfer. The apply unpacks that archive
 itself, and skips the unpacking only when it is already staged — so there is no
 staging step to remember and a bundle fetched to replace an old one takes effect
-on the next run. `--offline` sends every provider the bundle carries to the staged
-bundle instead of the network. `status upload` publishes what the box now has, so
-the next bundle can be built against it.
+on the next run. `status upload` publishes what the box now has, so the next
+bundle can be built against it.
 
 `dotfiles bundle stage PATH` is still there for unpacking without installing,
 which is what `bundle check` and `bundle show` read, and for a tarball carried
@@ -88,33 +93,42 @@ On a machine with no CLI yet the bootstrap comes first.
 `./install.sh --machine NAME --offline` finds the newest archive in the download
 cache, beside the checkout or in `$HOME`, unpacks it under
 `$XDG_CACHE_HOME/dotfiles/staged/`, installs uv and the CLI from it with no index
-at all, and prints the apply line above. The flag is needed on both and means a
-different thing on each: where the bootstrap gets uv and the wheels, and where
-the apply gets everything else.
+at all, and prints the apply line above. The flag means a different thing on
+each. The bootstrap takes uv and the wheels from the bundle. The apply takes only
+blocked items from it and contacts no remote.
 
-## A second apply picks up what `--offline` leaves undone
+## The config names what this network blocks, and one apply routes around it
 
-`--offline` is one switch for the whole run, and this box is only partly
-blocked. apt, `pypi.org` and `git clone` from GitHub answer here. No bundle
-carries an apt package or a tool from a private index, so an offline run still
-installs a missing one over the network. It declines every currency question,
-though, so apt reports nothing behind and nothing is upgraded. It also refuses
-every plugin transfer, because the bundle stages no plugin.
+This box is only partly blocked. Its config, deployed from
+`configs/trust/nonfleet/.config/dotfiles/config.toml`, lists the hosts it refuses
+under `[network] blocked`. `dotfiles network check` probes the hosts the plan
+reaches. It names a refused host the list leaves out, and a listed host that
+answers.
 
-A networked apply that skips `packages` and `toolchains` picks those up. Those
-two are the resources that reach release assets and `proxy.golang.org`, so
-skipping them keeps the run to git and apt:
+Each item reaches two hosts, and the apply routes them apart. An item whose
+download reaches a listed host installs from the staged bundle. Everything else
+installs from the network, as it would anywhere. A release tool's assets are
+blocked, but its version check goes to `api.github.com`. So it is measured against
+the newest release while its bytes come from the bundle.
+
+That makes the whole box one command, after the checkout is current:
 
 ```bash
 dotfiles update
-dotfiles apply --machine wsl-work-workstation --offline
-dotfiles apply --machine wsl-work-workstation --skip packages --skip toolchains
-dotfiles status upload
+dotfiles apply --machine wsl-work-workstation
 ```
 
-The second apply upgrades apt, pulls any plugin checkout that is behind, and
-installs what TPM and lazy have pending. Both applies converge to the same state
-when run again, so either can be repeated on its own.
+apt is asked what is behind, plugin checkouts are pulled, and TPM and lazy sync
+over git. rustup, Go and node install from their own hosts, and uv comes from the
+bundle. The run opens with a `network` line counting the blocked hosts and saying
+how many items go to the bundle and how many to the network. An item routed to
+the bundle that is missing or behind, with no staged bundle carrying it, is asked
+of a builder in the same run, as the section below describes.
+
+`--offline` keeps the list, installs blocked items only from what is staged, and
+contacts no remote. Such an item then gets a row naming the blocked host and the
+bundle it needs. Where the list is empty or absent, `--offline` counts every host
+as blocked and asks no network.
 
 ## Carry only what changed
 
@@ -138,6 +152,32 @@ Two `[remote]` keys close the loop with nothing typed:
 default off. `docs/architecture/offline-bundles.md` says why the defaults are one
 decision rather than several.
 
+## The apply asks a builder for what no staged bundle carries
+
+This box's config turns on `request_bundle_when_blocked_items_are_behind`. When
+the apply finds blocked items missing or behind and no staged bundle carrying
+them, it publishes this box's status and leaves a request on the remote naming
+those items. Then it waits for a builder running `dotfiles bundle serve`. Each
+step is a log line: sent, acknowledged by the builder, still waiting, bundle
+listed, downloading, verified, staged. The apply measures those items
+again against the new bundle and installs them in the same run.
+
+`dotfiles apply --request-bundle` asks on a box whose config leaves the key off,
+and asks under `--offline` too. `dotfiles bundle request` asks without applying:
+
+```bash
+dotfiles bundle request              # everything the status shows behind
+dotfiles bundle request --entry glow # or only what is named
+```
+
+When no builder acknowledges the request in time, the apply names the
+`dotfiles-bundle-serve` unit to check on the builder, stops waiting and installs
+the rest. A build that started gets a longer deadline. Either way the request
+stays in place, so `dotfiles bundle download` collects the bundle once the
+builder answers. A failed build prints the builder's error and the end of its
+log.
+`docs/architecture/offline-bundles.md` holds the protocol.
+
 **Nothing but packages and versions leaves that machine.**
 `src/dotfiles/publishing.py` is the account of both guards standing in front of
 the status document — why an allowlist, why a second gate behind it, and why one
@@ -145,9 +185,9 @@ row is withheld rather than the whole document refused.
 
 The offline install is rehearsed end to end by
 `uv run pytest tests/e2e --docker -k offline`, which builds a bundle, blackholes
-a set of hosts in a container, and asserts the install completes from cache.
-`tests/e2e/harness.py` declares which hosts and why each one was picked. Change
-the bundle format and that is what catches it.
+the hosts this box's config lists in a container, and asserts the install
+converges. `tests/e2e/harness.py` reads the list from that config rather than
+keeping its own. Change the bundle format and that is what catches it.
 
 ## Windows tools when winget is blocked
 

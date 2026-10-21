@@ -25,6 +25,7 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import plan as planning
 from dotfiles import resolve as resolver
+from dotfiles import routing
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
@@ -169,14 +170,14 @@ class Session:
         lazy, `MachineError` surfaces from wherever the property is first touched
         — inside `survey`, past every handler, as a traceback and exit 1.
 
-        **An offline run does not refresh.** There is no network to spend, and
-        `resources.packages._upstream` ignores the flag on that branch anyway. It
-        is narrowed here rather than left to each caller because `refresh` reaches
-        this door already decided: `commands.currency` returns the
-        `MEASURES_UPSTREAM` default whenever nothing was typed, so `--offline`
-        alone arrives asking for a network read. An `--offline --refresh` a person
-        actually typed is refused by `commands.contradiction` long before this,
-        which is why dropping it silently here costs no instruction.
+        **An offline run with no blocked hosts declared does not refresh.** Every
+        host counts as blocked there, so there is no network to spend. With a
+        declared list, `--offline` still refreshes, and each reader asks
+        `routes` whether its own host answers. It is narrowed here rather than left
+        to each caller because `refresh` reaches this door already decided:
+        `commands.currency` returns the `MEASURES_UPSTREAM` default whenever nothing
+        was typed. An `--offline --refresh` a person actually typed is refused by
+        `commands.contradiction` long before this.
 
         Not in `__init__`: constructing a Session directly is the bootstrap and
         test affordance, and only the front door carries the guarantees. The four
@@ -188,11 +189,13 @@ class Session:
             owner=owner,
             entries=entries,
             offline=offline,
-            refresh=refresh and not offline,
+            refresh=refresh,
             force=force,
             reinstall=reinstall,
         )
         _ = session.machine
+        if refresh and session.routes.everything:
+            return dc.replace(session, refresh=False)
         return session
 
     @functools.cached_property
@@ -232,6 +235,15 @@ class Session:
         the resource vocabulary, which reaches this file.
         """
         return evidence.Inventories(refresh=self.refresh)
+
+    @functools.cached_property
+    def routes(self) -> routing.Routes:
+        """Which hosts this run treats as blocked, read once for every provider.
+
+        From this machine's deployed config, or the copy its symlink stage deploys
+        where the first apply has not deployed one yet.
+        """
+        return routing.read(offline=self.offline, declared_at=routing.trust_copy(self.repo, self.machine.coordinates.network_trust))
 
     @functools.cached_property
     def preconditions(self) -> planning.Preconditions:

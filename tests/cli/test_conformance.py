@@ -633,7 +633,7 @@ def names_the_table(node: ast.expr) -> bool:
     return isinstance(node, ast.Attribute) and node.attr == TABLE
 
 
-def test_only_the_two_heading_builders_name_the_heading_width() -> None:
+def test_only_the_heading_builder_names_the_heading_width() -> None:
     """A function naming the width is laying out a heading of its own, whatever it
     draws it with.
 
@@ -641,7 +641,7 @@ def test_only_the_two_heading_builders_name_the_heading_width() -> None:
     render a section and neither names a width, because `section_line` hands them
     the geometry already.
     """
-    assert functions_naming('ADDRESS_COLUMN') == {'section_line', 'render_result'}
+    assert functions_naming('ADDRESS_COLUMN') == {'section_line'}
 
 
 def test_one_function_asks_a_yes_or_no_question() -> None:
@@ -1002,6 +1002,7 @@ def rendered_lines(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
         "apply's closing line, having done nothing": reconcile.applied_line(0, [], [], []),
         "apply's closing line, narrowed and current": reconcile.applied_line(0, [], [], [], ['custom/theme theme v7.1.0']),
         'the heading over a group of work': reconcile.converging_line([a_change(privileged=True)]),
+        'the heading over blocked items a builder is asked for': reconcile.bundle_need_line(('glow',)),
         'the headings over what apply walked past': untouched,
         'the machines row, sound but not silent': reconcile.declaration_row([warning], []).detail,
         'the machines row, refusing': reconcile.declaration_row([fatal], [fatal]).detail,

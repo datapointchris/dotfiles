@@ -123,7 +123,7 @@ def test_the_network_is_the_one_the_work_box_measured(container: Machine) -> Non
     if not container.environment.firewalled:
         pytest.skip('only a firewalled environment models the work network')
 
-    blocked, _ = measured_network()
+    blocked, _ = measured_network(container.environment)
     still_reachable = [host for host in blocked if reaches(container, f'curl -fsS --connect-timeout 5 https://{host}/')]
     assert not still_reachable, f'blocked at work but reachable here: {still_reachable}'
 
@@ -132,7 +132,7 @@ def test_the_network_is_the_one_the_work_box_measured(container: Machine) -> Non
     # crates.io blocked, because it answers a default curl agent with 403; that is
     # the trap `dotfiles.network` documents and works around, and this test
     # walked into it on its first run.
-    unreachable = [probe.name for probe in reachable_probes() if not reaches(container, probe.command())]
+    unreachable = [probe.name for probe in reachable_probes(container.environment) if not reaches(container, probe.command())]
     assert not unreachable, f'reachable at work but not here — the container is stricter than the firewall: {unreachable}'
 
 

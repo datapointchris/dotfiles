@@ -18,21 +18,12 @@ gate it exports runs before any byte moves.
 
 from __future__ import annotations
 
-import dataclasses as dc
-import datetime as dt
-import json
-import tempfile
-from pathlib import Path
-
 import typer
 
-from dotfiles import coordinates as axes
 from dotfiles import paths
 from dotfiles import publishing
-from dotfiles import reconcile
 from dotfiles import remote as transport
 from dotfiles import status as status_document
-from dotfiles import vocabulary
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import kept
@@ -50,8 +41,6 @@ from dotfiles.output import render_row
 from dotfiles.output import section_line
 from dotfiles.output import success
 from dotfiles.output import warn
-from dotfiles.results import Lens
-from dotfiles.results import ResourceResult
 from dotfiles.results import ResourceVerdict
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
@@ -60,72 +49,6 @@ app = typer.Typer(no_args_is_help=True, help='What this machine has installed, f
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 MachineOption = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)')
-
-
-@dc.dataclass(frozen=True, slots=True)
-class Composed:
-    """The publishable document and the rows it was folded from.
-
-    Both, because the two surfaces want different halves: `--json` wants the
-    document exactly as it will travel, and the terminal wants the typed results,
-    which reading them back out of the document would only cast to `object`.
-    """
-
-    document: dict[str, object]
-    results: tuple[ResourceResult, ...]
-    machine: str
-    trust: axes.NetworkTrust
-    """Which answer `discriminator` gives, resolved here because the session is here.
-
-    Carried rather than re-read at the two call sites, so the name a document is
-    published under and the name reported afterwards cannot come from different
-    reads of the same machine.
-    """
-
-    @property
-    def scope(self) -> str:
-        return ', '.join(publishing.PUBLISHABLE)
-
-
-def composed(machine: str | None) -> Composed:
-    """The publishable document, and the machine it is about.
-
-    Composed by walking with everything outside `publishing.PUBLISHABLE` skipped,
-    which is the allowlist expressed through the narrowing the engine already has.
-    A resource added to `vocabulary.RESOURCES` later is skipped here without anyone
-    editing this, which is the direction the boundary has to fail in.
-
-    `plan` rather than `check`: what a bundle builder wants is what would *change*,
-    and `check` deliberately keeps a different set of findings.
-
-    Rewritten `~`-rooted before it is returned. A row's evidence is usually the
-    path a tool was found at, which carries the account name, and the account name
-    is what the gate refuses — so an unrooted document refuses itself. A builder
-    wants the version rather than which home it sat in, so nothing is lost.
-    """
-    session = Session.resolve(machine)
-    named = session.machine_name
-    withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
-    # No run record, which is the same choice `commands/resources.py` made for the
-    # resource-scoped read doors. `runs.write` re-points `latest` at whatever it
-    # wrote, so composing a document after an offline apply took that pointer off
-    # the apply and put it on a two-resource plan — on the box whose run records
-    # are the only account of what happened there, and where `report path` exists
-    # so a failed apply's record can be uploaded. It also ran before the gate
-    # could refuse, so a document that never left still cost the apply its
-    # pointer.
-    began = dt.datetime.now(dt.UTC)
-    # Offline, and that is what makes the document useful rather than a
-    # convenience. This says what the machine *has*, which is measured by running
-    # each tool — never by asking upstream. The online lens resolves every release
-    # against GitHub first, so on the firewalled box this exists for those lookups
-    # fail and the rows vanish: 25 examined entries, none of them a version, none
-    # of them a release binary. Offline the same walk reports 36, with versions,
-    # which is exactly what a builder diffs against.
-    walked = reconcile.survey(Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
-    trust = session.machine.coordinates.network_trust
-    document = status_document.document(walked.results, named, began, verb='plan', written_by=publishing.discriminator(trust))
-    return Composed(publishing.rooted(document, str(Path.home())), tuple(walked.results), named, trust)
 
 
 @app.command('show')
@@ -156,7 +79,7 @@ def show(
     working out which of two vocabularies a `3` came from.
     """
     verbosity(verbose, quiet)
-    found = composed(machine)
+    found = status_document.composed(machine)
     # Measured once and read by both doors, so the exit code and the rows cannot
     # disagree — a red issue row above a CONVERGED exit sends `status show &&
     # status upload` straight into a refusal the first command already found.
@@ -192,24 +115,16 @@ def upload(
     """
     verbosity(verbose, quiet)
     where = transport.reachable()
-    found = composed(machine)
-    screen = publishing.publishable(found.document, found.trust)
+    published = status_document.publish(where, machine)
 
-    name = publishing.filename(found.machine, dt.datetime.now(dt.UTC), found.trust)
-    directory = transport.statuses_for(where, found.machine)
-    with tempfile.TemporaryDirectory() as workspace:
-        local = Path(workspace) / name
-        local.write_text(json.dumps(screen.document, indent=2) + '\n')
-        transport.push(where, local, directory)
-
-    success(f'uploaded {name} to {directory}')
-    render_note(f'covering {found.scope} and nothing else')
+    success(f'uploaded {published.name} to {published.directory}')
+    render_note(f'covering {published.composition.scope} and nothing else')
     # `warn`, not a note: `render_note` returns early under `-q`, so a publish that
     # dropped rows said nothing at all on the one invocation a script makes. A row
     # that did not travel is a warning about the artifact rather than evidence
     # under a verdict.
-    for withheld in screen.withheld:
-        warn(f'{withheld} was left out of {name}: its version string names this machine')
+    for withheld in published.withheld:
+        warn(f'{withheld} was left out of {published.name}: its version string names this machine')
     raise typer.Exit(ExitCode.CONVERGED)
 
 
@@ -234,22 +149,16 @@ def publish_after_apply(machine: str | None) -> None:
     if found.remote is None or not found.remote.publish_status_after_offline_apply:
         return
     try:
-        composition = composed(machine)
-        screen = publishing.publishable(composition.document, composition.trust)
-        name = publishing.filename(composition.machine, dt.datetime.now(dt.UTC), composition.trust)
-        with tempfile.TemporaryDirectory() as workspace:
-            local = Path(workspace) / name
-            local.write_text(json.dumps(screen.document, indent=2) + '\n')
-            transport.push(found.remote, local, transport.statuses_for(found.remote, composition.machine))
+        published = status_document.publish(found.remote, machine)
     except Exception as failed:
         warn(f'this machine converged and its status was not published: {failed}')
         return
-    render_note(f'published {name}, so the next bundle can be built against it')
+    render_note(f'published {published.name}, so the next bundle can be built against it')
     # Named here as `upload` names them. This is the path nobody is watching, so a
     # row dropped silently is one the builder then carries a tool for with nothing
     # anywhere recording why — degrading is right, degrading silently is not.
-    for withheld in screen.withheld:
-        warn(f'{withheld} was left out of {name}: its version string names this machine')
+    for withheld in published.withheld:
+        warn(f'{withheld} was left out of {published.name}: its version string names this machine')
 
 
 @app.command('list')

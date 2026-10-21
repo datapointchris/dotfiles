@@ -38,6 +38,8 @@ from dotfiles import catalog as catalogs
 from dotfiles import coordinates as axes
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import remote as transport
+from dotfiles import routing
 from dotfiles.providers import custom
 from dotfiles.providers import releases
 from dotfiles.resources import auth
@@ -101,6 +103,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(registry_paths(root))
     findings.extend(remote_tables(root))
     findings.extend(schedule_declared(root))
+    findings.extend(network_declared(root))
     return tuple(findings)
 
 
@@ -525,6 +528,9 @@ def remote_tables(root: Path) -> list[Finding]:
     Omission is checked as well as disagreement, and it is the likelier fault. One
     variant edited and the other forgotten leaves the declared copies trivially in
     agreement while the machine that was forgotten has no remote at all.
+
+    The automatic flags must be stated in every copy, and only their values may
+    differ. They say what each side does on its own, which is a fact about the side.
     """
     declared: dict[str, Any] = {}
     absent: list[str] = []
@@ -555,7 +561,8 @@ def remote_tables(root: Path) -> list[Finding]:
     # Compared as parsed values rather than as text, so whitespace and key order
     # are not a difference and a retyped table is only reported when it says
     # something else.
-    if not all(table == next(iter(declared.values())) for table in declared.values()):
+    addressed = [{key: key if key in transport.FLAGS else value for key, value in table.items()} for table in declared.values()]
+    if not all(table == addressed[0] for table in addressed):
         findings.append(Finding(REMOTE_TABLE, Severity.ERROR, f'{", ".join(sorted(declared))} declare different {REMOTE_TABLE} tables'))
     return findings
 
@@ -588,6 +595,42 @@ def schedule_declared(root: Path) -> list[Finding]:
                     Severity.ERROR,
                     f'{relative} does not state {SCHEDULE_TABLE}.enabled, so whether this machine runs a periodic '
                     f'check is readable only from the compiled-in default',
+                )
+            )
+    return findings
+
+
+def network_declared(root: Path) -> list[Finding]:
+    """Every variant of this tool's own config names the hosts its network blocks.
+
+    The variants disagree by design, as `schedule_declared`'s do. Each has to state
+    a list of hostnames, because an apply routes every download by it and a silent
+    copy would route everything to the network on a machine that cannot reach it.
+    """
+    findings: list[Finding] = []
+    for config in sorted((root / 'configs').rglob(DOTFILES_CONFIG)):
+        relative = str(config.relative_to(root))
+        try:
+            table = tomllib.loads(config.read_text()).get(routing.TABLE)
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+            continue
+        blocked = table.get(routing.KEY) if isinstance(table, dict) else None
+        if not isinstance(blocked, list):
+            findings.append(
+                Finding(
+                    routing.TABLE,
+                    Severity.ERROR,
+                    f'{relative} does not state {routing.TABLE}.{routing.KEY}, so an apply cannot tell which downloads this '
+                    f'network refuses',
+                )
+            )
+            continue
+        if malformed := [host for host in blocked if not routing.hostname(host)]:
+            findings.append(
+                Finding(
+                    routing.TABLE,
+                    Severity.ERROR,
+                    f'{relative}: {routing.TABLE}.{routing.KEY} holds {", ".join(map(repr, malformed))}, which is not a hostname',
                 )
             )
     return findings

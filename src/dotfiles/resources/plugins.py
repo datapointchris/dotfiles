@@ -100,6 +100,9 @@ class Observed:
     unsynced: tuple[tuple[str, str], ...] = ()
     """The managers with something outstanding, each with what was measured."""
 
+    declared: int = 0
+    """How many plugins the plan declares as clones, so the summary counts against it."""
+
     unmanaged: dict[str, str] = dc.field(default_factory=dict)
     """Address → the directory it has, for a plugin declared as a clone with no `.git`.
 
@@ -133,11 +136,17 @@ class Observed:
         word to carry it: a subdirectory plugin is copied out of a checkout that is
         then deleted, so two of the nine never were clones.
         """
-        present = f'all {len(self.present)} declared plugins are present'
-        if not self.managers:
+        if not self.declared:
+            present = 'this machine declares no plugins'
+        elif len(self.present) == self.declared:
+            present = f'all {self.declared} declared plugins are present'
+        else:
+            present = f'{len(self.present)} of {self.declared} declared plugins are present'
+        pending = dict(self.unsynced)
+        named = sorted(name for address, name in self.managers if address not in pending)
+        if not named:
             return present
-        named = sorted(name for _, name in self.managers)
-        return f'{present}, and {" and ".join(named)} have nothing pending'
+        return f'{present}, and {" and ".join(named)} {"has" if len(named) == 1 else "have"} nothing pending'
 
     @property
     def inventory(self) -> tuple[Examined, ...]:
@@ -219,7 +228,9 @@ class PluginsResource:
         # `unmanaged` stays in. `clone.behind` answers None for it without fetching,
         # so excluding it would save no round trip, and `diff` reaches its more
         # specific row first either way.
-        asked = tuple(item for item in clones if item.address in present and not clone.subdirectory(item))
+        asked = tuple(
+            item for item in clones if item.address in present and not clone.subdirectory(item) and registry.route(session, item).measured
+        )
         behind, unaskable = fetched(asked, session.home) if session.refresh else (frozenset(), frozenset())
         return Observed(
             present=present,
@@ -230,6 +241,7 @@ class PluginsResource:
             unsynced=tuple((item.address, pending) for item, provider in syncs if (pending := provider.pending(session))),
             unmanaged=unmanaged,
             origins={item.address: origin(item, item.address in unmanaged) for item in clones},
+            declared=len(clones),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:

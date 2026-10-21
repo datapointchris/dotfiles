@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from dotfiles.evidence import Inventories
     from dotfiles.machine import Machine
     from dotfiles.plan import Plan
+    from dotfiles.routing import Routes
 
 
 class MachineContext(Protocol):
@@ -52,8 +53,8 @@ class MachineContext(Protocol):
         ...
 
     @property
-    def offline(self) -> bool:
-        """Whether this run may spend the network at all."""
+    def routes(self) -> Routes:
+        """Which hosts this run treats as blocked, so which items install from the bundle."""
         ...
 
     @property

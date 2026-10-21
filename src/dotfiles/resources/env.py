@@ -100,7 +100,10 @@ class Observed:
 
     @property
     def summary(self) -> str:
-        return '~/.env matches the manifest and the declared flags'
+        """Scoped to the half this repo writes, because the values below the marker are findings of their own."""
+        if not self.exists:
+            return '~/.env is not written yet'
+        return '~/.env above its OVERRIDES marker matches the manifest and the declared flags'
 
     @property
     def inventory(self) -> tuple[Examined, ...]:
