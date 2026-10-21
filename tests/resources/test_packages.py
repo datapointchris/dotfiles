@@ -1239,7 +1239,7 @@ def installs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """
     attempted: list[str] = []
 
-    def record(entry, target=None, *, offline=False, again=False, before_place=None, floor='', reinstall=False):
+    def record(entry, target=None, *, offline=False, routes=None, again=False, before_place=None, floor='', reinstall=False):
         """The engine's shape rather than only its name.
 
         `before_place` is what the release provider hands in to displace a package

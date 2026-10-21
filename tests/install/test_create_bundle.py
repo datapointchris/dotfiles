@@ -22,6 +22,7 @@ from dotfiles import create_bundle
 from dotfiles import evidence as ev
 from dotfiles import github_release
 from dotfiles import paths
+from dotfiles import routing
 from dotfiles import status
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
@@ -560,8 +561,11 @@ class TestBundleRoundTrip:
 
         item = planned(entry, 'cargo_packages')
         reported = ev.probe_version(str(tmp_path / 'home' / '.cargo' / 'bin' / 'fd')).version
-        latest, _ = packages.upstream(Session('a-machine', offline=True), (item,))
-        observed = packages.Observed(evidence={}, met=Preconditions(), reported={item.address: reported}, latest=latest, from_bundle=True)
+        offline = {item.address: routing.Route(bundled=True, measured=False, everything=True)}
+        latest, _, from_bundle = packages.upstream(Session('a-machine', offline=True), (item,), offline)
+        observed = packages.Observed(
+            evidence={}, met=Preconditions(), reported={item.address: reported}, latest=latest, from_bundle=from_bundle, routes=offline
+        )
 
         assert packages.currency_of(item, observed) == ()
 

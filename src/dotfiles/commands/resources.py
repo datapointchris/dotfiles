@@ -291,7 +291,11 @@ SourceOption = typer.Option(
 )
 MachineOption = typer.Option(None, '--machine', help='Machine manifest to use')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
-OfflineOption = typer.Option(False, '--offline', help='Use a staged offline bundle instead of the network')
+OfflineOption = typer.Option(
+    False,
+    '--offline',
+    help='Install what the config blocks from the staged bundle and contact no remote; with nothing blocked, reach no network',
+)
 OwnerOption = typer.Option(None, '--owner', help='Only entries traceable to this GitHub owner')
 EntryOption = typer.Option(
     None,

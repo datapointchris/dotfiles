@@ -23,6 +23,7 @@ is no desired state here to converge on.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import datetime as dt
 import platform
 import time
@@ -31,8 +32,14 @@ from pathlib import Path
 
 import typer
 
+from dotfiles import catalog
+from dotfiles import coordinates
 from dotfiles import machine as machines
 from dotfiles import network
+from dotfiles import paths
+from dotfiles import registry
+from dotfiles import resolve
+from dotfiles import routing
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
@@ -93,6 +100,7 @@ def check(
     seconds = time.monotonic() - started
     verdicts = measurement.verdicts
     blocked = [verdict for verdict in verdicts if not verdict.reachable]
+    found = declared(machine, measurement)
 
     if as_json:
         emit_json(
@@ -106,6 +114,13 @@ def check(
                 # The results file is no substitute: it records `when`, not how long.
                 'seconds': round(seconds, 3),
                 'unprobed': list(measurement.unprobed),
+                'declared': {
+                    'source': found.routes.source,
+                    'blocked': sorted(found.routes.blocked),
+                    'undeclared': list(found.undeclared),
+                    'answered': list(found.answered),
+                    'items': found.reaching,
+                },
                 'probes': [
                     {
                         'section': verdict.probe.section,
@@ -122,7 +137,7 @@ def check(
             }
         )
     else:
-        render(machine.name, measurement, blocked, seconds)
+        render(machine.name, measurement, blocked, seconds, found)
 
     if output is not None:
         written = network.render(
@@ -138,7 +153,9 @@ def check(
     raise typer.Exit(ExitCode.ISSUE if blocked else ExitCode.CONVERGED)
 
 
-def render(machine_name: str, measurement: network.Measurement, blocked: Sequence[network.ProbeResult], seconds: float) -> None:
+def render(
+    machine_name: str, measurement: network.Measurement, blocked: Sequence[network.ProbeResult], seconds: float, found: Declared
+) -> None:
     """The probe run as a section, its refusals as rows, and one closing verdict.
 
     This is a `check`, so it reads beside the reconcile verbs and is written in
@@ -192,6 +209,7 @@ def render(machine_name: str, measurement: network.Measurement, blocked: Sequenc
         # for the same set on the same screen. A literal here reworded only the
         # rows or only the count, and the two sit three lines apart.
         render_row(Phrase.UNPROBED, '', reason, 'magenta', width)
+    render_declared(found, max([width, *(len(host) for host in (*found.reaching, *found.undeclared, *found.answered))]))
 
     console.print()
     standing = Phrase.CANNOT_INSTALL if blocked else Phrase.CAN_INSTALL
@@ -201,6 +219,61 @@ def render(machine_name: str, measurement: network.Measurement, blocked: Sequenc
         # refusal whose fix is a single act covering every row that shows it —
         # and the closing line is what a reader takes away from forty rows.
         hint('install the proxy CA and re-run: dotfiles network check')
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Declared:
+    """The measurement set beside the hosts this machine's config declares blocked."""
+
+    routes: routing.Routes
+    undeclared: tuple[str, ...]
+    """Refused here, but not declared, so an apply asks the network and fails."""
+
+    answered: tuple[str, ...]
+    """Declared blocked, but answered here, so an apply takes from the bundle what the network serves."""
+
+    reaching: dict[str, tuple[str, ...]]
+    """Each declared host, and the items whose version check or download reaches it."""
+
+
+def declared(machine: machines.Machine, measurement: network.Measurement) -> Declared:
+    """Compare what refused against `[network] blocked`, and name what each declared host affects.
+
+    Read through `registry.hosts`, the same answer an apply routes by, so the two
+    cannot name different hosts for one item.
+    """
+    routes = routing.read(offline=False, declared_at=routing.trust_copy(paths.REPO_ROOT, machine.coordinates.network_trust))
+    refused = {verdict.landed or verdict.probe.host for verdict in measurement.verdicts if not verdict.reachable}
+    answered = {host for verdict in measurement.verdicts if verdict.reachable for host in (verdict.probe.host, verdict.landed) if host}
+    target = coordinates.target_for(machine.coordinates)
+    items = resolve.resolve(catalog.load(), machine).items
+    return Declared(
+        routes,
+        tuple(sorted(refused - routes.blocked)),
+        tuple(sorted(routes.blocked & answered)),
+        {host: tuple(item.address for item in items if host in registry.hosts(item, target).every) for host in sorted(routes.blocked)},
+    )
+
+
+def render_declared(found: Declared, width: int) -> None:
+    """One row per declared host with the items it sends to the bundle, then each disagreement."""
+    where = found.routes.source or 'no config'
+    for host, items in found.reaching.items():
+        render_row(
+            'declared', host, f'{len(items)} item(s) reach it: {", ".join(items)}' if items else 'no item reaches it', 'yellow', width
+        )
+    for host in found.undeclared:
+        render_row(
+            'undeclared', host, f'refused here, but {where} does not declare it blocked, so an apply asks it and fails', 'red', width
+        )
+    for host in found.answered:
+        render_row(
+            'answered',
+            host,
+            f'answered here, but {where} declares it blocked, so an apply takes from the bundle what it serves',
+            'red',
+            width,
+        )
 
 
 def closing(blocked: int, intercepted: int) -> str:

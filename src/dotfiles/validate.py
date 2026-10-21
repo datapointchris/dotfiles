@@ -38,6 +38,7 @@ from dotfiles import catalog as catalogs
 from dotfiles import coordinates as axes
 from dotfiles import machine as machines
 from dotfiles import paths
+from dotfiles import routing
 from dotfiles.providers import custom
 from dotfiles.providers import releases
 from dotfiles.resources import auth
@@ -101,6 +102,7 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
     findings.extend(registry_paths(root))
     findings.extend(remote_tables(root))
     findings.extend(schedule_declared(root))
+    findings.extend(network_declared(root))
     return tuple(findings)
 
 
@@ -588,6 +590,42 @@ def schedule_declared(root: Path) -> list[Finding]:
                     Severity.ERROR,
                     f'{relative} does not state {SCHEDULE_TABLE}.enabled, so whether this machine runs a periodic '
                     f'check is readable only from the compiled-in default',
+                )
+            )
+    return findings
+
+
+def network_declared(root: Path) -> list[Finding]:
+    """Every variant of this tool's own config names the hosts its network blocks.
+
+    The variants disagree by design, as `schedule_declared`'s do. Each has to state
+    a list of hostnames, because an apply routes every download by it and a silent
+    copy would route everything to the network on a machine that cannot reach it.
+    """
+    findings: list[Finding] = []
+    for config in sorted((root / 'configs').rglob(DOTFILES_CONFIG)):
+        relative = str(config.relative_to(root))
+        try:
+            table = tomllib.loads(config.read_text()).get(routing.TABLE)
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+            continue
+        blocked = table.get(routing.KEY) if isinstance(table, dict) else None
+        if not isinstance(blocked, list):
+            findings.append(
+                Finding(
+                    routing.TABLE,
+                    Severity.ERROR,
+                    f'{relative} does not state {routing.TABLE}.{routing.KEY}, so an apply cannot tell which downloads this '
+                    f'network refuses',
+                )
+            )
+            continue
+        if malformed := [host for host in blocked if not routing.hostname(host)]:
+            findings.append(
+                Finding(
+                    routing.TABLE,
+                    Severity.ERROR,
+                    f'{relative}: {routing.TABLE}.{routing.KEY} holds {", ".join(map(repr, malformed))}, which is not a hostname',
                 )
             )
     return findings

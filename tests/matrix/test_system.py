@@ -1003,7 +1003,10 @@ def test_a_first_apply_installs_the_timer_its_own_symlink_pass_turned_on(
     monkeypatch.setenv('XDG_CONFIG_HOME', str(sandbox.home / '.config'))
     write(sandbox.home / '.config' / 'uv' / '.python-version', (sandbox.config / 'uv' / '.python-version').read_text())
     declare_system(sandbox, SCHEDULE_STEP)
-    write(sandbox.repo / 'configs' / 'trust' / 'fleet' / '.config' / 'dotfiles' / 'config.toml', '[schedule]\nenabled = true\n')
+    write(
+        sandbox.repo / 'configs' / 'trust' / 'fleet' / '.config' / 'dotfiles' / 'config.toml',
+        '[schedule]\nenabled = true\n\n[network]\nblocked = []\n',
+    )
     sandbox.shadow('systemctl', ANSWERS)
     units = sandbox.home / '.config' / 'systemd' / 'user'
 

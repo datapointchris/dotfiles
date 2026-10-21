@@ -47,6 +47,8 @@ from dotfiles import catalog
 from dotfiles import effects
 from dotfiles import evidence
 from dotfiles import github_release
+from dotfiles import paths
+from dotfiles import routing
 from dotfiles.coordinates import Target
 from dotfiles.effects import Output
 from dotfiles.output import err_console
@@ -61,28 +63,49 @@ from dotfiles.providers import unreadable_kind
 
 @dc.dataclass(frozen=True, slots=True)
 class Request:
-    """One tool to converge, and the one flag that changes how.
+    """One tool to converge, and which hosts this run may reach for it.
 
     There is no force flag and nowhere for one to attach: currency is measured
     before an installer is called, so reaching a function below means the machine
     needs it. A flag overriding that could only mean "write despite the
     measurement", and a flag never decides whether the command writes.
+
+    The routes rather than one offline flag, because one installer reaches several
+    hosts. `theme` takes its script from a host the work network blocks and clones
+    from one it allows, so each URL is asked about separately.
     """
 
     entry: catalog.CustomInstaller
     target: Target
-    offline: bool = False
+    routes: routing.Routes = dc.field(default_factory=routing.Routes)
+
+    def blocked(self, url: str) -> str:
+        """'' where this run reaches the URL's host, else the clause saying why not."""
+        route = self.routes.route(routing.ItemHosts(download=routing.hosts_of([url])))
+        return route.because if route.bundled else ''
 
 
 Installer = Callable[[Request], Result]
 
 
-def install(entry: catalog.CustomInstaller, target: Target, *, offline: bool = False) -> Result:
+def install(entry: catalog.CustomInstaller, target: Target, *, routes: routing.Routes | None = None) -> Result:
     """Converge one custom installer, whatever converging means for it."""
     installer = INSTALLERS.get(entry.name)
     if installer is None:
         return Result(False, f'nothing in providers.custom installs {entry.name}', kind=Kind.DECLARATION_INVALID)
-    return installer(Request(entry, target, offline=offline))
+    return installer(Request(entry, target, routes or routing.Routes()))
+
+
+def hosts(entry: catalog.CustomInstaller, target: Target) -> routing.ItemHosts:
+    """The hosts this tool's version check asks, and the hosts its install reaches.
+
+    The download half is `sources`, the same list `dotfiles network check` probes.
+    """
+    version = {routing.GITHUB_API} if entry.repo else set()
+    return routing.ItemHosts(
+        version=frozenset(version) | routing.hosts_of(filter(None, [version_file(entry)])),
+        download=routing.hosts_of(source.url for source in sources(entry, target)),
+    )
 
 
 def missing_parts(entry: catalog.CustomInstaller) -> tuple[str, ...]:
@@ -220,34 +243,46 @@ SOURCES: dict[str, Callable[[catalog.CustomInstaller, Target], tuple[Source, ...
 
 
 def staged_script(request: Request, url: str, into: Path) -> script.Script:
-    return script.staged(request.entry.name, url, into, offline=request.offline)
+    return script.staged(request.entry.name, url, into, offline=bool(request.blocked(url)))
 
 
 def run_vendor_script(request: Request, url: str) -> Result:
-    """Fetch and run one vendor install script.
+    """Fetch and run one vendor install script, from the bundle where its host is blocked.
 
     Shared with the language runtimes, which converge the same way: `providers/
     script.py` holds it, and an empty detail on success is its rule as much as
     `delegate_update`'s below.
     """
-    return script.run(request.entry.name, url, offline=request.offline)
+    if why := request.blocked(url):
+        err_console.print(f'{request.entry.name}: from the bundle, because {why}', soft_wrap=True)
+    return script.run(request.entry.name, url, offline=bool(request.blocked(url)))
 
 
 def unstaged(request: Request, url: str, reason: str = '') -> str:
-    return script.unstaged(request.entry.name, url, offline=request.offline, reason=reason)
+    if why := request.blocked(url):
+        return f'{request.entry.name} installs from {url}; {why}, and no bundle staged at {paths.staging_dir()} carries its script'
+    return script.unstaged(request.entry.name, url, offline=False, reason=reason)
 
 
-def present_and_offline(request: Request, installed: bool) -> Result | None:
-    """Offline is a reason to leave a working tool alone, not to fail.
+def left_alone(request: Request, installed: bool, *urls: str) -> Result | None:
+    """A working tool whose update reaches a blocked host is left as it is, not failed.
 
-    Every one of these updates from the network — a clone, a vendor script, a
-    release API — so an offline run has nothing to compare against and nothing to
-    fetch. Reporting the tool present is the honest answer; failing the stage
-    would report a machine as broken for being exactly what its bundle made it.
+    Failing the stage would report a machine as broken for being exactly what its
+    network allows. The row names the host, so the reason is on the screen.
     """
-    if request.offline and installed:
-        return Result(True, f'{request.entry.name} is installed; offline, so it is not updated', kind=Kind.UNCHANGED)
+    why = next((reason for url in urls if (reason := request.blocked(url))), '')
+    if installed and why:
+        return Result(True, f'{request.entry.name} is installed and not updated: {why}', kind=Kind.UNCHANGED)
     return None
+
+
+def cannot_reach(request: Request, what: str, *urls: str) -> Result | None:
+    """A refusal where installing this tool reaches a blocked host and no bundle carries it."""
+    blocked = next(((url, reason) for url in urls if (reason := request.blocked(url))), None)
+    if blocked is None:
+        return None
+    url, why = blocked
+    return Result(False, f'{what} installs from {url}; {why}, and no bundle stages it', kind=Kind.NOT_IN_BUNDLE, refused=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -267,8 +302,8 @@ def checkout_tool(request: Request) -> Result:
     checkout = local_dir() / 'share' / name
     installed = (checkout / '.git').is_dir()
 
-    if offline := present_and_offline(request, installed):
-        return offline
+    if kept := left_alone(request, installed, git_repo(request.entry)):
+        return kept
     if installed:
         return delegate_update(name, checkout)
     return run_vendor_script(request, request.entry.install_url)
@@ -294,8 +329,8 @@ def bashselfupdate(request: Request) -> Result:
     is installed, which is why the entry declares `installed_path`.
     """
     checkout = Path(request.entry.installed_path).expanduser()
-    if offline := present_and_offline(request, checkout.exists()):
-        return offline
+    if kept := left_alone(request, checkout.exists(), git_repo(request.entry)):
+        return kept
     return run_vendor_script(request, request.entry.install_url)
 
 
@@ -317,28 +352,29 @@ def claude_code(request: Request) -> Result:
     the next run measures whether the release arrived.
     """
     installed = evidence.reported_version(request.entry.executable) is not None
-    if offline := present_and_offline(request, installed):
-        return offline
+    if kept := left_alone(request, installed, request.entry.url):
+        return kept
 
+    blocked = bool(request.blocked(request.entry.install_url))
     with tempfile.TemporaryDirectory(prefix='dotfiles-claude-code-') as scratch:
         # Named before it is reached, as `theme`, `font` and the runtimes do through
         # `script.run`. This installer stages by hand and printed nothing, so it was
         # the one vendor script whose URL never reached the screen — on a firewalled
         # machine that is the single most useful line, because the host is what a
         # person has to get unblocked.
-        err_console.print(f'claude-code: {request.entry.install_url}', soft_wrap=True)
+        source = f'from the bundle, because {request.blocked(request.entry.install_url)}' if blocked else request.entry.install_url
+        err_console.print(f'claude-code: {source}', soft_wrap=True)
         staged = staged_script(request, request.entry.install_url, Path(scratch))
         if not staged:
             # `refused` where the bundle simply does not carry it, matching every
-            # other installer: an offline machine that was never given this script is
-            # doing what it was built to do, and reporting a failure makes the whole
-            # stage non-zero for it. Without this, offline claude-code was the one
-            # unstaged script counted as a broken install.
+            # other installer: a machine that cannot reach the script's host and was
+            # never given it is doing what it was built to do, and reporting a
+            # failure makes the whole stage non-zero for it.
             return Result(
                 False,
                 unstaged(request, request.entry.install_url, staged.reason),
-                kind=Kind.NOT_IN_BUNDLE if request.offline else Kind.DOWNLOAD_FAILED,
-                refused=request.offline,
+                kind=Kind.NOT_IN_BUNDLE if blocked else Kind.DOWNLOAD_FAILED,
+                refused=blocked,
             )
         completed = effects.run(['bash', str(staged.path)], output=Output.STREAM)
 
@@ -384,17 +420,12 @@ def awscli(request: Request) -> Result:
     was a branch here returning success without installing anything, which left
     a Mac with nothing wrong printing a line about awscli on every run.
     """
-    if offline := present_and_offline(request, evidence.reported_version(request.entry.executable) is not None):
-        return offline
-    if request.offline:
-        return Result(
-            False,
-            f'awscli installs from {request.entry.url}, which the offline bundle does not stage',
-            kind=Kind.NOT_IN_BUNDLE,
-            refused=True,
-        )
-
     url = awscli_zip(request.entry, request.target)
+    if kept := left_alone(request, evidence.reported_version(request.entry.executable) is not None, url):
+        return kept
+    if stopped := cannot_reach(request, 'awscli', url):
+        return stopped
+
     with tempfile.TemporaryDirectory(prefix='dotfiles-awscli-') as scratch:
         staging = Path(scratch)
         archive = staging / 'awscliv2.zip'
@@ -452,8 +483,10 @@ def mount_s3(request: Request) -> Result:
         return Result(True, 'mount-s3 has no macOS build, so nothing is installed here', kind=Kind.UNSUPPORTED_HERE)
 
     installed = evidence.reported_version(request.entry.executable)
-    if offline := present_and_offline(request, installed is not None):
-        return offline
+    if kept := left_alone(request, installed is not None, tarball_url):
+        return kept
+    if stopped := cannot_reach(request, 'mount-s3', tarball_url):
+        return stopped
 
     with tempfile.TemporaryDirectory(prefix='dotfiles-mount-s3-') as scratch:
         staging = Path(scratch)
@@ -529,18 +562,16 @@ def terraform_ls(request: Request) -> Result:
     `releases.hashicorp.com`, so the checksum file cannot be discovered among the
     release assets and has to be named directly.
 
-    Nothing stages it into an offline bundle for the same reason, so an offline
-    run refuses it rather than failing the stage — the alternative is a machine
-    that cannot finish an install because of a language server.
+    Nothing stages it into a bundle for the same reason, so a run that cannot reach
+    either host refuses it rather than failing the stage — the alternative is a
+    machine that cannot finish an install because of a language server.
     """
     entry = request.entry
-    if request.offline:
-        return Result(
-            False,
-            f'terraform-ls is served from {HASHICORP}, which the offline bundle does not stage',
-            kind=Kind.NOT_IN_BUNDLE,
-            refused=True,
-        )
+    api = f'https://{routing.GITHUB_API}'
+    if kept := left_alone(request, evidence.reported_version(entry.executable) is not None, HASHICORP, api):
+        return kept
+    if stopped := cannot_reach(request, 'terraform-ls', HASHICORP, api):
+        return stopped
 
     try:
         latest = github_release.latest_version(entry.repo, '')
@@ -625,8 +656,12 @@ def bats(request: Request) -> Result:
     """
     entry = request.entry
     installed = evidence.reported_version(entry.executable)
-    if offline := present_and_offline(request, installed is not None):
-        return offline
+    api = f'https://{routing.GITHUB_API}'
+    core_repo = bats_repos(entry)[0]
+    if kept := left_alone(request, installed is not None, api, core_repo):
+        return kept
+    if stopped := cannot_reach(request, 'bats', api, core_repo):
+        return stopped
 
     try:
         latest = github_release.latest_version(entry.repo, '')
@@ -704,15 +739,11 @@ def git(request: Request) -> Result:
     check is which one PATH finds, not whether it finds one.
     """
     entry = request.entry
-    if offline := present_and_offline(request, evidence.reported_version(entry.executable) is not None):
-        return offline
-    if request.offline:
-        return Result(
-            False,
-            f'git builds from a clone of {git_repo(entry)}, which the offline bundle does not stage',
-            kind=Kind.NOT_IN_BUNDLE,
-            refused=True,
-        )
+    api = f'https://{routing.GITHUB_API}'
+    if kept := left_alone(request, evidence.reported_version(entry.executable) is not None, api, git_repo(entry)):
+        return kept
+    if stopped := cannot_reach(request, 'git', api, git_repo(entry)):
+        return stopped
 
     latest = github_release.latest_tag(entry.repo)
     if latest is None:

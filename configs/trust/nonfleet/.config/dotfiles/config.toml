@@ -31,6 +31,24 @@ repos_registry = "~/.config/repos.json"
 [schedule]
 enabled = false
 
+# The hosts this network refuses, by name. An apply takes what an item downloads
+# from one of them out of the staged bundle, and installs everything else from the
+# network as usual. `dotfiles network check` measures the same hosts and says
+# where this list and the network disagree.
+#
+# GitHub serves a release asset from the three githubusercontent hosts after a
+# redirect, so blocking them blocks every release download while github.com still
+# answers clones and the API.
+[network]
+blocked = [
+  "release-assets.githubusercontent.com",
+  "objects.githubusercontent.com",
+  "github-releases.githubusercontent.com",
+  "raw.githubusercontent.com",
+  "proxy.golang.org",
+  "claude.ai",
+]
+
 # Both trust variants declare this table identically; a validator holds them to it.
 #
 # The three flags are stated rather than left to the defaults they match, for the

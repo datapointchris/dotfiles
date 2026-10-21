@@ -184,6 +184,14 @@ class Change:
     """The copy `apply` takes off the machine to repair this row, where the repair
     is a removal. Set only where a declaration's `supersedes` names the copy."""
 
+    awaits_bundle: str = ''
+    """Why repairing this needs a newer bundle than the one staged, or ''.
+
+    The clause naming the blocked host the item's download reaches. Set where the
+    item installs from the bundle and no staged bundle carries the version it
+    wants. `packages.bundle_need` reads it.
+    """
+
     def __post_init__(self) -> None:
         """Three invariants a signature cannot express, each conditional on another
         field's value."""
@@ -338,6 +346,10 @@ class Outcome:
         carrying = dc.replace(change, advice=result.advice) if result.advice else change
         if result.refused:
             return cls(carrying, OutcomeStatus.REFUSED, result.detail)
+        if result.ok and result.kind is providers.Kind.UNCHANGED:
+            # Nothing was written, so the run did not change it. Counted as done,
+            # the closing line called a tool left alone a change.
+            return cls(carrying, OutcomeStatus.SKIPPED, result.detail)
         if result.ok:
             return cls(carrying, OutcomeStatus.DONE, result.detail)
         # Only a failure is diagnosed, and only here. A refusal wrote nothing

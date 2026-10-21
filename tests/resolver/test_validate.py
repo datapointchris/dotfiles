@@ -537,8 +537,12 @@ SCHEDULE = '[schedule]\nenabled = false\n'
 """Every dotfiles config states this, so a synthetic tree that omits it is reporting
 the schedule finding rather than whatever the test is about."""
 
+NETWORK = '[network]\nblocked = []\n'
+"""Stated by every dotfiles config, for the reason `SCHEDULE` is."""
+
 REMOTE = (
     SCHEDULE
+    + NETWORK
     + """
 [remote]
 root = "/dotfiles"
@@ -564,7 +568,7 @@ def test_the_same_remote_table_in_both_trust_variants_is_silent(tmp_path: Path) 
 def test_no_variant_declaring_a_remote_is_silent(tmp_path: Path) -> None:
     """Having no remote is the ordinary state of a machine that never exchanges a
     bundle, so the check is about agreement and never about presence."""
-    named = SCHEDULE + 'repos_registry = "~/.config/repos.json"\n'
+    named = SCHEDULE + 'repos_registry = "~/.config/repos.json"\n' + NETWORK
     root = configs_tree(tmp_path, configs={f'trust/fleet/{DOTFILES_CONFIG}': named, f'trust/nonfleet/{DOTFILES_CONFIG}': named})
 
     assert validate.declaration(root) == ()
@@ -578,7 +582,7 @@ def test_a_remote_declared_in_one_variant_and_not_the_other_is_an_error(tmp_path
         tmp_path,
         configs={
             f'trust/fleet/{DOTFILES_CONFIG}': REMOTE,
-            f'trust/nonfleet/{DOTFILES_CONFIG}': SCHEDULE + 'repos_registry = "~/.config/repos.json"\n',
+            f'trust/nonfleet/{DOTFILES_CONFIG}': SCHEDULE + 'repos_registry = "~/.config/repos.json"\n' + NETWORK,
         },
     )
 
@@ -644,6 +648,7 @@ def test_the_same_table_written_out_differently_is_not_a_difference(tmp_path: Pa
     check that diffed the text would report every reformatting as a drifted server."""
     retyped = (
         SCHEDULE
+        + NETWORK
         + """
 [remote]
 root   = "/dotfiles"

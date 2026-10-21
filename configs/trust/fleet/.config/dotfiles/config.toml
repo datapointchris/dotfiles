@@ -37,6 +37,13 @@ workstations_json = "~/.local/share/terminal-library-fleet/workstations.json"
 [schedule]
 enabled = true
 
+# The hosts this network refuses. None here, so every item installs from the
+# network. Stated for the reason [schedule] is: a validator
+# holds both variants to naming it. `apply --offline` treats an empty list as
+# every host refused.
+[network]
+blocked = []
+
 # Both trust variants declare this table identically; a validator holds them to it.
 #
 # The three flags are stated rather than left to the defaults they match, for the
