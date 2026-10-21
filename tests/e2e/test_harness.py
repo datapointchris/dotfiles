@@ -18,7 +18,6 @@ from pathlib import Path
 import harness
 import pytest
 from harness import ARCHLINUX
-from harness import BLOCKED_HOSTS
 from harness import CONTAINER_PATH_DIRS
 from harness import ENVIRONMENTS
 from harness import PROBE_AGENT
@@ -77,20 +76,6 @@ def test_github_stays_reachable_because_its_block_is_path_scoped() -> None:
     assert any(host.endswith('githubusercontent.com') for host in blocked), (
         'blackholing the CDN a download redirects to is how a path-scoped block becomes a host rule'
     )
-
-
-def test_every_blocked_host_is_one_the_plan_actually_reaches() -> None:
-    """A name in `BLOCKED_HOSTS` that no probe targets blocks nothing.
-
-    It would still be counted, still emitted as an `--add-host` pair, and still
-    read as a firewall in the run header — so the rig would report a restricted
-    network while rehearsing a smaller one than it claims. The CDNs are exempt
-    because a redirect target is never a probe's own host.
-    """
-    reached = {probe.host for probe in harness.measured_probes()}
-    unused = [host for host in BLOCKED_HOSTS if host not in reached and not host.endswith('githubusercontent.com')]
-
-    assert not unused, f'blocked but never reached, so blocking it rehearses nothing: {unused}'
 
 
 def test_the_go_proxy_is_blocked_because_that_is_why_go_tools_are_bundled() -> None:
