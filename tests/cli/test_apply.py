@@ -224,7 +224,9 @@ class Walk:
     """A stand-in for the engine, yielding whatever a test needs it to have found.
 
     `found` is what measuring a stage again turns up, keyed by stage. Stubbed with
-    the rest, because the real `engine.remeasure` measures this machine.
+    the rest, because the real `engine.remeasure` measures this machine. So is
+    `engine.measure`, which the settings pass after the walk calls, and which finds
+    what `assess` found.
     """
 
     def __init__(self, *events: Event, outcomes: tuple[Event, ...] = (), found: dict[Stage, list[Event]] | None = None) -> None:
@@ -246,6 +248,9 @@ class Walk:
     def remeasure(self, session, selection, stage, planned):
         self.remeasured.append(stage)
         return self.found.get(stage, [])
+
+    def measure(self, session, name, resource, plan):
+        return iter(event for event in self.assessed if event.resource == name)
 
 
 def drift(item: str, repair: Repair = Repair.AUTOMATIC) -> Event:
@@ -276,6 +281,7 @@ def walked(monkeypatch: pytest.MonkeyPatch, walk: Walk) -> Walk:
     monkeypatch.setattr(engine, 'assess', walk.assess)
     monkeypatch.setattr(engine, 'execute', walk.execute)
     monkeypatch.setattr(engine, 'remeasure', walk.remeasure)
+    monkeypatch.setattr(engine, 'measure', walk.measure)
     return walk
 
 
@@ -343,6 +349,7 @@ def test_a_group_is_announced_before_it_runs_rather_than_after(quiet: None, monk
     monkeypatch.setattr(engine, 'assess', lambda *args, **kwargs: iter((drift('ripgrep'),)))
     monkeypatch.setattr(engine, 'execute', acting)
     monkeypatch.setattr(engine, 'remeasure', lambda *args: [])
+    monkeypatch.setattr(engine, 'measure', lambda *args: iter(()))
     monkeypatch.setattr('dotfiles.reconcile.render_section', lambda address, *args, **kwargs: announced.append(f'section:{address}'))
 
     reconcile.apply_machine(engine.Selection.everything())
