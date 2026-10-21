@@ -46,6 +46,7 @@ from dotfiles import status as status_document
 from dotfiles.refusal import Refusal
 from dotfiles.resources import OutcomeStatus
 from dotfiles.session import Session
+from dotfiles.vocabulary import ExitCode
 
 log = logging.get_logger('bundle-requests')
 
@@ -64,12 +65,12 @@ SERVE_UNIT = 'dotfiles-bundle-serve.service'
 SERVE_FEATURE = 'serve_bundles'
 """The manifest boolean that installs `SERVE_UNIT`, so the advice can name the builder's manifest."""
 
-BUILD_VERB = 'bundle-build'
-"""The verb a build's run record is filed under, so `dotfiles report list` shows each build."""
+BUILD_VERB = 'build'
+"""The verb a build's run record is filed under, one of `vocabulary.RECORDED_VERBS`, so `dotfiles report list` shows each build."""
 
 
 class MalformedRequest(Refusal):
-    """A request file that does not parse as one."""
+    """A file on the requests shelf that does not parse as what its name says it is."""
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -98,10 +99,23 @@ def request_from(document: Any) -> Request:
     missing = [field.name for field in dc.fields(Request) if field.name != 'entries' and not isinstance(document.get(field.name), str)]
     if missing:
         raise MalformedRequest(f'the request carries no {", ".join(missing)}')
+    unsafe = [name for name in ('id', 'status') if not bare_filename(document[name])]
+    if unsafe:
+        raise MalformedRequest(f'the request names its {", ".join(unsafe)} as a path rather than a filename')
     entries = document.get('entries') or []
     if not isinstance(entries, list) or not all(isinstance(name, str) for name in entries):
         raise MalformedRequest('the request names its entries as something other than a list of strings')
     return Request(**{field.name: document[field.name] for field in dc.fields(Request) if field.name != 'entries'}, entries=tuple(entries))
+
+
+def bare_filename(value: str) -> bool:
+    """Whether `value` names a file in one directory, so joining it onto another stays there.
+
+    A request's `id` names the builder's files on the remote and its `status` the
+    local file the status lands in. Anyone holding the remote's token can write a
+    request, and an absolute path discards the prefix it is joined onto.
+    """
+    return value not in ('', '.', '..') and Path(value).name == value
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -159,9 +173,21 @@ def put(where: transport.Remote, directory: str, name: str, document: dict[str, 
         transport.push(where, local, directory)
 
 
-def read_remote(where: transport.Remote, directory: str, name: str) -> Any:
+def read_object(where: transport.Remote, directory: str, name: str) -> dict[str, Any]:
+    """One file from the shelf as a JSON object, or `MalformedRequest` where it is not one.
+
+    Read the same way by both halves. A file another box wrote may be half uploaded
+    or hand edited, and neither may end the run that reads it.
+    """
     with tempfile.TemporaryDirectory() as workspace:
-        return json.loads(transport.pull(where, f'{directory}/{name}', Path(workspace) / name).read_text())
+        pulled = transport.pull(where, f'{directory}/{name}', Path(workspace) / name, timeout=transport.SMALL_OPERATION_SECONDS)
+        try:
+            document = json.loads(pulled.read_text())
+        except ValueError as unreadable:
+            raise MalformedRequest(f'{name} on the remote is not JSON: {unreadable}') from unreadable
+    if not isinstance(document, dict):
+        raise MalformedRequest(f'{name} on the remote is a JSON {type(document).__name__}, not an object')
+    return document
 
 
 def dotfiles_commit() -> str:
@@ -188,6 +214,18 @@ def obtain_bundle(machine: str | None, entries: Sequence[str]) -> Path | None:
         if refused.advice:
             pointed(refused.advice)
         return None
+
+
+def refuse_unbundled(machine: str | None, entries: Sequence[str]) -> None:
+    """Refuse an entry this machine's plan bundles nothing under, before anything reaches the remote.
+
+    The builder refuses the same names the same way, after a status upload and
+    a wait. `create_bundle.left_out_of` is the one judge for both ends.
+    """
+    try:
+        create_bundle.left_out_of(Session.resolve(machine).plan, tuple(entries))
+    except create_bundle.BundleError as refused:
+        raise Refusal(str(refused), code=ExitCode.USAGE) from refused
 
 
 def said(message: str, *, warning: bool = False) -> None:
@@ -263,11 +301,16 @@ def requested_and_staged(machine: str | None, entries: tuple[str, ...]) -> Path 
 
 
 def waited_for(where: transport.Remote, request: Request, already_listed: set[str]) -> offline_bundle.Record | None:
-    """Poll until a bundle names this request, the builder fails it, or time runs out."""
+    """Poll until a bundle names this request, the builder fails it, or time runs out.
+
+    A bundle on the shelf answers before a failed marker does: a builder that
+    uploaded and then could not tidy up still built it. With no acknowledgement by
+    `ACKNOWLEDGE_DEADLINE_SECONDS` no builder is running, so the wait stops there
+    rather than holding the apply for `REQUEST_TIMEOUT_SECONDS`.
+    """
     directory = transport.requests_for(where, request.machine)
     began = time.monotonic()
     acknowledged: Acknowledgement | None = None
-    warned = False
     said_waiting = 0.0
 
     while time.monotonic() - began < REQUEST_TIMEOUT_SECONDS:
@@ -275,38 +318,44 @@ def waited_for(where: transport.Remote, request: Request, already_listed: set[st
         waited = time.monotonic() - began
         try:
             found = shelf_of(transport.listed(where, directory) or ())
-            if request.id in found.failed:
-                failure = read_remote(where, directory, f'{request.id}{FAILED_SUFFIX}')
-                said(
-                    f'{failure.get("builder", "the builder")} could not build request {request.id}: {failure.get("error", "")}',
-                    warning=True,
-                )
-                for line in failure.get('log_tail') or []:
-                    said(f'  {line}')
-                pointed('fix what the error names, then run: dotfiles bundle request')
-                return None
-            if acknowledged is None and request.id in found.building:
-                document = read_remote(where, directory, f'{request.id}{BUILDING_SUFFIX}')
-                acknowledged = Acknowledgement(**{field.name: document.get(field.name, '') for field in dc.fields(Acknowledgement)})
-                said(f'{acknowledged.builder} acknowledged it at {acknowledged.started_at} and is building')
             answered = answering(where, request.machine, request.id, already_listed)
             if answered is not None:
                 if acknowledged is None:
                     said('a builder acknowledged and built it between two polls')
                 said(f'bundle listed: {answered.name}')
                 return answered
+            if request.id in found.failed:
+                failure = read_object(where, directory, f'{request.id}{FAILED_SUFFIX}')
+                said(
+                    f'{failure.get("builder", "the builder")} could not build request {request.id}: {failure.get("error", "")}',
+                    warning=True,
+                )
+                tail = failure.get('log_tail')
+                for line in tail if isinstance(tail, list) else []:
+                    said(f'  {line}')
+                pointed('fix what the error names, then run: dotfiles bundle request')
+                return None
+            if acknowledged is None and request.id in found.building:
+                document = read_object(where, directory, f'{request.id}{BUILDING_SUFFIX}')
+                acknowledged = Acknowledgement(**{field.name: document.get(field.name, '') for field in dc.fields(Acknowledgement)})
+                said(f'{acknowledged.builder} acknowledged it at {acknowledged.started_at} and is building')
             if request.id not in found.requests:
                 said(f'request {request.id} left the remote with no bundle answering it, so a newer request took its place', warning=True)
                 return None
         except transport.RemoteError as unanswered:
             said(f'the remote did not answer this poll, still waiting: {unanswered}', warning=True)
             continue
+        except MalformedRequest as unreadable:
+            said(f'{unreadable}, so the next poll reads it again', warning=True)
+            continue
 
-        if acknowledged is None and not warned and waited >= ACKNOWLEDGE_DEADLINE_SECONDS:
-            said(f'no builder has acknowledged request {request.id} after {ACKNOWLEDGE_DEADLINE_SECONDS // 60} minutes', warning=True)
+        if acknowledged is None and waited >= ACKNOWLEDGE_DEADLINE_SECONDS:
+            minutes = ACKNOWLEDGE_DEADLINE_SECONDS // 60
+            said(f'no builder acknowledged request {request.id} within {minutes} minutes, so this run stops waiting', warning=True)
             said(f'the builder is the {SERVE_UNIT} user unit on the machine running the {builder_manifests()} manifest')
+            said('the request stays on the remote, so a builder that starts later still answers it')
             pointed(f'check it there: systemctl --user status {SERVE_UNIT}; journalctl --user -u {SERVE_UNIT}')
-            warned = True
+            return None
         if waited - said_waiting >= STILL_WAITING_EVERY_SECONDS:
             said(f'still {"building" if acknowledged else "waiting for a builder"}, {int(waited) // 60}m{int(waited) % 60:02d}s in')
             said_waiting = waited
@@ -330,13 +379,19 @@ def builder_manifests() -> str:
 
 
 def answering(where: transport.Remote, machine: str, request_id: str, already_listed: set[str]) -> offline_bundle.Record | None:
-    """The record of a bundle that answers this request, reading only archives new since it was sent."""
+    """The record of a bundle that answers this request, reading only archives new since it was sent.
+
+    An archive is uploaded before its record, so one listed with no record yet is
+    read again on the next poll rather than set aside as somebody else's.
+    """
     shelf = transport.bundles_for(where, machine)
     for name in offline_bundle.on_remote(where, machine):
         if name in already_listed:
             continue
-        already_listed.add(name)
         record = offline_bundle.record_on_remote(where, shelf, name)
+        if not record.sha256:
+            continue
+        already_listed.add(name)
         if record.description.request == request_id:
             return record
     return None
@@ -360,17 +415,30 @@ class LogTail(stdlib_logging.Handler):
 
 
 def serve(once: bool) -> bool:
-    """Answer requests every `SERVE_POLL_SECONDS`, or in one pass under `once`. False when a build failed."""
+    """Answer requests every `SERVE_POLL_SECONDS`, or in one pass under `once`. False when a build failed.
+
+    The loop returns True once the checkout's HEAD moves. Its unit restarts on any
+    exit, so the next build runs on the code an update pulled rather than the
+    modules this process imported.
+    """
     where = transport.require()
     if not where.transport.declares(transport.Operation.DELETE):
         raise transport.RemoteError(
             'bundle serve deletes each request it answers, and no remote.transport.delete is declared',
             advice='declare delete in the [remote.transport] table of config.toml',
         )
-    log.info(f'serving bundle requests under {where.directory(transport.REQUESTS)} as {paths.machine_id()}, every {SERVE_POLL_SECONDS}s')
+    started_on = dotfiles_commit()
+    log.info(
+        f'serving bundle requests under {where.directory(transport.REQUESTS)} as {paths.machine_id()}, '
+        f'every {SERVE_POLL_SECONDS}s, on dotfiles commit {started_on or "(unknown)"}'
+    )
+    finished_here: set[str] = set()
     while True:
+        if not once and (moved_to := dotfiles_commit()) != started_on:
+            log.info(f'the checkout moved from {started_on} to {moved_to}, so this process exits for its unit to restart it')
+            return True
         try:
-            clean = serve_pass(where)
+            clean = serve_pass(where, finished_here)
         except transport.RemoteError as unanswered:
             log.warning(f'the remote did not answer this pass: {unanswered}')
             clean = False
@@ -379,25 +447,44 @@ def serve(once: bool) -> bool:
         time.sleep(SERVE_POLL_SECONDS)
 
 
-def serve_pass(where: transport.Remote) -> bool:
-    """Build the newest request on each manifest's shelf, deleting the ones it supersedes."""
+def serve_pass(where: transport.Remote, finished_here: set[str]) -> bool:
+    """Build each box's newest request on every manifest's shelf, deleting the ones it supersedes.
+
+    `finished_here` holds the requests this process built or failed. A request the
+    remote would not let it remove, or whose failed marker it refused, then stays
+    on the shelf without being built again on every pass. It also holds each
+    directory refused for naming no manifest, so the refusal is logged once.
+    """
     manifests = transport.listed(where, where.directory(transport.REQUESTS)) or ()
+    declared = set(machines.names())
     clean = True
     for machine in sorted(name.rstrip('/') for name in manifests):
+        if machine not in declared:
+            if machine not in finished_here:
+                log.warning(f'{transport.REQUESTS}/{machine} names no manifest this checkout declares, so its requests are left alone')
+                finished_here.add(machine)
+            continue
         directory = transport.requests_for(where, machine)
         found = shelf_of(transport.listed(where, directory) or ())
-        if not found.requests:
-            continue
-        *superseded, newest = found.requests
-        for old in superseded:
-            log.info(f'request {old} for {machine} is superseded by {newest}, deleting it')
+        newest = {box_of(request_id): request_id for request_id in found.requests}
+        for old in found.requests:
+            if old == newest[box_of(old)]:
+                continue
+            log.info(f'request {old} for {machine} is superseded by {newest[box_of(old)]}, deleting it')
             for suffix, present in ((REQUEST_SUFFIX, True), (BUILDING_SUFFIX, old in found.building), (FAILED_SUFFIX, old in found.failed)):
                 if present:
                     transport.remove(where, f'{directory}/{old}{suffix}')
-        if newest in found.failed:
-            continue
-        clean = answer(where, machine, newest) and clean
+        for request_id in sorted(newest.values()):
+            if request_id in found.failed or request_id in finished_here:
+                continue
+            clean = answer(where, machine, request_id) and clean
+            finished_here.add(request_id)
     return clean
+
+
+def box_of(request_id: str) -> str:
+    """The box a request id names after its UTC stamp, so one box's request supersedes only its own."""
+    return request_id.partition('-')[2]
 
 
 def answer(where: transport.Remote, machine: str, request_id: str) -> bool:
@@ -410,7 +497,9 @@ def answer(where: transport.Remote, machine: str, request_id: str) -> bool:
     record = runs.start(identity, {'request': request_id})
     watch = runs.Stopwatch()
     try:
-        request = request_from(read_remote(where, directory, f'{request_id}{REQUEST_SUFFIX}'))
+        request = request_from(read_object(where, directory, f'{request_id}{REQUEST_SUFFIX}'))
+        if request.id != request_id:
+            raise MalformedRequest(f'{request_id}{REQUEST_SUFFIX} names itself {request.id}')
         record.flags.update({'status': request.status, 'entries': list(request.entries), 'arch': request.arch})
         acknowledgement = Acknowledgement(request.id, now(), paths.machine_id(), os.getpid())
         put(where, directory, f'{request.id}{BUILDING_SUFFIX}', dc.asdict(acknowledgement))
@@ -433,8 +522,11 @@ def answer(where: transport.Remote, machine: str, request_id: str) -> bool:
             offline_bundle.publish(where, archive)
         log.info(f'uploaded {archive.name} and its record to {transport.bundles_for(where, machine)}')
 
-        transport.remove(where, f'{directory}/{request.filename}')
-        transport.remove(where, f'{directory}/{request.id}{BUILDING_SUFFIX}')
+        try:
+            transport.remove(where, f'{directory}/{request.filename}')
+            transport.remove(where, f'{directory}/{request.id}{BUILDING_SUFFIX}')
+        except transport.RemoteError as untidy:
+            log.warning(f'the bundle is uploaded, and request {request.id} could not be removed from the remote: {untidy}')
         log.info(f'answered request {request.id}')
         record.record_outcome(f'bundle-request/{request_id}', 'built', str(OutcomeStatus.DONE), watch.finish(), archive.name)
         return True
@@ -452,7 +544,7 @@ def answer(where: transport.Remote, machine: str, request_id: str) -> bool:
     finally:
         stdlib_logging.root.removeHandler(tail)
         try:
-            runs.write(runs.finish(record))
+            runs.write(runs.finish(record), latest_follows=False)
         except OSError as unwritten:
             log.warning(f'the run record for request {request_id} was not written: {unwritten}')
         logging.configure()

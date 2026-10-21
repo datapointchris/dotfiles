@@ -409,13 +409,19 @@ def event_log_path(identity: Identity, runs_dir: Path | None = None) -> Path:
     return (runs_dir or paths.RUNS_DIR) / f'{identity.stem}.jsonl'
 
 
-def write(record: RunRecord, runs_dir: Path | None = None) -> Path:
-    """Write the record and point `latest` at it."""
+def write(record: RunRecord, runs_dir: Path | None = None, *, latest_follows: bool = True) -> Path:
+    """Write the record and point `latest` at it, unless `latest_follows` is False.
+
+    A bundle build passes False: `latest` answers how this machine last converged,
+    which a build for another machine does not measure.
+    """
     directory = runs_dir or paths.RUNS_DIR
     directory.mkdir(parents=True, exist_ok=True)
 
     destination = directory / f'{record_filename(record)}.json'
     destination.write_text(json.dumps(dc.asdict(record), indent=2) + '\n')
+    if not latest_follows:
+        return destination
 
     latest = directory.parent / paths.LATEST_RUN.name
     if latest.is_symlink() or latest.exists():
@@ -513,7 +519,7 @@ def names_a_run(stem: str) -> bool:
     """
     stamp, _, rest = stem.partition('-')
     machine, _, verb = rest.rpartition('-')
-    if not machine or verb not in vocabulary.RECONCILE_VERBS:
+    if not machine or verb not in vocabulary.RECORDED_VERBS:
         return False
     try:
         dt.datetime.strptime(stamp, '%Y%m%dT%H%M%SZ')

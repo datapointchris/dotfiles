@@ -360,7 +360,7 @@ def record_on_remote(where: transport.Remote, directory: str, name: str) -> Reco
     with tempfile.TemporaryDirectory() as workspace:
         local = Path(workspace) / sidecar
         try:
-            transport.pull(where, f'{directory}/{sidecar}', local)
+            transport.pull(where, f'{directory}/{sidecar}', local, timeout=transport.SMALL_OPERATION_SECONDS)
             return record_from(json.loads(local.read_text()))
         except (transport.RemoteError, OSError, ValueError):
             return Record(name, 0, '')

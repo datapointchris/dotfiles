@@ -406,11 +406,12 @@ def request(
     """Ask the builder for a bundle, wait for it, then download, verify and stage it.
 
     Publishes this machine's status, leaves a request beside it on the remote, and
-    polls every 15 seconds until a bundle naming the request is listed. Gives up
-    after 15 minutes, and names the builder's unit when nothing acknowledges within
-    two. `bundle_requests` holds the exchange.
+    polls until a bundle naming the request is listed. Stops waiting when no
+    builder acknowledges the request, naming the builder's unit, or when the build
+    outruns its deadline. `bundle_requests` holds the exchange.
     """
     verbosity(verbose, quiet)
+    bundle_requests.refuse_unbundled(machine, tuple(entry or ()))
     staged = bundle_requests.obtain_bundle(machine, tuple(entry or ()))
     if staged is None:
         raise typer.Exit(ExitCode.ISSUE)
@@ -426,9 +427,8 @@ def serve(
 ) -> None:
     """Build the bundles restricted machines request, until stopped.
 
-    Polls the remote's requests every 20 seconds and answers the newest per
-    machine: acknowledge, build against the status it names, upload, then delete
-    the request. A failed build leaves a failed marker with its log tail. Each
+    Polls the remote's requests and answers each box's newest one: acknowledge,
+    build against the status it names, upload, then delete the request. A failed build leaves a failed marker with its log tail. Each
     build writes a run record that `dotfiles report list` shows.
     """
     verbosity(verbose, quiet)

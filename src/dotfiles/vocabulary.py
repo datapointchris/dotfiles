@@ -29,7 +29,7 @@ class ExitCode(IntEnum):
 
 
 RECONCILE_VERBS = ('plan', 'check', 'apply')
-"""The three that measure a machine, and the only three that leave a run record.
+"""The three that measure a machine.
 
 `plan` and `check` ask different questions of one measurement — *what would apply
 change* and *is anything wrong* — and one verb answering both is what made a
@@ -37,9 +37,15 @@ scheduled unit sit permanently failed on a machine whose only fault was a packag
 being a version behind. `apply` is `plan` and then execute, so the three are a
 Terraform-shaped trio rather than three unrelated words.
 
-Named apart from the rest of `CORE_VERBS` because a filename carries one of these
-and nothing else does: `runs.names_a_run` is what decides whether a `.json` in a
-directory the whole fleet writes to is a record at all.
+Named apart from the rest of `CORE_VERBS` because each leaves a run record.
+"""
+
+RECORDED_VERBS = (*RECONCILE_VERBS, 'build')
+"""Every verb a run record is filed under: the three that measure a machine, and
+`build`, a bundle `bundle serve` built for another machine.
+
+A filename carries one of these and nothing else does: `runs.names_a_run` is what
+decides whether a `.json` in a directory every machine writes to is a record at all.
 """
 
 CORE_VERBS = (*RECONCILE_VERBS, 'list', 'show', 'search')

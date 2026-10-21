@@ -101,8 +101,9 @@ FLAGS = (
 )
 """The boolean settings in the `[remote]` table, in the order they are shown.
 
-One list, read by the parser and by `config show`, so a setting added later is
-rendered and attributed without a second place to remember. A renderer holding its
+One list, read by `config show` and, through `KEYS`, by the parser's check for
+unknown keys. A setting added here is then rendered and accepted without a second
+place to remember, and `read` still names each one. A renderer holding its
 own copy shows every flag but the newest, and a setting that is on reads as a
 machine that does not have it.
 """
@@ -189,7 +190,7 @@ class Remote:
     """Whether `apply` asks a builder for the blocked items it lacks, then waits for the bundle.
 
     `bundle_requests.obtain_bundle` is the exchange. Off by default for the reason
-    the other three are: the box this serves reaches the server only when told to.
+    every flag here is: the box this serves reaches the server only when told to.
     """
 
     def directory(self, *parts: str) -> str:
@@ -231,11 +232,11 @@ BUNDLES = 'bundles'
 STATUSES = 'status'
 REPORTS = 'reports'
 REQUESTS = 'requests'
-"""The four kinds of artifact under `root`, and dotfiles decides all of them.
+"""The kinds of artifact under `root`, and dotfiles decides all of them.
 
 A *shelf* is one machine's directory inside one of these — `<root>/bundles/<manifest>`
 — which is what every `--machine` flag here reads and what `bundles_for`,
-`statuses_for` and `reports_for` build. These are kinds, not shelves: one word for
+`statuses_for`, `reports_for` and `requests_for` build. These are kinds, not shelves: one word for
 both would leave the term with two referents on one help screen.
 
 `requests` is the one kind written by both ends. A restricted box leaves a request
@@ -524,16 +525,34 @@ def reachable() -> Remote:
     return where
 
 
-def run_transport(remote: Remote, operation: Operation, output: effects.Output, substitutions: Mapping[str, str]) -> effects.Completed:
+SMALL_OPERATION_SECONDS = 60
+"""How long a probe, listing, mkdir or delete may take before it counts as unanswered.
+
+A polling loop is bounded only as far as each call inside it is, and a stalled
+transport would otherwise hold an apply forever. An upload or download moves an
+archive of any size, so a caller bounds one only where it knows the file is small.
+"""
+
+SMALL_OPERATIONS = frozenset({Operation.PROBE, Operation.LIST, Operation.MKDIR, Operation.DELETE})
+
+
+def run_transport(
+    remote: Remote, operation: Operation, output: effects.Output, substitutions: Mapping[str, str], *, timeout: float | None = None
+) -> effects.Completed:
     """One transport invocation, with the substitutions as a mapping.
 
     A mapping for the same reason `Transport.argv` takes one: `remote` is both a
     placeholder name and this parameter's name, so a keyword form binds the config
     object to the placeholder and raises on the argument it already had.
+
+    `timeout` defaults to `SMALL_OPERATION_SECONDS` for `SMALL_OPERATIONS` and to
+    none for a transfer. An expiry is a failed run like any other.
     """
     argv = remote.transport.argv(operation, substitutions)
     log.debug('remote.invoke', operation=str(operation), program=remote.transport.program)
-    return effects.run(list(argv), output=output)
+    if timeout is None and operation in SMALL_OPERATIONS:
+        timeout = SMALL_OPERATION_SECONDS
+    return effects.run(list(argv), output=output, timeout=timeout)
 
 
 def names(remote: Remote, directory: str) -> tuple[str, ...]:
@@ -654,8 +673,12 @@ def push(remote: Remote, local: Path, directory: str) -> str:
     return f'{directory.rstrip("/")}/{local.name}'
 
 
-def pull(remote: Remote, path: str, local: Path) -> Path:
+def pull(remote: Remote, path: str, local: Path, *, timeout: float | None = None) -> Path:
     """Fetch one remote file to a local path, and answer where it landed.
+
+    `timeout` bounds the download, for a caller that knows the file is small. A
+    bounded download runs quiet, because `effects.run` refuses a deadline on a
+    streaming child and a small file has no progress worth showing.
 
     The destination directory is created first because the local cache legitimately
     does not exist yet on a machine that has never fetched anything, and a
@@ -668,7 +691,8 @@ def pull(remote: Remote, path: str, local: Path) -> Path:
     command that caused it.
     """
     local.parent.mkdir(parents=True, exist_ok=True)
-    ran = run_transport(remote, Operation.DOWNLOAD, effects.Output.STREAM, {'remote': path, 'local': str(local)})
+    output = effects.Output.STREAM if timeout is None else effects.Output.QUIET
+    ran = run_transport(remote, Operation.DOWNLOAD, output, {'remote': path, 'local': str(local)}, timeout=timeout)
     if not ran.ok:
         raise RemoteError(f'{remote.transport.program} could not download {path}', code=ExitCode.ISSUE)
     if not local.is_file():
