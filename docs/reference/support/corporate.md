@@ -11,6 +11,12 @@ pass/fail line per host. Run it on the restricted machine first. The answer is
 rarely "the internet is blocked" and usually "GitHub release assets are blocked
 but the API is not", which changes what you have to carry in.
 
+The check then reads the machine's `[network] blocked` list and says where the two
+disagree. A `declared` row names each listed host and the items whose version
+check or download reaches it. An `undeclared` row is a host that refused but is
+not listed, so an apply would ask it and fail. An `answered` row is a listed host
+that answered, so an apply takes from the bundle what the network would serve.
+
 Pass `--output <path>` to render the run somewhere outside the repo. Keep it
 under `$XDG_STATE_HOME` to diff two runs after the firewall rules change.
 `src/dotfiles/commands/network.py` holds why that flag has no default, and
@@ -71,9 +77,8 @@ dotfiles status upload
 what it found and asks before the transfer. The apply unpacks that archive
 itself, and skips the unpacking only when it is already staged — so there is no
 staging step to remember and a bundle fetched to replace an old one takes effect
-on the next run. `--offline` sends every provider the bundle carries to the staged
-bundle instead of the network. `status upload` publishes what the box now has, so
-the next bundle can be built against it.
+on the next run. `status upload` publishes what the box now has, so the next
+bundle can be built against it.
 
 `dotfiles bundle stage PATH` is still there for unpacking without installing,
 which is what `bundle check` and `bundle show` read, and for a tarball carried
@@ -92,29 +97,39 @@ at all, and prints the apply line above. The flag is needed on both and means a
 different thing on each: where the bootstrap gets uv and the wheels, and where
 the apply gets everything else.
 
-## A second apply picks up what `--offline` leaves undone
+## The config names what this network blocks, and one apply routes around it
 
-`--offline` is one switch for the whole run, and this box is only partly
-blocked. apt, `pypi.org` and `git clone` from GitHub answer here. No bundle
-carries an apt package or a tool from a private index, so an offline run still
-installs a missing one over the network. It declines every currency question,
-though, so apt reports nothing behind and nothing is upgraded. It also refuses
-every plugin transfer, because the bundle stages no plugin.
+This box is only partly blocked. Its config, deployed from
+`configs/trust/nonfleet/.config/dotfiles/config.toml`, lists the hosts it refuses
+under `[network] blocked`. GitHub's release-asset hosts, `proxy.golang.org`,
+`raw.githubusercontent.com` and `claude.ai` are on it. apt, `pypi.org`, npm,
+`api.github.com`, `git clone` from GitHub, rustup, `go.dev` and nodejs.org answer,
+so they are not.
 
-A networked apply that skips `packages` and `toolchains` picks those up. Those
-two are the resources that reach release assets and `proxy.golang.org`, so
-skipping them keeps the run to git and apt:
+Each item reaches two hosts, and the apply routes them apart. An item whose
+download reaches a listed host installs from the staged bundle. Everything else
+installs from the network, as it would anywhere. A release tool's assets are
+blocked, but its version check goes to `api.github.com`. So it is measured against
+the newest release while its bytes come from the bundle.
+
+That makes the whole box one command:
 
 ```bash
 dotfiles update
 dotfiles apply --machine wsl-work-workstation --offline
-dotfiles apply --machine wsl-work-workstation --skip packages --skip toolchains
 dotfiles status upload
 ```
 
-The second apply upgrades apt, pulls any plugin checkout that is behind, and
-installs what TPM and lazy have pending. Both applies converge to the same state
-when run again, so either can be repeated on its own.
+`--offline` keeps the list and contacts no remote. apt is asked what is behind,
+plugin checkouts are pulled, and TPM and lazy sync over git. rustup, Go and node
+install from their own hosts, and uv comes from the bundle. The run opens with a
+`network` line counting the blocked hosts and saying how many items go to the
+bundle and how many to the network.
+
+An item routed to the bundle that is missing or behind, with no staged bundle
+carrying what it wants, gets a row naming the blocked host. Its advice says which
+bundle is needed. Where no list is declared at all, `--offline` counts every host
+as blocked and asks no network.
 
 ## Carry only what changed
 
@@ -145,9 +160,9 @@ row is withheld rather than the whole document refused.
 
 The offline install is rehearsed end to end by
 `uv run pytest tests/e2e --docker -k offline`, which builds a bundle, blackholes
-a set of hosts in a container, and asserts the install completes from cache.
-`tests/e2e/harness.py` declares which hosts and why each one was picked. Change
-the bundle format and that is what catches it.
+the hosts this box's config lists in a container, and asserts the install
+converges. `tests/e2e/harness.py` reads the list from that config rather than
+keeping its own. Change the bundle format and that is what catches it.
 
 ## Windows tools when winget is blocked
 

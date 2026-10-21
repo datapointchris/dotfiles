@@ -47,12 +47,45 @@ Each round is planned against the last. The blocked box publishes what it has,
 the builder leaves out everything already current, and the next bundle is
 smaller than the one before it. A box that has never published gets everything.
 
+## Each item is routed to the bundle or the network, so one apply converges the box
+
+The restricted box is only partly blocked, and its config says which part:
+`[network] blocked` lists the hosts it refuses. `src/dotfiles/routing.py` reads
+the list once per run, from the deployed config or, on a first apply, from the
+trust copy the symlink stage will deploy.
+
+Every item reaches two kinds of host, and they are routed apart. The version
+check asks one and the download fetches from another. A release tool on this
+network asks `api.github.com` for its newest version and takes its bytes from the
+bundle, because only the asset hosts are blocked. So it is measured against
+upstream and installed from what the bundle carries. An item whose download
+reaches no blocked host installs from the network, exactly as on an open one.
+
+`registry.Provider.hosts` is the one answer to which hosts an item reaches. The
+routing reads it, and so does `dotfiles network check` when it names the items a
+declared host affects. A second table of hosts would let the two disagree about
+one item.
+
+*Rejected:* one `--offline` switch for the whole run. It sent every provider to
+the bundle, so apt was never asked what was behind and no plugin was pulled,
+though both answer on this network. Converging the box took a second, networked
+apply that skipped the resources reaching blocked hosts.
+
+`--offline` keeps the list and contacts no remote. Where no list is declared, it
+counts every host as blocked, which is the only reading available to a box that
+says nothing about its network.
+
 ## The apply unpacks; `bundle stage` is for looking first
 
-`apply --offline` stages the newest archive it finds for this machine, and skips
-the unpacking only when that archive is already among the staged directories. So
-downloading and applying is the whole sequence, and a bundle fetched to replace
-an out-of-date one takes effect on the next run.
+An apply that routes any item to the bundle stages the newest archive it finds
+for this machine. It skips the unpacking only when that archive is already among
+the staged directories. So downloading and applying is the whole sequence, and a
+bundle fetched to replace an out-of-date one takes effect on the next run.
+
+With no archive anywhere the run goes on. Everything the network serves still
+installs, and each item the bundle would have supplied gets a row naming its
+blocked host and the bundle it needs. The one exception is `--offline` with no
+list declared, where nothing could install, so the run refuses before measuring.
 
 `bundle stage` unpacks without installing anything, which is what `bundle check`
 and `bundle show` read. Reach for it to see what a bundle covers before letting
