@@ -140,8 +140,10 @@ slowest ordinary command is `aws --version` at ~0.5s — a Python interpreter st
 — so five is an order of magnitude clear of normal and still names a stall long
 before the five minutes that prompted it.
 
-Deliberately not applied to `Output.STREAM`. A streaming command is an install,
-minutes are its normal cost, and it is already narrating itself on screen.
+Deliberately applied to `Output.QUIET` alone. A streaming command is an install,
+minutes are its normal cost, and it is already narrating itself on screen. An
+`Output.DATA` child holds the terminal, so its time includes a person answering
+it, such as `sudo -v` waiting on a password.
 """
 
 NOT_FOUND = 127
@@ -288,7 +290,7 @@ def run(
         # A second record rather than the first one promoted, so the debug stream
         # keeps one line per command whatever its duration and nothing reading it
         # has to know that slow commands are spelled differently.
-        if seconds >= SLOW_SECONDS and output is not Output.STREAM:
+        if seconds >= SLOW_SECONDS and output is Output.QUIET:
             log.info('slow command', command=' '.join(argv), seconds=seconds)
         return completed
 

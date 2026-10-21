@@ -162,7 +162,7 @@ class Staging:
             return f'no bundle staged at {paths.under_home(self.directory)}'
         origin = f'unpacked {self.extracted.name}' if self.extracted else 'already staged'
         described = ', '.join(part for part in (f'built {self.built}' if self.built else '', self.platform) if part)
-        beneath = f' over {len(self.bundles) - 1} older' if len(self.bundles) > 1 else ''
+        beneath = f' and the {len(self.bundles) - 1} older bundle(s) it reads through' if len(self.bundles) > 1 else ''
         return f'{len(self.carried)} file(s) from {self.newest.name}{beneath} — {origin}{f" ({described})" if described else ""}'
 
     @property

@@ -415,7 +415,7 @@ def request(
     staged = bundle_requests.obtain_bundle(machine, tuple(entry or ()))
     if staged is None:
         raise typer.Exit(ExitCode.ISSUE)
-    success(f'staged {staged.name}, so the next apply installs from it')
+    success(f'staged {staged.name}; apply installs from it whatever this network blocks')
     raise typer.Exit(ExitCode.CONVERGED)
 
 
