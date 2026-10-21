@@ -183,6 +183,7 @@ required:
     description: Domain the homelab serves its APIs and identity provider under, as a bare host name such as example.com
     network_trust: fleet
     consumers:
+      - configs/trust/fleet/.config/fleet/config.toml.tmpl
       - configs/trust/fleet/.config/homelab/config.toml.tmpl
       - configs/trust/fleet/.config/icb/config.toml.tmpl
       - configs/trust/fleet/.config/ifiles/config.toml.tmpl
@@ -200,6 +201,7 @@ required:
     description: cli-<machine> for a person's login or svc-<machine> for a service, where <machine> is the identity provider's name for this machine
     network_trust: fleet
     consumers:
+      - configs/trust/fleet/.config/fleet/config.toml.tmpl
       - configs/trust/fleet/.config/homelab/config.toml.tmpl
       - configs/trust/fleet/.config/icb/config.toml.tmpl
       - configs/trust/fleet/.config/learning/config.toml.tmpl
