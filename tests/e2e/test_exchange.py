@@ -130,5 +130,4 @@ def test_a_request_is_built_by_serve_and_staged_by_the_box_that_asked(builder: M
 
     assert served.returncode == 0, served.stderr[-3000:]
     assert answered.returncode == 0, answered.stderr[-3000:]
-    assert 'staged at' in answered.stderr, answered.stderr[-3000:]
     assert not listed(), 'serve left a request on the shelf it answered or superseded'

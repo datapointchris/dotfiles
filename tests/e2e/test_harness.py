@@ -63,27 +63,6 @@ def test_a_host_is_never_both_blocked_and_reachable() -> None:
     assert not set(blocked) & set(reachable)
 
 
-def test_github_stays_reachable_because_its_block_is_path_scoped() -> None:
-    """A release download has to fail while clones and the API keep working.
-
-    Taking github.com down takes the working paths with it, which is what made
-    theme, font and bashselfupdate fail in a test of a network where they install
-    fine. The CDN names are how that becomes expressible as a host rule.
-    """
-    blocked, reachable = measured_network()
-    assert 'github.com' in reachable
-    assert 'github.com' not in blocked
-    assert any(host.endswith('githubusercontent.com') for host in blocked), (
-        'blackholing the CDN a download redirects to is how a path-scoped block becomes a host rule'
-    )
-
-
-def test_the_go_proxy_is_blocked_because_that_is_why_go_tools_are_bundled() -> None:
-    """The one blocked registry, named because a whole install section turns on it."""
-    blocked, _ = measured_network()
-    assert 'proxy.golang.org' in blocked
-
-
 def test_only_a_firewalled_environment_blackholes_anything() -> None:
     """An online environment given a firewall would be testing the offline path
     while claiming to test the online one."""

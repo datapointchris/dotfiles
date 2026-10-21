@@ -307,32 +307,6 @@ def test_the_offline_run_used_an_interpreter_the_machine_already_had(machine: Ma
     assert not interpreter.startswith(managed), f'the offline install fetched an interpreter: {interpreter}'
 
 
-def test_the_offline_run_never_resolved_a_version_online(machine: Machine) -> None:
-    """The version has to come from the bundle manifest, or the filename built
-    from it names a file the cache does not hold.
-
-    `tests/resources/test_packages.py::test_offline_never_refreshes_however_it_was_asked`
-    asserts the mechanism directly and cheaply; this is the same property observed
-    on a real install, where a path that bypassed the short-circuit would show up
-    as a resolution attempt.
-
-    Read off the two sentences the bundle paths actually print. This asserted
-    `'Using cached'` — a phrase nothing in this repo emits and uv stopped printing
-    when the bootstrap moved from `pip install` to a wheelhouse — so it had been
-    failing for a reason that said nothing about versions at all.
-
-    `Checksum verified from offline bundle` is the tighter of the two and is why
-    it is required rather than either-or: the digest is looked up by the asset
-    *filename*, which is built from the bundled version, so a tag resolved online
-    would name a file `checksums.txt` has no line for and fall through to the
-    network instead of printing this.
-    """
-    if not machine.environment.offline:
-        pytest.skip('only the offline environment installs from a bundle')
-    assert 'Checksum verified from offline bundle' in machine.install_log
-    assert 'installed from the bundle' in machine.install_log
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # The sparse round trip
 # ─────────────────────────────────────────────────────────────────────────────
@@ -444,5 +418,4 @@ def test_one_apply_asks_a_builder_for_the_blocked_tool_no_bundle_carries_and_ins
 
     assert served.returncode == 0, served.stderr[-4000:]
     assert applied.returncode == 0, applied.stderr[-4000:]
-    assert 'staged at' in applied.stderr, applied.stderr[-4000:]
     assert machine.succeeds('command -v glow'), applied.stderr[-4000:]

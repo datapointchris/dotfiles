@@ -177,8 +177,8 @@ def declare_transport(machine: Machine, peer: Machine, *, extra: str = '') -> No
     what made the automatic-path tests pass against a machine that had turned
     nothing on. `extra` is `[remote]` keys a test turns on.
 
-    The deployed symlink is removed first. Written through, it replaced the repo's
-    trust copy, which carries the `[network]` table routing falls back to and which
+    The deployed symlink is removed first. Written through, it would replace the
+    repo's trust copy, which carries the `[network]` table routing falls back to and which
     the declaration check compares with the other trust variant.
     """
     home = machine.environment.home

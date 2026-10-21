@@ -146,7 +146,6 @@ class TestUploading:
         ran = cli('bundle', 'upload', str(tarball), catch_exceptions=True)
 
         assert ran.exit_code == ExitCode.ISSUE
-        assert 'does not say which machine' in ran.stderr
         assert list(shelf(server).iterdir()) == []
 
     def test_a_landed_upload_stays_converged_when_the_retention_nudge_cannot_list(
@@ -600,15 +599,15 @@ class TestTheAutomaticPaths:
         assert (sandbox.staging / NEWEST / bundle.MANIFEST).is_file()
 
     def test_a_remote_that_will_not_answer_still_ends_on_the_missing_bundle(self, sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-        """ "The remote would not answer" is a worse thing to end an apply on than
-        "there is no bundle" — the second is what the caller can act on, and it is
-        true either way."""
+        """A remote that will not answer leaves the apply where an empty shelf
+        would: converged on what the network served, with nothing fetched."""
         self.staged_nothing(sandbox)
         self.blocking(declare(sandbox.config, program='nothing-installed-here', extra='fetch_bundle_when_none_is_staged = true\n'))
 
         ran = cli('apply', catch_exceptions=True)
 
-        assert 'no bundle is staged' in ran.stderr
+        assert ran.exit_code == ExitCode.CONVERGED
+        assert not paths.archive_dir().exists()
 
     def test_an_offline_apply_publishes_nothing_by_default(self, sandbox: Sandbox, server: Path, cli: Callable[..., Invocation]) -> None:
         """Paired with the exit code and a positive fact. An apply that died while

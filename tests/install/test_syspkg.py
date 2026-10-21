@@ -87,9 +87,9 @@ def test_a_phased_update_the_upgrade_would_defer_is_not_behind(fake_bin: Path) -
     """Ubuntu phases an update out to a share of machines, and `apt-get upgrade`
     defers it on the rest while `apt list --upgradable` still lists it.
 
-    Read off the listing, the deferred package was behind on every run and every
-    apply escalated to upgrade nothing. The simulation names it only in its
-    summary, indented under a heading, and never on an `Inst` line.
+    Read off the listing, a deferred package reads behind until its phase
+    arrives. The simulation names it only in its summary, indented under a
+    heading, and never on an `Inst` line.
     """
     summary = 'Calculating upgrade...\\nThe following upgrades have been deferred due to phasing:\\n  tmux\\n'
     manager(fake_bin, 'apt-get', f'[ "$1" = update ] && exit 0\nprintf "{summary}{SIMULATED_CURL}"')
