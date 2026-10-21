@@ -287,8 +287,8 @@ class TestWhatTheTargetDecides:
 
         # `others` rather than `findings`: an unmeasurable row carries
         # `Repair.NONE`, so it is something the walk saw and neither verb keeps as
-        # its own finding. It reaches `--json` all the same, which is the property
-        # "a fact on screen is reachable through some machine door" states.
+        # its own finding. It reaches `--json` all the same, because anything the
+        # screen shows must be readable without parsing the screen.
         ran = cli('check', '--offline', '--json', catch_exceptions=True)
         rows = list(chain.from_iterable(resource['others'] for resource in ran.document['resources']))
         found = next(row for row in rows if 'lazygit' in row['item'])
