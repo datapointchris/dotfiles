@@ -277,20 +277,30 @@ def fetch_latest_version(repo: str) -> str:
 
 
 def download(url: str, destination: Path) -> None:
+    """Fetch one asset, retrying what can pass on a second try.
+
+    A 404 or any other client error is the same answer every time, so it is
+    asked once. A timeout, a rate limit or a server error is retried.
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
-    last_error: Exception | None = None
+    last_error = ''
 
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         try:
             destination.write_bytes(github_release.request(url))
+        except httpx2.HTTPStatusError as refused:
+            status = refused.response.status_code
+            last_error = f'HTTP {status} {refused.response.reason_phrase}'.rstrip()
+            if status < 500 and status not in (408, 429):
+                break
         except (httpx2.HTTPError, OSError) as error:
-            last_error = error
-            if attempt < DOWNLOAD_ATTEMPTS:
-                log.warning(f'Retry {attempt}/{DOWNLOAD_ATTEMPTS} for {url} ({error})')
+            last_error = str(error)
         else:
             return
+        if attempt < DOWNLOAD_ATTEMPTS:
+            log.warning(f'Retry {attempt}/{DOWNLOAD_ATTEMPTS} for {url} ({last_error})')
 
-    raise BundleError(f'Failed to download: {url}\n  error: {last_error}')
+    raise BundleError(f'Failed to download {url}: {last_error}')
 
 
 # Install scripts never go through this cache. They are served from unversioned
