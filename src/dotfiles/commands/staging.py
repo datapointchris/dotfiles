@@ -15,15 +15,14 @@ from __future__ import annotations
 import contextlib
 import dataclasses as dc
 import datetime as dt
-import json
 import shutil
 import sys
-import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
 import typer
 
+from dotfiles import bundle_requests
 from dotfiles import coordinates as axes
 from dotfiles import create_bundle
 from dotfiles import machine as machines
@@ -38,6 +37,7 @@ from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import kept
 from dotfiles.commands import limit_option
+from dotfiles.commands import resources
 from dotfiles.commands import verbosity
 from dotfiles.output import VERDICT_COLORS
 from dotfiles.output import VERDICT_MARKS
@@ -82,6 +82,21 @@ B008 exempts a call in a default only where the annotation is an immutable
 builtin, which `str` and `bool` are and `axes.Arch` cannot be shown to be. The
 singleton is what its message asks for and what every other option here already
 is."""
+
+
+BundleEntryOption = typer.Option(
+    None,
+    '--entry',
+    help='Carry only this declared entry, plus uv and the wheelhouse (repeatable)',
+    autocompletion=resources.declared_names,
+)
+
+RequestEntryOption = typer.Option(
+    None,
+    '--entry',
+    help='Ask for only this declared entry (repeatable; default: everything behind)',
+    autocompletion=resources.declared_names,
+)
 
 
 def asking(interactive: bool | None) -> bool:
@@ -141,6 +156,7 @@ def create(
     # is a direct dependency on a package typer 0.27 stopped having.
     arch: axes.Arch = ArchOption,
     against: str = typer.Option(None, '--against', help="Build sparsely against a status document, or 'latest' to fetch one"),
+    entry: list[str] = BundleEntryOption,
     print_path: bool = typer.Option(False, '--print-path', help='Print the archive path on stdout, for a pipeline'),
     no_cache: bool = typer.Option(False, '--no-cache', help='Re-download every asset, ignoring the download cache'),
     no_input: bool = typer.Option(False, '--no-input', help='Never prompt; fail naming the flag that would have answered'),
@@ -177,6 +193,10 @@ def create(
     `latest` fetches the newest status the remote holds for that machine, which is
     a read of the input rather than a second effect — the same act as opening the
     file a path names.
+
+    `--entry` carries only the named entries, plus uv and the wheelhouse, which the
+    bootstrap needs whatever was asked for. The rest of the plan is recorded in
+    `bundle.json` as `left_out`, and the archive is named and described as sparse.
     """
     verbosity(verbose, quiet)
     chosen_machine = pointed_at(machine, '--machine', machines.names(), 'Machine this bundle is for', no_input=no_input)
@@ -187,7 +207,9 @@ def create(
     # `NoSuchMachine` carries USAGE, so it travels to the boundary as exit 2.
     machines.manifest_path(chosen_machine)
 
-    built = create_bundle.build(chosen_machine, chosen_arch, use_cache=not no_cache, against=status_for(against, chosen_machine))
+    built = create_bundle.build(
+        chosen_machine, chosen_arch, use_cache=not no_cache, against=status_for(against, chosen_machine), entries=tuple(entry or ())
+    )
 
     if print_path:
         print(built)
@@ -320,9 +342,7 @@ def upload(
     the newest archive itself, so the loop is `bundle create && bundle upload`
     rather than a substitution.
 
-    A record is written beside the archive, carrying its size, its digest and what
-    the bundle says it is. It is a few hundred bytes and it is what `download`
-    reads to describe a bundle before spending the transfer on it.
+    A record is written beside the archive by `offline_bundle.publish`.
     """
     verbosity(verbose, quiet)
     where = transport.reachable()
@@ -338,24 +358,10 @@ def upload(
     if not found.is_file():
         raise typer.BadParameter(f'{found} is not a file', param_hint='ARCHIVE')
 
-    record = offline_bundle.described_record(found)
+    record = offline_bundle.publish(where, found)
     machine = record.description.machine
-    if not machine:
-        error(f'{found.name} does not say which machine it is for, so there is no shelf to put it on')
-        hint('rebuild it: dotfiles bundle create --machine NAME --arch ARCH')
-        raise typer.Exit(ExitCode.ISSUE)
 
-    directory = transport.bundles_for(where, machine)
-    with tempfile.TemporaryDirectory() as workspace:
-        sidecar = Path(workspace) / f'{found.name}{offline_bundle.SIDECAR_SUFFIX}'
-        sidecar.write_text(json.dumps(record.as_dict(), indent=2) + '\n')
-        # The archive first. A record that arrives before the bytes it describes
-        # is a row `bundle list` shows and `bundle download` then fails to fetch,
-        # which reads as a broken remote rather than an interrupted upload.
-        landed = transport.push(where, found, directory)
-        transport.push(where, sidecar, directory)
-
-    success(f'uploaded {found.name} to {landed.rsplit("/", 1)[0]}')
+    success(f'uploaded {found.name} to {transport.bundles_for(where, machine)}')
     report_retention(where, machine)
     raise typer.Exit(ExitCode.CONVERGED)
 
@@ -388,6 +394,45 @@ def report_retention(where: transport.Remote, machine: str) -> None:
     if sweep.superseded:
         render_note(f'{len(sweep.superseded)} bundle(s) past the {where.keep_bundles} kept: oldest is {sweep.superseded[0]}')
         hint('remove them with: dotfiles bundle prune --remote')
+
+
+@bundle_app.command('request')
+def request(
+    machine: str = typer.Option(None, '--machine', help='Machine manifest to request for (default: this machine)'),
+    entry: list[str] = RequestEntryOption,
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
+    """Ask the builder for a bundle, wait for it, then download, verify and stage it.
+
+    Publishes this machine's status, leaves a request beside it on the remote, and
+    polls every 15 seconds until a bundle naming the request is listed. Gives up
+    after 15 minutes, and names the builder's unit when nothing acknowledges within
+    two. `bundle_requests` holds the exchange.
+    """
+    verbosity(verbose, quiet)
+    staged = bundle_requests.obtain_bundle(machine, tuple(entry or ()))
+    if staged is None:
+        raise typer.Exit(ExitCode.ISSUE)
+    success(f'staged {staged.name}, so the next apply installs from it')
+    raise typer.Exit(ExitCode.CONVERGED)
+
+
+@bundle_app.command('serve')
+def serve(
+    once: bool = typer.Option(False, '--once', help='Answer what is waiting, then exit'),
+    verbose: int = VerboseOption,
+    quiet: bool = QuietOption,
+) -> None:
+    """Build the bundles restricted machines request, until stopped.
+
+    Polls the remote's requests every 20 seconds and answers the newest per
+    machine: acknowledge, build against the status it names, upload, then delete
+    the request. A failed build leaves a failed marker with its log tail. Each
+    build writes a run record that `dotfiles report list` shows.
+    """
+    verbosity(verbose, quiet)
+    raise typer.Exit(ExitCode.CONVERGED if bundle_requests.serve(once) else ExitCode.ISSUE)
 
 
 @bundle_app.command('list')

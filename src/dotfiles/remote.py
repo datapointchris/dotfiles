@@ -93,7 +93,12 @@ machine that says nothing.
 """
 
 
-FLAGS = ('fetch_bundle_when_none_is_staged', 'publish_status_after_offline_apply', 'publish_reports_after_apply')
+FLAGS = (
+    'fetch_bundle_when_none_is_staged',
+    'publish_status_after_offline_apply',
+    'publish_reports_after_apply',
+    'request_bundle_when_blocked_items_are_behind',
+)
 """The boolean settings in the `[remote]` table, in the order they are shown.
 
 One list, read by the parser and by `config show`, so a setting added later is
@@ -180,6 +185,12 @@ class Remote:
     fetch_bundle_when_none_is_staged: bool = False
     publish_status_after_offline_apply: bool = False
     publish_reports_after_apply: bool = False
+    request_bundle_when_blocked_items_are_behind: bool = False
+    """Whether `apply` asks a builder for the blocked items it lacks, then waits for the bundle.
+
+    `bundle_requests.obtain_bundle` is the exchange. Off by default for the reason
+    the other three are: the box this serves reaches the server only when told to.
+    """
 
     def directory(self, *parts: str) -> str:
         """A remote path under the configured root, always absolute from it.
@@ -219,14 +230,18 @@ class Remote:
 BUNDLES = 'bundles'
 STATUSES = 'status'
 REPORTS = 'reports'
-"""The three kinds of artifact under `root`, and dotfiles decides all of them.
+REQUESTS = 'requests'
+"""The four kinds of artifact under `root`, and dotfiles decides all of them.
 
 A *shelf* is one machine's directory inside one of these — `<root>/bundles/<manifest>`
 — which is what every `--machine` flag here reads and what `bundles_for`,
 `statuses_for` and `reports_for` build. These are kinds, not shelves: one word for
 both would leave the term with two referents on one help screen.
 
-`reports` differs from the other two in who reads it. A bundle and a status are
+`requests` is the one kind written by both ends. A restricted box leaves a request
+there, the builder answers beside it, and `bundle_requests` owns the shapes.
+
+`reports` differs from the others in who reads it. A bundle and a status are
 consumed by this tool, on the other end of the offline loop. A report is consumed
 by a person, which is why it is the one kind whose contents are masked rather than
 row-screened — `publishing.masked` records why.
@@ -255,6 +270,10 @@ def statuses_for(remote: Remote, machine: str) -> str:
 
 def reports_for(remote: Remote, machine: str) -> str:
     return remote.directory(REPORTS, machine)
+
+
+def requests_for(remote: Remote, machine: str) -> str:
+    return remote.directory(REQUESTS, machine)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -391,6 +410,8 @@ def read(config: settings.Config | None = None) -> Configured:
     problems.extend([problem] if problem else [])
     reports, problem = flag(table, 'publish_reports_after_apply')
     problems.extend([problem] if problem else [])
+    requesting, problem = flag(table, 'request_bundle_when_blocked_items_are_behind')
+    problems.extend([problem] if problem else [])
 
     transport, faults = declared_transport(table.get('transport'))
     problems.extend(faults)
@@ -406,6 +427,7 @@ def read(config: settings.Config | None = None) -> Configured:
             fetch_bundle_when_none_is_staged=fetch,
             publish_status_after_offline_apply=publish,
             publish_reports_after_apply=reports,
+            request_bundle_when_blocked_items_are_behind=requesting,
         )
     )
 
@@ -657,9 +679,10 @@ def pull(remote: Remote, path: str, local: Path) -> Path:
 def remove(remote: Remote, path: str) -> None:
     """Delete one remote artifact, where the machine declared how to.
 
-    Never reached from an upload. Retention runs from `bundle prune` alone, so
-    nothing this tool does on a schedule can remove bytes from a server — see
-    `superseded` for the split.
+    Never reached from an upload. Retention runs from `bundle prune` alone, so no
+    bundle, status or report leaves a server unless somebody typed that — see
+    `superseded` for the split. `bundle serve` is the one unattended caller, and it
+    deletes only the request files it answered or superseded.
     """
     if not remote.transport.declares(Operation.DELETE):
         raise RemoteError(
