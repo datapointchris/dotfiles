@@ -423,8 +423,17 @@ def carries(repo: str, ref: str, path: str) -> bool | None:
     return True if response.is_success else None
 
 
-def release_assets(repo: str, tag: str) -> dict[str, int] | None:
-    """{name: id} for a tag's assets, or None when the release could not be read.
+@dataclass(frozen=True, slots=True)
+class Asset:
+    """One file a release publishes, as the release API describes it."""
+
+    id: int
+    digest: str = ''
+    """GitHub's sha256 of the bytes it stores, as bare hex. '' for an asset uploaded before GitHub computed one."""
+
+
+def release_assets(repo: str, tag: str) -> dict[str, Asset] | None:
+    """{name: Asset} for a tag's assets, or None when the release could not be read.
 
     Three answers rather than two, over the distinction `remote.listed` already
     draws: `{}` is a release that publishes nothing, and None is not knowing.
@@ -434,7 +443,19 @@ def release_assets(repo: str, tag: str) -> dict[str, int] | None:
         payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/tags/{encoded}'))
     except (httpx2.HTTPError, json.JSONDecodeError):
         return None
-    return {asset['name']: asset['id'] for asset in payload.get('assets', [])}
+    return {asset['name']: Asset(asset['id'], sha256_hex(asset.get('digest'))) for asset in payload.get('assets', [])}
+
+
+def sha256_hex(published: str | None) -> str:
+    """The hex out of GitHub's `sha256:<hex>`, or '' where it is absent or names another algorithm."""
+    algorithm, _, value = (published or '').partition(':')
+    return value if algorithm == 'sha256' else ''
+
+
+def published_digest(published: dict[str, Asset], asset_name: str) -> str:
+    """GitHub's digest of one asset, or '' where the release lists none for it."""
+    listed = published.get(asset_name)
+    return listed.digest if listed else ''
 
 
 def latest_version(repo: str, tag_prefix: str = '', ceiling: str = '') -> str | None:
@@ -786,11 +807,11 @@ def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', a
         # right answer for a download: the asset may well be fetchable when the
         # API is not. Only verification treats not knowing as a refusal.
         published = release_assets(repo, tag) or {}
-        asset_id = published.get(asset_name)
-        if asset_id is not None:
+        listed = published.get(asset_name)
+        if listed is not None:
             try:
                 destination.write_bytes(
-                    request(f'https://api.github.com/repos/{repo}/releases/assets/{asset_id}', accept='application/octet-stream')
+                    request(f'https://api.github.com/repos/{repo}/releases/assets/{listed.id}', accept='application/octet-stream')
                 )
             except (httpx2.HTTPError, OSError) as refused:
                 first = Fetched.failed(refused).reason
@@ -842,6 +863,10 @@ def verify_release_checksum(
     """A mismatch deletes the file, so a retry cannot extract bytes that already
     failed. `checksum_url` names the checksums file directly, for a release not
     hosted on GitHub.
+
+    A release's own checksums file is asked first. Where it has none, or its file
+    does not name the asset, GitHub's digest of the stored asset is the check, so
+    UNPUBLISHED and UNLISTED mean neither source could answer.
     """
     if bundle_checksums is not None and bundle_checksums.is_file():
         outcome = verify_from_bundle(path, asset_name, bundle_checksums)
@@ -850,6 +875,7 @@ def verify_release_checksum(
         log_warning(f'Offline bundle records no checksum for {asset_name}')
 
     from_sidecar = False
+    digest = ''
     if checksum_url:
         try:
             checksums_text = request(checksum_url).decode()
@@ -865,9 +891,10 @@ def verify_release_checksum(
             log_error(f'Could not read the release {tag} of {repo}, so its checksums are unknown')
             return Verification.UNREADABLE
 
+        digest = published_digest(published, asset_name)
         checksum_asset = select_checksum_asset(sorted(published), asset_name)
         if checksum_asset is None:
-            return Verification.UNPUBLISHED
+            return compared(path, asset_name, digest) if digest else Verification.UNPUBLISHED
         from_sidecar = checksum_asset.endswith(CHECKSUM_SIDECAR_SUFFIXES)
 
         browser_url = f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}'
@@ -890,9 +917,16 @@ def verify_release_checksum(
 
     expected = checksum_for_asset(checksums_text, asset_name, from_sidecar)
     if expected is None:
+        if digest:
+            return compared(path, asset_name, digest)
         log_warning(f'Checksums file has no entry for {asset_name}')
         return Verification.UNLISTED
 
+    return compared(path, asset_name, expected)
+
+
+def compared(path: Path, asset_name: str, expected: str) -> Verification:
+    """The file against one published digest, deleted on a mismatch."""
     actual = sha256_of(path)
     if not digests_match(expected, actual):
         log_error(f'Checksum mismatch for {asset_name}')

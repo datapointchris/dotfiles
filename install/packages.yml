@@ -848,8 +848,9 @@ runtimes:
 #
 # A verified checksum is the default, so a release that cannot supply one says so
 # here — `checksum: unpublished` for a release with no checksums file at all, and
-# `checksum: unlisted` for one whose file does not name the asset. Both install
-# unverified and both are measured against live releases by
+# `checksum: unlisted` for one whose file does not name the asset. Both fall back
+# to GitHub's own digest of the asset, install unverified only where it has none,
+# and are measured against live releases by
 # tests/install/test_release_urls.py, which fails when an exception stops being
 # true as well as when a verifiable release stops verifying.
 

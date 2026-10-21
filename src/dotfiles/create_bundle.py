@@ -83,16 +83,16 @@ VERDICT_VERIFIED = 'verified'
 A claim about the bytes on disk, so it does not survive them being replaced.
 """
 
-VERDICT_UNPUBLISHED = 'unpublished'
+VERDICT_UNPUBLISHED = 'no-digest'
 """The release publishes no digest this bundler can read for the asset.
 
 A claim about what upstream serves for one released tag, which the same asset
 downloaded again cannot contradict — so it outlives a re-download, and losing it
 sends the build back to an API it may not be able to reach.
 
-Both spellings the live check reaches collapse to this one word:
-`select_checksum_asset` finding no file, and a checksums file that does not name
-the asset. The declaration keeps them apart as `unpublished` and `unlisted`
+Every way the live check finds nothing collapses to this one word: no checksums
+file and no GitHub digest, or a checksums file that does not name the asset and
+no GitHub digest. The declaration keeps `unpublished` and `unlisted` apart
 because a reader has to fix different things; the cache does not, because both
 mean the same thing to the next build.
 """
@@ -732,27 +732,30 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
         # one rate-limited build the permanent answer for every build after it.
         raise BundleError(f'Could not read the release {tag} of {repo}, so its checksums are unknown')
 
+    digest = github_release.published_digest(published, asset_name)
     checksum_asset = github_release.select_checksum_asset(sorted(published), asset_name)
-    if checksum_asset is None:
+    if checksum_asset is None and not digest:
         log.warning(f'    {repo} publishes no checksums, none recorded')
         cache.remember_status(asset, VERDICT_UNPUBLISHED)
         return
 
-    try:
-        checksums_text = github_release.request(f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}').decode()
-    except (httpx2.HTTPError, UnicodeDecodeError) as error:
-        raise BundleError(f'Failed to download {checksum_asset} from {repo}: {error}') from error
+    expected = digest
+    if checksum_asset is not None:
+        try:
+            checksums_text = github_release.request(f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}').decode()
+        except (httpx2.HTTPError, UnicodeDecodeError) as error:
+            raise BundleError(f'Failed to download {checksum_asset} from {repo}: {error}') from error
 
-    expected = github_release.checksum_for_asset(
-        checksums_text, asset_name, checksum_asset.endswith(github_release.CHECKSUM_SIDECAR_SUFFIXES)
-    )
-    if expected is None:
-        # yq's checksums is an rhash table (name first, then one column per
-        # algorithm), which the sha256sum parser cannot read. Its installer does
-        # not verify either, so this is no worse than the online path.
-        log.warning(f'    {checksum_asset} has no readable entry for {asset_name}, none recorded')
-        cache.remember_status(asset, VERDICT_UNPUBLISHED)
-        return
+        listed = github_release.checksum_for_asset(
+            checksums_text, asset_name, checksum_asset.endswith(github_release.CHECKSUM_SIDECAR_SUFFIXES)
+        )
+        if listed is None and not digest:
+            # yq's checksums is an rhash table (name first, then one column per
+            # algorithm), which the sha256sum parser cannot read.
+            log.warning(f'    {checksum_asset} has no readable entry for {asset_name}, none recorded')
+            cache.remember_status(asset, VERDICT_UNPUBLISHED)
+            return
+        expected = listed or digest
 
     actual = github_release.sha256_of(path)
     if not github_release.digests_match(expected, actual):

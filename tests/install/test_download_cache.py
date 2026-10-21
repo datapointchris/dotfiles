@@ -743,6 +743,22 @@ def test_a_rebuilt_entry_is_checked_against_upstream_before_it_reaches_checksums
     assert second.checksums == [f'{sha256_of_bytes(STALE)}  {ASSET.filename}']
 
 
+def test_a_release_with_no_checksums_file_is_verified_against_githubs_digest(cache_home, wire, tmp_path):
+    """GitHub computes a sha256 for every asset it stores, so a project that publishes
+    no checksums file still reaches the install machine verified."""
+    listing = f'{{"assets": [{{"name": "{ASSET.filename}", "id": 1, "digest": "sha256:{sha256_of_bytes(PAYLOAD)}"}}]}}'
+    wire({ASSET.url: PAYLOAD, RELEASE_API: listing.encode()})
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
+    bundle = create_bundle.Bundle(tmp_path / 'installers', 'linux', 'x86_64', 'a-machine', BUILT_AT)
+
+    cache.fetch(ASSET, destination, '  fd')
+    create_bundle.verify_against_upstream(bundle, cache, destination, ASSET)
+
+    assert bundle.checksums == [f'{sha256_of_bytes(PAYLOAD)}  {ASSET.filename}']
+    assert cache.status(ASSET) == create_bundle.VERDICT_VERIFIED
+
+
 def test_a_release_that_publishes_nothing_stays_answered_across_a_re_download(cache_home, wire, tmp_path):
     """`unpublished` is a fact about what a release serves for one tag, and the
     same asset downloaded again cannot contradict it.

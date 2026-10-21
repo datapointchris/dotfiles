@@ -230,18 +230,22 @@ def test_an_unreadable_listing_raises_rather_than_reading_as_an_unpublished_pin(
 # ─────────────────────────────────────────────────────────────────────────────
 # Release assets
 #
-# The name-to-id mapping the private-repo download path and the checksum
-# selector are both built on.
+# The name-to-asset mapping the private-repo download path, the checksum
+# selector and GitHub's digest fallback are built on.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_every_published_asset_is_named_with_the_id_the_asset_endpoint_wants(github):
+def test_every_published_asset_is_named_with_its_id_and_github_digest(github):
+    """An asset uploaded before GitHub computed digests answers `null`, which is no digest rather than a malformed one."""
     github.serve(
         'https://api.github.com/repos/owner/repo/releases/tags/v1.0.0',
-        {'assets': [{'name': ASSET, 'id': 41}, {'name': 'checksums.txt', 'id': 42}]},
+        {'assets': [{'name': ASSET, 'id': 41, 'digest': 'sha256:ab12'}, {'name': 'checksums.txt', 'id': 42, 'digest': None}]},
     )
 
-    assert github_release.release_assets('owner/repo', 'v1.0.0') == {ASSET: 41, 'checksums.txt': 42}
+    assert github_release.release_assets('owner/repo', 'v1.0.0') == {
+        ASSET: github_release.Asset(41, 'ab12'),
+        'checksums.txt': github_release.Asset(42),
+    }
 
 
 def test_a_tag_carrying_a_slash_is_encoded_into_one_path_segment(github):
@@ -251,7 +255,7 @@ def test_a_tag_carrying_a_slash_is_encoded_into_one_path_segment(github):
     encoded = 'https://api.github.com/repos/owner/repo/releases/tags/cli%2Fv0.9.0'
     github.serve(encoded, {'assets': [{'name': ASSET, 'id': 7}]})
 
-    assert github_release.release_assets('owner/repo', 'cli/v0.9.0') == {ASSET: 7}
+    assert github_release.release_assets('owner/repo', 'cli/v0.9.0') == {ASSET: github_release.Asset(7)}
     assert github.asked == [encoded]
 
 

@@ -71,9 +71,15 @@ for a person to remove.
 ## Verification defends the transfer, not the publisher
 
 Every download is checked against the SHA-256 the release published, before
-extraction. An entry whose upstream cannot supply one declares that in
-`packages.yml`; `catalog.CHECKSUM_STATES` says why the exceptions are separate
-values.
+extraction. An entry whose upstream publishes no checksums file, or one that does
+not name the asset, declares that in `packages.yml`; `catalog.CHECKSUM_STATES`
+says why the exceptions are separate values.
+
+A declared exception still verifies wherever GitHub has a digest for the asset.
+The release API reports one for every asset uploaded since GitHub began computing
+them, and it arrives over the same TLS connection from the same release as a
+checksums file would, so it defends the same transfer. Only an asset older than
+that installs unverified.
 
 The declaration is not this section's alone. `go_tools`, `cargo_packages` and
 `winget_packages` carry the same field for the assets a bundle downloads for

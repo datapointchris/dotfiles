@@ -259,7 +259,11 @@ class TestChecksumStaging:
         payload.write_text('payload bytes')
         staged: list = []
 
-        monkeypatch.setattr(github_release, 'release_assets', lambda repo, tag: {self.ASSET: 1, 'checksums.txt': 2})
+        monkeypatch.setattr(
+            github_release,
+            'release_assets',
+            lambda repo, tag: {self.ASSET: github_release.Asset(1), 'checksums.txt': github_release.Asset(2)},
+        )
 
         def download(url, destination, repo='', tag='', asset_name=''):
             staged.append(destination)

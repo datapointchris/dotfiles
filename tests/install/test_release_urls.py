@@ -173,15 +173,15 @@ def repo_is_private() -> Callable[[str], bool]:
 
 
 @pytest.fixture(scope='session')
-def published_assets() -> Callable[[str, str], dict[str, int]]:
+def published_assets() -> Callable[[str, str], dict[str, github_release.Asset]]:
     """Asset names a release publishes, one API call per (repo, tag).
 
     A release that could not be read fails the case rather than reading as one that publishes nothing, which would turn a
     rate-limited API into a green run over an unmeasured corpus.
     """
-    cache: dict[tuple[str, str], dict[str, int]] = {}
+    cache: dict[tuple[str, str], dict[str, github_release.Asset]] = {}
 
-    def lookup(repo: str, tag: str) -> dict[str, int]:
+    def lookup(repo: str, tag: str) -> dict[str, github_release.Asset]:
         if (repo, tag) not in cache:
             published = github_release.release_assets(repo, tag)
             assert published is not None, f'could not read the release {tag} of {repo}'
@@ -371,7 +371,7 @@ def declared_checksum_states() -> dict[str, str]:
     return states
 
 
-def checksum_state(repo: str, tag: str, asset_name: str, assets: dict[str, int]) -> str:
+def checksum_state(repo: str, tag: str, asset_name: str, assets: dict[str, github_release.Asset]) -> str:
     """What verification would find, without downloading the asset to hash it."""
     checksum_asset = github_release.select_checksum_asset(sorted(assets), asset_name)
     if checksum_asset is None:
