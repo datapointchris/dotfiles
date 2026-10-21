@@ -191,17 +191,19 @@ def root_is_declined(sandbox: Sandbox) -> None:
 WITNESS = 'privileged-commands'
 
 
-def records(sandbox: Sandbox, *tools: str) -> Path:
+def records(sandbox: Sandbox, *tools: str, simulates: str = '') -> Path:
     """Shadow each privileged tool with one that leaves a trace, and return the trace.
 
     The file is the assertion. A message saying root was declined proves what the
     run *said*; an absent witness proves `groupadd` was never handed the account.
 
-    A redirected `apt-get update` writes no line, because it is not one of these.
-    `syspkg._apt_outdated` points `Dir::State::lists` at a scratch directory
-    precisely so the currency read needs no root, and a witness that could not tell
+    Three calls write no line, because none of them is privileged: `--version`, and
+    the redirected `apt-get update` and `apt-get -s upgrade` that
+    `syspkg.apt_outdated` measures currency with. It points `Dir::State::lists` at a
+    scratch directory so the read needs no root, and a witness that could not tell
     that apart would report every measuring run as an escalation. Same rule as
     `would_change_this_machine` in `tests/conftest.py`, which guards the same call.
+    `simulates` is what the simulation prints.
 
     The subcommand is checked as well as the option, for the reason `REDIRECTABLE`
     states there: every apt subcommand takes `Dir::State::lists`, and on an install
@@ -209,7 +211,10 @@ def records(sandbox: Sandbox, *tools: str) -> Path:
     machine.
     """
     log = sandbox.root / WITNESS
-    unprivileged = 'if [ "$1" = update ]; then case "$*" in *Dir::State::lists=*) exit 0 ;; esac; fi'
+    unprivileged = (
+        '[ "$1" = --version ] && exit 0\n'
+        f'case "$*" in *Dir::State::lists=*) case "$1" in update) exit 0 ;; -s) printf "{simulates}"; exit 0 ;; esac ;; esac'
+    )
     for tool in tools:
         sandbox.shadow(tool, f'#!/bin/sh\n{unprivileged}\nprintf "%s %s\\n" "$(basename "$0")" "$*" >> {log}\nexit 0\n')
     return log
@@ -515,8 +520,7 @@ def pending_manager_upgrade(sandbox: Sandbox, monkeypatch: pytest.MonkeyPatch) -
     is the whole-manager upgrade."""
     sandbox.declare(packages=CURL, manifest=LINUX)
     sandbox.shadow('dpkg-query', '#!/bin/sh\nprintf "curl\\n"\n')
-    sandbox.shadow('apt', '#!/bin/sh\n[ "$1" = "--version" ] && exit 0\nprintf "linux-image/noble 6.8 amd64 [upgradable]\\n"\n')
-    return records(sandbox, 'apt-get')
+    return records(sandbox, 'apt-get', simulates='Inst linux-image [6.7] (6.8 Ubuntu:24.04/noble-updates [amd64])\\n')
 
 
 PRIVILEGED: list[tuple[str, Callable[[Sandbox, pytest.MonkeyPatch], Path], str, str]] = [

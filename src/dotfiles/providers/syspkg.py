@@ -456,7 +456,7 @@ def available(manager: str) -> bool:
 OUTDATED: dict[str, tuple[str, ...]] = {
     'pacman': ('checkupdates', '--nocolor'),
     'aur': ('yay', '-Qu', '--aur'),
-    'apt': ('apt', 'list', '--upgradable'),
+    'apt': ('apt-get', '-s', 'upgrade'),
     'brew': ('brew', 'outdated', '--formula', '--quiet'),
     'cask': ('brew', 'outdated', '--cask', '--quiet'),
     'flatpak': ('flatpak', 'remote-ls', '--updates', '--columns=application'),
@@ -542,7 +542,7 @@ Accessibility that freezes mouse and keyboard until it is re-granted by hand.
 
 
 APT_LISTS = Path('/var/lib/apt/lists')
-"""The index `apt list --upgradable` compares against, and cannot refresh unprivileged.
+"""The index an apt upgrade resolves against, which an unprivileged run cannot refresh.
 
 Read to seed the private copy below. Never written: refreshing it is `apt-get
 update` as root, which a read verb does not get to be.
@@ -563,11 +563,11 @@ def apt_redirect(scratch: Path) -> tuple[str, ...]:
 def apt_outdated() -> frozenset[str] | None:
     """apt's currency, measured against an index this run refreshed itself.
 
-    `apt list --upgradable` reads `/var/lib/apt/lists`, so it answers from whenever
-    that was last updated — the defect `checkupdates` cures on Arch, with no apt
+    apt reads `/var/lib/apt/lists`, so an unrefreshed ask answers from whenever that
+    was last updated — the defect `checkupdates` cures on Arch, with no apt
     equivalent. A redirected `update` needs no root and touches nothing the machine
     reads, seeded from `APT_LISTS` because a cold fetch is 25.6 MB against a 2.8 MB
-    delta.
+    delta. `simulated` says why the ask is a simulated upgrade.
 
     **A refresh that fails is a non-answer, never a smaller one.** An empty seed
     reports *nothing behind*, which declares a machine current on a run that
@@ -592,7 +592,7 @@ def apt_outdated() -> frozenset[str] | None:
         if not refreshed.ok:
             return None
         listed = effects.run([*OUTDATED['apt'], *redirect], output=Output.QUIET, timeout=CURRENCY_SECONDS)
-    return names(listed.stdout) if listed.ok else None
+    return simulated(listed.stdout) if listed.ok else None
 
 
 def outdated(manager: str) -> frozenset[str] | None:
@@ -604,8 +604,7 @@ def outdated(manager: str) -> frozenset[str] | None:
     the answer for a manager that listed nothing.
 
     apt branches here rather than in `OUTDATED` because its read is two commands
-    and a scratch directory. `apt-get` ships with `apt`, so one `--version` vouches
-    for both.
+    and a scratch directory, both `apt-get`.
     """
     command = OUTDATED.get(manager)
     if command is None or not effects.run([command[0], '--version'], output=Output.QUIET, timeout=PROBE_SECONDS).ok:
@@ -628,18 +627,27 @@ def names(transcript: str) -> frozenset[str]:
 
     Field one, since every one of these prints `<name> <versions…>` or a bare
     name — `mas` included, whose field one is the numeric id it is addressed by.
-    Two adjustments, both apt's: it spells the name `curl/noble-updates`, so a
-    name ends at its first `/`, and it prefaces the list with `Listing...` and a
-    warning that its CLI is not stable, on the same stream as the answer. A first
-    field ending in `.` or `:` is apt talking rather than apt answering.
+    A first field ending in `.` or `:` is a manager talking on the stream it
+    answers on, rather than answering.
     """
     found = set()
     for line in transcript.splitlines():
         field = line.split()[0] if line.split() else ''
         if not field or field.endswith(('.', ':')):
             continue
-        found.add(field.split('/')[0])
+        found.add(field)
     return frozenset(found)
+
+
+def simulated(transcript: str) -> frozenset[str]:
+    """The packages an `apt-get -s upgrade` would install, one per `Inst` line.
+
+    The simulation rather than `apt list --upgradable`, because `apt-get upgrade`
+    defers a phased update and the listing does not. Read off the listing, a
+    package phased away from this machine is behind on every run until its phase
+    arrives, and every apply asks for a password to upgrade nothing.
+    """
+    return frozenset(line.split()[1] for line in transcript.splitlines() if line.startswith('Inst '))
 
 
 def upgrade(manager: str, privilege: Escalates) -> Result:

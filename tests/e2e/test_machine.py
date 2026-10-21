@@ -208,9 +208,10 @@ def test_every_networked_currency_read_answers_on_a_real_machine(machine: Machin
     """Whether pacman and apt accept being read through a refreshed index copy.
 
     Both take a route no lower level can exercise. `checkupdates` copies the pacman
-    database, refreshes the copy under fakeroot and reads it; `syspkg._apt_outdated`
-    points `Dir::State::lists` and `Dir::Cache` at a scratch directory and runs
-    `apt-get update` there. The unit tests assert the argv a stub was handed, and a
+    database, refreshes the copy under fakeroot and reads it; `syspkg.apt_outdated`
+    points `Dir::State::lists` and `Dir::Cache` at a scratch directory, runs
+    `apt-get update` there and simulates the upgrade against it. The unit tests
+    assert the argv a stub was handed, and a
     stub agrees with anything — a real manager rejecting either would report UNKNOWN
     on every machine of that family.
 

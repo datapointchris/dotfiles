@@ -791,19 +791,17 @@ def only_missing(*absent: str) -> Callable[..., str | None]:
 UNMEASURED_CAUSES = (
     ('nothing-missing', (), ev.Unmeasured.DECLINED),
     ('the-manager', ('apt-get',), ev.Unmeasured.MANAGER_ABSENT),
-    ('its-reader', ('apt',), ev.Unmeasured.READER_ABSENT),
 )
 """Which binary is absent, and the cause that makes the row unmeasurable.
 
-apt is the pair that shows the distinction: `INSTALL` names `apt-get` and
-`OUTDATED` names `apt`. pacman is the case it was written for — `checkupdates` is
-a different package from pacman — and cannot be exercised from this table because
-this file's declaration is an apt machine.
+apt answers its own currency through `apt-get`, so it reaches two of the three
+causes. The third, a reader that ships apart from its manager, is pacman's, and
+the test after this one pins it.
 """
 
 
 @pytest.mark.parametrize(('label', 'absent', 'reason'), UNMEASURED_CAUSES, ids=[case[0] for case in UNMEASURED_CAUSES])
-def test_an_unmeasurable_manager_says_which_of_the_three_causes_it_is(
+def test_an_unmeasurable_manager_says_which_cause_it_is(
     label: str,
     absent: tuple[str, ...],
     reason: ev.Unmeasured,

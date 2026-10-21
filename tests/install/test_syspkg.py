@@ -2,10 +2,10 @@
 
 The seam is the real binary, shadowed on PATH. What breaks here is never the
 logic — it is a manager's output convention, and every one of them has a
-different one: `pacman -Qu` reports an empty result as a failure, apt prefaces its
-list with two lines that are not packages and spells a name `curl/noble-updates`,
-and `mas` answers with numeric ids. A fake that returns tidy lines would assert
-nothing about any of that.
+different one: `pacman -Qu` reports an empty result as a failure, apt names a
+package behind only on the `Inst` lines of an upgrade simulation, and `mas`
+answers with numeric ids. A fake that returns tidy lines would assert nothing
+about any of that.
 """
 
 from __future__ import annotations
@@ -79,30 +79,27 @@ def test_pacman_currency_is_read_through_checkupdates_rather_than_off_the_sync_d
     assert syspkg.outdated('pacman') == frozenset({'fresh-answer'})
 
 
-def apt_listing(fake_bin: Path, listing: str) -> Path:
-    """An apt that lists `listing`, and the `apt-get` its refresh runs first.
+SIMULATED_CURL = 'Inst curl [8.4.0] (8.5.0 Ubuntu:24.04/noble-updates [amd64])\\nConf curl (8.5.0 Ubuntu:24.04/noble-updates [amd64])\\n'
+"""The two lines `apt-get -s upgrade` prints for a package it would upgrade, escaped for `printf`."""
 
-    Both, always. `apt_outdated` runs `apt-get update` before it lists, so an
-    unshadowed one is the real binary on whatever box runs the suite — absent on
-    Arch and a 25 MB fetch on the Ubuntu runner.
+
+def test_a_phased_update_the_upgrade_would_defer_is_not_behind(fake_bin: Path) -> None:
+    """Ubuntu phases an update out to a share of machines, and `apt-get upgrade`
+    defers it on the rest while `apt list --upgradable` still lists it.
+
+    Read off the listing, the deferred package was behind on every run and every
+    apply escalated to upgrade nothing. The simulation names it only in its
+    summary, indented under a heading, and never on an `Inst` line.
     """
-    manager(fake_bin, 'apt', f'printf "{listing}"')
-    return executable(fake_bin, 'apt-get', '#!/bin/sh\nexit 0\n')
-
-
-def test_apts_preamble_is_not_mistaken_for_a_package(fake_bin: Path) -> None:
-    """apt prefaces its list with `Listing...` and a warning that its CLI is not
-    stable, both on the same stream as the answer — and spells the name
-    `curl/noble-updates`."""
-    listing = 'WARNING: apt does not have a stable CLI interface.\\nListing...\\ncurl/noble-updates 8.5.0 amd64 [upgradable from: 8.4.0]\\n'
-    apt_listing(fake_bin, listing)
+    summary = 'Calculating upgrade...\\nThe following upgrades have been deferred due to phasing:\\n  tmux\\n'
+    manager(fake_bin, 'apt-get', f'[ "$1" = update ] && exit 0\nprintf "{summary}{SIMULATED_CURL}"')
 
     assert syspkg.outdated('apt') == frozenset({'curl'})
 
 
 def test_apt_currency_is_read_against_an_index_this_run_refreshed(fake_bin: Path) -> None:
-    """`apt list --upgradable` compares against `/var/lib/apt/lists`, so it answers
-    from whenever that was last updated as root.
+    """apt compares against `/var/lib/apt/lists`, so it answers from whenever that
+    was last updated as root.
 
     Measured 2026-08-22 in the Ubuntu test image: the machine's own lists reported
     nothing upgradable while a refreshed copy reported eighteen packages. Both
@@ -110,19 +107,18 @@ def test_apt_currency_is_read_against_an_index_this_run_refreshed(fake_bin: Path
     the shape that either reads the stale index or writes the machine's.
     """
     argv = fake_bin / 'apt-argv'
-    manager(fake_bin, 'apt', f'printf "%s\\n" "$*" >> {argv}\nprintf "Listing...\\ncurl/noble 8.5.0 amd64 [upgradable from: 8.4.0]\\n"')
-    executable(fake_bin, 'apt-get', f'#!/bin/sh\nprintf "%s\\n" "$*" >> {argv}\n')
+    manager(fake_bin, 'apt-get', f'printf "%s\\n" "$*" >> {argv}\n[ "$1" = update ] && exit 0\nprintf "{SIMULATED_CURL}"')
 
     assert syspkg.outdated('apt') == frozenset({'curl'})
     handed = argv.read_text().splitlines()
-    assert [line.split()[0] for line in handed] == ['update', 'list']
+    assert [line.split()[0] for line in handed] == ['update', '-s']
     assert all('Dir::State::lists=' in line and 'Dir::Cache=' in line for line in handed)
 
 
 def test_an_apt_refresh_that_fails_is_a_non_answer_rather_than_a_smaller_one(fake_bin: Path) -> None:
     """A count taken against an index nothing refreshed is a count nobody measured.
 
-    The listing would answer from whatever the seed held, and an empty seed answers
+    The simulation would answer from whatever the seed held, and an empty seed answers
     *nothing behind* — a machine reported current by a run that reached no archive.
     This repo's own Debian image builds that state: its Dockerfile runs `rm -rf
     /var/lib/apt/lists/*`, so only the network is missing.
@@ -130,8 +126,7 @@ def test_an_apt_refresh_that_fails_is_a_non_answer_rather_than_a_smaller_one(fak
     `None` is what the pacman path already answers for the same failure, and it is
     what `by_currency` turns into UNKNOWN with a cause.
     """
-    manager(fake_bin, 'apt', 'printf "Listing...\\ncurl/noble 8.5.0 amd64 [upgradable from: 8.4.0]\\n"')
-    executable(fake_bin, 'apt-get', '#!/bin/sh\necho "could not resolve host" >&2\nexit 100\n')
+    manager(fake_bin, 'apt-get', f'[ "$1" = update ] && echo "could not resolve host" >&2 && exit 100\nprintf "{SIMULATED_CURL}"')
 
     assert syspkg.outdated('apt') is None
 
@@ -156,10 +151,6 @@ def test_a_managers_progress_on_stderr_is_not_a_package_behind(fake_bin: Path) -
     auto-update writes progress to stderr. Read from the merged transcript, the
     decoration becomes a package name: `2 brew package(s) behind: ollama, ✔︎` on a
     machine that is behind on one.
-
-    apt's preamble above is the same disease. Guarding it line-shape by line-shape
-    is the wrong answer; reading the stream that carries the answer is the right
-    one.
     """
     manager(fake_bin, 'brew', 'printf "✔︎ Cask copilot-money\\n" >&2\nprintf "ollama\\n"')
 
