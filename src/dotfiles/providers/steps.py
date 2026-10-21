@@ -6,7 +6,9 @@ one observation in the repo that genuinely needs root. OrbStack's plugin
 directory is a JSON merge into a user config. libpq is a formula Homebrew
 installs and deliberately does not link. The Windows font path is discovered by
 asking Windows across a filesystem boundary only a WSL machine can see, and so is
-the profile `.wslconfig` is copied into. The
+the profile `.wslconfig` is copied into. Windows Terminal's settings are a JSON
+merge across that same boundary, into a file `theme`, `font` and the terminal
+itself also rewrite. The
 /etc/hosts grant is a sudoers rule only root can read, so it is observed through
 what sudo will list instead. The scheduled check is a systemd user timer or a
 LaunchAgent, and lives in `providers/schedule.py` because it is the only one
@@ -451,6 +453,106 @@ def write_wslconfig() -> Result:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Windows Terminal's scroll keys, handed back to tmux
+# ─────────────────────────────────────────────────────────────────────────────
+
+RESIZE_CHORDS = ('ctrl+shift+up', 'ctrl+shift+down')
+"""tmux.conf and nvim's keymaps resize on these, and Windows Terminal scrolls on them by default."""
+
+WINDOWS_TERMINAL_SETTINGS = (
+    Path('AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json'),
+    Path('AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json'),
+    Path('AppData/Local/Microsoft/Windows Terminal/settings.json'),
+)
+"""The Store install, the Preview install and the unpackaged one, under a Windows profile."""
+
+
+def windows_terminal_settings() -> list[Path]:
+    """Every settings file under a profile this account can read, found without asking Windows who it is."""
+    try:
+        profiles = sorted((WINDOWS_MOUNT / 'Users').iterdir())
+    except OSError:
+        return []
+    found = []
+    for profile in profiles:
+        for relative in WINDOWS_TERMINAL_SETTINGS:
+            try:
+                if (profile / relative).is_file():
+                    found.append(profile / relative)
+            except OSError:
+                continue
+    return found
+
+
+def read_windows_terminal_settings(path: Path) -> dict[str, object] | None:
+    """None where the file is not plain JSON, since rewriting it would drop its comments."""
+    try:
+        loaded = json.loads(path.read_text(encoding='utf-8-sig'))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def unbinding(entry: object, chord: str) -> bool:
+    return isinstance(entry, dict) and entry.get('keys') == chord and 'id' in entry and entry['id'] in {None, 'unbound'}
+
+
+def chords_still_bound(settings: dict[str, object]) -> list[str]:
+    declared = settings.get('keybindings')
+    entries = declared if isinstance(declared, list) else []
+    return [chord for chord in RESIZE_CHORDS if not any(unbinding(entry, chord) for entry in entries)]
+
+
+def windows_terminal_resize_keys() -> State:
+    settings_files = windows_terminal_settings()
+    if not settings_files:
+        return State(Verdict.MATCHED, 'no Windows Terminal settings file to unbind keys in')
+    for path in settings_files:
+        settings = read_windows_terminal_settings(path)
+        if settings is None:
+            return State(Verdict.UNKNOWN, f'{path} is not plain JSON', repair=Repair.NONE)
+        bound = chords_still_bound(settings)
+        if bound:
+            return State(Verdict.MISSING, f'{path} leaves {", ".join(bound)} to Windows Terminal scrolling')
+    return State(Verdict.MATCHED)
+
+
+def unbind_windows_terminal_resize_keys() -> Result:
+    """Replace any entry for the two chords with an unbinding, and keep every other key.
+
+    `theme` and `font` rewrite this same file for its schemes and fonts, and
+    Windows Terminal rewrites it from its settings UI, so the merge leaves
+    everything outside `keybindings` exactly as it found it. The write goes
+    through a rename because Windows Terminal reloads the file the moment it
+    changes.
+    """
+    written = []
+    for path in windows_terminal_settings():
+        settings = read_windows_terminal_settings(path)
+        if settings is None:
+            return Result(False, f'{path} is not plain JSON, so nothing was written', kind=Kind.TARGET_UNUSABLE)
+        if not chords_still_bound(settings):
+            continue
+        declared = settings.get('keybindings')
+        kept = (
+            [entry for entry in declared if not (isinstance(entry, dict) and entry.get('keys') in RESIZE_CHORDS)]
+            if isinstance(declared, list)
+            else []
+        )
+        settings['keybindings'] = [*kept, *({'id': None, 'keys': chord} for chord in RESIZE_CHORDS)]
+        staged = path.with_name(f'{path.name}.dotfiles-tmp')
+        try:
+            staged.write_text(json.dumps(settings, indent=4, ensure_ascii=False) + '\n', encoding='utf-8')
+            staged.replace(path)
+        except OSError as error:
+            return Result(False, f'could not write {path}: {error}', kind=Kind.WRITE_FAILED)
+        written.append(str(path))
+    if not written:
+        return Result(True, 'no Windows Terminal settings file needed the keys unbound', kind=Kind.APPLIED)
+    return Result(True, f'{", ".join(written)} hands {", ".join(RESIZE_CHORDS)} to the shell', kind=Kind.APPLIED)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # libpq, which Homebrew installs without linking
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -603,6 +705,7 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
     'orbstack-docker-plugins': (anywhere(orbstack_plugins), unprivileged(add_orbstack_plugins)),
     'windows-fonts': (anywhere(windows_fonts), unprivileged(write_fontconfig)),
     'wslconfig': (anywhere(wslconfig), unprivileged(write_wslconfig)),
+    'windows-terminal-resize-keys': (anywhere(windows_terminal_resize_keys), unprivileged(unbind_windows_terminal_resize_keys)),
     'psql-linked': (anywhere(psql_linked), unprivileged(link_psql)),
     'etc-hosts-sudo-grant': (anywhere(hosts_write_granted), escalating(grant_hosts_write)),
 }

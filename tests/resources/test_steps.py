@@ -1,4 +1,4 @@
-"""The five rows with no shared mechanism behind them.
+"""The rows with no shared mechanism behind them.
 
 Nothing here needs a Mac or a WSL host. `$HOME` is a real seam and every external
 command — `chflags`, `xcodebuild`, `xcode-select`, `cmd.exe`, `fc-cache` — is
@@ -372,6 +372,40 @@ def test_no_windows_filesystem_has_no_wslconfig_to_write(tmp_path: Path, monkeyp
     monkeypatch.setattr(steps, 'WINDOWS_MOUNT', tmp_path / 'absent')
 
     assert steps.observe('wslconfig', ANY_RUN).verdict is Verdict.MATCHED
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Windows Terminal's resize keys
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_unbinding_the_resize_keys_keeps_what_theme_font_and_the_terminal_wrote(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    mount = tmp_path / 'mnt-c'
+    monkeypatch.setattr(steps, 'WINDOWS_MOUNT', mount)
+    settings = mount / 'Users' / 'chris.birch' / steps.WINDOWS_TERMINAL_SETTINGS[0]
+    settings.parent.mkdir(parents=True)
+    original = {
+        '$schema': 'https://aka.ms/terminal-profiles-schema',
+        'actions': [{'command': {'action': 'copy', 'singleLine': False}, 'id': 'User.copy.644BA8F2'}],
+        'keybindings': [{'id': 'User.copy.644BA8F2', 'keys': 'ctrl+c'}, {'id': 'Terminal.ScrollUp', 'keys': 'ctrl+shift+up'}],
+        'profiles': {'defaults': {'font': {'face': 'JetBrainsMono Nerd Font', 'size': 11}, 'opacity': 90}, 'list': []},
+        'schemes': [{'name': 'Rosé Pine'}],
+    }
+    settings.write_text(json.dumps(original, indent=4), encoding='utf-8-sig')
+
+    assert steps.observe('windows-terminal-resize-keys', ANY_RUN).verdict is Verdict.MISSING
+    assert steps.apply('windows-terminal-resize-keys', Privilege(), ANY_RUN).ok
+
+    written = json.loads(settings.read_text())
+    assert written['keybindings'] == [
+        {'id': 'User.copy.644BA8F2', 'keys': 'ctrl+c'},
+        {'id': None, 'keys': 'ctrl+shift+up'},
+        {'id': None, 'keys': 'ctrl+shift+down'},
+    ]
+    assert {key: value for key, value in written.items() if key != 'keybindings'} == {
+        key: value for key, value in original.items() if key != 'keybindings'
+    }
+    assert steps.observe('windows-terminal-resize-keys', ANY_RUN).verdict is Verdict.MATCHED
 
 
 # ─────────────────────────────────────────────────────────────────────────────

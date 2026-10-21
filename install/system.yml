@@ -723,7 +723,7 @@ macos_defaults:
     description: Reduce motion
 
 # Machine state with no shared mechanism behind it: a file flag, a directory, a
-# root-only license read, a JSON merge, a keg-only formula's link, and two paths
+# root-only license read, JSON merges, a keg-only formula's link, and two paths
 # discovered by asking Windows. The mechanics are one pair of functions each in
 # src/dotfiles/providers/steps.py, for the same reason custom_installers has no
 # engine.
@@ -773,6 +773,15 @@ steps:
   # before it is replaced: it is edited by hand while something is broken.
   - name: wslconfig
     description: .wslconfig in the Windows profile, matching install/wsl/wslconfig.template
+    host: wsl
+
+  # tmux and nvim resize on ctrl+shift+arrow. Windows Terminal binds the up and
+  # down chords to scrolling by default and never passes them to WSL, so left and
+  # right resize while up and down silently do nothing. Unbound in the settings
+  # file rather than shipped as a fragment, because a fragment carries profiles
+  # and color schemes and no key bindings.
+  - name: windows-terminal-resize-keys
+    description: Windows Terminal leaving ctrl+shift+up and ctrl+shift+down to tmux and nvim
     host: wsl
 
   # A scheduled job writes /etc/hosts from the fleet's inventory with
