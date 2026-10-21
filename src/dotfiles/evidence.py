@@ -506,7 +506,7 @@ class Unmeasured(enum.StrEnum):
 UNMEASURED_DETAIL = {
     Unmeasured.MANAGER_ABSENT: 'no {name} on this machine to ask what is behind',
     Unmeasured.READER_ABSENT: '{name} is here but {reader} is not, so nothing can say what it is behind — install {package}',
-    Unmeasured.DECLINED: 'nothing asked {name} what is behind — a network call, and `--cached` declines it',
+    Unmeasured.DECLINED: 'nothing asked {name} what is behind — a network call, which `--cached` and `--offline` both decline',
 }
 """One sentence per cause, in one place, so a reword is not a test change."""
 

@@ -805,19 +805,21 @@ def test_declining_the_network_leaves_the_networked_manager_unmeasured(sandbox: 
     assert lands(planned, checked, 'manager/flatpak') is Lands.UNMEASURED
 
 
-def test_the_unmeasured_row_names_the_flag_that_declined_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The advice has to name something the verb printing it accepts.
+def test_the_unmeasured_row_names_the_flags_that_decline_the_network(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+    """Both, so the row names whichever one the reader typed.
 
     Asserted on the string because that is the whole defect: every read verb
     measures, so `--refresh` is the default and telling a reader to add it sends
-    them to type the state they are already in.
+    them to type the state they are already in. `apply` takes `--offline` and has
+    no `--cached`.
     """
     a_machine_with_a_flatpak_app_behind(sandbox)
 
     ran = cli('system', 'plan', '--cached', '--json')
 
     detail = next(entry['detail'] for entry in resource(ran, 'system')['others'] if entry['item'] == 'manager/flatpak')
-    assert '`--cached` declines it' in detail
+    assert '`--cached`' in detail
+    assert '`--offline`' in detail
     assert '--refresh' not in detail
 
 
