@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import stat
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -527,6 +529,78 @@ def test_a_rule_visudo_refuses_is_never_installed(fake_bin: Path, tmp_path: Path
     assert not result.ok
     assert 'visudo refused' in result.detail
     assert not log.exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The hooks git copies into every clone
+# ─────────────────────────────────────────────────────────────────────────────
+
+GIT = shutil.which('git') or 'git'
+
+
+def git(cwd: Path, *argv: str, path: str | None = None) -> subprocess.CompletedProcess[str]:
+    """git with no system or global config, and the template directory the step writes."""
+    env = {**os.environ, 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': os.devnull}
+    if path is not None:
+        env['PATH'] = path
+    identity = ('-c', 'user.name=test', '-c', 'user.email=test@example.com')
+    template = ('-c', f'init.templateDir={Path.home() / steps.GIT_TEMPLATE_DIR}')
+    return subprocess.run([GIT, *identity, *template, '-C', str(cwd), *argv], capture_output=True, text=True, env=env, check=False)
+
+
+@pytest.fixture
+def templated_repo(home: Path, tmp_path: Path) -> Path:
+    assert steps.apply('git-template-hooks', Privilege(), ANY_RUN).ok
+    assert git(tmp_path, 'init', '-q', 'repo').returncode == 0
+    return tmp_path / 'repo'
+
+
+def test_a_hook_linked_to_its_source_is_drift_and_is_replaced_by_a_file(home: Path) -> None:
+    """git copies a symlinked template into the clone as a symlink, and
+    `pre-commit install` there would write through it into this repo."""
+    pre_commit, _ = steps.template_hooks()
+    pre_commit.parent.mkdir(parents=True)
+    pre_commit.symlink_to(steps.TEMPLATE_HOOK)
+    assert steps.observe('git-template-hooks', ANY_RUN).verdict is Verdict.STALE
+
+    assert steps.apply('git-template-hooks', Privilege(), ANY_RUN).ok
+
+    assert steps.observe('git-template-hooks', ANY_RUN).verdict is Verdict.MATCHED
+    assert not pre_commit.is_symlink()
+
+
+def test_a_new_repo_runs_pre_commit_only_where_it_has_a_config(templated_repo: Path, fake_bin: Path, tmp_path: Path) -> None:
+    """A pre-commit that fails the commit-msg stage, so a commit that succeeds is
+    one the hooks let through. No config never reaches pre-commit. A config
+    reaches it at both stages. A config on a machine without pre-commit commits
+    rather than blocking."""
+    log = tmp_path / 'pre-commit.log'
+    executable(fake_bin, 'pre-commit', f'#!/bin/sh\necho "$1 $3" >> {log}\n[ "$3" != --hook-type=commit-msg ]\n')
+    for stage in steps.TEMPLATE_HOOK_STAGES:
+        copied = templated_repo / '.git' / 'hooks' / stage
+        assert stat.S_ISREG(copied.lstat().st_mode) and os.access(copied, os.X_OK)
+
+    assert git(templated_repo, 'commit', '--allow-empty', '-m', 'no config').returncode == 0
+    assert not log.exists()
+
+    (templated_repo / '.pre-commit-config.yaml').write_text('repos: []\n')
+    assert git(templated_repo, 'commit', '--allow-empty', '-m', 'config').returncode != 0
+    assert log.read_text().splitlines() == ['hook-impl --hook-type=pre-commit', 'hook-impl --hook-type=commit-msg']
+
+    nothing_on_path = tmp_path / 'empty'
+    nothing_on_path.mkdir()
+    assert git(templated_repo, 'commit', '--allow-empty', '-m', 'no pre-commit', path=str(nothing_on_path)).returncode == 0
+
+
+@pytest.mark.skipif(shutil.which('pre-commit') is None, reason='needs pre-commit, whose install is what reads the marker')
+def test_pre_commit_install_takes_the_template_hook_as_its_own(templated_repo: Path) -> None:
+    """A hook pre-commit does not recognize is moved to <stage>.legacy and run as
+    well as pre-commit's own, so every check would run twice."""
+    stages = [flag for stage in steps.TEMPLATE_HOOK_STAGES for flag in ('-t', stage)]
+    env = {**os.environ, 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': os.devnull}
+    subprocess.run(['pre-commit', 'install', *stages], cwd=templated_repo, env=env, check=True, capture_output=True)
+
+    assert not list((templated_repo / '.git' / 'hooks').glob('*.legacy'))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -723,8 +723,9 @@ macos_defaults:
     description: Reduce motion
 
 # Machine state with no shared mechanism behind it: a file flag, a directory, a
-# root-only license read, JSON merges, a keg-only formula's link, and two paths
-# discovered by asking Windows. The mechanics are one pair of functions each in
+# root-only license read, JSON merges, a keg-only formula's link, executable
+# files git copies into each clone, and two paths discovered by asking Windows.
+# The mechanics are one pair of functions each in
 # src/dotfiles/providers/steps.py, for the same reason custom_installers has no
 # engine.
 steps:
@@ -762,6 +763,14 @@ steps:
     description: libpq force-linked, which is what puts psql on PATH
     os_family: darwin
     requires_package: psql
+    needs_root: false
+
+  # The directory common.gitconfig names as init.templateDir. Written as real
+  # files rather than deployed as links from configs/: git copies a symlinked
+  # template into each clone as a symlink, and `pre-commit install` opens the
+  # hook for writing, which would write through the link into this repo.
+  - name: git-template-hooks
+    description: The commit hooks git copies into every clone, which run a repo's pre-commit config
     needs_root: false
   - name: windows-fonts
     description: fontconfig pointing at the Windows user font directory

@@ -1,0 +1,26 @@
+#!/bin/sh
+# The hook git copies into every clone and every `git init`, once as pre-commit
+# and once as commit-msg. It reads its stage from the name it was run under.
+#
+# A repo with no .pre-commit-config.yaml commits as if no hook were installed.
+# A repo with one, on a machine with no pre-commit, commits with a warning
+# rather than a refusal, because refusing would block every commit there.
+#
+# The ID line is the marker pre-commit looks for to recognize its own hook
+# scripts. Carrying it makes `pre-commit install` overwrite this file in place.
+# Without it, pre-commit moves the file to <stage>.legacy and runs it as well
+# as its own, so every check runs twice.
+# ID: 138fd403232d2ddd5efb44317e38bf03
+
+config=.pre-commit-config.yaml
+stage=${0##*/}
+
+[ -f "$config" ] || exit 0
+
+if ! command -v pre-commit >/dev/null 2>&1; then
+  echo "$stage: pre-commit is not installed, so no check in $config ran" >&2
+  exit 0
+fi
+
+here=$(cd "$(dirname "$0")" && pwd)
+exec pre-commit hook-impl --config="$config" --hook-type="$stage" --hook-dir "$here" -- "$@"

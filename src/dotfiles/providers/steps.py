@@ -8,7 +8,8 @@ installs and deliberately does not link. The Windows font path is discovered by
 asking Windows across a filesystem boundary only a WSL machine can see, and so is
 the profile `.wslconfig` is copied into. Windows Terminal's settings are a JSON
 merge across that same boundary, into a file `theme`, `font` and the terminal
-itself also rewrite. The
+itself also rewrite. The hooks git copies into each clone are written as real
+executable files, because git copies a symlinked template as a symlink. The
 /etc/hosts grant is a sudoers rule only root can read, so it is observed through
 what sudo will list instead. The scheduled check is a systemd user timer or a
 LaunchAgent, and lives in `providers/schedule.py` because it is the only one
@@ -553,6 +554,85 @@ def unbind_windows_terminal_resize_keys() -> Result:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# The hooks git copies into every clone
+# ─────────────────────────────────────────────────────────────────────────────
+
+TEMPLATE_HOOK = paths.INSTALL_DIR / 'git' / 'template-hook'
+
+GIT_TEMPLATE_DIR = Path('.local') / 'share' / 'git' / 'templates'
+"""Below the home directory, and the path `init.templateDir` names in
+common.gitconfig. Fixed rather than read from `$XDG_DATA_HOME`, because git
+expands no variable in a config path and the two have to agree."""
+
+TEMPLATE_HOOK_STAGES = ('pre-commit', 'commit-msg')
+"""The stages every pre-commit config here runs at. The hook reads its stage from
+its own name, so one source is written once per stage."""
+
+
+def template_hooks() -> tuple[Path, ...]:
+    hooks = Path.home() / GIT_TEMPLATE_DIR / 'hooks'
+    return tuple(hooks / stage for stage in TEMPLATE_HOOK_STAGES)
+
+
+def template_hook_fault(hook: Path, wanted: bytes) -> str:
+    """Why one installed hook is not the source, empty when it is.
+
+    A link is a fault even when it resolves to the source. git copies a template
+    symlink into the clone as a symlink, so `pre-commit install` in that clone
+    would write through it.
+    """
+    try:
+        mode = hook.lstat().st_mode
+    except FileNotFoundError:
+        return 'is missing'
+    if stat.S_ISLNK(mode):
+        return 'is a symlink, which git would copy into each clone as one'
+    if not stat.S_ISREG(mode) or hook.read_bytes() != wanted:
+        return f'differs from {TEMPLATE_HOOK.name}'
+    if not mode & stat.S_IXUSR:
+        return 'is not executable, so git would skip it'
+    return ''
+
+
+def git_template_hooks() -> State:
+    wanted = TEMPLATE_HOOK.read_bytes()
+    faults = [(hook, fault) for hook in template_hooks() if (fault := template_hook_fault(hook, wanted))]
+    if not faults:
+        return State(Verdict.MATCHED)
+    detail = '; '.join(f'{hook} {fault}' for hook, fault in faults)
+    if all(fault == 'is missing' for _, fault in faults):
+        return State(Verdict.MISSING, detail)
+    return State(Verdict.STALE, detail)
+
+
+def write_executable(target: Path, content: bytes) -> None:
+    """Stage beside the target, then rename over it, so a link at the target is
+    replaced and a failed write leaves the target as it was."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    handle, staged = tempfile.mkstemp(dir=target.parent, prefix=f'.{target.name}.')
+    try:
+        with os.fdopen(handle, 'wb') as staging:
+            staging.write(content)
+        os.chmod(staged, 0o755)
+        os.replace(staged, target)
+    except BaseException:
+        Path(staged).unlink(missing_ok=True)
+        raise
+
+
+def write_git_template_hooks() -> Result:
+    """Write each hook as a regular executable file, replacing a link rather than
+    writing through it."""
+    source = TEMPLATE_HOOK.read_bytes()
+    for hook in template_hooks():
+        try:
+            write_executable(hook, source)
+        except OSError as error:
+            return Result(False, f'could not write {hook}: {error}', kind=Kind.WRITE_FAILED)
+    return Result(True, f'{", ".join(TEMPLATE_HOOK_STAGES)} written to {template_hooks()[0].parent}', kind=Kind.APPLIED)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # libpq, which Homebrew installs without linking
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -706,6 +786,7 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
     'windows-fonts': (anywhere(windows_fonts), unprivileged(write_fontconfig)),
     'wslconfig': (anywhere(wslconfig), unprivileged(write_wslconfig)),
     'windows-terminal-resize-keys': (anywhere(windows_terminal_resize_keys), unprivileged(unbind_windows_terminal_resize_keys)),
+    'git-template-hooks': (anywhere(git_template_hooks), unprivileged(write_git_template_hooks)),
     'psql-linked': (anywhere(psql_linked), unprivileged(link_psql)),
     'etc-hosts-sudo-grant': (anywhere(hosts_write_granted), escalating(grant_hosts_write)),
 }

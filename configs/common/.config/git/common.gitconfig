@@ -15,6 +15,9 @@ editor = nvim
 
 [init]
 defaultBranch = main
+# Written by the git-template-hooks step. Each clone gets a pre-commit and a
+# commit-msg hook that run the repo's .pre-commit-config.yaml, if it has one.
+templateDir = ~/.local/share/git/templates
 
 [fetch]
 prune = true
