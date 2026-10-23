@@ -1658,6 +1658,24 @@ def test_the_apply_that_installs_a_release_removes_the_npm_copy_it_supersedes(
     assert (fake_bin / 'npm.log').read_text().splitlines()[-1] == 'uninstall -g @example/frob'
 
 
+def test_the_apply_that_installs_a_replacement_deletes_the_go_binary_it_was_renamed_from(
+    tmp_path: Path, release_cache: Path, monkeypatch: pytest.MonkeyPatch, unprivileged: Privilege
+) -> None:
+    """A rename puts no second copy on PATH for `shadowing` to find, so the row
+    names the old file. `go install` keeps no receipt, so deleting it is the removal."""
+    gotool.gobin().mkdir(parents=True, exist_ok=True)
+    old = executable(gotool.gobin(), 'oldfrob')
+    live = superseding_release(tmp_path, release_cache, 'go:oldfrob', 'linux')
+    monkeypatch.setattr(
+        registry, 'install', lambda _, change, __: Outcome(change, OutcomeStatus.DONE, f'placed {released("frob", "frob 1.0.0")}')
+    )
+
+    outcome = packages.RESOURCE.perform(live, only_change(live), unprivileged)
+
+    assert outcome.status is OutcomeStatus.DONE
+    assert not old.exists()
+
+
 @pytest.mark.parametrize(('removes', 'status'), [(True, OutcomeStatus.DONE), (False, OutcomeStatus.FAILED)], ids=['removed', 'refused'])
 def test_apply_removes_a_homebrew_copy_the_release_supersedes(
     tmp_path: Path,

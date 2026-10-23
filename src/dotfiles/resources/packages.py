@@ -330,6 +330,8 @@ class PackagesResource:
                 stray_change(item, stray, observed, plan.machine.coordinates.package_manager)
                 for stray in observed.shadowed.get(item.address, ())
             )
+            if evidence.verdict is Verdict.MATCHED:
+                changes.extend(placed_change(item, removal, observed) for removal in placed_beside(item))
 
         for binary, module in sorted(observed.undeclared.items()):
             where = paths.under_home(observed.home / 'go' / 'bin' / binary, observed.home)
@@ -378,10 +380,42 @@ def left_beside(session: Session, item: DesiredItem) -> list[diagnose.Removal]:
     evidence = {item.address: registry.evidence_for(item, session.inventories)}
     manager = session.plan.machine.coordinates.package_manager
     return [
-        removal
-        for stray in shadowing((item,), evidence, session.plan, session.repo).get(item.address, ())
-        if supersedes(item, removal := diagnose.removal_of(Path(stray.path), manager, session.home))
+        *(
+            removal
+            for stray in shadowing((item,), evidence, session.plan, session.repo).get(item.address, ())
+            if supersedes(item, removal := diagnose.removal_of(Path(stray.path), manager, session.home))
+        ),
+        *placed_beside(item),
     ]
+
+
+def placed_beside(item: DesiredItem) -> list[diagnose.Removal]:
+    """The files the item's `go:` and `release:` rows name that are still on disk.
+
+    Looked up by name rather than found by `shadowing`, because a replacement
+    under a new name is no second copy of anything: jactionlint's install never
+    puts a second `actionlint` on PATH. A row naming the item's own executable
+    would delete what was just installed, so it names nothing.
+    """
+    return [
+        removal
+        for installer, binary in map(catalog.superseded_row, getattr(item.entry, 'supersedes', ()))
+        if installer in superseded.PLACED and binary != item.executable and (removal := superseded.placed(installer, binary))
+    ]
+
+
+def placed_change(item: DesiredItem, removal: diagnose.Removal, observed: Observed) -> Change:
+    """One row for a file an installed item's `supersedes` names, which `apply` deletes."""
+    return Change(
+        NAME,
+        item.stage,
+        removal.package,
+        Verdict.UNDECLARED,
+        repair=Repair.AUTOMATIC,
+        detail=f'found: {paths.under_home(Path(removal.path), observed.home)}, left by {removal.mechanism} beside {item.address}',
+        advice=f'superseded by {item.address} -> apply runs {superseded.command_line(removal)}',
+        removes=removal,
+    )
 
 
 def undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:

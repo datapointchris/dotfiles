@@ -1776,12 +1776,15 @@ go_tools:
 
   # Pinned to the rev the repos' pre-commit hook runs, so a local lint answers
   # what the hook will. v2 renames every flag, so it moves with that hook.
+  # `supersedes` deletes the rhysd/actionlint binary this replaced, which a
+  # machine that installed it before the rename still has in ~/go/bin.
   - name: jactionlint
     package: github.com/jdx/jactionlint/cmd/jactionlint
     github_repo: jdx/jactionlint
     binary_pattern: "jactionlint_{version_num}_{os}_{go_arch}.tar.gz"
     version: "1.8.2"
     description: GitHub Actions workflow linter, jdx's fork of actionlint
+    supersedes: ['go:actionlint']
 
   - name: goose
     package: github.com/pressly/goose/v3/cmd/goose

@@ -10,13 +10,18 @@ from __future__ import annotations
 
 import os
 import shlex
+from collections.abc import Callable
+from pathlib import Path
 
 from dotfiles import effects
+from dotfiles import paths
 from dotfiles.diagnose import Removal
 from dotfiles.effects import Output
 from dotfiles.privilege import Escalates
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
+from dotfiles.providers import bin_dir
+from dotfiles.providers import gotool
 from dotfiles.providers import npm
 from dotfiles.providers import syspkg
 
@@ -28,14 +33,34 @@ UNINSTALL: dict[str, tuple[str, ...]] = {
 """How each user-space installer removes one package. A system manager's is
 `syspkg.UNINSTALL`."""
 
+PLACED: dict[str, Callable[[], Path]] = {'go': gotool.gobin, 'release': bin_dir}
+"""Where each installer that keeps no receipt writes a binary. Its copy is a file
+there, and removing it is deleting that file."""
+
+
+def placed(installer: str, binary: str) -> Removal | None:
+    """The copy a `go:` or `release:` row names, where one is on disk.
+
+    A plain file only. `~/.local/bin` also holds uv's links and the links this
+    repo deploys from `apps/`, and neither is a binary a release wrote.
+    """
+    path = PLACED[installer]() / binary
+    if path.is_symlink() or not path.is_file():
+        return None
+    return Removal(installer, f'rm {paths.under_home(path, Path.home())}', binary, path=str(path))
+
 
 def removable(removal: Removal) -> bool:
     """Whether a copy came from an installer this module can remove it with."""
-    return bool(removal.package) and (removal.mechanism in UNINSTALL or removal.mechanism in syspkg.UNINSTALL)
+    return bool(removal.package) and (
+        removal.mechanism in UNINSTALL or removal.mechanism in syspkg.UNINSTALL or removal.mechanism in PLACED
+    )
 
 
 def argv(removal: Removal) -> list[str]:
     """The command `uninstall` runs for a copy."""
+    if removal.mechanism in PLACED:
+        return ['rm', removal.path]
     table = syspkg.UNINSTALL if removal.mechanism in syspkg.UNINSTALL else UNINSTALL
     return [*table[removal.mechanism], removal.package]
 
@@ -73,6 +98,12 @@ def remove(removal: Removal, privilege: Escalates) -> Result:
 
 
 def uninstall(removal: Removal, privilege: Escalates) -> Result:
+    if removal.mechanism in PLACED:
+        try:
+            Path(removal.path).unlink()
+        except OSError as error:
+            return Result(False, f'{command_line(removal)} failed: {error}', kind=Kind.COMMAND_FAILED)
+        return Result(True, f'{removal.mechanism}: removed {removal.path}', kind=Kind.APPLIED)
     if removal.mechanism in syspkg.UNINSTALL:
         return syspkg.uninstall(removal.mechanism, [removal.package], privilege)
     completed = effects.run(argv(removal), env=environment(removal), output=Output.QUIET)

@@ -177,7 +177,7 @@ lookup quietly returning nothing. One entry declares `tags` — `aws/aws-cli`,
 which tags every build and publishes no release.
 """
 
-SUPERSEDABLE_INSTALLERS = ('apt', 'brew', 'cargo', 'npm', 'pacman', 'uv')
+SUPERSEDABLE_INSTALLERS = ('apt', 'brew', 'cargo', 'go', 'npm', 'pacman', 'release', 'uv')
 """The installers a `supersedes` row names with a prefix: `cargo:abtop`, `brew:gh`.
 
 A prefixed row names one installer's copy, which `apply` removes once the entry
@@ -185,8 +185,11 @@ is installed and which never holds the install back. A bare row names a system
 package that conflicts with the entry, the same word under every OS manager: it
 blocks the install until `--force` removes it.
 
-These are the installers `diagnose.removal_of` attributes a copy to by package,
+Most are the installers `diagnose.removal_of` attributes a copy to by package,
 which is what a row is matched against. An AUR build is pacman's to remove.
+`go` and `release` keep no receipt, so their row names a file instead: the
+binary of that name in the directory the installer writes to, which is
+`superseded.PLACED`. `go:actionlint` is `~/go/bin/actionlint`.
 """
 
 
@@ -742,12 +745,17 @@ class GoTool(Entry):
     describes the release asset alone.
     """
 
+    supersedes: tuple[str, ...] = ()
+    """What this tool took over from, as `GithubRelease.supersedes` reads it. A
+    tool that replaced one under another name, as jactionlint replaced
+    actionlint, names the old binary with `go:`."""
+
     @property
     def owner(self) -> str | None:
         return owner_of(self.github_repo) if self.github_repo else owner_of(self.package)
 
     def problems(self) -> tuple[str, ...]:
-        return (*checksum_problems(self, self.checksum), *Entry.problems(self))
+        return (*checksum_problems(self, self.checksum), *supersedes_problems(self.supersedes), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
