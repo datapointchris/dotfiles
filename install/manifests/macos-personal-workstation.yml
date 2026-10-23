@@ -10,7 +10,7 @@ go_tools:
   - terraform-docs
   - gum
   - lazydocker
-  - actionlint
+  - jactionlint
   - goose
   - gofumpt
   - golangci-lint
