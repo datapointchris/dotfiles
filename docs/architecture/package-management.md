@@ -15,7 +15,7 @@ one version and one name on macOS and Linux, in user space, with no sudo.
 ### Tier 1: GitHub Releases (Latest Stable)
 
 Pre-built binaries, into `~/.local/bin` or `~/.local/<tool-name>/`. Read the
-roster with `packages list --section=github_releases`.
+roster with `packages list --source github_releases`.
 
 Default to a system package. Move a tool here only for a reason. The reasons
 that hold up:
@@ -49,7 +49,7 @@ download URL, so both channels install the same file. The fields that do it are
 apt, brew and pacman, into `/usr/bin` at the lowest PATH priority. Use them for
 system utilities whose version does not matter, and for anything dragging large
 multimedia or compiled dependencies behind it. Read the roster with
-`packages list --section=system_packages`.
+`packages list --source system_packages`.
 
 #### Core vs workstation split
 

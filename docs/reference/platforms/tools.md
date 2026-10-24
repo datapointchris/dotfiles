@@ -1,7 +1,7 @@
 # Tool Availability
 
 What is installed on a machine is `doit kit list`, or
-`packages list --section=<section>` for one install method. This page covers
+`packages list --source <section>` for one install method. This page covers
 only the tools where the *choice* of method needed a decision, and the
 per-platform quirks that decision produced.
 

@@ -184,7 +184,7 @@ Add every new doc to `mkdocs.yml` navigation. Notes naming nothing in this repo 
 
 **A doc earns its lines by explaining what the code cannot state** — a decision, a rejected
 alternative, a non-obvious constraint, a measured tradeoff. Never write a list a command produces:
-`task --list-all`, `packages list --section=<x>`, `eza -1 install/manifests/`, `<tool> --help`. If
+`task --list-all`, `packages list --source <x>`, `eza -1 install/manifests/`, `<tool> --help`. If
 `--help` would regenerate a section correctly, delete it. `docker.md`, `tmux-sessions.md` and
 `custom-installers.md` are the models; nothing in them changes when code changes.
 `docs/development/docs-audit.md` is the dated baseline — add to it, never edit it.
