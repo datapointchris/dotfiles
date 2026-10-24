@@ -2094,9 +2094,10 @@ macos_casks:
     description: Note-taking app
     tags: [gui, editor]
 
-  - name: visual-studio-code
-    description: Code editor
-    tags: [gui, editor]
+  # Kept for reference and not installed: every Mac installs every cask here.
+  # - name: visual-studio-code
+  #   description: Code editor
+  #   tags: [gui, editor]
 
   - name: claude
     description: Claude desktop app
