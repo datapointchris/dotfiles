@@ -68,6 +68,27 @@ systemd = true
 Systemd takes effect after `wsl --shutdown` from Windows and needs WSL 0.67.6 or newer. Nothing in
 the installer supports this path.
 
+## Arch prunes weekly and caps the build cache
+
+Docker never deletes an image, a build layer or a volume on its own, so a development machine
+fills its root filesystem with test images, per-branch tags and build cache. Two declarations in
+`install/system.yml` bound it, each doing the half the other cannot.
+
+`/etc/docker/daemon.json` caps BuildKit's cache at 60 GB. BuildKit already garbage-collects, but
+its default cap is a share of the disk too large ever to trim on a workstation root. The cap sits
+high on purpose: an evicted layer is rebuilt on the next build, so a tight cap costs build time in
+exactly the loop the cache exists for.
+
+A weekly `docker-prune.timer` removes what the cap leaves behind: images, stopped containers and
+build cache unused for a week, then every anonymous volume no container references. Named volumes
+hold development databases, so `docker volume prune` runs without `--all` and never reaches them.
+The `until` filter means different things per object: last use for build cache, but the upstream
+build date for an image. So an image nothing runs is removed once it is a week old, however
+recently it was pulled, and is pulled again on next use.
+
+Neither takes effect until dockerd restarts and systemd reloads, which a reboot does. The file
+provider writes files and restarts nothing.
+
 ## Completions are generated from the CLI
 
 `.zshrc` generates the zsh completion with `docker completion zsh` and writes it to

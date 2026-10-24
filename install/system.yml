@@ -133,6 +133,68 @@ managed_files:
       [Journal]
       SystemMaxUse=500M
 
+  # Docker deletes nothing on its own, and BuildKit sizes its default cache cap
+  # as most of the disk, so on a workstation root it never trims. 60 GB holds an
+  # active build loop without evicting it. The keys bind case-insensitively to
+  # dockerd's DefaultMaxUsedSpace and siblings; `dockerd --validate` accepts an
+  # unknown key here, so it cannot check them. dockerd reads this at restart.
+  - name: docker-build-cache-cap
+    description: BuildKit's build cache capped at 60 GB
+    requires_package: docker
+    path: /etc/docker/daemon.json
+    content: |
+      {
+        "builder": {
+          "gc": {
+            "enabled": true,
+            "defaultReservedSpace": "20GB",
+            "defaultMaxUsedSpace": "60GB",
+            "defaultMinFreeSpace": "40GB"
+          }
+        }
+      }
+
+  # `until` counts from last use for build cache, but from the upstream build
+  # date for an image, so any image no container uses goes once it is a week
+  # old and is pulled again on next use. `volume prune` without `--all` takes
+  # only anonymous volumes no container references; named volumes hold dev
+  # databases and are never touched.
+  - name: docker-prune-service
+    description: Removes Docker images, containers, build cache and anonymous volumes left unused
+    requires_package: docker
+    path: /etc/systemd/system/docker-prune.service
+    content: |
+      [Unit]
+      Description=Remove Docker objects left unused for a week, and unattached anonymous volumes
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/docker system prune --all --force --filter until=168h
+      ExecStart=/usr/bin/docker volume prune --force
+
+  - name: docker-prune-timer
+    description: Runs docker-prune weekly
+    requires_package: docker
+    path: /etc/systemd/system/docker-prune.timer
+    content: |
+      [Unit]
+      Description=Weekly Docker prune
+
+      [Timer]
+      OnCalendar=weekly
+      Persistent=true
+      RandomizedDelaySec=1h
+
+  # A drop-in rather than a `systemd_units` row, because units are enabled
+  # before files are written, and the timer does not exist on a fresh box yet.
+  - name: docker-prune-at-boot
+    description: timers.target wants docker-prune.timer, so it starts at every boot
+    requires_package: docker
+    path: /etc/systemd/system/timers.target.d/docker-prune.conf
+    content: |
+      [Unit]
+      Wants=docker-prune.timer
+
   # zram is the first swap, compressed in RAM at priority 100. It holds only what
   # compression saves, and /tmp is a tmpfs whose pages can leave RAM only by
   # being swapped. So this disk swapfile, at priority 10, takes what zram cannot.
