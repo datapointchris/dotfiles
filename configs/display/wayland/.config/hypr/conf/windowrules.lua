@@ -15,7 +15,7 @@ hl.window_rule({
   center = true,
 })
 
--- Browser Picture-in-Picture (Firefox, Zen, Librewolf)
+-- Firefox Picture-in-Picture
 hl.window_rule({
   name = 'picture-in-picture',
   match = { title = '^(Picture-in-Picture)$' },

@@ -910,13 +910,6 @@ class FlatpakApp(Entry):
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
-class ZenExtension(Entry):
-    section: ClassVar[str] = 'zen_extensions'
-
-    url: str
-
-
-@dc.dataclass(frozen=True, slots=True, kw_only=True)
 class SystemConfig(Entry):
     """Configuration the machine owns, rather than payload it installs.
 
@@ -1214,7 +1207,6 @@ SECTION_CLASSES: tuple[type[Entry], ...] = (
     MasApp,
     MacosCask,
     FlatpakApp,
-    ZenExtension,
 )
 """In `packages.yml` order, which is what `packages list` and the run record render."""
 

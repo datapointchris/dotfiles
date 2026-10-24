@@ -1422,7 +1422,6 @@ in the wrong place here changes nothing about when it runs.
 
 UNPROVIDED: dict[str, str] = {
     'runtimes': 'read by the toolchain providers for their floors; a machine gets a runtime from its tool lists, never by subscribing',
-    'zen_extensions': 'declared and installed by nothing; the browser profile is not managed from here yet',
 }
 """Sections deliberately absent from the registry, each with the reason.
 

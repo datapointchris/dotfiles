@@ -79,8 +79,11 @@ installer run it, and that page promises the reverse.
 
 ## A browser's extensions are configuration where the browser has a policy
 
-Safari's extensions are App Store apps and Zen's come from addons.mozilla.org, so
-both are declared in `packages.yml`. Vivaldi's are neither. Chromium installs
+Vivaldi is the browser on every machine for now. Zen and LibreWolf were both
+tried before it and dropped, so neither is installed or configured here.
+
+Safari's extensions are App Store apps, so they are declared in `packages.yml`.
+Vivaldi's are not. Chromium installs
 whatever an enterprise policy file names, which makes the file the declared state
 and the extensions a consequence of it. So the set is a `managed_files` row and
 not a `vivaldi_extensions` section with a provider behind it: writing one file is

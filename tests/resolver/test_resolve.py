@@ -211,11 +211,11 @@ def test_an_aur_only_entry_is_planned_on_pacman(tmp_path: Path) -> None:
     """pacman selects a family — dropping `aur` loses five entries from Arch."""
     plan = synthetic(
         tmp_path,
-        {'system_packages': [{'name': 'zen-browser', 'aur': 'zen-browser-bin'}]},
+        {'system_packages': [{'name': 'visual-studio-code', 'aur': 'visual-studio-code-bin'}]},
         {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'},
     )
 
-    assert [item.name for item in plan.for_section('system_packages')] == ['zen-browser']
+    assert [item.name for item in plan.for_section('system_packages')] == ['visual-studio-code']
 
 
 # ─────────────────────────────────────────────────────────────────────────────

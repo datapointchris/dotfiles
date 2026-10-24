@@ -113,7 +113,6 @@ SUBSCRIPTIONS: dict[str, tuple[Spelling, str]] = {
     'flatpak_apps': (Spelling.GATE, 'flatpak'),
     'macos_casks': (Spelling.WHOLESALE, ''),
     'mas_apps': (Spelling.WHOLESALE, ''),
-    'zen_extensions': (Spelling.WHOLESALE, ''),
     'runtimes': (Spelling.DERIVED, ''),
 }
 """Every catalog section, and the manifest key that speaks for it.

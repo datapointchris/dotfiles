@@ -284,19 +284,19 @@ managed_files:
   # it". Both extensions that would want one carry their own off switch, which
   # is the toggle actually wanted.
   #
-  # Dark Reader, Bitwarden, uBlock Origin Lite, UnTrap — Safari's `mas_apps` and
-  # `zen_extensions` that have a Chromium build, UnTrap's published by the same
-  # developer as the Safari one. Hush has no Chromium build; the cookie banners
+  # Dark Reader, Bitwarden, uBlock Origin Lite, UnTrap — Safari's `mas_apps` that
+  # have a Chromium build, UnTrap's published by the same developer as the Safari
+  # one. Hush has no Chromium build; the cookie banners
   # it blocked are covered by uBlock Origin Lite's `EasyList/uBO – Cookie
-  # Notices` ruleset, which is a per-profile toggle no policy can set. Zen's
-  # full uBlock Origin is MV2, which Chromium 152 dropped and Vivaldi with it.
+  # Notices` ruleset, which is a per-profile toggle no policy can set. The full
+  # uBlock Origin is MV2, which Chromium 152 dropped and Vivaldi with it.
   #
   # Claude in Chrome is what `claude --chrome` drives the browser through. It
   # also needs a native messaging host, which Claude Code writes into Vivaldi's
   # `NativeMessagingHosts/` itself on the first `/chrome`, so only the
   # extension is declared here.
   - name: vivaldi-extensions
-    description: Extensions Vivaldi force-installs, matching Safari and Zen, plus Claude in Chrome
+    description: Extensions Vivaldi force-installs, matching Safari, plus Claude in Chrome
     requires_package: vivaldi
     path: /etc/vivaldi/policies/managed/extensions.json
     content: |
@@ -328,7 +328,7 @@ managed_files:
   # cfprefsd caches the domain, so the extensions appear at the next login rather
   # than the moment this lands.
   - name: vivaldi-extensions-macos
-    description: Extensions Vivaldi force-installs, matching Safari and Zen, plus Claude in Chrome
+    description: Extensions Vivaldi force-installs, matching Safari, plus Claude in Chrome
     os_family: darwin
     path: /Library/Managed Preferences/com.vivaldi.Vivaldi.plist
     content: |

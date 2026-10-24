@@ -147,11 +147,11 @@ def test_an_aur_package_is_answered_by_pacman(tmp_path: Path) -> None:
     """An AUR package is a pacman package once it is installed."""
     live = session(
         tmp_path,
-        {'system_packages': [{'name': 'zen-browser', 'aur': 'zen-browser-bin'}]},
+        {'system_packages': [{'name': 'visual-studio-code', 'aur': 'visual-studio-code-bin'}]},
         {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'},
     )
 
-    assert registry.evidence_for(only_item(live), {'pacman': frozenset({'zen-browser-bin'})}).verdict is Verdict.MATCHED
+    assert registry.evidence_for(only_item(live), {'pacman': frozenset({'visual-studio-code-bin'})}).verdict is Verdict.MATCHED
 
 
 def test_a_manager_that_cannot_be_asked_yields_unknown(tmp_path: Path) -> None:

@@ -27,8 +27,7 @@
         "player-icons": {
             "default": "♪",
             "spotify": "♪",
-            "firefox": "♪",
-            "librewolf": "♪"
+            "firefox": "♪"
         },
         "max-length": 80,
         "tooltip-format": "{title} - {artist}"

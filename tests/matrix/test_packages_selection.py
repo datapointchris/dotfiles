@@ -44,7 +44,7 @@ DECLARATION = {
     'go_tools': [{'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'}],
     'uv_tools': {'lint': [{'name': 'ruff'}]},
     'system_packages': [{'name': 'ripgrep', 'apt': 'ripgrep', 'pacman': 'ripgrep'}],
-    'zen_extensions': [{'name': 'Bitwarden', 'url': 'https://addons.mozilla.org/firefox/addon/bitwarden/'}],
+    'runtimes': {'node': {'install_method': 'fnm'}},
 }
 """Five sections, each here to be reachable by one `--source` row.
 
@@ -117,7 +117,7 @@ def test_a_source_naming_a_section_this_resource_installs_runs(verb: str, source
     [
         ('no_such_section', 'unknown source'),
         ('system_packages', 'belongs to system'),
-        ('zen_extensions', 'nothing installs zen_extensions'),
+        ('runtimes', 'nothing installs runtimes'),
     ],
     ids=['not-a-section', 'a-section-system-owns', 'a-section-nothing-installs'],
 )
