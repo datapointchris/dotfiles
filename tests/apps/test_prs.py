@@ -685,19 +685,19 @@ def test_the_page_action_asks_gh_for_a_rendering_and_for_the_comments(session) -
     assert '-c ' not in run.stdout
 
 
-def test_the_review_action_opens_a_claude_window_on_that_pr(session, tmp_path) -> None:
-    """The number travels and the repo does not. The skill takes a count in the
-    slot after the number, and it resolves the repo from the working directory —
-    which is the window's `-c`, this PR's own checkout.
+@pytest.mark.parametrize(('key', 'prompt'), [('r', "/review-pr 7'"), ('e', "/explain-code-changes #7'")])
+def test_a_claude_action_opens_a_claude_window_on_that_pr(session, tmp_path, key, prompt) -> None:
+    """The number travels and the repo does not. Each skill resolves the repo from
+    the working directory, which is the window's `-c`, this PR's own checkout.
 
     The path is a directory this test makes, because `ABSENT` is absent and this
     action opens what it is given.
     """
     checkout = tmp_path / 'a-checkout'
     checkout.mkdir()
-    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, 'r'),))
+    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, key),))
 
-    assert "/review-pr 7'" in run.stdout
+    assert prompt in run.stdout
     assert f'-c {checkout}' in run.stdout
 
 

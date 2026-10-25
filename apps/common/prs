@@ -20,8 +20,8 @@ worth pressing from the list, since the confirm it prints is the whole flow.
 
 The menu shows the PR's description rendered as markdown, and its own footer names
 the keys that scroll it. `p` fetches GitHub's own rendering instead, with the
-comment threads the listing does not carry, and `r` opens a Claude window running
-`/review-pr` on it.
+comment threads the listing does not carry. `r` opens a Claude window running
+`/review-pr` on it, and `e` one running `/explain-code-changes` to read it with.
 
 Lives in dotfiles rather than in fleet because every machine has this and only
 some have fleet. The data comes from `pull-requests`, the one place that knows how to
@@ -97,6 +97,7 @@ MERGE_ICON = ''
 # the only form of the name that reads anywhere and can be grepped for.
 PAGE_ICON = ''  # U+F15C file-text, beside FILES_ICON's file
 REVIEW_ICON = ''  # U+F41E octicon checklist, beside DIFF_ICON and MERGE_ICON
+EXPLAIN_ICON = ''  # U+F0EB lightbulb, for reading a PR to understand it
 # `REVIEW_ICON` marks the `r` action, which asks for a review. `DECISION_ICON`
 # marks the status column, which renders the one GitHub already reached. Two
 # different things, so two names.
@@ -953,12 +954,27 @@ def claude_review(pr: PullRequest, *, interactive: bool = False) -> int:
     and the window already opens in that PR's checkout, which is where the skill
     resolves the repo from.
     """
+    return claude_window(pr, 'review', f'/review-pr {pr.number}')
+
+
+def claude_explain(pr: PullRequest, *, interactive: bool = False) -> int:
+    """A Claude window running `/explain-code-changes` on the PR, to read it with.
+
+    `#<number>` rather than a bare number, because the skill also takes a sha and
+    a short hex sha can be all digits. The skill fetches the PR's ref itself, so
+    this needs no diff window open first. Its window is named like the diff's, so
+    the skill reads the repo and number off it to reach that diff's nvim socket.
+    """
+    return claude_window(pr, 'explain', f'/explain-code-changes #{pr.number}')
+
+
+def claude_window(pr: PullRequest, verb: str, prompt: str) -> int:
     checkout = in_repo(pr)
     if not checkout:
-        return fail(f'{pr.repo} is not checked out here, and a review needs the code')
+        return fail(f'{pr.repo} is not checked out here, and Claude needs the code')
     return open_window(
-        f'review {pr.repo} #{pr.number}',
-        f"claude --permission-mode bypassPermissions '/review-pr {pr.number}'",
+        f'{verb} {pr.repo} #{pr.number}',
+        f"claude --permission-mode bypassPermissions '{prompt}'",
         cwd=checkout,
         needs=('claude',),
     )
@@ -1089,12 +1105,21 @@ def run(argv: list[str], cwd: Path | None = None) -> int:
 #
 # `providers` names GitHub for every action that reaches a GitHub-only tool. The
 # three without it are local: the diff is git, the branch name is a string, and
-# the browser takes a URL. `review` carries it because the skill it launches
-# posts with `gh pr review` and names bbkt nowhere.
+# the browser takes a URL. `review` and `explain` carry it because the skills
+# they launch read the PR with `gh` and name bbkt nowhere.
 ACTIONS = (
     Action('diff', 'd', DIFF_ICON, 'view diff', 'fetch the ref and open it in a tmux window', open_diff),
     Action('page', 'p', PAGE_ICON, 'page and comments', 'the description and every comment, in a pager', read_page, frozenset({'github'})),
     Action('review', 'r', REVIEW_ICON, 'claude review', 'a Claude window running /review-pr on it', claude_review, frozenset({'github'})),
+    Action(
+        'explain',
+        'e',
+        EXPLAIN_ICON,
+        'claude explain',
+        'a Claude window running /explain-code-changes on it',
+        claude_explain,
+        frozenset({'github'}),
+    ),
     Action('browser', 'o', BROWSER_ICON, 'open in browser', 'the same page, handed to your browser', open_browser),
     Action('branch', 'b', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard', copy_branch),
     Action('comment', 'c', COMMENT_ICON, 'comment', 'write one in $EDITOR and post it', comment, frozenset({'github'})),
