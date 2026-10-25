@@ -131,6 +131,7 @@ nav:
       - Custom Installers: architecture/custom-installers.md
       - Offline Bundles: architecture/offline-bundles.md
       - System Configuration: architecture/system-configuration.md
+      - Desktop Memory Reservations: architecture/desktop-memory-reservations.md
       - Observability: architecture/observability.md
   - Configuration:
       - configuration/index.md

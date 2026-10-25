@@ -24,6 +24,8 @@ How the dotfiles repository is organized and why.
   reach GitHub, and how narrow the channel back has to be
 - [System Configuration](system-configuration.md) — groups, units, files under `/etc`, the login
   shell and macOS defaults; why they are a second file from packages
+- [Desktop Memory Reservations](desktop-memory-reservations.md) — the memory the kernel never
+  reclaims from the terminal, tmux and audio, and why every ancestor carries its children's sum
 - [Observability](observability.md) — the run record, the log stream and the status file, split by
   who reads each one
 

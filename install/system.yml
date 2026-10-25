@@ -240,6 +240,142 @@ managed_files:
       [Unit]
       Wants=swapfile.swap
 
+  # zram-generator's default is half of RAM capped at 4 GiB, which one build
+  # fills before spilling to the disk swapfile. Sized to RAM, a full device holds
+  # about a quarter of RAM at the 4:1 ratio zstd reaches on this swap. The
+  # generator runs at boot and at daemon-reload, and a device already running
+  # keeps its size until systemd-zram-setup@zram0.service restarts.
+  - name: zram-size
+    description: zram swap sized to RAM, in front of the disk swapfile
+    requires_package: zram-generator
+    path: /etc/systemd/zram-generator.conf
+    content: |
+      [zram0]
+      zram-size = ram
+      compression-algorithm = zstd
+
+  # A swap-in also reads ahead up to 2^page-cluster pages. From zram each extra
+  # page is a decompression nobody asked for, so 0 reads the faulted page alone.
+  # It applies to the disk swapfile behind zram as well.
+  - name: swap-readahead
+    description: A swap-in reads only the page it faulted on, which suits zram
+    requires_package: zram-generator
+    path: /etc/sysctl.d/99-swap-readahead.conf
+    content: |
+      vm.page-cluster = 0
+
+  # Memory the kernel will not reclaim from the desktop, so a job that fills RAM
+  # swaps out its own pages before the terminal's, the audio's or the
+  # compositor's. MemoryMin protects what a cgroup uses, up to the figure, and
+  # holds nothing back while unused. The cgroup2 mount here has no
+  # memory_recursiveprot, so a cgroup is protected only as far as every ancestor
+  # is, and each parent carries the sum of its children:
+  #
+  #   user.slice, user-.slice  5312M  user@ 2240M + login session 3072M
+  #   user@.service            2240M  app.slice 2048M + session.slice 192M
+  #   app.slice                2048M  ghostty 256M + Vivaldi 512M + 5 surfaces x 256M
+  #   session.slice             192M  pipewire, pipewire-pulse, wireplumber x 64M
+  #
+  # The tmux server runs in the ghostty surface scope that started it, so the
+  # surface row is what reserves tmux. An SSH login is a session scope too, and
+  # shares user-.slice with Hyprland's while it runs.
+  # docs/architecture/desktop-memory-reservations.md is the reasoning.
+  - name: memory-min-user-slice
+    description: user.slice carries the reservations of the desktop beneath it
+    display_stack: wayland
+    path: /etc/systemd/system/user.slice.d/memory-min.conf
+    content: |
+      [Slice]
+      MemoryMin=5312M
+
+  - name: memory-min-user-uid-slice
+    description: Each user-<uid>.slice carries the reservations of the desktop beneath it
+    display_stack: wayland
+    path: /etc/systemd/system/user-.slice.d/memory-min.conf
+    content: |
+      [Slice]
+      MemoryMin=5312M
+
+  - name: memory-min-user-manager
+    description: Each user's systemd manager carries the reservations of its apps and audio
+    display_stack: wayland
+    path: /etc/systemd/system/user@.service.d/memory-min.conf
+    content: |
+      [Service]
+      MemoryMin=2240M
+
+  - name: memory-min-login-session
+    description: The login session, Hyprland and the browsers it started, keeps 3 GiB resident
+    display_stack: wayland
+    path: /etc/systemd/system/session-.scope.d/memory-min.conf
+    content: |
+      [Scope]
+      MemoryMin=3072M
+
+  - name: memory-min-app-slice
+    description: app.slice carries the reservations of ghostty, its surfaces and Vivaldi
+    display_stack: wayland
+    path: /etc/systemd/user/app.slice.d/memory-min.conf
+    content: |
+      [Slice]
+      MemoryMin=2048M
+
+  - name: memory-min-session-slice
+    description: session.slice carries the reservations of the audio services
+    display_stack: wayland
+    path: /etc/systemd/user/session.slice.d/memory-min.conf
+    content: |
+      [Slice]
+      MemoryMin=192M
+
+  - name: memory-min-pipewire
+    description: PipeWire keeps 64M resident, so audio does not wait on a swap-in
+    display_stack: wayland
+    path: /etc/systemd/user/pipewire.service.d/memory-min.conf
+    content: |
+      [Service]
+      MemoryMin=64M
+
+  - name: memory-min-pipewire-pulse
+    description: The PulseAudio bridge browsers play through keeps 64M resident
+    display_stack: wayland
+    path: /etc/systemd/user/pipewire-pulse.service.d/memory-min.conf
+    content: |
+      [Service]
+      MemoryMin=64M
+
+  - name: memory-min-wireplumber
+    description: WirePlumber, which sets up the audio and Bluetooth audio devices, keeps 64M resident
+    display_stack: wayland
+    path: /etc/systemd/user/wireplumber.service.d/memory-min.conf
+    content: |
+      [Service]
+      MemoryMin=64M
+
+  - name: memory-min-ghostty
+    description: ghostty's single-instance service keeps 256M resident
+    display_stack: wayland
+    path: /etc/systemd/user/app-com.mitchellh.ghostty.service.d/memory-min.conf
+    content: |
+      [Service]
+      MemoryMin=256M
+
+  - name: memory-min-ghostty-surfaces
+    description: Each ghostty surface keeps 256M resident, the tmux server's included
+    display_stack: wayland
+    path: /etc/systemd/user/app-ghostty-surface-transient-.scope.d/memory-min.conf
+    content: |
+      [Scope]
+      MemoryMin=256M
+
+  - name: memory-min-vivaldi
+    description: Vivaldi's app scope keeps 512M resident
+    display_stack: wayland
+    path: /etc/systemd/user/app-com.vivaldi.Vivaldi-.scope.d/memory-min.conf
+    content: |
+      [Scope]
+      MemoryMin=512M
+
   # Without this, ~/.config/zsh/.zshrc never loads at all, on any platform.
   # $HOME is deliberately unexpanded: zsh expands it when it reads the file, and
   # baking this user's home into a system-wide file would be wrong for every

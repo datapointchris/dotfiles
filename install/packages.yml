@@ -677,6 +677,12 @@ system_packages:
     pacman: pipewire-pulse
     description: PipeWire PulseAudio replacement
 
+  # Builds the zram swap device at boot from the zram-generator.conf that
+  # install/system.yml declares.
+  - name: zram-generator
+    pacman: zram-generator
+    description: Compressed swap in RAM, set up at boot
+
   - name: wlogout
     aur: wlogout
     description: Logout menu for Wayland
