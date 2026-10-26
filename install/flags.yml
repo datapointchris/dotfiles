@@ -121,9 +121,10 @@ required:
 
   # An OpenBao server on the machine's own network, and the private CA its
   # certificate chains to, both read by the bao CLI from the environment. The
-  # address is one this public repo must not carry. The CA is a file in another
-  # checkout on the machine, so this names where it lives rather than keeping a
-  # copy that goes stale the day the CA is reissued.
+  # address is one this public repo must not carry, and the CA's certificate
+  # names the private network it vouches for, so no copy of it is kept here.
+  # BAO_CACERT names an installed copy outside any working checkout, so a
+  # branch switch in the repo that issues the CA never moves the trust.
   #
   # BAO_CACERT is the trust: bao verifies the server against that file alone, and
   # the system store is left as it is. So nothing here needs root, and a machine
@@ -139,7 +140,7 @@ required:
       - the bao CLI, outside this repo
 
   - name: BAO_CACERT
-    description: Absolute path to the CA certificate the OpenBao server's certificate chains to
+    description: Absolute path to an installed copy of the CA certificate the OpenBao server's certificate chains to, outside any working checkout
     network_trust: fleet
     capacity: workstation
     file_must_exist: true
