@@ -119,6 +119,33 @@ required:
     consumers:
       - apps/trust/fleet/claude-ci-watch
 
+  # An OpenBao server on the machine's own network, and the private CA its
+  # certificate chains to, both read by the bao CLI from the environment. The
+  # address is one this public repo must not carry. The CA is a file in another
+  # checkout on the machine, so this names where it lives rather than keeping a
+  # copy that goes stale the day the CA is reissued.
+  #
+  # BAO_CACERT is the trust: bao verifies the server against that file alone, and
+  # the system store is left as it is. So nothing here needs root, and a machine
+  # on any other network trusts nothing new.
+  #
+  # Two axes, for CLAUDE_CI_WATCH_NTFY_HOST's reasons: a private address means
+  # nothing on another network, and a person reads secrets from a workstation.
+  - name: BAO_ADDR
+    description: URL of the OpenBao server on this machine's network, such as https://<address>:8200
+    network_trust: fleet
+    capacity: workstation
+    consumers:
+      - the bao CLI, outside this repo
+
+  - name: BAO_CACERT
+    description: Absolute path to the CA certificate the OpenBao server's certificate chains to
+    network_trust: fleet
+    capacity: workstation
+    file_must_exist: true
+    consumers:
+      - the bao CLI, outside this repo
+
   # The FreshRSS server and account, named once and read by both consumers.
   # newsboat evaluates a backtick in its config, so it takes the same variable the
   # launcher does rather than a file of its own.
