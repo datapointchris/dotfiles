@@ -110,6 +110,7 @@ uv_tools:
   - logsift
   - dectl
   - sparkxray-cli
+  - doppeldata-cli
   - safekeep
   - typos
   - runthrough

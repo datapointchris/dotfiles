@@ -94,6 +94,7 @@ uv_tools:
   - syncer
   - dectl
   - sparkxray-cli
+  - doppeldata-cli
   - safekeep
 
 shell_plugins: true

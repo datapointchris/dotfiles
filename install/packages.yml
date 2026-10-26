@@ -1709,6 +1709,11 @@ uv_tools:
       index: datapointchris
       description: Find why a Spark run was slow from its event log, with no JVM
 
+    - name: doppeldata-cli
+      command: doppeldata
+      index: datapointchris
+      description: Profile a dataset into a reviewable file holding no rows, then generate synthetic data from it
+
 # ================================================================
 # GIT UV TOOLS
 # ================================================================
