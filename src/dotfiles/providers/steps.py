@@ -5,8 +5,7 @@ screenshot directory existing is a directory existing. The Xcode license is the
 one observation in the repo that genuinely needs root. OrbStack's plugin
 directory is a JSON merge into a user config. libpq is a formula Homebrew
 installs and deliberately does not link. The Windows font path is discovered by
-asking Windows across a filesystem boundary only a WSL machine can see, and so is
-the profile `.wslconfig` is copied into. Windows Terminal's settings are a JSON
+asking Windows across a filesystem boundary only a WSL machine can see. Windows Terminal's settings are a JSON
 merge across that same boundary, into a file `theme`, `font` and the terminal
 itself also rewrite. The hooks git copies into each clone are written as real
 executable files, because git copies a symlinked template as a symlink. The
@@ -29,7 +28,6 @@ from the half of the run that must never prompt.
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 import os
 import re
@@ -372,88 +370,6 @@ def write_fontconfig() -> Result:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# .wslconfig, in the Windows profile
-# ─────────────────────────────────────────────────────────────────────────────
-
-WSLCONFIG_TEMPLATE = paths.INSTALL_DIR / 'wsl' / 'wslconfig.template'
-
-
-def windows_profile() -> Path | None:
-    """%USERPROFILE%, asked of Windows because it is not always C:\\Users\\<name>."""
-    if not WINDOWS_MOUNT.is_dir():
-        return None
-    profile = windows_variable('USERPROFILE')
-    if profile is None:
-        return None
-    converted = run(['wslpath', '-u', profile], output=Output.QUIET)
-    linux_path = converted.stdout.strip() if converted.ok else ''
-    return Path(linux_path) if linux_path else None
-
-
-def a_profile_already_holding_the_template() -> Path | None:
-    """The installed copy, found by reading the profiles rather than asking Windows.
-
-    The observe runs on the check timer, and asking forks `cmd.exe` for the reason
-    `windows_fonts` gives. Another account's profile holding an exact copy while
-    this one has none would read as converged, which needs two accounts each
-    applying this repo.
-    """
-    template = WSLCONFIG_TEMPLATE.read_bytes()
-    try:
-        profiles = sorted((WINDOWS_MOUNT / 'Users').iterdir())
-    except OSError:
-        return None
-    for profile in profiles:
-        try:
-            if (profile / '.wslconfig').read_bytes() == template:
-                return profile / '.wslconfig'
-        except OSError:
-            continue
-    return None
-
-
-def wslconfig() -> State:
-    if not WINDOWS_MOUNT.is_dir():
-        return State(Verdict.MATCHED, 'no Windows filesystem to write .wslconfig to')
-    if a_profile_already_holding_the_template() is not None:
-        return State(Verdict.MATCHED)
-
-    profile = windows_profile()
-    if profile is None:
-        return State(Verdict.UNKNOWN, WINDOWS_SILENT, repair=Repair.NONE)
-    target = profile / '.wslconfig'
-    if not target.is_file():
-        return State(Verdict.MISSING, f'{target} does not exist')
-    if target.read_bytes() == WSLCONFIG_TEMPLATE.read_bytes():
-        return State(Verdict.MATCHED)
-    return State(Verdict.STALE, f'{target} differs from {WSLCONFIG_TEMPLATE.name}, and apply backs it up before replacing it')
-
-
-def write_wslconfig() -> Result:
-    """Copy the template, keeping a differing file beside it rather than losing it.
-
-    `.wslconfig` is edited by hand at the moment something is broken, and a fix
-    replaced with no copy kept is one nobody finds again.
-    """
-    profile = windows_profile()
-    if profile is None or not profile.is_dir():
-        return Result(False, 'Windows named no profile directory to write .wslconfig to', kind=Kind.UNSUPPORTED_HERE)
-
-    target = profile / '.wslconfig'
-    template = WSLCONFIG_TEMPLATE.read_bytes()
-    kept = ''
-    try:
-        if target.is_file() and target.read_bytes() != template:
-            backup = target.with_name(f'.wslconfig.{dt.datetime.now():%Y%m%d%H%M%S}.bak')
-            shutil.copy2(target, backup)
-            kept = f', and the previous one is at {backup}'
-        target.write_bytes(template)
-    except OSError as error:
-        return Result(False, f'could not write {target}: {error}', kind=Kind.WRITE_FAILED)
-    return Result(True, f'{target} written{kept}. WSL reads it after `wsl.exe --shutdown` and about eight seconds', kind=Kind.APPLIED)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Windows Terminal's scroll keys, handed back to tmux
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -784,7 +700,6 @@ STEPS: dict[str, tuple[Observer, Applier]] = {
     'xcode-license': (anywhere(xcode_license), escalating(accept_xcode_license)),
     'orbstack-docker-plugins': (anywhere(orbstack_plugins), unprivileged(add_orbstack_plugins)),
     'windows-fonts': (anywhere(windows_fonts), unprivileged(write_fontconfig)),
-    'wslconfig': (anywhere(wslconfig), unprivileged(write_wslconfig)),
     'windows-terminal-resize-keys': (anywhere(windows_terminal_resize_keys), unprivileged(unbind_windows_terminal_resize_keys)),
     'git-template-hooks': (anywhere(git_template_hooks), unprivileged(write_git_template_hooks)),
     'psql-linked': (anywhere(psql_linked), unprivileged(link_psql)),

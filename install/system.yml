@@ -974,14 +974,6 @@ steps:
     description: fontconfig pointing at the Windows user font directory
     host: wsl
 
-  # .wslconfig configures the VM that hosts every distro, so it sits in the
-  # Windows profile, outside the $HOME the symlink manager deploys into, and is
-  # copied rather than linked. A copy that differs is backed up beside itself
-  # before it is replaced: it is edited by hand while something is broken.
-  - name: wslconfig
-    description: .wslconfig in the Windows profile, matching install/wsl/wslconfig.template
-    host: wsl
-
   # tmux and nvim resize on ctrl+shift+arrow. Windows Terminal binds the up and
   # down chords to scrolling by default and never passes them to WSL, so left and
   # right resize while up and down silently do nothing. Unbound in the settings

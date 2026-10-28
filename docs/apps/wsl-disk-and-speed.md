@@ -36,18 +36,13 @@ to the network drive, while `rebuild` writes its archive to a local disk it has
 to fit on. The backup that leaves the machine is the safer of the two at exactly
 the moment space is what you are short of.
 
-## `.wslconfig` is the one config this repo copies rather than symlinks
+## `.wslconfig` is individual to each computer, and this repo does not manage it
 
-`.wslconfig` configures the VM that hosts every distro, so it sits in
-`%UserProfile%` on the Windows side. The symlink manager deploys below `$HOME`,
-and `$HOME` here is inside the guest. The mechanism this repo uses for everything
-else therefore cannot reach it. The `wslconfig` row in `install/system.yml`
-copies `install/wsl/wslconfig.template` there instead, so `dotfiles system plan`,
-`check` and `apply` cover it like any other system row. A copy that differs is
-backed up beside itself before it is replaced, because it is the file someone
-edits by hand while something is broken.
+`.wslconfig` configures the VM that hosts every distro, from `%UserProfile%` on
+the Windows side. Its settings belong to the computer it sits on, so it is kept
+on that computer and nothing here writes it.
 
-The row finds a converged copy by reading the profiles under `/mnt/c/Users`
-rather than asking Windows for `%USERPROFILE%`. The scheduled check observes it
-every few minutes, and a Linux process forking `cmd.exe` on a timer is the
-pattern `windows-fonts` avoids for the same reason.
+`wsl-tools doctor` still reads the file and prints its active settings. It
+suggests `autoMemoryReclaim=gradual` where none is set, because the default
+`dropCache` discards the guest's page cache outright. Leave `sparseVhd` off for
+the reason given above `wsl-tools compact`: a sparse vhdx cannot be compacted.

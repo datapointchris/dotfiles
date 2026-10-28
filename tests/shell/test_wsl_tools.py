@@ -29,7 +29,6 @@ from shells import Shell
 from shells import shell_out
 
 TOOL = str(REPO / 'apps' / 'host' / 'wsl' / 'wsl-tools')
-TEMPLATE = REPO / 'install' / 'wsl' / 'wslconfig.template'
 
 BASE_PATH = r'C:\Users\me\AppData\Local\wsl\{7f3a}'
 DEVICE_PREFIX = '\\\\?\\'
@@ -389,16 +388,6 @@ def test_the_tool_does_not_offer_to_enable_sparse_mode() -> None:
     code = uncommented(TOOL)
     assert not [line for line in code if '--set-sparse' in line]
     assert not [line for line in code if '--allow-unsafe' in line]
-
-
-def test_the_template_does_not_enable_sparse_vhd() -> None:
-    active = [line for line in TEMPLATE.read_text(encoding='utf-8').splitlines() if not line.lstrip().startswith('#')]
-    assert not [line for line in active if 'sparseVhd' in line]
-
-
-def test_the_template_sets_the_memory_reclaim_mode() -> None:
-    """The shipped default is dropCache, which discards the guest's page cache."""
-    assert 'autoMemoryReclaim=gradual' in TEMPLATE.read_text(encoding='utf-8')
 
 
 # ================================================================
