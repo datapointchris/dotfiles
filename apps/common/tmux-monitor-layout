@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Rebuild a tmux window as the monitor: abtop over btop in the left half, a
+# full-height shell in the right.
+#
+#   tmux-monitor-layout [pane]    pane defaults to the one this runs in
+#
+# The named pane survives and becomes abtop; every other pane in its window is
+# killed. The respawn comes last because it kills whatever runs in that pane,
+# which is this script when sesh's startup_command calls it.
+set -euo pipefail
+
+pane="${1:-${TMUX_PANE:?run inside tmux or name a pane}}"
+
+tmux kill-pane -a -t "$pane"
+tmux split-window -h -f -d -t "$pane" -c "$HOME"
+tmux split-window -v -d -t "$pane" -c "$HOME" btop
+tmux respawn-pane -k -t "$pane" -c "$HOME" abtop

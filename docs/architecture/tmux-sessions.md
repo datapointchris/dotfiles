@@ -205,10 +205,11 @@ which is heavier than typing a name for work that lasts a few days.
 The exception is `monitor`, which is not an initiative: abtop over btop on the left, a full-height
 shell on the right. Its layout is fixed and rebuilt in a keystroke, which is exactly what a config
 block describes well. sesh has no pane key — `[[window]]` carries only `name`, `startup_script` and `path`, and
-issue #198 asking for panes was closed without them — so the split runs inline in
-`startup_command` via `tmux split-window`. It replaced a bash app that did the same thing in 150
-lines, and the file lives in `configs/trust/fleet/`, so the coordinate keeps it off nonfleet machines
-without the app's `command -v` probing.
+issue #198 asking for panes was closed without them — so `startup_command` calls
+`tmux-monitor-layout`. The layout lives in that script rather than inline because `prefix W` runs it
+too, rebuilding one window without killing the session around it. A sesh startup command only runs
+when the session is created, so it can never repair a window that lost a pane. The sesh file lives
+in `configs/trust/fleet/`, so the coordinate keeps the session off nonfleet machines.
 
 `prefix s` and `prefix w` are not two versions of the same picker. They sit at different levels,
 and the split mirrors the two status lines: `prefix s` is line 1, `prefix w` is line 2 for every
@@ -302,5 +303,6 @@ cite the same item, not that you want them apart.
 | --- | --- |
 | `apps/common/tmux-sessions` | Switching, creation, promotion, reordering, status relocation |
 | `apps/common/tmux-rearrange` | Bulk regroup: scan, propose, render a script |
+| `apps/common/tmux-monitor-layout` | Lays a window out as the monitor, for sesh and `prefix W` |
 | `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call |
 | `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colors |
