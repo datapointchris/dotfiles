@@ -202,9 +202,9 @@ still what `prefix s` is for; it emits paths, and what you do with a path is you
 them. Declaring initiative templates would mean handing off to tmuxinator via `sesh connect -T`,
 which is heavier than typing a name for work that lasts a few days.
 
-The exception is `monitor`, which is not an initiative: btop over oxker, every pane a read, safe to
-kill and rebuild because nothing in it holds work. That is exactly what a config block describes
-well. sesh has no pane key — `[[window]]` carries only `name`, `startup_script` and `path`, and
+The exception is `monitor`, which is not an initiative: abtop over btop on the left, a full-height
+shell on the right. Its layout is fixed and rebuilt in a keystroke, which is exactly what a config
+block describes well. sesh has no pane key — `[[window]]` carries only `name`, `startup_script` and `path`, and
 issue #198 asking for panes was closed without them — so the split runs inline in
 `startup_command` via `tmux split-window`. It replaced a bash app that did the same thing in 150
 lines, and the file lives in `configs/trust/fleet/`, so the coordinate keeps it off nonfleet machines
