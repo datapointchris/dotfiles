@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Rebuild a tmux window as the monitor: abtop over btop in the left half, a
-# full-height shell in the right.
+# full-height shell in the right, and the window named monitor.
 #
 #   tmux-monitor-layout [pane]    pane defaults to the one this runs in
 #
@@ -11,6 +11,7 @@ set -euo pipefail
 
 pane="${1:-${TMUX_PANE:?run inside tmux or name a pane}}"
 
+tmux rename-window -t "$pane" monitor
 tmux kill-pane -a -t "$pane"
 tmux split-window -h -f -d -t "$pane" -c "$HOME"
 tmux split-window -v -d -t "$pane" -c "$HOME" btop
