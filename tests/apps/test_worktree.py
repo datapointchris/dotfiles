@@ -330,6 +330,7 @@ __PREAMBLE__
 printf '%s' "$TMUX_PANE" > "__STATE__/pane"
 printf '%s' "$$" > "__STATE__/pid"
 pwd > "__STATE__/cwd"
+printf '%s\n' "$@" > "__STATE__/argv"
 for last; do :; done
 printf '%s' "$last" > "__STATE__/prompt"
 __BODY__
@@ -1957,6 +1958,14 @@ class TestSpawnScope:
         assert result.returncode == 0, plain(result.stderr)
         assert (spawn_state / 'cwd').read_text().strip() == str(fleet['primary'])
         assert not (fleet['roots'] / 'primary').exists(), 'no slug means no branch, so there is nothing to isolate'
+
+    def test_what_follows_a_double_dash_reaches_claude_ahead_of_the_prompt(self, fleet, spawn, spawn_state, tmp_path):
+        result = spawn(fleet['primary'], '--brief', str(brief_at(tmp_path / 'b.md')), '--', '--agent', 'reviewer', '--add-dir', '/x')
+
+        assert result.returncode == 0, plain(result.stderr)
+        argv = (spawn_state / 'argv').read_text().splitlines()
+        assert argv[:-1] == ['--permission-mode', 'bypassPermissions', '--agent', 'reviewer', '--add-dir', '/x', '--']
+        assert argv[-1].startswith('Read ')
 
     def test_an_existing_worktree_is_attached_to_rather_than_refused(self, fleet, run, spawn, spawn_state, tmp_path):
         """Respawning an agent into work already in progress is the ordinary case."""
