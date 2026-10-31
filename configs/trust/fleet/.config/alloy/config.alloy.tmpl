@@ -29,6 +29,105 @@ otelcol.processor.batch "local" {
 // Under the --storage.path the service passes Alloy.
 otelcol.storage.file "queue" { }
 
+// How far each record file has been read, so a restart ships nothing twice.
+otelcol.storage.file "offsets" { }
+
+// The record files this machine writes, each record once. A synced directory also
+// holds other machines' files, so each glob names this machine's own by its
+// lowercased short hostname, and the box that wrote a record is the one that ships it.
+//
+// A JSON record carrying a W3C traceparent lands under the trace that wrote it.
+// One without the field passes through unparsed.
+
+// A dotfiles run: one JSON object per file, its closing brace at the first column.
+otelcol.receiver.filelog "dotfiles_runs" {
+  include  = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.json", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at = "beginning"
+  storage  = otelcol.storage.file.offsets.handler
+
+  operators = [
+    {
+      type     = "regex_parser",
+      regex    = "\"traceparent\":\\s*\"00-(?P<trace_id>[0-9a-f]{32})-(?P<span_id>[0-9a-f]{16})-",
+      on_error = "send_quiet",
+      trace    = {trace_id = {parse_from = "attributes.trace_id"}, span_id = {parse_from = "attributes.span_id"}},
+    },
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "dotfiles.run"},
+  ]
+
+  multiline {
+    line_start_pattern = "^\\{"
+  }
+
+  output {
+    logs = [otelcol.processor.batch.local.input]
+  }
+}
+
+// Each command a dotfiles run made, one JSON object a line.
+otelcol.receiver.filelog "dotfiles_effects" {
+  include  = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.jsonl", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at = "beginning"
+  storage  = otelcol.storage.file.offsets.handler
+
+  operators = [
+    {
+      type     = "regex_parser",
+      regex    = "\"traceparent\":\\s*\"00-(?P<trace_id>[0-9a-f]{32})-(?P<span_id>[0-9a-f]{16})-",
+      on_error = "send_quiet",
+      trace    = {trace_id = {parse_from = "attributes.trace_id"}, span_id = {parse_from = "attributes.span_id"}},
+    },
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "dotfiles.effect"},
+  ]
+
+  output {
+    logs = [otelcol.processor.batch.local.input]
+  }
+}
+
+// A test run: one JSON object per file, past filelog's default 1 MiB a record.
+otelcol.receiver.filelog "test_runs" {
+  include      = [string.format("%s/.local/state/fleet/tests/runs/*-%s.json", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at     = "beginning"
+  storage      = otelcol.storage.file.offsets.handler
+  max_log_size = "16MiB"
+
+  operators = [
+    {
+      type     = "regex_parser",
+      regex    = "\"traceparent\":\\s*\"00-(?P<trace_id>[0-9a-f]{32})-(?P<span_id>[0-9a-f]{16})-",
+      on_error = "send_quiet",
+      trace    = {trace_id = {parse_from = "attributes.trace_id"}, span_id = {parse_from = "attributes.span_id"}},
+    },
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "tests.run"},
+  ]
+
+  multiline {
+    line_start_pattern = "^\\{"
+  }
+
+  output {
+    logs = [otelcol.processor.batch.local.input]
+  }
+}
+
+// A token report as saved: rendered text, so the whole file is one record. Its
+// first line starts with TOKENS.
+otelcol.receiver.filelog "token_reports" {
+  include   = [string.format("%s/.local/state/claude/token-report/*-%s.txt", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at  = "beginning"
+  storage   = otelcol.storage.file.offsets.handler
+  operators = [{type = "add", field = "attributes[\"fleet.kind\"]", value = "token-report.save"}]
+
+  multiline {
+    line_start_pattern = "^TOKENS"
+  }
+
+  output {
+    logs = [otelcol.processor.batch.local.input]
+  }
+}
+
 otelcol.exporter.otlphttp "collector" {
   client {
     endpoint = "${OTLP_GATEWAY_ENDPOINT}"
