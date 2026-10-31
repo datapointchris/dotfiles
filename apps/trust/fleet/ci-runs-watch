@@ -19,8 +19,8 @@
 # success is read once after its last update, since its jobs are then fixed.
 set -euo pipefail
 
-interval=5
-keep=20
+interval=1
+keep=10
 JOBS_EVERY=15
 while getopts "n:k:h" opt; do
   case "$opt" in
