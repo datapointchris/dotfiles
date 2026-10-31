@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
+import re
 import typing
 from collections.abc import Iterator
 from collections.abc import Mapping
@@ -1190,6 +1191,48 @@ class Step(SystemConfig):
     needs_root: bool = False
 
 
+EVERY = re.compile(r'([1-9][0-9]*)([mhdw])')
+"""A timer's interval: a whole number of minutes, hours, days or weeks."""
+
+EVERY_SECONDS = {'m': 60, 'h': 60 * 60, 'd': 24 * 60 * 60, 'w': 7 * 24 * 60 * 60}
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class UserTimer(SystemConfig):
+    """A command this account runs on an interval, and the report each run leaves.
+
+    `dotfiles timers run <name>` is what the unit starts. It runs `argv` and
+    appends one line to the timer-reports file, keyed by `report_key`, so a
+    failure and the pass after it name the same row. `~` in `argv` is expanded
+    when the timer runs.
+    """
+
+    section: ClassVar[str] = 'user_timers'
+
+    needs_root: bool = False
+    argv: tuple[str, ...]
+    every: str
+    report_key: str
+
+    @property
+    def seconds(self) -> int:
+        found = EVERY.fullmatch(self.every)
+        assert found, self.every
+        return int(found.group(1)) * EVERY_SECONDS[found.group(2)]
+
+    def problems(self) -> tuple[str, ...]:
+        wrong = []
+        if not self.argv:
+            wrong.append('declares an empty argv; a timer runs a command')
+        if not EVERY.fullmatch(self.every):
+            wrong.append(f'declares every {self.every!r}; write a whole number and one of m, h, d or w, as 10m or 1d')
+        if not self.report_key:
+            wrong.append('declares no report_key; a failure and the pass after it are matched by it')
+        if self.needs_root:
+            wrong.append('declares needs_root; a user timer runs as this account')
+        return (*wrong, *SystemConfig.problems(self))
+
+
 SECTION_CLASSES: tuple[type[Entry], ...] = (
     SystemPackage,
     Runtime,
@@ -1219,6 +1262,7 @@ SYSTEM_SECTION_CLASSES: tuple[type[SystemConfig], ...] = (
     LoginShell,
     MacosDefault,
     Step,
+    UserTimer,
 )
 """`system.yml`, in its own map rather than merged into `SECTIONS`.
 
