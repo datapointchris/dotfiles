@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Watch the GitHub Actions runs the self-hosted CI runner serves, grouped by
+# state and colored, redrawn every interval. Usage: ci-runs-watch [-n SECONDS] [-k KEEP]
+#
+# Private repos are the ones whose CI runs on the self-hosted runner, so those are
+# the registry rows it polls. Each poll sends If-None-Match with the last ETag,
+# and GitHub does not count a 304 against the rate limit, so idle repos are free.
+set -euo pipefail
+
+interval=15
+keep=10
+while getopts "n:k:h" opt; do
+  case "$opt" in
+    n) interval="$OPTARG" ;;
+    k) keep="$OPTARG" ;;
+    *)
+      echo "usage: ci-runs-watch [-n SECONDS] [-k FINISHED_RUNS_PER_STATE]" >&2
+      exit 2
+      ;;
+  esac
+done
+
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/ci-runs-watch"
+mkdir -p "$cache"
+token="$(gh auth token)"
+
+registry="$(repos-registry)"
+owner="$(jq -r .owner "$registry")"
+repos=()
+while IFS= read -r repo; do repos+=("$repo"); done < <(jq -r '.repos[] | select(.visibility == "private") | .name' "$registry")
+
+poll_repo() {
+  local repo="$1" body="$cache/$1.json" etag_file="$cache/$1.etag" headers status
+  local -a cond=()
+  [[ -s "$body" && -s "$etag_file" ]] && cond=(-H "If-None-Match: $(<"$etag_file")")
+  headers="$(mktemp)"
+  status="$(curl -s -o "$body.new" -D "$headers" -w '%{http_code}' \
+    -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" ${cond[@]+"${cond[@]}"} \
+    "https://api.github.com/repos/$owner/$repo/actions/runs?per_page=20")" || status=000
+  if [[ "$status" == 200 ]]; then
+    mv "$body.new" "$body"
+    rg -i '^etag:' "$headers" | cut -d' ' -f2- | tr -d '\r' >"$etag_file" || true
+  else
+    rm -f "$body.new"
+    [[ "$status" == 304 ]] || echo "$repo: HTTP $status" >>"$cache/errors"
+  fi
+  rm -f "$headers"
+}
+
+render() {
+  local cols
+  cols="$(tput cols)"
+  jq -rs --argjson keep "$keep" '
+    def ago: (now - (fromdate)) | floor
+      | if . < 60 then "\(.)s" elif . < 3600 then "\(./60|floor)m"
+        elif . < 86400 then "\(./3600|floor)h\(.%3600/60|floor)m" else "\(./86400|floor)d" end;
+    def took: ((.updated_at|fromdate) - ((.run_started_at // .created_at)|fromdate)) | floor
+      | "\(./60|floor)m\(.%60)s";
+    def group: if .status == "in_progress" then "RUNNING"
+      elif .status != "completed" then "QUEUED"
+      elif .conclusion == "success" then "SUCCEEDED"
+      elif (.conclusion == "cancelled" or .conclusion == "skipped") then "CANCELED"
+      else "FAILED" end;
+    [.[].workflow_runs[]? | . + {group: group}] as $runs
+    | ["RUNNING", "QUEUED", "FAILED", "CANCELED", "SUCCEEDED"][] as $g
+    | [$runs[] | select(.group == $g)]
+    | (if $g == "QUEUED" then sort_by(.created_at)
+       elif $g == "RUNNING" then sort_by(.run_started_at)
+       else sort_by(.updated_at) | reverse | .[:$keep] end) as $rows
+    | "\($g)\t\($rows|length)",
+      ($rows[] |
+        (if $g == "QUEUED" then "waiting \(.created_at|ago)"
+         elif $g == "RUNNING" then "running \(.run_started_at|ago)"
+         else "\(.updated_at|ago) ago, took \(took)" end) as $when
+        | "  \($when)\t\(.repository.name)\t\(.name)\t\(.head_branch)\t\(.conclusion // .status)\t\(.display_title)")
+  ' "$cache"/*.json 2>/dev/null | awk -F'\t' -v cols="$cols" '
+    function fit(s, n) { return length(s) > n ? substr(s, 1, n - 1) "…" : s }
+    BEGIN {
+      c["RUNNING"] = "\033[1;33m"; c["QUEUED"] = "\033[1;36m"; c["FAILED"] = "\033[1;31m"
+      c["CANCELED"] = "\033[1;35m"; c["SUCCEEDED"] = "\033[1;32m"; reset = "\033[0m"
+    }
+    $1 in c { g = $1; printf "\n%s%s (%s)%s\n", c[g], g, $2, reset; next }
+    {
+      printf "%s%-24s%s %-22s %-20s %-24s %-10s %s\n", c[g], $1, reset,
+        fit($2, 22), fit($3, 20), fit($4, 24), fit($5, 10), fit($6, cols - 106)
+    }
+  '
+}
+
+trap 'tput cnorm; exit 0' INT TERM
+tput civis
+while true; do
+  rm -f "$cache/errors"
+  for repo in "${repos[@]}"; do poll_repo "$repo" & done
+  wait
+  frame="$(
+    printf '%s CI runs on %d repos for %s, every %ss\n' \
+      "$(date +%H:%M:%S)" "${#repos[@]}" "$owner" "$interval"
+    render
+    if [[ -s "$cache/errors" ]]; then printf '\n\033[31m%s\033[0m\n' "$(<"$cache/errors")"; fi
+  )"
+  clear
+  printf '%s\n' "$frame"
+  sleep "$interval"
+done
