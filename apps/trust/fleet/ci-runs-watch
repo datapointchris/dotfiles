@@ -7,8 +7,8 @@
 # and GitHub does not count a 304 against the rate limit, so idle repos are free.
 set -euo pipefail
 
-interval=15
-keep=10
+interval=5
+keep=20
 while getopts "n:k:h" opt; do
   case "$opt" in
     n) interval="$OPTARG" ;;
