@@ -1,0 +1,57 @@
+// This machine's OTLP agent. A program sends its telemetry to the default OTLP
+// ports on localhost, and Alloy forwards it to the collector through a queue on
+// disk. Telemetry written while the collector is out of reach waits there.
+
+otelcol.receiver.otlp "local" {
+  grpc {
+    endpoint = "127.0.0.1:4317"
+  }
+
+  http {
+    endpoint = "127.0.0.1:4318"
+  }
+
+  output {
+    logs    = [otelcol.processor.batch.local.input]
+    metrics = [otelcol.processor.batch.local.input]
+    traces  = [otelcol.processor.batch.local.input]
+  }
+}
+
+otelcol.processor.batch "local" {
+  output {
+    logs    = [otelcol.exporter.otlphttp.collector.input]
+    metrics = [otelcol.exporter.otlphttp.collector.input]
+    traces  = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+// Under the --storage.path the service passes Alloy.
+otelcol.storage.file "queue" { }
+
+otelcol.exporter.otlphttp "collector" {
+  client {
+    endpoint = "${OTLP_GATEWAY_ENDPOINT}"
+  }
+
+  // Capped in bytes, so the limit is disk rather than a count of batches.
+  sending_queue {
+    enabled    = true
+    sizer      = "bytes"
+    queue_size = 1073741824
+    storage    = otelcol.storage.file.queue.handler
+  }
+
+  // Retried until the collector takes it, so time away costs queue space rather
+  // than telemetry.
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+}
+
+// Each failed retry logs at info, which away from the collector is one line every
+// half minute into a log launchd never rotates.
+logging {
+  level = "warn"
+}

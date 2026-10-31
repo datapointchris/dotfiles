@@ -33,6 +33,7 @@ github_releases:
   - gh
   - fzf
   - syncthing
+  - alloy
   - neovim
   - lazygit
   - yazi

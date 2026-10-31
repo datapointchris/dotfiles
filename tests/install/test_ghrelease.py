@@ -41,11 +41,14 @@ from dotfiles.providers.releases import Archive
 from dotfiles.providers.releases import Companion
 from dotfiles.providers.releases import LaunchAgent
 from dotfiles.providers.releases import ReleaseArtifact
+from dotfiles.providers.releases import UserUnit
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
 DARWIN = Target(OSFamily.DARWIN, Arch.ARM64)
 
-AGENT = LaunchAgent('com.example.demo', ('serve', '--no-browser'))
+AGENT = LaunchAgent('com.example.demo', ('serve', f'--home={releases.HOME}/demo'))
+
+AUTHORED = UserUnit('demo.service', 'demo', ('run', f'--state={releases.HOME}/.local/state/demo'))
 """A declared agent for a tool no release publishes, for the reason `registered`
 gives about assets: every real name in the table is measured against a live
 release, so borrowing one to test a placement inherits its spelling."""
@@ -613,7 +616,7 @@ class TestLaunchAgent:
         install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True, target=DARWIN, agent=AGENT)
 
         placed = plistlib.loads((home / 'Library' / 'LaunchAgents' / 'com.example.demo.plist').read_bytes())
-        assert placed['ProgramArguments'] == [str(home / '.local' / 'bin' / 'demo'), 'serve', '--no-browser']
+        assert placed['ProgramArguments'] == [str(home / '.local' / 'bin' / 'demo'), 'serve', f'--home={home}/demo']
 
     def test_the_job_is_a_daemon_rather_than_a_one_shot(self, home, bundle):
         """What declaring an agent at all means. Without `KeepAlive` launchd runs it
@@ -758,22 +761,32 @@ class TestSystemdUnit:
     that machine converged, on a box that actually runs the unit.
     """
 
-    def test_a_placed_unit_is_enabled(self, home, bundle, tmp_path, monkeypatch):
+    def test_a_placed_unit_is_reloaded_enabled_and_restarted(self, home, bundle, tmp_path, monkeypatch):
+        """Without the reload systemd enables the copy it read at boot, and without the
+        restart a running daemon keeps the binary this install replaced."""
         log = recording(home, 'systemctl')
 
         result = install_one(with_unit(tmp_path, bundle), entry(), offline=True)
 
         assert result.ok, result.detail
-        assert log.read_text().splitlines() == ['--user daemon-reload', '--user enable --now demo.service']
+        assert log.read_text().splitlines() == [
+            '--user daemon-reload',
+            '--user enable --now demo.service',
+            '--user restart demo.service',
+        ]
 
-    def test_the_reload_comes_before_the_enable(self, home, bundle, tmp_path, monkeypatch):
-        """Without it systemd enables the copy it read at boot, which for a unit this
-        install has just written is the previous one or nothing at all."""
+    def test_an_authored_unit_starts_the_placed_binary_with_home_left_to_systemd(self, home, bundle):
+        """Alloy's archive ships no user unit, so `releases.UNITS` declares one."""
+        stage(bundle, 'demo', 'demo', 'v1.2.3', PAYLOAD)
         log = recording(home, 'systemctl')
 
-        install_one(with_unit(tmp_path, bundle), entry(), offline=True)
+        with authored('demo', AUTHORED):
+            result = install_one(ReleaseArtifact('demo', Archive.RAW), entry(), offline=True)
 
-        assert log.read_text().index('daemon-reload') < log.read_text().index('enable')
+        assert result.ok, result.detail
+        placed = (home / '.config' / 'systemd' / 'user' / 'demo.service').read_text()
+        assert f'ExecStart={home}/.local/bin/demo run --state=%h/.local/state/demo\n' in placed
+        assert log.read_text().splitlines()[-1] == '--user restart demo.service'
 
     def test_an_enable_that_fails_fails_the_install(self, home, bundle, tmp_path, monkeypatch):
         """The opposite call to launchd's, and the same question decides both: what
@@ -837,6 +850,16 @@ class TestUnitEvidence:
         with registered(with_unit(tmp_path, bundle), entry()):
             assert ghrelease.unsupervised('demo', 'demo') == ''
 
+    def test_an_authored_unit_that_differs_from_its_declaration_is_reported(self, home):
+        """This repo wrote the whole unit, so arguments moved here are compared whole.
+        Without it a running daemon keeps the old ones and `check` reports nothing."""
+        recording(home, 'systemctl')
+        stale = UserUnit(AUTHORED.name, AUTHORED.description, ('run',))
+        write_unit(home, ghrelease.unit_text(stale, home / '.local' / 'bin' / 'demo'))
+
+        with authored('demo', AUTHORED):
+            assert 'differs from what this repo declares' in ghrelease.unsupervised('demo', 'demo')
+
 
 def write_unit(home: Path, body: str) -> Path:
     placed = ghrelease.unit_dir() / 'demo.service'
@@ -865,6 +888,18 @@ def recording(home: Path, name: str, *, exit_code: int = 0) -> Path:
     placed.write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> {log}\nexit {exit_code}\n')
     placed.chmod(0o755)
     return log
+
+
+@contextlib.contextmanager
+def authored(name: str, unit: UserUnit):
+    """Declare one entry's authored unit for the duration of a test, as `supervised` does."""
+    table = dict(releases.UNITS)
+    releases.UNITS[name] = unit
+    try:
+        yield
+    finally:
+        releases.UNITS.clear()
+        releases.UNITS.update(table)
 
 
 @contextlib.contextmanager

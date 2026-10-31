@@ -1029,6 +1029,19 @@ github_releases:
     description: Continuous file synchronization between the fleet's machines
     tags: [cli, network, sync]
 
+  # The machine's OTLP agent. A program sends its telemetry to localhost, and Alloy
+  # forwards it to a central collector through a queue on disk, so a laptop off the
+  # network keeps its telemetry until it is back. Alloy rather than otelcol-contrib,
+  # because the servers it reports beside already run it. `releases.UNITS` and
+  # `releases.AGENTS` supervise it. pacman and Homebrew both ship it as
+  # grafana-alloy with a service of its own, so `supersedes` blocks it. Two
+  # copies would be two daemons on one set of ports.
+  - name: alloy
+    repo: grafana/alloy
+    supersedes: [grafana-alloy]
+    description: OpenTelemetry Collector forwarding this machine's telemetry through a disk queue
+    tags: [network, observability]
+
   # One release covers every workstation, which is why this is not a brew/pacman
   # split: ntfy publishes a universal darwin build and is absent from the pacman
   # repos entirely, so the hand-dropped binary it replaces was the only option.

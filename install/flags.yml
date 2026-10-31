@@ -192,6 +192,21 @@ required:
     consumers:
       - configs/trust/fleet/.config/atuin/config.toml.tmpl
 
+  # The OpenTelemetry collector this machine's Alloy forwards to, an address on the
+  # machine's own network. Alloy runs under systemd or launchd and sources no shell
+  # profile, so the value is rendered into its config from the template below.
+  #
+  # Not OTEL_EXPORTER_OTLP_ENDPOINT, which every OpenTelemetry SDK reads. Set in
+  # ~/.env, that name would send each program straight to the collector, past the
+  # local agent and its disk queue.
+  #
+  # Scoped by trust alone, for the reason ATUIN_SYNC_ADDRESS gives.
+  - name: OTLP_GATEWAY_ENDPOINT
+    description: URL of the OpenTelemetry collector this machine's agent forwards to, such as http://collector.example:4318
+    network_trust: fleet
+    consumers:
+      - configs/trust/fleet/.config/alloy/config.alloy.tmpl
+
   # The domain the homelab serves its APIs and its identity provider under. Each
   # product CLI's config.toml names its API and the provider as subdomains of
   # it, ifiles' names its file server, and this public repo must not carry the

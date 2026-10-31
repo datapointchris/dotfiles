@@ -67,6 +67,29 @@ class Companion:
         return self.url_template.format(tag=tag)
 
 
+HOME = '{home}'
+"""The account's home directory inside a supervised daemon's arguments.
+
+systemd expands `%h` itself and launchd expands nothing, so each supervision file
+is written with its own spelling of it.
+"""
+
+
+@dc.dataclass(frozen=True, slots=True)
+class UserUnit:
+    """A systemd user unit authored here, for a release whose archive ships none.
+
+    `ReleaseArtifact.unit` takes upstream's where it publishes a user unit. Alloy
+    publishes only its distro packages' system unit, which reads an environment file
+    under /etc, so its user unit is declared here the way every `LaunchAgent` is.
+    """
+
+    name: str
+    description: str
+    arguments: tuple[str, ...] = ()
+    """What follows the binary in `ExecStart`, with `HOME` standing for the home directory."""
+
+
 @dc.dataclass(frozen=True, slots=True)
 class LaunchAgent:
     """How launchd is told to keep a release's daemon running.
@@ -205,6 +228,30 @@ def abtop(tag: str, target: Target) -> ReleaseArtifact:
     else:
         triple = 'aarch64-unknown-linux-gnu' if target.is_arm else 'x86_64-unknown-linux-gnu'
     return ReleaseArtifact(f'abtop-{triple}.tar.xz', Archive.TARBALL, path=f'abtop-{triple}/abtop')
+
+
+def alloy(tag: str, target: Target) -> ReleaseArtifact:
+    """A zip holding one binary, named after the asset's own stem."""
+    system = 'darwin' if target.is_darwin else 'linux'
+    arch = 'arm64' if target.is_arm else 'amd64'
+    stem = f'alloy-{system}-{arch}'
+    return ReleaseArtifact(f'{stem}.zip', Archive.ZIP, path=stem)
+
+
+ALLOY_ARGUMENTS = (
+    'run',
+    f'{HOME}/.config/alloy/config.alloy',
+    f'--storage.path={HOME}/.local/state/alloy',
+    '--stability.level=public-preview',
+    '--disable-reporting',
+)
+"""One argument list for the unit and the agent, so both platforms run the same daemon.
+
+The config's exporter keeps its queue in `otelcol.storage.file`, which Alloy ships
+at `public-preview` and refuses to load below that level. The queue lives under
+`--storage.path`. `--disable-reporting` stops the usage report Alloy sends Grafana
+by default.
+"""
 
 
 def asl_language_server(tag: str, target: Target) -> ReleaseArtifact:
@@ -473,6 +520,7 @@ def go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
 
 ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'abtop': abtop,
+    'alloy': alloy,
     'asl-language-server': asl_language_server,
     'atuin': atuin,
     'duckdb': duckdb,
@@ -529,6 +577,7 @@ keystroke rather than in any verdict.
 """
 
 AGENTS: dict[str, LaunchAgent] = {
+    'alloy': LaunchAgent('com.grafana.alloy', ALLOY_ARGUMENTS),
     'syncthing': LaunchAgent('net.syncthing.syncthing', ('serve', '--no-browser', '--no-restart')),
 }
 """Which tools launchd supervises on a Mac, by entry name.
@@ -543,6 +592,15 @@ Keyed by entry name and off `ReleaseArtifact` for `COMPANIONS`' reason, which is
 the whole argument for a second table: an asset is named from a tag and a target,
 so reading a fact off one costs a release lookup and therefore a network call.
 `check` asks what a machine owes without either.
+"""
+
+UNITS: dict[str, UserUnit] = {
+    'alloy': UserUnit('alloy.service', 'Grafana Alloy, an OpenTelemetry Collector', ALLOY_ARGUMENTS),
+}
+"""Which tools systemd supervises from a unit authored here, by entry name.
+
+Keyed off `ReleaseArtifact` for `AGENTS`' reason. An entry is in this table or
+names its archive's unit, never both.
 """
 
 

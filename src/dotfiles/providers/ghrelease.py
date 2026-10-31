@@ -17,9 +17,10 @@ the variation moved into `providers.releases.ReleaseArtifact`, where a bare bina
     TARBALL / ZIP         unpack, then take `path` out of it, plus any `extras`
     ReleaseArtifact.tree  unpack into ~/.local and symlink `path` out of the tree
 
-An eighth step reaches the one release that publishes a daemon rather than a
-command: a supervision file, `ReleaseArtifact.unit` out of the archive on Linux and
-`releases.AGENTS` written into `~/Library/LaunchAgents` on a Mac. `supervise` is
+An eighth step reaches a release that publishes a daemon rather than a command: a
+supervision file, on Linux `ReleaseArtifact.unit` out of the archive or a
+`releases.UNITS` unit authored here, and `releases.AGENTS` written into
+`~/Library/LaunchAgents` on a Mac. `supervise` is
 why that half is here and not in `install/system.yml` — a `systemd_units` row can
 narrow on an OS family and on a *system* package, and neither says "the machines
 declaring this release", so the row would reach every Linux box in the fleet.
@@ -60,9 +61,12 @@ from dotfiles.providers import unreadable_kind
 from dotfiles.providers.releases import AGENTS
 from dotfiles.providers.releases import ASSETS
 from dotfiles.providers.releases import COMPANIONS
+from dotfiles.providers.releases import HOME
+from dotfiles.providers.releases import UNITS
 from dotfiles.providers.releases import Archive
 from dotfiles.providers.releases import LaunchAgent
 from dotfiles.providers.releases import ReleaseArtifact
+from dotfiles.providers.releases import UserUnit
 
 BUNDLE_CHECKSUMS = 'checksums.txt'
 BUNDLE_BINARIES = 'binaries'
@@ -445,6 +449,20 @@ def unit_dir() -> Path:
     return paths.xdg_home('XDG_CONFIG_HOME', '.config') / 'systemd' / 'user'
 
 
+def unit_text(unit: UserUnit, binary: Path) -> str:
+    """The unit this repo authors, starting the binary this install placed.
+
+    `Restart=on-failure` is `KeepAlive`'s half on this platform, and the ten-second
+    wait keeps a daemon whose config has not arrived yet under systemd's start limit.
+    """
+    command = ' '.join([str(binary), *(argument.replace(HOME, '%h') for argument in unit.arguments)])
+    return (
+        f'[Unit]\nDescription={unit.description}\n\n'
+        f'[Service]\nExecStart={command}\nRestart=on-failure\nRestartSec=10\n\n'
+        '[Install]\nWantedBy=default.target\n'
+    )
+
+
 def agent_plist(agent: LaunchAgent, binary: Path) -> bytes:
     """The job this repo declares for a release's daemon.
 
@@ -463,7 +481,7 @@ def agent_plist(agent: LaunchAgent, binary: Path) -> bytes:
     return launchd.serialize(
         {
             'Label': agent.label,
-            'ProgramArguments': [str(binary), *agent.arguments],
+            'ProgramArguments': [str(binary), *(argument.replace(HOME, str(Path.home())) for argument in agent.arguments)],
             'KeepAlive': True,
             'RunAtLoad': True,
             'ProcessType': 'Background',
@@ -530,6 +548,8 @@ def declared_unit(name: str) -> str:
     rather than a fact about a particular release, and asking upstream for one
     would cost `check` an API call per entry.
     """
+    if name in UNITS:
+        return UNITS[name].name
     build = ASSETS.get(name)
     if build is None:
         return ''
@@ -561,20 +581,33 @@ def supervise_launchd(entry: catalog.GithubRelease) -> Result:
 
 
 def supervise_systemd(entry: catalog.GithubRelease) -> Result:
-    """Reload the manager and enable the unit `place` wrote.
+    """Write an authored unit, then reload the manager, enable the unit and restart it.
 
     A failure here fails the install, which is the opposite call to launchd's above
     and is decided by the same question: what does the file buy on its own. Nothing,
     here — an unenabled user unit is a daemon that does not start at the next login
     or any login after it.
+
+    Both callers reach this only after something changed: a binary replaced, or a
+    unit `unsupervised` reported. `enable --now` leaves a running daemon alone, so
+    the restart is what makes the change run before the next login.
     """
     unit = declared_unit(entry.name)
     placed = unit_dir() / unit
+    if entry.name in UNITS:
+        try:
+            placed.parent.mkdir(parents=True, exist_ok=True)
+            placed.write_text(unit_text(UNITS[entry.name], installed_at(entry.executable)))
+        except OSError as unwritable:
+            return Result(False, f'could not write {placed}: {unwritable.strerror}', kind=Kind.WRITE_FAILED)
     if not placed.is_file():
         return Result(False, f'{placed} was not placed, so nothing keeps {entry.executable} running', kind=Kind.ARCHIVE_INCOMPLETE)
     enabled = systemd.enable(unit)
     if not enabled.ok:
         return Result(False, f'could not enable {unit}: {enabled.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    restarted = systemd.restart(unit)
+    if not restarted.ok:
+        return Result(False, f'could not restart {unit}: {restarted.transcript.strip()}', kind=Kind.COMMAND_FAILED)
     return Result(True, str(placed), kind=Kind.APPLIED)
 
 
@@ -593,16 +626,19 @@ def unsupervised_launchd(name: str, executable: str) -> str:
 def unsupervised_systemd(name: str, executable: str) -> str:
     """The three states, with the middle one narrowed to what is knowable offline.
 
-    The unit's body comes out of the release archive rather than from this repo, so
-    there is nothing here to compare it against without a download. What `place`
-    *does* author is the `ExecStart` path, and that is the half that goes wrong —
-    a unit still naming `/usr/bin` after the package it came from was removed is
-    exec-not-found on every start.
+    An authored unit is compared whole. An archive's unit comes out of the release
+    rather than from this repo, so there is nothing here to compare it against
+    without a download. What `place` *does* author is the `ExecStart` path, and that
+    is the half that goes wrong — a unit still naming `/usr/bin` after the package it
+    came from was removed is exec-not-found on every start.
     """
     placed = unit_dir() / declared_unit(name)
     if not placed.is_file():
         return f'{placed} does not exist, so nothing keeps {executable} running'
-    if exec_at(placed.read_text(), installed_at(executable)) != placed.read_text():
+    if name in UNITS:
+        if placed.read_text() != unit_text(UNITS[name], installed_at(executable)):
+            return f'{placed} differs from what this repo declares'
+    elif exec_at(placed.read_text(), installed_at(executable)) != placed.read_text():
         return f'{placed} does not start {installed_at(executable)}'
     if not systemd.enabled(placed.name):
         return f'{placed.name} is installed and systemd has not enabled it'

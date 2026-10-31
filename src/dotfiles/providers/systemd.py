@@ -18,7 +18,7 @@ from dotfiles import effects
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 
-__all__ = ['available', 'disable', 'enable', 'enabled']
+__all__ = ['available', 'disable', 'enable', 'enabled', 'restart']
 
 
 def available() -> bool:
@@ -53,6 +53,11 @@ def enable(unit: str) -> Completed:
     """
     effects.run(['systemctl', '--user', 'daemon-reload'], output=Output.QUIET)
     return effects.run(['systemctl', '--user', 'enable', '--now', unit], output=Output.QUIET)
+
+
+def restart(unit: str) -> Completed:
+    """Restart the unit, so a replaced binary or a rewritten unit runs at once."""
+    return effects.run(['systemctl', '--user', 'restart', unit], output=Output.QUIET)
 
 
 def disable(unit: str) -> Completed:
