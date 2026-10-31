@@ -12,14 +12,6 @@ otelcol.receiver.otlp "local" {
   }
 
   output {
-    logs    = [otelcol.processor.batch.local.input]
-    metrics = [otelcol.processor.batch.local.input]
-    traces  = [otelcol.processor.batch.local.input]
-  }
-}
-
-otelcol.processor.batch "local" {
-  output {
     logs    = [otelcol.exporter.otlphttp.collector.input]
     metrics = [otelcol.exporter.otlphttp.collector.input]
     traces  = [otelcol.exporter.otlphttp.collector.input]
@@ -60,7 +52,7 @@ otelcol.receiver.filelog "dotfiles_runs" {
   }
 
   output {
-    logs = [otelcol.processor.batch.local.input]
+    logs = [otelcol.exporter.otlphttp.collector.input]
   }
 }
 
@@ -81,16 +73,17 @@ otelcol.receiver.filelog "dotfiles_effects" {
   ]
 
   output {
-    logs = [otelcol.processor.batch.local.input]
+    logs = [otelcol.exporter.otlphttp.collector.input]
   }
 }
 
-// A test run: one JSON object per file, past filelog's default 1 MiB a record.
+// A test run: one JSON object per file, past filelog's default 1 MiB a record and
+// inside the 16 MiB batch a record has to fit.
 otelcol.receiver.filelog "test_runs" {
   include      = [string.format("%s/.local/state/fleet/tests/runs/*-%s.json", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
   start_at     = "beginning"
   storage      = otelcol.storage.file.offsets.handler
-  max_log_size = "16MiB"
+  max_log_size = "8MiB"
 
   operators = [
     {
@@ -107,7 +100,7 @@ otelcol.receiver.filelog "test_runs" {
   }
 
   output {
-    logs = [otelcol.processor.batch.local.input]
+    logs = [otelcol.exporter.otlphttp.collector.input]
   }
 }
 
@@ -124,7 +117,7 @@ otelcol.receiver.filelog "token_reports" {
   }
 
   output {
-    logs = [otelcol.processor.batch.local.input]
+    logs = [otelcol.exporter.otlphttp.collector.input]
   }
 }
 
@@ -139,6 +132,15 @@ otelcol.exporter.otlphttp "collector" {
     sizer      = "bytes"
     queue_size = 1073741824
     storage    = otelcol.storage.file.queue.handler
+
+    // Sized in bytes, so a request stays under an OTLP receiver's default 20 MiB
+    // body however many record files a first start reads at once.
+    batch {
+      sizer         = "bytes"
+      min_size      = 1048576
+      max_size      = 16777216
+      flush_timeout = "1s"
+    }
   }
 
   // Retried until the collector takes it, so time away costs queue space rather
