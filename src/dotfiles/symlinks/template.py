@@ -26,8 +26,12 @@ import os
 import re
 import string
 import tempfile
+from collections.abc import Iterator
 from collections.abc import Mapping
 from pathlib import Path
+
+from dotfiles.effects import Output
+from dotfiles.effects import run
 
 SUFFIX = '.tmpl'
 
@@ -85,23 +89,44 @@ def render(source: Path, values: Mapping[str, str]) -> Rendering:
 
 
 def is_rendering_of(source: Path, text: str) -> bool:
-    """Whether the text is this template filled in with any values at all.
+    """Whether the text is this template, as it stands or as any commit held it, filled in with any values at all.
 
     A rendered file is a regular file, so this is what tells this manager's output
     from somebody's file: the template's literal text, with each placeholder
     matching anything on one line. A rendering made with an earlier value matches.
     So does a hand edit that changes only the text where a placeholder stands, and
     the next `apply` overwrites it. Any other edit does not match.
+
+    A machine holds the rendering of the version it last applied. An edit to the
+    template's literal text would otherwise turn that file into somebody's on
+    every machine at once, so each committed version is tried after the current one.
+    """
+    return any(fits(held, text) for held in texts_held(source))
+
+
+def texts_held(source: Path) -> Iterator[str]:
+    """The template's text as it stands, then as each commit touching it held it, newest first."""
+    yield source.read_text()
+    revisions = run(['git', '-C', str(source.parent), 'rev-list', 'HEAD', '--', source.name], output=Output.QUIET)
+    for revision in revisions.stdout.split() if revisions.ok else ():
+        shown = run(['git', '-C', str(source.parent), 'show', f'{revision}:./{source.name}'], output=Output.QUIET)
+        if shown.ok:
+            yield shown.stdout
+
+
+def fits(template_text: str, text: str) -> bool:
+    """Whether the text is this template text with each placeholder filled by anything on one line.
+
+    A template text with an invalid `$` has no renderings, so nothing fits it.
     """
     pieces: list[str] = []
     end = 0
-    template_text = source.read_text()
     for found in string.Template.pattern.finditer(template_text):
         pieces.append(re.escape(template_text[end : found.start()]))
         if found.group('escaped') is not None:
             pieces.append(re.escape('$'))
         elif found.group('invalid') is not None:
-            raise ValueError(malformed(source))
+            return False
         else:
             pieces.append(r'[^\n]*')
         end = found.end()

@@ -649,7 +649,7 @@ def holds_foreign_content(link: Link, content: Content, *, copying: bool) -> boo
         case Content.DIFFERS:
             try:
                 return not template.is_rendering_of(link.source, link.target.read_text())
-            except (OSError, ValueError):
+            except (OSError, UnicodeDecodeError):
                 return True
         case Content.ABSENT | Content.SAME | Content.UNREADABLE:
             return False

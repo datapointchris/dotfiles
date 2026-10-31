@@ -10,6 +10,8 @@ that would create it.
 
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -699,6 +701,25 @@ def test_a_changed_value_renders_again(session: Session, repo: Path, home: Path)
     apply(session)
 
     assert rendered_target(home).read_text() == 'server = "http://new:2"\n'
+
+
+def test_a_rendering_of_a_template_s_earlier_committed_text_renders_again(session: Session, repo: Path, home: Path) -> None:
+    identity = {**os.environ, 'GIT_AUTHOR_NAME': 'T', 'GIT_AUTHOR_EMAIL': 't@t', 'GIT_COMMITTER_NAME': 'T', 'GIT_COMMITTER_EMAIL': 't@t'}
+
+    def commit(text: str) -> None:
+        declare(repo, APP_TEMPLATE, text)
+        subprocess.run(['git', '-C', str(repo), 'add', '-A'], check=True, env=identity)
+        subprocess.run(['git', '-C', str(repo), 'commit', '-qm', 'template'], check=True, env=identity)
+
+    subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+    commit('server = "http://${APP_SERVER}:1"\n')
+    answer(session, 'inside')
+    apply(session)
+    commit('server = "https://${APP_SERVER}"\n')
+
+    apply(session)
+
+    assert rendered_target(home).read_text() == 'server = "https://inside"\n'
 
 
 def test_a_link_at_the_target_is_replaced_rather_than_written_through(session: Session, repo: Path, home: Path) -> None:
