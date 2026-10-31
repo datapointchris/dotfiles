@@ -2348,6 +2348,13 @@ class TestSpawnWindowName:
         assert rig.window_of(beta) == rig.window_of(alpha), 'the second worker opened a window of its own'
         assert rig.window_name(beta) == 'alpha · beta'
 
+    def test_a_session_in_the_checkout_takes_the_window_name_it_was_given(self, fleet, spawn, rig, tmp_path):
+        rig.add_pane_before_the_caller()
+        result = spawn(fleet['primary'], '--brief', str(brief_at(tmp_path / 'lead.md')), '--window-name', 'repo-pr7-review', '--json')
+
+        assert result.returncode == 0, plain(result.stderr)
+        assert rig.window_name(json.loads(result.stdout)['pane']) == 'repo-pr7-review'
+
     def test_a_reviewer_under_one_of_them_leaves_the_name_as_it_was(self, fleet, run, spawn, rig, tmp_path):
         rig.add_pane_before_the_caller()
         alpha = self.worker(spawn, fleet, tmp_path, 'alpha')

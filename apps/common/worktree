@@ -1390,7 +1390,9 @@ def keep_brief(source: Path, repo: str, slug: str | None) -> Path:
     return destination
 
 
-def open_session_pane(caller: str, workdir: Path, prompt: str, *, below: bool, slug: str | None, claude_args: list[str]) -> dict[str, Any]:
+def open_session_pane(
+    caller: str, workdir: Path, prompt: str, *, below: bool, window_name: str | None, claude_args: list[str]
+) -> dict[str, Any]:
     """Ask for a pane to run a session in, and return what the multiplexer made.
 
     The request is intent rather than geometry. A reviewer names the pane it
@@ -1399,9 +1401,9 @@ def open_session_pane(caller: str, workdir: Path, prompt: str, *, below: bool, s
     wide, which way to split, or which window — those are answers, and asking for
     them here would make one multiplexer's answer the only implementable one.
 
-    A worker's slug goes to the port as the name of its work, which is how the
-    window list says what each worker is doing. How the multiplexer shows it is the
-    adapter's business. A reviewer sends none, because it sits under the worker
+    A worker's window name goes to the port as the name of its work, which is how
+    the window list says what each worker is doing. How the multiplexer shows it is
+    the adapter's business. A reviewer sends none, because it sits under the worker
     the name already describes.
 
     `readable` in the record is the multiplexer's claim that the pane can be
@@ -1410,7 +1412,7 @@ def open_session_pane(caller: str, workdir: Path, prompt: str, *, below: bool, s
     """
     role = REVIEWER if below else WORKER
     partner = ['--for', caller] if below else []
-    named = ['--window-name', slug] if slug and not below else []
+    named = ['--window-name', window_name] if window_name and not below else []
     # The `--` before the prompt keeps a variadic flag such as --add-dir from taking it.
     session = ['claude', '--permission-mode', 'bypassPermissions', *claude_args, '--', prompt]
     made = ctl('pane', 'open', role, *partner, *named, '--cwd', str(workdir), '--', *session)
@@ -1570,7 +1572,9 @@ def announce(spawned: Spawned, timeout: float) -> None:
             say_info('The pane is running; the field this needs is `pid` in claude-sessions --json')
 
 
-def cmd_spawn(slug: str | None, brief: str, *, below: bool, timeout: float, as_json: bool, claude_args: list[str]) -> int:
+def cmd_spawn(
+    slug: str | None, brief: str, *, below: bool, window_name: str | None, timeout: float, as_json: bool, claude_args: list[str]
+) -> int:
     """Start a Claude session in a pane of its own, and name it.
 
     Everything that can refuse is settled before anything is created —
@@ -1604,7 +1608,9 @@ def cmd_spawn(slug: str | None, brief: str, *, below: bool, timeout: float, as_j
     # not collect, because nothing was ever pushed and it is held as UNPUBLISHED. So the
     # one thing this command created gets unwound before the refusal reaches the caller.
     try:
-        made = open_session_pane(caller, where.path, BRIEF_PROMPT.format(brief=kept), below=below, slug=slug, claude_args=claude_args)
+        made = open_session_pane(
+            caller, where.path, BRIEF_PROMPT.format(brief=kept), below=below, window_name=window_name or slug, claude_args=claude_args
+        )
     except Refused:
         if where.created:
             unwind(checkout, where)
@@ -1937,6 +1943,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     spawn.add_argument('--below', action='store_true', help='a reviewer, placed directly under the pane it reviews rather than beside it')
     spawn.add_argument(
+        '--window-name',
+        metavar='NAME',
+        help='what the window list calls this work, in place of the slug; a session with neither lands in a window called agents',
+    )
+    spawn.add_argument(
         '--timeout',
         type=float,
         default=REGISTRATION_TIMEOUT,
@@ -2015,7 +2026,13 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
             return cmd_new(args.slug)
         case 'spawn':
             return cmd_spawn(
-                args.slug, args.brief, below=args.below, timeout=args.timeout, as_json=args.as_json, claude_args=args.claude_args
+                args.slug,
+                args.brief,
+                below=args.below,
+                window_name=args.window_name,
+                timeout=args.timeout,
+                as_json=args.as_json,
+                claude_args=args.claude_args,
             )
         case 'land':
             return cmd_land()
