@@ -5,10 +5,17 @@
 # Private repos are the ones whose CI runs on the self-hosted runner, so those are
 # the registry rows it polls. Each poll sends If-None-Match with the last ETag,
 # and GitHub does not count a 304 against the rate limit, so idle repos are free.
+#
+# Under each running or queued run is one line per job: its runner, its current
+# step and how long that step has run, or the labels a waiting job needs. A failed
+# run names the job and step that failed. A running run's jobs change on every
+# step, so most of those polls are a 200, and they refresh every JOBS_EVERY
+# seconds rather than every interval to stay well inside the hourly limit.
 set -euo pipefail
 
 interval=5
 keep=20
+JOBS_EVERY=15
 while getopts "n:k:h" opt; do
   case "$opt" in
     n) interval="$OPTARG" ;;
@@ -21,7 +28,7 @@ while getopts "n:k:h" opt; do
 done
 
 cache="${XDG_CACHE_HOME:-$HOME/.cache}/ci-runs-watch"
-mkdir -p "$cache"
+mkdir -p "$cache/jobs"
 token="$(gh auth token)"
 
 registry="$(repos-registry)"
@@ -29,38 +36,95 @@ owner="$(jq -r .owner "$registry")"
 repos=()
 while IFS= read -r repo; do repos+=("$repo"); done < <(jq -r '.repos[] | select(.visibility == "private") | .name' "$registry")
 
-poll_repo() {
-  local repo="$1" body="$cache/$1.json" etag_file="$cache/$1.etag" headers status
+# One conditional GET into body, keeping its ETag beside it. A 304 touches the
+# body, so its mtime says when GitHub last confirmed it.
+conditional_get() {
+  local url="$1" body="$2" label="$3" etag_file="$2.etag" headers status
   local -a cond=()
   [[ -s "$body" && -s "$etag_file" ]] && cond=(-H "If-None-Match: $(<"$etag_file")")
   headers="$(mktemp)"
   status="$(curl -s -o "$body.new" -D "$headers" -w '%{http_code}' \
     -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" ${cond[@]+"${cond[@]}"} \
-    "https://api.github.com/repos/$owner/$repo/actions/runs?per_page=20")" || status=000
+    "$url")" || status=000
   if [[ "$status" == 200 ]]; then
     mv "$body.new" "$body"
     rg -i '^etag:' "$headers" | cut -d' ' -f2- | tr -d '\r' >"$etag_file" || true
   else
     rm -f "$body.new"
-    [[ "$status" == 304 ]] || echo "$repo: HTTP $status" >>"$cache/errors"
+    if [[ "$status" == 304 ]]; then touch "$body"; else echo "$label: HTTP $status" >>"$cache/errors"; fi
   fi
   rm -f "$headers"
 }
 
+poll_repo() {
+  conditional_get "https://api.github.com/repos/$owner/$1/actions/runs?per_page=20" "$cache/$1.json" "$1"
+}
+
+# Jobs for every unfinished run, and once for a failed run after its last
+# update. A finished run's jobs are fixed, so that one copy stands.
+poll_jobs() {
+  local now repo id updated body mtime
+  now="$(date +%s)"
+  while read -r repo id updated active; do
+    body="$cache/jobs/$id.json"
+    mtime="$(stat -c %Y "$body" 2>/dev/null || echo 0)"
+    if [[ "$active" == true ]]; then
+      ((now - mtime >= JOBS_EVERY)) || continue
+    else
+      ((mtime < updated)) || continue
+    fi
+    conditional_get "https://api.github.com/repos/$owner/$repo/actions/runs/$id/jobs?per_page=50" "$body" "$repo jobs $id" &
+  done < <(jq -r '.workflow_runs[]?
+      | select(.status != "completed" or (.conclusion | IN("failure", "timed_out", "startup_failure")))
+      | "\(.repository.name) \(.id) \(.updated_at | fromdate) \(.status != "completed")"' "$cache"/*.json 2>/dev/null)
+  wait
+}
+
 render() {
-  local cols
+  local cols jobs_map
   cols="$(tput cols)"
-  jq -rs --argjson keep "$keep" '
-    def ago: (now - (fromdate)) | floor
-      | if . < 60 then "\(.)s" elif . < 3600 then "\(./60|floor)m"
-        elif . < 86400 then "\(./3600|floor)h\(.%3600/60|floor)m" else "\(./86400|floor)d" end;
-    def took: ((.updated_at|fromdate) - ((.run_started_at // .created_at)|fromdate)) | floor
-      | "\(./60|floor)m\(.%60)s";
+  jobs_map="$(mktemp)"
+  shopt -s nullglob
+  local files=("$cache"/jobs/*.json)
+  shopt -u nullglob
+  if ((${#files[@]})); then
+    jq -s '[.[] | .jobs? // [] | select(length > 0) | {key: (.[0].run_id | tostring), value: .}] | from_entries' \
+      "${files[@]}" >"$jobs_map" 2>/dev/null || echo '{}' >"$jobs_map"
+  else
+    echo '{}' >"$jobs_map"
+  fi
+  jq -rs --argjson keep "$keep" --slurpfile jobs "$jobs_map" '
+    def since: (now - fromdate) | floor;
+    def dur: if . < 60 then "\(.)s" elif . < 3600 then "\(./60|floor)m\(.%60)s"
+      elif . < 86400 then "\(./3600|floor)h\(.%3600/60|floor)m" else "\(./86400|floor)d" end;
+    def ago: since | dur;
+    def took: ((.updated_at|fromdate) - ((.run_started_at // .created_at)|fromdate)) | floor | dur;
     def group: if .status == "in_progress" then "RUNNING"
       elif .status != "completed" then "QUEUED"
       elif .conclusion == "success" then "SUCCEEDED"
       elif (.conclusion == "cancelled" or .conclusion == "skipped") then "CANCELED"
       else "FAILED" end;
+    def failed: .conclusion | IN("failure", "timed_out", "startup_failure", "cancelled");
+    def jobline:
+      if .status == "in_progress" then
+        ([.steps[]? | select(.status == "in_progress")][0]) as $s
+        | ["J", .name, "running \(.started_at | ago)", (.runner_name // "-"),
+           (if $s then "step \($s.number)/\(.steps | length) \($s.name)"
+              + (if $s.started_at then " (\($s.started_at | ago))" else "" end)
+            else "setting up" end)]
+      elif .status == "completed" then
+        ([.steps[]? | select(.conclusion | IN("failure", "timed_out", "cancelled"))][0]) as $s
+        | ["J", .name,
+           .conclusion + (if .started_at and .completed_at
+             then " in \(((.completed_at | fromdate) - (.started_at | fromdate)) | dur)" else "" end),
+           (.runner_name // "-"),
+           (if $s then "failed at step \($s.number) \($s.name)"
+            elif (.steps | length) == 0 and failed then "no steps recorded"
+            else "" end)]
+      else
+        ["J", .name, "waiting \(.created_at | ago)", "-", "needs \(.labels | join(","))"]
+      end
+      | join("\t");
     [.[].workflow_runs[]? | . + {group: group}] as $runs
     | ["RUNNING", "QUEUED", "FAILED", "CANCELED", "SUCCEEDED"][] as $g
     | [$runs[] | select(.group == $g)]
@@ -72,19 +136,37 @@ render() {
         (if $g == "QUEUED" then "waiting \(.created_at|ago)"
          elif $g == "RUNNING" then "running \(.run_started_at|ago)"
          else "\(.updated_at|ago) ago, took \(took)" end) as $when
-        | "  \($when)\t\(.repository.name)\t\(.name)\t\(.head_branch)\t\(.conclusion // .status)\t\(.display_title)")
+        | "  \($when)\t\(.repository.name)\t\(.name)\t\(.head_branch)\t\(.conclusion // .status)\t\(.display_title)",
+          (($jobs[0][.id | tostring] // [])
+            | if $g == "RUNNING" or $g == "QUEUED" then .[] | select(.conclusion != "skipped")
+              elif $g == "FAILED" then .[] | select(failed)
+              else empty end
+            | jobline))
   ' "$cache"/*.json 2>/dev/null | awk -F'\t' -v cols="$cols" '
-    function fit(s, n) { return length(s) > n ? substr(s, 1, n - 1) "…" : s }
+    function fit(s, n) { return n < 1 ? "" : length(s) > n ? substr(s, 1, n - 1) "…" : s }
+    function shade(state) {
+      if (state ~ /^running/) return c["RUNNING"]
+      if (state ~ /^waiting/) return c["QUEUED"]
+      if (state ~ /^success/) return c["SUCCEEDED"]
+      if (state ~ /^(failure|timed_out|startup_failure)/) return c["FAILED"]
+      return c["CANCELED"]
+    }
     BEGIN {
       c["RUNNING"] = "\033[1;33m"; c["QUEUED"] = "\033[1;36m"; c["FAILED"] = "\033[1;31m"
-      c["CANCELED"] = "\033[1;35m"; c["SUCCEEDED"] = "\033[1;32m"; reset = "\033[0m"
+      c["CANCELED"] = "\033[1;35m"; c["SUCCEEDED"] = "\033[1;32m"; reset = "\033[0m"; dim = "\033[2m"
     }
     $1 in c { g = $1; printf "\n%s%s (%s)%s\n", c[g], g, $2, reset; next }
+    $1 == "J" {
+      printf "      %s└ %-28s%s %s%-22s%s %-14s %s%s%s\n", dim, fit($2, 28), reset,
+        shade($3), fit($3, 22), reset, fit($4, 14), dim, fit($5, cols - 78), reset
+      next
+    }
     {
       printf "%s%-24s%s %-22s %-20s %-24s %-10s %s\n", c[g], $1, reset,
         fit($2, 22), fit($3, 20), fit($4, 24), fit($5, 10), fit($6, cols - 106)
     }
   '
+  rm -f "$jobs_map"
 }
 
 trap 'tput cnorm; exit 0' INT TERM
@@ -93,6 +175,8 @@ while true; do
   rm -f "$cache/errors"
   for repo in "${repos[@]}"; do poll_repo "$repo" & done
   wait
+  poll_jobs
+  find "$cache/jobs" -name '*.json*' -mmin +1440 -delete 2>/dev/null || true
   frame="$(
     printf '%s CI runs on %d repos for %s, every %ss\n' \
       "$(date +%H:%M:%S)" "${#repos[@]}" "$owner" "$interval"
