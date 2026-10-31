@@ -157,11 +157,16 @@ def test_a_download_that_fails_says_where_it_was_looking_and_why(world, monkeypa
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_every_declared_tap_is_registered(world) -> None:
+def test_every_declared_tap_is_registered_and_trusted(world) -> None:
     reached = world()
 
     assert bootstrap.taps(('FelixKratz/formulae', 'nikitabobko/tap')).ok
-    assert reached.calls == [('brew', 'tap', 'FelixKratz/formulae'), ('brew', 'tap', 'nikitabobko/tap')]
+    assert reached.calls == [
+        ('brew', 'tap', 'FelixKratz/formulae'),
+        ('brew', 'trust', '--tap', 'FelixKratz/formulae'),
+        ('brew', 'tap', 'nikitabobko/tap'),
+        ('brew', 'trust', '--tap', 'nikitabobko/tap'),
+    ]
 
 
 def test_a_tap_that_fails_stops_the_batch_rather_than_warning(world) -> None:

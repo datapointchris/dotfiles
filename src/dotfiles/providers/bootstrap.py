@@ -109,13 +109,19 @@ def taps(wanted: Sequence[str]) -> Result:
     warning: installing anyway means every package in the group fails for a
     reason naming the wrong formula.
 
-    `brew tap` on an already-registered tap is a no-op, so this is idempotent
-    without asking what is registered.
+    Homebrew refuses to load a formula or cask from a tap nobody trusted, so a
+    registered tap is still unresolvable until it is trusted. Declaring the tap is
+    the trust decision, so the whole tap is trusted. Homebrew prefers trusting
+    single formulae, which would need each package to declare its tap.
+
+    `brew tap` and `brew trust` on a tap already registered or trusted are no-ops,
+    so this is idempotent without asking what is registered.
     """
     for tap in wanted:
-        added = effects.run(['brew', 'tap', tap], output=Output.QUIET)
-        if not added.ok:
-            return Result(False, f'brew tap {tap} exited {added.returncode}', kind=Kind.COMMAND_FAILED)
+        for command in (['brew', 'tap', tap], ['brew', 'trust', '--tap', tap]):
+            done = effects.run(command, output=Output.QUIET)
+            if not done.ok:
+                return Result(False, f'{" ".join(command)} exited {done.returncode}', kind=Kind.COMMAND_FAILED)
     return Result(True, '', kind=Kind.APPLIED)
 
 

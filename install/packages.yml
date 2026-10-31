@@ -7,7 +7,7 @@
 # ================================================================
 # MACOS HOMEBREW TAPS
 # ================================================================
-# Third-party Homebrew taps to add before installing packages
+# Third-party Homebrew taps to add and trust before installing packages
 # These provide packages not in the main Homebrew repository
 
 macos_taps:
