@@ -62,6 +62,7 @@ def test_the_run_is_stamped_on_every_event(tmp_path):
     dotfiles_logging.get_logger('test').info('phase_started', phase='packages')
 
     event = events_in(event_log)[0]
+    assert list(event)[:3] == ['timestamp', 'run_id', 'host'], 'a line opens with what tells it apart'
     assert event['run_id'] == 'abc123'
     assert event['host'] == 'box-a'
     assert 'machine' not in event

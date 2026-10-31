@@ -108,6 +108,19 @@ log existed. A stream that cannot say who wrote a line cannot be filtered by
 anyone reading it either."""
 
 
+LINE_LEADS_WITH = ('timestamp', 'run_id', 'host')
+
+
+def identity_first(
+    _logger: structlog.typing.WrappedLogger, _method: str, event_dict: structlog.typing.EventDict
+) -> structlog.typing.EventDict:
+    """Lead a line with when and by which run it was written, because a file tailer
+    tells files apart by their first kilobyte, and a long fixed first event made two
+    runs' streams look like one file."""
+    head = {key: event_dict[key] for key in LINE_LEADS_WITH if key in event_dict}
+    return {**head, **event_dict}
+
+
 def use_colors() -> bool:
     """LOG_COLORS forces the answer; otherwise ask the terminal.
 
@@ -192,7 +205,14 @@ def configure(event_log: Path | None = None) -> None:
         to_file.name = EVENT_LOG_HANDLER_NAME
         to_file.setLevel(logging.DEBUG)
         to_file.setFormatter(
-            structlog.stdlib.ProcessorFormatter(processor=structlog.processors.JSONRenderer(), foreign_pre_chain=SHARED_PROCESSORS)
+            structlog.stdlib.ProcessorFormatter(
+                processors=[
+                    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                    identity_first,
+                    structlog.processors.JSONRenderer(),
+                ],
+                foreign_pre_chain=SHARED_PROCESSORS,
+            )
         )
         logging.root.addHandler(to_file)
 
