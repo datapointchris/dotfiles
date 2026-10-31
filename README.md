@@ -120,7 +120,6 @@ Installed something six months ago and forgot about it? `doit` has you covered:
 doit kit list             # See everything, every collection
 doit show ripgrep         # Details, examples, why you installed it
 doit find git             # Find git-related tools, cards and shortcuts
-doit kit remind           # Surface something you forgot existed
 doit kit unused           # What you own, can run, and never do
 ```
 
@@ -190,7 +189,3 @@ This is a personal dotfiles repo, but you're welcome to:
 ## License
 
 MIT - do whatever you want with it
-
----
-
-**Tip**: `doit kit remind` surfaces something you have not reached for in 90 days, and the weekly nudge runs it for you.
