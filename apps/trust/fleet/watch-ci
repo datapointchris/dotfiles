@@ -17,10 +17,10 @@ request comes from the repo's pull request list rather than the run's own
 run is matched to the pull request whose merge commit it ran on.
 
 The board is one table under a row of column names, the shape of `gh run list`.
-Each run is one row: its repo, workflow and number, age, how long it took, its
-title, and last how a failure resolved, its trigger and its tag. Each job is a
-row below it on the same columns: its step under the title, and its runner or
-attempts last. No row wraps. Text past the edge of the screen is cut with an
+Each run is one row: its age beside its symbol, its repo, its title, how long it
+took, its workflow and number, and last how a failure resolved, its trigger and
+its tag. Each job is a row below it: its step beside its symbol, then on the
+run's columns how long it took, its name, and its runner or attempts. No row wraps. Text past the edge of the screen is cut with an
 ellipsis, so the columns hold however long a title or a log line runs.
 
 Under each running or queued run is a row per job: how long it has run, its
@@ -119,7 +119,7 @@ PRUNE_EVERY = 600
 GROUPS = ('RUNNING', 'QUEUED', 'FAILED', 'CANCELED', 'SUCCEEDED')
 LIVE = ('RUNNING', 'QUEUED')
 FAILED_CONCLUSIONS = frozenset({'failure', 'timed_out', 'startup_failure'})
-COLUMN_LABELS = ('REPO', 'RUN / JOB', 'AGE', 'TOOK', 'TITLE / STEP', 'TRIGGER / RUNNER')
+COLUMN_LABELS = ('AGE', 'REPO', 'TITLE / STEP', 'TOOK', 'RUN / JOB', 'TRIGGER / RUNNER')
 RUN_MOST = 32
 TRIGGER_LEAST = 24
 PULL_REQUEST_EVENTS = frozenset({'pull_request', 'pull_request_target'})
@@ -791,16 +791,16 @@ class AnsiRenderer:
 
 @dataclass(frozen=True)
 class RunRow:
-    """One run's cells in column order: symbol, repo, run, age, took, trigger and title."""
+    """One run's cells in column order: age, symbol, repo, title, took, run and trigger."""
 
+    age: Cell
     symbol: str
     color: str
     repo: Cell
-    run: Cell
-    age: Cell
-    took: Cell
-    trigger: Line
     title: str
+    took: Cell
+    run: Cell
+    trigger: Line
 
 
 @dataclass(frozen=True)
@@ -818,20 +818,28 @@ class JobRow:
 
 @dataclass(frozen=True)
 class Columns:
-    """Widths shared by every row on the screen. A job's name spans the repo and run columns, and its step sits under the title.
+    """Widths shared by every row on the screen. A job's step starts beside its symbol and spans the repo and title columns.
 
     The trigger column is last and unpadded, so the screen's edge cuts it first.
     """
 
-    repo: int
-    run: int
     age: int
-    took: int
+    repo: int
     title: int
+    took: int
+    run: int
+
+    @property
+    def repo_at(self) -> int:
+        return len('  ') + self.age + len(' ✓ ')
+
+    @property
+    def step_at(self) -> int:
+        return self.repo_at + len('└ ✓ ')
 
     @property
     def title_at(self) -> int:
-        return len('  ✓ ') + self.repo + self.run + self.age + self.took + 4 * len(GAP.text)
+        return self.repo_at + self.repo + len(GAP.text)
 
 
 def job_symbol(job: Json) -> tuple[str, str]:
@@ -910,14 +918,14 @@ class Layout:
             took = Cell(duration(epoch(run['updated_at']) - epoch(run.get('run_started_at') or run['created_at'])))
         symbol, color = RUN_SYMBOL[group]
         return RunRow(
+            age,
             symbol,
             color,
             Cell(clean(repo['name']), BOLD, f'{repo["html_url"]}/actions'),
-            Cell(f'{clean(run["name"])} #{run["run_number"]}', '', run['html_url']),
-            age,
-            took,
-            self.trigger(entry),
             self.board.title(run),
+            took,
+            Cell(f'{clean(run["name"])} #{run["run_number"]}', '', run['html_url']),
+            self.trigger(entry),
         )
 
     def job_row(self, job: Json, note: str, runner: bool) -> JobRow:
@@ -968,17 +976,17 @@ class Layout:
             clip(
                 [
                     Cell('  '),
+                    column(run.age, columns.age, right=True),
+                    Cell(' '),
                     Cell(run.symbol, run.color),
                     Cell(' '),
                     column(run.repo, columns.repo),
                     GAP,
-                    column(run.run, columns.run),
-                    GAP,
-                    column(run.age, columns.age, right=True),
+                    column(Cell(run.title), columns.title),
                     GAP,
                     column(run.took, columns.took, right=True),
                     GAP,
-                    column(Cell(run.title), columns.title),
+                    column(run.run, columns.run),
                     GAP,
                     *run.trigger,
                 ],
@@ -987,28 +995,25 @@ class Layout:
         ]
         failure = entry.failure
         excerpted = {job['id'] for job in failure.latest_attempt_jobs()} if failure and not failure.resolution else set()
-        name_width = columns.repo + len(GAP.text) + columns.run - len('└ ✓ ')
         for job in jobs:
             passed = job.color == GREEN
             row: Line = [
-                Cell('    '),
+                Cell(' ' * columns.repo_at),
                 Cell('└ ', DIM),
                 Cell(job.symbol, job.color),
                 Cell(' '),
-                column(Cell(job.name, '', job.job.get('html_url') or ''), name_width),
-                GAP,
-                Cell('', pad=columns.age),
+                column(Cell(job.step, DIM), columns.title_at + columns.title - columns.step_at),
                 GAP,
                 column(Cell(job.took, '' if passed else job.color), columns.took, right=True),
                 GAP,
-                column(Cell(job.step, DIM), columns.title),
+                column(Cell(job.name, '', job.job.get('html_url') or ''), columns.run),
                 GAP,
                 Cell(job.where, DIM if passed else ''),
             ]
             lines.append(clip(row, self.width))
             if job.job['id'] in excerpted:
                 for excerpt in self.board.excerpt(job.job['id']):
-                    lines.append(clip([Cell(' ' * columns.title_at), Cell('│ ', RED), Cell(clean(excerpt))], self.width))
+                    lines.append(clip([Cell(' ' * columns.step_at), Cell('│ ', RED), Cell(clean(excerpt))], self.width))
         return lines
 
 
@@ -1055,15 +1060,19 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
         return min(wanted, most) if most else wanted
 
     columns = Columns(
-        repo=widest([r.repo.text for r in runs.values()], COLUMN_LABELS[0]),
-        run=widest([r.run.text for r in runs.values()], COLUMN_LABELS[1], RUN_MOST),
-        age=widest([r.age.text for r in runs.values()], COLUMN_LABELS[2]),
-        took=widest([r.took.text for r in runs.values()] + [j.took for j in every_job], COLUMN_LABELS[3]),
+        age=widest([r.age.text for r in runs.values()], COLUMN_LABELS[0]),
+        repo=widest([r.repo.text for r in runs.values()], COLUMN_LABELS[1]),
         title=0,
+        took=widest([r.took.text for r in runs.values()] + [j.took for j in every_job], COLUMN_LABELS[3]),
+        run=widest([r.run.text for r in runs.values()] + [j.name for j in every_job], COLUMN_LABELS[4], RUN_MOST),
     )
-    title_room = max(len(COLUMN_LABELS[4]), width - columns.title_at - len(GAP.text) - TRIGGER_LEAST)
-    texts = [r.title for r in runs.values()] + [j.step for j in every_job]
-    columns = replace(columns, title=widest(texts, COLUMN_LABELS[4], title_room))
+    after_title = columns.took + columns.run + 3 * len(GAP.text) + TRIGGER_LEAST
+    title_room = max(len(COLUMN_LABELS[2]), width - columns.title_at - after_title)
+    step_lead = columns.title_at - columns.step_at
+    wanted = max(
+        [width_of(COLUMN_LABELS[2]), *(width_of(r.title) for r in runs.values()), *(width_of(j.step) - step_lead for j in every_job)]
+    )
+    columns = replace(columns, title=min(wanted, title_room))
     blocks = {id(e): [renderer.line(line) for line in layout.block(e, runs[id(e)], jobs[id(e)], columns)] for e in every}
 
     header: Line = [
@@ -1082,9 +1091,9 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
         if until > board.now:
             name = 'GraphQL' if resource == 'graphql' else 'REST'
             header += [GAP, Cell(f'· {name} held until {time.strftime("%H:%M:%S", time.localtime(until))}: {because}', RED)]
-    widths = (columns.repo, columns.run, columns.age, columns.took, columns.title)
-    labels: Line = [Cell(' ' * len('  ✓ '))]
-    for label, label_width, right in zip(COLUMN_LABELS[:-1], widths, (False, False, True, True, False), strict=True):
+    labels: Line = [Cell('  '), Cell(COLUMN_LABELS[0], DIM, pad=columns.age, right=True), Cell(' ' * len(' ✓ '))]
+    widths = (columns.repo, columns.title, columns.took, columns.run)
+    for label, label_width, right in zip(COLUMN_LABELS[1:-1], widths, (False, False, True, False), strict=True):
         labels += [Cell(label, DIM, pad=label_width, right=right), GAP]
     labels.append(Cell(COLUMN_LABELS[-1], DIM))
     top = [renderer.line(clip(header, width)), '', renderer.line(clip(labels, width))]
