@@ -37,7 +37,8 @@ then the run column, then the title, and text cut short ends in an ellipsis.
 
 Under each running or queued run is a row per job: how long it has run, its
 runner, and its current step with how long that step has run, or the labels a
-waiting job needs. A job's time takes its symbol's color, so a passed job's is
+waiting job needs. A finished job says how it ended, how long ago, and how many
+steps it ran. A job's time takes its symbol's color, so a passed job's is
 green beside its check. A running run's TOOK is its time so far over the median of
 its workflow's last successful runs, red once past twice that median. A queued
 run's AGE is how long it has waited. A run is RUNNING once any job of its attempt has started, and
@@ -953,8 +954,12 @@ def job_symbol(job: Json) -> tuple[str, str]:
 
 
 def step_named(steps: list[Json], step: Json) -> str:
-    """A step by its position, since step numbers skip: a job's post steps are numbered from 25 in an 18-step job."""
-    return f'step {steps.index(step) + 1}/{len(steps)} {clean(step["name"])}'
+    """A step by its position, since step numbers skip: a job's post steps are numbered from 25 in an 18-step job.
+
+    An action pinned to a commit keeps the commit's first seven characters, as git shortens one.
+    """
+    name = re.sub(r'@([0-9a-f]{7})[0-9a-f]{33}\b', r'@\1', clean(step['name']))
+    return f'step {steps.index(step) + 1}/{len(steps)} {name}'
 
 
 class Layout:
@@ -1041,7 +1046,14 @@ class Layout:
             if job.get('started_at') and job.get('completed_at'):
                 took = duration(epoch(job['completed_at']) - epoch(job['started_at']))
             stopped = next((s for s in steps if s.get('conclusion') in ('failure', 'timed_out', 'cancelled')), None)
-            detail = step_named(steps, stopped) if stopped else 'no steps recorded' if failed(job) and not steps else ''
+            if stopped:
+                detail = step_named(steps, stopped)
+            elif failed(job) and not steps:
+                detail = 'no steps recorded'
+            else:
+                ended = {'success': 'passed'}.get(job.get('conclusion') or '', job.get('conclusion') or 'finished')
+                when = f'{ended} {ago(now - epoch(job["completed_at"]))} ago' if job.get('completed_at') else ended
+                detail = f'{when} · {len(steps)} step{"" if len(steps) == 1 else "s"}' if steps else when
             timed_out = 'timed out' if job.get('conclusion') == 'timed_out' else ''
             where = ' · '.join(filter(None, [clean(job.get('runner_name')) if runner else '', note, timed_out]))
             return JobRow(job, symbol, color, name, took, where, detail)
