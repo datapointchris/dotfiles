@@ -1003,55 +1003,50 @@ steps:
     network_trust: fleet
     needs_root: true
 
-# Commands this account runs on an interval: a systemd user timer on Linux, a
-# LaunchAgent on macOS. Each unit starts `dotfiles timers run <name>`, which runs
-# `argv` and appends what happened to $XDG_STATE_HOME/dotfiles/timer-reports/,
-# keyed by `report_key` so a failure and the pass after it name the same row.
-# `providers/timers.py` and `timer_reports.py` are the mechanics. Windows is
-# excluded throughout, since it has neither manager.
+# Commands this account runs on an interval. `providers/timers.py` installs them
+# and `timer_reports.py` records each run. Windows has neither manager, so every
+# row excludes it.
 user_timers:
   - name: update-check
     description: Whether each self-updating tool's last release check succeeded, read from its state file
     argv: [dotfiles, updates, check, --json]
     every: 1d
-    report_key: update-check-failing
     excludes_os_family: windows
 
   - name: repos-fetch
-    description: Fetch every registered clone's remote-tracking refs and tags, touching no working tree
+    description: Fetch the remotes of every clone syncer tracks
     argv: [syncer, fetch]
     every: 10m
-    report_key: schedule/job-failed/repos-fetch
     network_trust: fleet
     excludes_os_family: windows
 
-  # The rest run on one machine, because what they build is synced to the others
-  # or reads that machine's own sessions.
+  # These run only where a manifest sets primary_workstation. What they build
+  # syncs to the other machines, or reads this machine's own sessions.
   - name: exemplar-pull
     description: Fast-forward the read-only reference clones under ~/code/refs
     argv: [syncer, apply, -c, ~/.local/share/terminal-library-fleet/exemplar-repos.json]
     every: 1w
-    report_key: schedule/job-failed/exemplar-pull
     network_trust: fleet
     feature: primary_workstation
+    excludes_os_family: windows
   - name: indy-index
-    description: Re-index every repo and clone into indy's search store, which syncs to every machine
+    description: Re-index indy's search store
     argv: [indy, index]
     every: 1d
-    report_key: schedule/job-failed/indy-index
     network_trust: fleet
     feature: primary_workstation
+    excludes_os_family: windows
   - name: usage-export
-    description: Measure this machine's shell history into the usage table the digest merges
+    description: Export this machine's shell-history usage
     argv: [doit, kit, digest, export]
     every: 1d
-    report_key: schedule/job-failed/usage-export
     network_trust: fleet
     feature: primary_workstation
+    excludes_os_family: windows
   - name: worker-health
     description: Whether each headless Claude worker on this machine is still producing
-    argv: [uv, run, --project, ~/.claude, python, ~/.claude/hooks/worker-health, --save]
+    argv: [uv, run, --project, ~/.claude, python, ~/.claude/hooks/worker-health, --save, --json]
     every: 1d
-    report_key: schedule/job-failed/worker-health
     network_trust: fleet
     feature: primary_workstation
+    excludes_os_family: windows

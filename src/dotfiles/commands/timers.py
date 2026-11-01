@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import sys
+
 import typer
 
 from dotfiles import catalog
@@ -29,7 +32,12 @@ def run(name: str = NameArgument, as_json: bool = JsonOption) -> None:
         err_console.print(f'no user_timers row is named {name!r}. Declared: {", ".join(sorted(rows)) or "none"}')
         raise typer.Exit(ExitCode.USAGE)
     line = timer_reports.run(entry)
-    path = timer_reports.record(line)
+    try:
+        path = timer_reports.record(line)
+    except OSError as failed:
+        err_console.print(f'{name}: could not record the run in {timer_reports.REPORTS_DIR}: {failed}', soft_wrap=True)
+        sys.stderr.write(json.dumps(line) + '\n')
+        raise typer.Exit(ExitCode.ISSUE) from failed
     if as_json:
         emit_json(line)
     else:

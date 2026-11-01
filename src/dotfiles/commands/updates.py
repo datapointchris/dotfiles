@@ -30,9 +30,10 @@ def check(
 ) -> None:
     """Report the tools whose last release check failed, or whose state file cannot be read.
 
-    Exit 3 when any did, 0 when none did. A tool with no state file is not
-    reported: its gate writes nothing until it checks. `-q` prints the summary
-    alone, and `-v` adds a row for each tool that checked cleanly.
+    Exit 0 when every tool's last check succeeded, 1 when one failed, and 3 when
+    a state file could not be read or no tool has written one for this machine.
+    A tool with no state file for this machine is left out. `-q` prints the
+    summary alone, and `-v` adds a row for each tool that checked cleanly.
     """
     verbosity(verbose, quiet)
     found = updates.scan(state or updates.state_home())
@@ -49,4 +50,6 @@ def check(
                 if not tool['last_error']:
                     console.print(f'{tool["tool"]}  last checked {tool["checked_at"] or "never"}')
         err_console.print(found['summary'] or f'{len(found["checked"])} tools checked, none reported a failure ({found["state_home"]})')
-    raise typer.Exit(ExitCode.ISSUE if found['summary'] else ExitCode.CONVERGED)
+    if found['unreadable'] or found['nothing_checked']:
+        raise typer.Exit(ExitCode.ISSUE)
+    raise typer.Exit(ExitCode.DRIFT if found['failing'] else ExitCode.CONVERGED)

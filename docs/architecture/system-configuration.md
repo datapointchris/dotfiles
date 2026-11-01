@@ -80,33 +80,19 @@ installer run it, and that page promises the reverse.
 
 ## A timer row's unit runs `dotfiles timers run`, never the command itself
 
-A `user_timers` row is a command and an interval. Its unit, a systemd user timer
-or a LaunchAgent, starts `dotfiles timers run <name>` rather than the command. So
-every run is recorded by this repo's code, whatever the command is. The record is
-one JSON line in `$XDG_STATE_HOME/dotfiles/timer-reports/<date>-<machine>.jsonl`.
-It carries the outcome, a summary, the command's report and the row's
-`report_key`.
+A row's unit starts `dotfiles timers run <name>` rather than the command. So
+every run is recorded by this repo's code, whatever the command is.
+`timer_reports.py` says what a record holds.
 
-The key is what lets a reader close what it opened. A failure and the pass after
-it carry the same key, so the reader that filed a row on the failure resolves it
-on the pass.
+dotfiles posts the record nowhere. Where a machine runs an OTLP agent, the agent
+tails the reports directory and ships each line. That keeps one path for
+everything a machine produces, and the agent queues on disk while the collector
+is out of reach. A machine with no agent keeps the file, and `dotfiles check`
+reads each row's newest run from it.
 
-dotfiles posts the record nowhere. The machine's OTLP agent tails the directory,
-and its `timer_reports` receiver maps each line to a `desk.check` record. That
-keeps one path for everything a desk produces, and the agent queues on disk while
-the collector is out of reach.
-
-Every line opens with its timestamp. The tailer tells files apart by their first
-kilobyte, and two days whose files began with the same bytes would read as one
-file already shipped.
-
-A row narrowed by `feature: primary_workstation` runs on one machine only. What
-it builds, such as a search index, syncs to the others, so running it on each
-would repeat the work.
-
-Nothing plans a row that is no longer declared. Deleting one leaves its units
-installed, and `systemctl --user disable --now dotfiles-timer-<name>.timer` stops
-it.
+A row narrowed by `feature: primary_workstation` runs only where a manifest sets
+that feature. What it builds, such as a search index, syncs to the other
+machines, so running it on each would repeat the work.
 
 ## A browser's extensions are configuration where the browser has a policy
 
