@@ -71,7 +71,7 @@ npm_globals: []
 uv_tools:
   - pre-commit  # runs a repo's commit hooks when the fix job commits there
   - doit        # the usage-digest job runs `doit kit digest run` on this box
-  - syncer      # `fleet audit run` fast-forwards every checkout through it
+  - syncer      # the repos-pull job fast-forwards every checkout on this box through it
 
 shell_plugins: true
 tmux_plugins: true
