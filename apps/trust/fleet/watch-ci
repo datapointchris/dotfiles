@@ -289,15 +289,31 @@ class GitHub:
         self.parsed.pop(body, None)
 
     def note_rate(self, headers: Any) -> None:
-        """The lowest remaining count per resource until its window resets, since GraphQL sometimes answers from a second, fresh window."""
         try:
             remaining, limit, reset = (int(headers[k]) for k in ('x-ratelimit-remaining', 'x-ratelimit-limit', 'x-ratelimit-reset'))
         except (KeyError, ValueError):
             return
-        resource = headers.get('x-ratelimit-resource', 'core')
+        self.keep_rate(headers.get('x-ratelimit-resource', 'core'), remaining, limit, reset)
+
+    def keep_rate(self, resource: str, remaining: int, limit: int, reset: int) -> None:
+        """The lowest remaining count per resource until its window resets, since GraphQL sometimes answers from a second, fresh window."""
         last = self.rates.get(resource)
         if last is None or last[2] <= time.time() or remaining < last[0]:
             self.rates[resource] = (remaining, limit, reset)
+
+    async def read_graphql_rate(self) -> None:
+        """GraphQL's budget from /rate_limit, which costs nothing, while no live query has reported it in the current window."""
+        last = self.rates.get('graphql')
+        if last and last[2] > time.time():
+            return
+        try:
+            response = await self.client.get('/rate_limit')
+            graphql = response.json()['resources']['graphql']
+            self.keep_rate('graphql', int(graphql['remaining']), int(graphql['limit']), int(graphql['reset']))
+        except httpx2.HTTPError as error:
+            self.errors.append(f'rate limit: {type(error).__name__} {error}')
+        except (KeyError, TypeError, ValueError) as error:
+            self.errors.append(f'rate limit: no GraphQL figure in the answer ({error})')
 
     async def refresh(self, path: str, body: Path, label: str) -> bool:
         """GET path into body, sending the last ETag. True when the body changed."""
@@ -1218,6 +1234,7 @@ async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bo
                     continue
                 if not github.held('core', started):
                     await poller.poll()
+                    await github.read_graphql_rate()
                     if follower is None:
                         await poller.read_live()
                         await poller.read_jobs(time.time())
