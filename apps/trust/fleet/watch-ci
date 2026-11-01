@@ -13,7 +13,12 @@ once each IDLE_EVERY seconds, the repos spread across that time, so a run starti
 there shows within IDLE_EVERY. GitHub's secondary limit allows 900 REST points a
 minute and 100 requests at once, and its docs do not say whether a 304 counts. So
 the idle cadence keeps a registry of a hundred repos under 900 a minute either way,
-and every request waits for one of IN_FLIGHT_MOST slots.
+and every REST request waits for one of IN_FLIGHT_MOST slots. The live GraphQL
+query has its own lane, so a burst of REST reads never delays it.
+
+The screen redraws every interval from whatever has landed, and at once when the
+terminal is resized. Fetching runs beside it, so a slow poll delays the data but
+never the clock on the screen.
 
 Each run says what it ran for: the trigger, the pull request it tested or merged,
 the tag on its commit, and who started it when that was not the owner. The pull
@@ -25,8 +30,10 @@ The board is one table under a row of column names, the shape of `gh run list`.
 Each run is one row: its age beside its symbol, its repo, its title, how long it
 took, its workflow and number, and last how a failure resolved, its trigger and
 its tag. Each job is a row below it: its step beside its symbol, then on the
-run's columns how long it took, its name, and its runner or attempts. No row wraps. Text past the edge of the screen is cut with an
-ellipsis, so the columns hold however long a title or a log line runs.
+run's columns how long it took, its name, and its runner or attempts. Each column
+is as wide as its widest cell while the screen has room, measured again on every
+frame. No row wraps. Past the screen's width the trigger column gives way first,
+then the run column, then the title, and text cut short ends in an ellipsis.
 
 Under each running or queued run is a row per job: how long it has run, its
 runner, and its current step with how long that step has run, or the labels a
@@ -67,10 +74,12 @@ the live query fails, live runs' REST jobs are read every JOBS_EVERY.
 
 A repo's pull requests are read when a run newer than the last read appears, and
 its tags when a run finishes, because a pull request list changes on every
-comment and push. A spent hourly limit holds the API that refused it, REST or
+comment and push. The leader publishes when it last read each, so a new leader
+does not read them all again. A spent hourly limit holds the API that refused it, REST or
 GraphQL, until its reset. Any other 403 or 429 that names a rate limit is the
 secondary limit, which REST and GraphQL share, so it holds both. It holds for the
-`retry-after` GitHub sends, or HOLD_UNSAID seconds where it sends none.
+`retry-after` GitHub sends. Where it sends none, the hold starts at HOLD_FIRST
+seconds and doubles with each refusal in a row, up to HOLD_MOST.
 
 Every instance watching the same repos shares one poll. The first to start takes a
 lock in the cache directory and polls. Every other instance draws from the cache,
@@ -104,6 +113,7 @@ import sys
 import time
 import unicodedata
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import replace
 from pathlib import Path
@@ -126,7 +136,8 @@ IDLE_EVERY = 10.0
 HOT_FOR = 300
 IN_FLIGHT_MOST = 8
 VIEWER_FRESH = 5.0
-HOLD_UNSAID = 60
+HOLD_FIRST = 3
+HOLD_MOST = 60
 EXCERPT_RETRY = 60
 EXCERPT_ATTEMPTS = 3
 EXCERPTS_PER_POLL = 4
@@ -279,9 +290,11 @@ class GitHub:
         self.errors: list[str] = []
         self.rates: dict[str, tuple[int, int, int]] = {}
         self.holds: dict[str, tuple[float, str]] = {}
+        self.refusals = 0
         self.slots = asyncio.Semaphore(IN_FLIGHT_MOST)
 
     async def send(self, method: str, path: str, **options: Any) -> Any:
+        """A REST request, once one of IN_FLIGHT_MOST slots is free."""
         async with self.slots:
             return await self.client.request(method, path, **options)
 
@@ -289,18 +302,29 @@ class GitHub:
         return self.holds.get(resource, (0.0, ''))[0] > now
 
     def note_refusal(self, response: Any, limited: bool = False) -> None:
-        """A spent hourly limit holds its own API until the reset; a secondary limit holds REST and GraphQL alike."""
+        """A spent hourly limit holds its own API until the reset; a secondary limit holds REST and GraphQL alike.
+
+        A secondary limit with no `retry-after` holds for HOLD_FIRST seconds, doubling up to HOLD_MOST with each
+        refusal after a hold ends. Requests already in flight when one is refused do not count again. Any answer
+        that is not a refusal starts the count over.
+        """
         if response.status_code not in (403, 429) and not limited:
+            self.refusals = 0
             return
         headers = response.headers
+        now = time.time()
         if headers.get('x-ratelimit-remaining') == '0' and not headers.get('retry-after'):
             resource = headers.get('x-ratelimit-resource', 'core')
-            self.holds[resource] = (float(headers.get('x-ratelimit-reset', time.time() + HOLD_UNSAID)), 'its hourly limit is spent')
+            self.holds[resource] = (float(headers.get('x-ratelimit-reset', now + HOLD_MOST)), 'its hourly limit is spent')
             return
         if retry := headers.get('retry-after'):
-            hold = (time.time() + int(retry), f'GitHub asked for {retry}s between requests')
+            hold = (now + int(retry), f'GitHub asked for {retry}s between requests')
         elif limited or response.status_code == 429 or 'rate limit' in response.text.lower():
-            hold = (time.time() + HOLD_UNSAID, 'GitHub refused it as the secondary rate limit')
+            if self.held('core', now):
+                return
+            wait = min(HOLD_FIRST * 2**self.refusals, HOLD_MOST)
+            self.refusals += 1
+            hold = (now + wait, f'GitHub refused it as the secondary rate limit, refusal {self.refusals} in a row')
         else:
             return
         self.holds['core'] = self.holds['graphql'] = hold
@@ -388,9 +412,9 @@ class GitHub:
         return response.text if response.status_code == 200 else None
 
     async def graphql(self, query: str, variables: Json) -> tuple[Json | None, str]:
-        """The query's data, or None and why there is none."""
+        """The query's data, or None and why there is none. It skips the REST slots, so a burst of REST reads never delays the live view."""
         try:
-            response = await self.send('POST', '/graphql', json={'query': query, 'variables': variables})
+            response = await self.client.request('POST', '/graphql', json={'query': query, 'variables': variables})
         except httpx2.HTTPError as error:
             return None, f'{type(error).__name__} {error}'
         self.note_rate(response.headers)
@@ -461,13 +485,14 @@ class ActionsPoller:
         rest = {job['id']: job['status'] for job in self.rest_jobs(run_id)}
         return any(rest.get(job_id) != live['status'] for job_id, live in self.live_jobs[run_id].items())
 
-    async def follow_live(self, every: float) -> None:
+    async def follow_live(self, every: float, landed: Callable[[], None]) -> None:
         """Keep the live view current: each `every` seconds while a job runs, otherwise each LIVE_QUIET_EVERY or when a run list changes."""
         while True:
             started = time.time()
             self.run_lists_changed.clear()
             if self.visible and not self.github.held('graphql', started):
                 await self.read_live()
+                landed()
             await asyncio.sleep(max(started + every - time.time(), 0.0))
             if not self.running_check_runs:
                 with contextlib.suppress(TimeoutError):
@@ -1134,15 +1159,19 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
         repo=widest([r.repo.text for r in runs.values()], COLUMN_LABELS[1]),
         title=0,
         took=widest([r.took.text for r in runs.values()] + [j.took for j in every_job], COLUMN_LABELS[3]),
-        run=widest([r.run.text for r in runs.values()] + [j.name for j in every_job], COLUMN_LABELS[4], RUN_MOST),
+        run=widest([r.run.text for r in runs.values()] + [j.name for j in every_job], COLUMN_LABELS[4]),
     )
-    after_title = columns.took + columns.run + 3 * len(GAP.text) + TRIGGER_LEAST
-    title_room = max(len(COLUMN_LABELS[2]), width - columns.title_at - after_title)
     step_lead = columns.title_at - columns.step_at
-    wanted = max(
+    title = max(
         [width_of(COLUMN_LABELS[2]), *(width_of(r.title) for r in runs.values()), *(width_of(j.step) - step_lead for j in every_job)]
     )
-    columns = replace(columns, title=min(wanted, title_room))
+    trigger = max([width_of(COLUMN_LABELS[-1]), *(line_width(r.trigger) for r in runs.values()), *(width_of(j.where) for j in every_job)])
+    # Past the screen's width the trigger column gives way first, then the run column, then the title.
+    over = columns.title_at + title + columns.took + columns.run + 3 * len(GAP.text) + trigger - width
+    over -= min(max(over, 0), max(trigger - TRIGGER_LEAST, 0))
+    run = columns.run - min(max(over, 0), max(columns.run - RUN_MOST, 0))
+    over -= columns.run - run
+    columns = replace(columns, run=run, title=max(width_of(COLUMN_LABELS[2]), title - max(over, 0)))
     blocks = {id(e): [renderer.line(line) for line in layout.block(e, runs[id(e)], jobs[id(e)], columns)] for e in every}
 
     header: Line = [
@@ -1311,6 +1340,7 @@ class SharedPoll:
             'holds': github.holds,
             'live_note': live_note,
             'errors': errors,
+            'references_read': {f'{kind}/{repo}': newest for (kind, repo), newest in poller.references_read.items()},
         }
         staged = self.state.with_name(self.state.name + '.new')
         staged.write_text(json.dumps(state))
@@ -1326,6 +1356,8 @@ class SharedPoll:
             poller.live_took = state['live_took']
             github.rates = {resource: tuple(rate) for resource, rate in state['rates'].items()}
             github.holds = {resource: tuple(hold) for resource, hold in state['holds'].items()}
+            references = (key.split('/', 1) for key in state.get('references_read', {}))
+            poller.references_read = {(kind, repo): state['references_read'][f'{kind}/{repo}'] for kind, repo in references}
         except (OSError, ValueError, KeyError, TypeError):
             return {}
         return state
@@ -1368,61 +1400,123 @@ async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bo
     shared = SharedPoll(cache, owner, repos)
     async with httpx2.AsyncClient(base_url=API, headers=headers, timeout=20) as client:
         github = GitHub(client, cache)
-        poller = ActionsPoller(github, owner, repos)
-        live_every = max(LIVE_EVERY_LEAST, args.interval)
-        live_task: asyncio.Task[None] | None = None
+        watcher = Watcher(args, ActionsPoller(github, owner, repos), github, shared, renderer, live)
         try:
             with Screen(live) as screen:
-                while True:
-                    started = time.time()
-                    on = not live or on_screen()
-                    if on:
-                        shared.seen()
-                    if shared.lead():
-                        if live_task is None and not args.once:
-                            poller.stagger(started)
-                            live_task = asyncio.create_task(poller.follow_live(live_every))
-                        watchers = shared.other_viewers(started)
-                        poller.visible = on or watchers > 0
-                        if not poller.visible:
-                            await asyncio.sleep(args.interval)
-                            continue
-                        if not github.held('core', started):
-                            await poller.poll()
-                            await github.read_graphql_rate()
-                            if live_task is None:
-                                await poller.read_live()
-                                await poller.read_jobs(time.time())
-                            await poller.read_excerpts(Board(poller, time.time()).standing_failed_jobs(args.keep))
-                        live_note = ''
-                        if poller.running_check_runs:
-                            live_note = f'steps every {max(live_every, poller.live_took):.1f}s'
-                        elif poller.live_jobs:
-                            live_note = f'jobs every {LIVE_QUIET_EVERY:g}s while none runs'
-                        errors = [*github.errors, *([poller.live_error] if poller.live_error else [])]
-                        shared.publish(poller, github, live_note, errors)
-                        source = f'polling for {watchers} other window{"" if watchers == 1 else "s"}' if watchers else ''
-                    else:
-                        if not on:
-                            await asyncio.sleep(args.interval)
-                            continue
-                        state = shared.adopt(poller, github)
-                        live_note, errors = state.get('live_note', ''), state.get('errors', [])
-                        source = (
-                            f"drawn from pid {state['pid']}'s poll {time.time() - state['written']:.0f}s ago"
-                            if state
-                            else 'waiting for the polling instance to publish'
-                        )
-                    summary = PollSummary(len(repos), args.interval, dict(github.rates), dict(github.holds), live_note, errors, source)
-                    size = shutil.get_terminal_size((120, 0))
-                    screen.draw(
-                        render(Board(poller, time.time()), summary, args.keep, size.columns, size.lines if live else None, renderer)
-                    )
-                    if args.once:
-                        return
-                    await asyncio.sleep(max(args.interval - (time.time() - started), 0.0))
+                if args.once:
+                    await watcher.fetch()
+                    watcher.draw(screen)
+                    return
+                with contextlib.suppress(NotImplementedError):
+                    asyncio.get_running_loop().add_signal_handler(signal.SIGWINCH, watcher.resized.set)
+                fetching = asyncio.create_task(watcher.fetch_every_interval())
+                try:
+                    await watcher.draw_every_interval(screen)
+                finally:
+                    fetching.cancel()
         finally:
             shared.leave()
+
+
+class Watcher:
+    """One instance's two loops. Fetching never holds a frame back.
+
+    The fetch loop leads the polling or leaves it to the leader. The draw loop redraws every interval
+    from whatever has landed, and at once when the terminal is resized, so a slow poll delays only
+    the data, never the clock on the screen.
+    """
+
+    def __init__(
+        self, args: argparse.Namespace, poller: ActionsPoller, github: GitHub, shared: SharedPoll, renderer: AnsiRenderer, live: bool
+    ) -> None:
+        self.args = args
+        self.poller = poller
+        self.github = github
+        self.shared = shared
+        self.renderer = renderer
+        self.live = live
+        self.live_every = max(LIVE_EVERY_LEAST, args.interval)
+        self.live_task: asyncio.Task[None] | None = None
+        self.took_over = False
+        self.on = True
+        self.live_note = ''
+        self.errors: list[str] = []
+        self.source = ''
+        self.resized = asyncio.Event()
+
+    async def fetch_every_interval(self) -> None:
+        while True:
+            started = time.time()
+            await self.fetch()
+            await asyncio.sleep(max(self.args.interval - (time.time() - started), 0.0))
+
+    async def fetch(self) -> None:
+        """One poll when this instance leads and someone is watching. A follower fetches nothing."""
+        started = time.time()
+        if not self.shared.lead():
+            return
+        if not self.took_over:
+            self.took_over = True
+            self.shared.adopt(self.poller, self.github)
+            self.poller.stagger(started)
+            if not self.args.once:
+                self.live_task = asyncio.create_task(self.poller.follow_live(self.live_every, self.landed))
+        watchers = self.shared.other_viewers(started)
+        self.poller.visible = self.on or watchers > 0
+        self.source = f'polling for {watchers} other window{"" if watchers == 1 else "s"}' if watchers else ''
+        if not self.poller.visible or self.github.held('core', started):
+            return
+        await self.poller.poll()
+        await self.github.read_graphql_rate()
+        if self.live_task is None:
+            await self.poller.read_live()
+            await self.poller.read_jobs(time.time())
+        await self.poller.read_excerpts(Board(self.poller, time.time()).standing_failed_jobs(self.args.keep))
+        self.landed()
+
+    def landed(self) -> None:
+        """New data is in: say how fresh the live view is, and publish it all to the other instances."""
+        poller = self.poller
+        self.live_note = ''
+        if poller.running_check_runs:
+            self.live_note = f'steps every {max(self.live_every, poller.live_took):.1f}s'
+        elif poller.live_jobs:
+            self.live_note = f'jobs every {LIVE_QUIET_EVERY:g}s while none runs'
+        self.errors = [*self.github.errors, *([poller.live_error] if poller.live_error else [])]
+        self.shared.publish(poller, self.github, self.live_note, self.errors)
+
+    async def draw_every_interval(self, screen: Screen) -> None:
+        """A frame on every tick, so the seconds on screen never skip one; a resize draws at once and keeps the ticks."""
+        tick = time.time()
+        while True:
+            self.resized.clear()
+            self.on = not self.live or on_screen()
+            if self.on:
+                self.shared.seen()
+                self.draw(screen)
+            now = time.time()
+            if now >= tick:
+                tick = now - (now - tick) % self.args.interval + self.args.interval
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(self.resized.wait(), tick - now)
+
+    def draw(self, screen: Screen) -> None:
+        """One frame at the terminal's current size. A follower first lays the leader's latest state over its own."""
+        if self.shared.held is None:
+            state = self.shared.adopt(self.poller, self.github)
+            self.live_note, self.errors = state.get('live_note', ''), state.get('errors', [])
+            self.source = (
+                f"drawn from pid {state['pid']}'s poll {time.time() - state['written']:.0f}s ago"
+                if state
+                else 'waiting for the polling instance to publish'
+            )
+        github = self.github
+        summary = PollSummary(
+            len(self.poller.repos), self.args.interval, dict(github.rates), dict(github.holds), self.live_note, self.errors, self.source
+        )
+        size = shutil.get_terminal_size((120, 0))
+        board = Board(self.poller, time.time())
+        screen.draw(render(board, summary, self.args.keep, size.columns, size.lines if self.live else None, self.renderer))
 
 
 def interrupt(*_: object) -> None:
