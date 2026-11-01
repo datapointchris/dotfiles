@@ -12,6 +12,10 @@ tool that deploys it, and nothing announces it.
 - **`~/dotfiles` itself stays on `main`.** Every change, a small fix included, is made in a worktree
   rather than a checkout here. `worktree land` catches `main` up afterwards, which here is a
   redeploy.
+- **A catch-up that changes `pyproject.toml` or `uv.lock` needs `cd ~/dotfiles && uv run dotfiles
+  update`.** The editable install reads the new `src/` at once but not a new dependency, so every
+  command fails on the import, `dotfiles update` included. `uv run` starts it from the project
+  venv, which has the dependency, and the update rebuilds the tool with the lock's pins.
 - **`EnterWorktree(path=…)` refuses when the session's directory is outside this repo.** From `~/dev`,
   drive the worktree by absolute path instead.
 - **One worktree per stack, at its top.** `rebase.updateRefs` silently skips a stacked branch checked
