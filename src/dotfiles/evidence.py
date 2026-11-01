@@ -804,6 +804,12 @@ def probe_version(executable: str) -> Reported:
     return Reported(None)
 
 
+def checkout_tag(checkout: Path) -> Reported:
+    """The release tag a git checkout sits on, or None where it sits on no tag."""
+    result = run(['git', '-C', str(checkout), 'describe', '--tags', '--exact-match', 'HEAD'], output=Output.QUIET, timeout=PROBE_SECONDS)
+    return Reported(result.stdout.strip() or None) if result.ok else Reported(None)
+
+
 def have_github_credentials() -> bool:
     """Whether a credential exists at all, asked once so a check and the installs
     it gates cannot disagree about whether reaching GitHub is worth trying."""

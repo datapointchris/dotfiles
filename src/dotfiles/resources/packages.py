@@ -540,10 +540,9 @@ def has_currency(item: DesiredItem, *, offline: bool) -> bool:
     question nobody can answer, and an UNKNOWN row on every plan is noise. A Go
     tool declared by module path alone names no repo to consult. A GUI names one
     and still cannot be asked: probing `webviewrs` opened a window and blocked the
-    plan on its event loop, which is what `reports_version` exists to declare. And
-    something that installs no binary has nothing to ask — `bashselfupdate` is a
-    sourced library found by its `installed_path`, so it names a repo and still has
-    no version to report.
+    plan on its event loop, which is what `reports_version` exists to declare.
+    Something that installs no binary is asked through its checkout instead, as
+    `checkout` says.
 
     A vendor's version file is a question for an online run only. No bundle
     records what one said, and the script that would act on it downloads from
@@ -551,7 +550,7 @@ def has_currency(item: DesiredItem, *, offline: bool) -> bool:
     what `custom._claude_code` does with it too. A package index page is the
     same, because no bundle stages a Python tool.
     """
-    if not (isinstance(item.entry, CURRENCY) and item.entry.reports_version and item.executable):
+    if not (isinstance(item.entry, CURRENCY) and item.entry.reports_version and (item.executable or checkout(item))):
         return False
     wanted = wanted_release(item)
     return bool(wanted.repo or wanted.crate) or (bool(wanted.version_file or wanted.python_project) and not offline)
@@ -636,7 +635,22 @@ def installed_version(item: DesiredItem, found: ev.Evidence) -> ev.Reported:
         return ev.Reported(ev.uv_tool_pin(item.name))
     if isinstance(item.entry, catalog.UvTool) and item.entry.index_url:
         return ev.Reported(ev.uv_tool_version(item.name))
+    if (path := checkout(item)) is not None:
+        return ev.checkout_tag(path)
     return ev.probe_version(str(found.binary or item.executable))
+
+
+def checkout(item: DesiredItem) -> Path | None:
+    """The git checkout an entry with no binary is installed as, where it declares one.
+
+    `bashselfupdate` is a sourced library found by its `installed_path`. Nothing
+    runs it to ask a version, so its checkout's tag is the version. Without this
+    it had no verdict for "behind", and its installer, which lands on the newest
+    release, never ran again after the first install.
+    """
+    if isinstance(item.entry, catalog.CustomInstaller) and item.entry.installed_path and not item.executable:
+        return Path(item.entry.installed_path).expanduser()
+    return None
 
 
 def wanted_release(item: DesiredItem) -> releases.Wanted:
