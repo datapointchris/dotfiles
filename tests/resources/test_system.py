@@ -32,6 +32,7 @@ from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import bootstrap
 from dotfiles.providers import syspkg
+from dotfiles.providers import timers
 from dotfiles.resources import Change
 from dotfiles.resources import OutcomeStatus
 from dotfiles.resources import Repair
@@ -102,6 +103,18 @@ def unmeasured_requests(request, monkeypatch: pytest.MonkeyPatch):
     if 'measures_requests' in request.keywords:
         return
     monkeypatch.setattr(syspkg, 'requested', lambda manager: None)
+
+
+@pytest.fixture(autouse=True)
+def no_installed_timers(monkeypatch: pytest.MonkeyPatch):
+    """No test in this file reads the timers installed on the machine running it.
+
+    Autouse for `unmeasured_currency`'s reason. Every observe lists the installed
+    timer units, and no plan here declares one, so each timer installed on the
+    desk running the suite arrived as an undeclared change. Strays are measured
+    in `test_timer_reports.py`, against a directory that test writes.
+    """
+    monkeypatch.setattr(timers, 'strays', lambda declared: {})
 
 
 def payload(live: Session):
