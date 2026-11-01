@@ -1,0 +1,918 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = ["httpx2"]
+# ///
+"""Watch the GitHub Actions runs on the registry's private repos, redrawn in place.
+
+    watch-ci [-n SECONDS] [-k RUNS] [--repo NAME]... [--once]
+
+Private repos are the ones whose CI runs on the self-hosted runner, so those are
+the registry rows it polls.
+
+Each run says what it ran for: the trigger, the pull request it tested or merged,
+the tag on its commit, and who started it when that was not the owner. The pull
+request comes from the repo's pull request list rather than the run's own
+`pull_requests`, because GitHub empties that once the pull request closes. A push
+run is matched to the pull request whose merge commit it ran on. Under the title
+is the run's URL. It is the one handle a browser and a copy both take whole,
+because `gh run view` takes an id and a repo rather than a URL.
+
+Under each running or queued run is one line per job: its runner, its current
+step and how long that step has run, or the labels a waiting job needs. A running
+run shows the median of its workflow's last successful runs beside its age.
+
+FAILED lists every run with a failed job in any attempt, and under it each failed
+job with its attempt. A run's conclusion is its latest attempt's, so a run whose
+failed job was rerun, or that was cancelled after a job failed, would otherwise
+hide that failure. A failure
+whose rerun passed, whose workflow has passed on that branch since, or whose pull
+request has closed says so and drops its log excerpt. A standing one shows the
+lines of its failed step's log that name the failure, read once per job.
+
+Every GET sends If-None-Match with the last ETag, and GitHub does not count a 304
+against the rate limit, so idle repos are free. A 304 touches the cached body, so
+its mtime says when GitHub last confirmed it. A running run's jobs change on every
+step, so most of those polls are a 200. They refresh every JOBS_EVERY seconds
+rather than every interval to stay well inside the hourly limit. Any other run
+that is not a first-attempt success is read once after its last update, since its
+jobs are then fixed. A repo's pull requests and tags are read when its runs
+change, and every REFERENCES_EVERY seconds otherwise.
+
+The screen fits the terminal's height. Running and queued runs are placed first,
+then standing failures, then the other finished runs newest first, so a long
+FAILED list never pushes a live run off the top.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import contextlib
+import datetime as dt
+import json
+import os
+import re
+import shutil
+import signal
+import statistics
+import subprocess
+import sys
+import time
+import unicodedata
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import httpx2
+
+Json = dict[str, Any]
+
+API = 'https://api.github.com'
+RUNS_PER_REPO = 20
+PULL_REQUESTS_PER_REPO = 30
+TAGS_PER_REPO = 30
+JOBS_EVERY = 15
+REFERENCES_EVERY = 60
+EXCERPT_RETRY = 60
+EXCERPTS_PER_POLL = 4
+EXCERPT_LINES = 3
+MIN_FREE_TEXT = 20
+TYPICAL_OF = 5
+PRUNE_AFTER = 24 * 3600
+PRUNE_EVERY = 600
+
+GROUPS = ('RUNNING', 'QUEUED', 'FAILED', 'CANCELED', 'SUCCEEDED')
+LIVE = ('RUNNING', 'QUEUED')
+FAILED_CONCLUSIONS = frozenset({'failure', 'timed_out', 'startup_failure'})
+PULL_REQUEST_EVENTS = frozenset({'pull_request', 'pull_request_target'})
+
+GROUP_STYLE = {'RUNNING': '1;33', 'QUEUED': '1;36', 'FAILED': '1;31', 'CANCELED': '1;35', 'SUCCEEDED': '1;32'}
+BOLD = '1'
+DIM = '2'
+RED = '31'
+GREEN = '32'
+YELLOW = '33'
+MAGENTA = '35'
+CYAN = '36'
+
+ESCAPE = re.compile(r'\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])')
+CONTROL = re.compile(r'[\x00-\x1f\x7f-\x9f]')
+LOG_TIMESTAMP = re.compile(r'^\ufeff?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ')
+EXIT_CODE = '##[error]Process completed with exit code'
+FAILURE_SIGNAL = re.compile(
+    r'^\s*(?:--- FAIL:|FAIL\b|FAILED\b|ERROR\b|E\s+\w*(?:Error|Exception)\b|panic:|fatal:|Error:|error(?:\[\w+\])?:|not ok \d|Traceback)'
+    r'|\.{3,}Failed$'
+    r'|no space left on device'
+)
+GO_TEST_LOCATION = re.compile(r'^\s+\S+:\d+: ')
+SIMILAR = re.compile(r'\S*[/\\]\S*|\d+')
+
+
+def epoch(stamp: str | None) -> float:
+    return dt.datetime.fromisoformat(stamp).timestamp() if stamp else 0.0
+
+
+def duration(seconds: float) -> str:
+    s = max(0, int(seconds))
+    if s < 60:
+        return f'{s}s'
+    if s < 3600:
+        return f'{s // 60}m{s % 60}s'
+    if s < 86400:
+        return f'{s // 3600}h{s % 3600 // 60}m'
+    return f'{s // 86400}d'
+
+
+def clean(text: str | None) -> str:
+    """API text with every escape and control character gone, so a commit message cannot drive the terminal."""
+    return CONTROL.sub(' ', ESCAPE.sub('', text or ''))
+
+
+def failed(item: Json) -> bool:
+    return item.get('conclusion') in FAILED_CONCLUSIONS
+
+
+def group_of(run: Json) -> str:
+    if run['status'] == 'in_progress':
+        return 'RUNNING'
+    if run['status'] != 'completed':
+        return 'QUEUED'
+    if run['conclusion'] == 'success':
+        return 'SUCCEEDED'
+    if run['conclusion'] in ('cancelled', 'skipped'):
+        return 'CANCELED'
+    return 'FAILED'
+
+
+def failure_excerpt(log: str) -> list[str]:
+    """The lines of a failed step's log that name the failure, at most EXCERPT_LINES.
+
+    The step is the one that ends at the first `##[error]`. Lines repeating one
+    message about different paths collapse into one with a count.
+    """
+    lines = [CONTROL.sub(' ', ESCAPE.sub('', LOG_TIMESTAMP.sub('', raw))).rstrip() for raw in log.splitlines()]
+    errors = [i for i, line in enumerate(lines) if line.startswith('##[error]')]
+    if not errors:
+        return []
+    picked = [lines[i].removeprefix('##[error]').strip() for i in errors if not lines[i].startswith(EXIT_CODE)]
+    end = errors[0]
+    start = next((i for i in range(end - 1, -1, -1) if lines[i].startswith('##[group]Run ')), 0)
+    start = next((i + 1 for i in range(start, end) if lines[i].startswith('##[endgroup]')), start)
+    step = lines[start:end]
+    keys: list[str] = []
+    found: dict[str, list[str]] = {}
+    for i, line in enumerate(step):
+        if not FAILURE_SIGNAL.search(line) or line.strip() == 'FAIL':
+            continue
+        key = SIMILAR.sub('', line)
+        if key in found:
+            found[key].append(line)
+            continue
+        keys.append(key)
+        found[key] = [line]
+        rest = step[i + 1 :]
+        if line.lstrip().startswith('--- FAIL:') and rest and GO_TEST_LOCATION.match(rest[0]):
+            keys.append(f'{i} location')
+            found[keys[-1]] = [rest[0]]
+        elif line.endswith('Failed'):
+            detail = next((r for r in rest if r.strip() and not r.startswith('- ')), None)
+            if detail and not FAILURE_SIGNAL.search(detail):
+                keys.append(f'{i} hook output')
+                found[keys[-1]] = [detail]
+    for key in keys:
+        first, more = found[key][0].strip(), len(found[key]) - 1
+        picked.append(f'{first} (and {more} more like it)' if more else first)
+    if not picked:
+        picked = [line.strip() for line in step if line.strip() and not line.startswith('##[')][-EXCERPT_LINES:]
+    return picked[:EXCERPT_LINES]
+
+
+class GitHub:
+    """Conditional GETs against the API, each body and its ETag kept on disk."""
+
+    def __init__(self, client: Any, cache: Path) -> None:
+        self.client = client
+        self.cache = cache
+        self.parsed: dict[Path, Any] = {}
+        self.errors: list[str] = []
+        self.rate: tuple[int, int, int] | None = None
+
+    def load(self, body: Path) -> Any:
+        if body not in self.parsed:
+            try:
+                self.parsed[body] = json.loads(body.read_bytes())
+            except (OSError, ValueError):
+                return None
+        return self.parsed[body]
+
+    def forget(self, body: Path) -> None:
+        self.parsed.pop(body, None)
+
+    def note_rate(self, headers: Any) -> None:
+        try:
+            remaining, limit, reset = (int(headers[k]) for k in ('x-ratelimit-remaining', 'x-ratelimit-limit', 'x-ratelimit-reset'))
+        except (KeyError, ValueError):
+            return
+        if self.rate is None or reset != self.rate[2] or remaining < self.rate[0]:
+            self.rate = (remaining, limit, reset)
+
+    async def refresh(self, path: str, body: Path, label: str) -> bool:
+        """GET path into body, sending the last ETag. True when the body changed."""
+        etag = body.with_name(body.name + '.etag')
+        headers = {}
+        if body.exists() and etag.exists() and (last := etag.read_text().strip()):
+            headers['If-None-Match'] = last
+        try:
+            response = await self.client.get(path, headers=headers)
+        except httpx2.HTTPError as error:
+            self.errors.append(f'{label}: {type(error).__name__} {error}')
+            return False
+        self.note_rate(response.headers)
+        if response.status_code == 304:
+            body.touch()
+            return False
+        if response.status_code != 200:
+            self.errors.append(f'{label}: HTTP {response.status_code}')
+            return False
+        body.parent.mkdir(parents=True, exist_ok=True)
+        staged = body.with_name(body.name + '.new')
+        staged.write_bytes(response.content)
+        staged.replace(body)
+        etag.write_text(response.headers.get('etag', ''))
+        self.parsed[body] = response.json()
+        return True
+
+    async def text(self, path: str) -> str | None:
+        """A job log. The API answers with a redirect to blob storage, which carries no rate headers."""
+        try:
+            response = await self.client.get(path, follow_redirects=True, timeout=60)
+        except httpx2.HTTPError:
+            return None
+        if response.history:
+            self.note_rate(response.history[0].headers)
+        return response.text if response.status_code == 200 else None
+
+
+class ActionsPoller:
+    """What the API last said about each repo's runs, jobs, pull requests and tags."""
+
+    def __init__(self, github: GitHub, owner: str, repos: list[str]) -> None:
+        self.github = github
+        self.owner = owner
+        self.repos = repos
+        self.references_read: dict[str, float] = {}
+        self.excerpt_retry: dict[int, float] = {}
+        self.pruned = 0.0
+
+    def body(self, kind: str, name: object) -> Path:
+        return self.github.cache / kind / f'{name}.json'
+
+    def runs(self) -> list[Json]:
+        return [run for repo in self.repos for run in (self.github.load(self.body('runs', repo)) or {}).get('workflow_runs', [])]
+
+    def jobs(self, run_id: int) -> list[Json]:
+        return (self.github.load(self.body('jobs-every-attempt', run_id)) or {}).get('jobs', [])
+
+    def pull_requests(self, repo: str) -> list[Json]:
+        return self.github.load(self.body('pull-requests', repo)) or []
+
+    def tags(self, repo: str) -> list[Json]:
+        return self.github.load(self.body('tags', repo)) or []
+
+    def excerpt(self, job_id: int) -> list[str]:
+        return self.github.load(self.body('failure-excerpts', job_id)) or []
+
+    async def poll(self) -> None:
+        self.github.errors.clear()
+        repo_path = f'/repos/{self.owner}'
+        changed = await asyncio.gather(
+            *(
+                self.github.refresh(f'{repo_path}/{repo}/actions/runs?per_page={RUNS_PER_REPO}', self.body('runs', repo), repo)
+                for repo in self.repos
+            )
+        )
+        now = time.time()
+        due = [
+            repo
+            for repo, fresh in zip(self.repos, changed, strict=True)
+            if fresh or now - self.references_read.get(repo, 0) >= REFERENCES_EVERY
+        ]
+        for repo in due:
+            self.references_read[repo] = now
+        await asyncio.gather(
+            *(
+                self.github.refresh(
+                    f'{repo_path}/{repo}/pulls?state=all&sort=updated&direction=desc&per_page={PULL_REQUESTS_PER_REPO}',
+                    self.body('pull-requests', repo),
+                    f'{repo} pull requests',
+                )
+                for repo in due
+            ),
+            *(
+                self.github.refresh(f'{repo_path}/{repo}/tags?per_page={TAGS_PER_REPO}', self.body('tags', repo), f'{repo} tags')
+                for repo in due
+            ),
+        )
+        await self.read_jobs(now)
+        self.prune(now)
+
+    async def read_jobs(self, now: float) -> None:
+        reads = []
+        for run in self.runs():
+            if run['status'] == 'completed' and run['conclusion'] == 'success' and run['run_attempt'] == 1:
+                continue
+            body = self.body('jobs-every-attempt', run['id'])
+            confirmed = body.stat().st_mtime if body.exists() else 0.0
+            if run['status'] != 'completed' and now - confirmed < JOBS_EVERY:
+                continue
+            if run['status'] == 'completed' and confirmed >= epoch(run['updated_at']):
+                continue
+            repo = run['repository']['name']
+            path = f'/repos/{self.owner}/{repo}/actions/runs/{run["id"]}/jobs?filter=all&per_page=100'
+            reads.append(self.github.refresh(path, body, f'{repo} jobs {run["id"]}'))
+        await asyncio.gather(*reads)
+
+    async def read_excerpts(self, jobs: list[tuple[str, Json]]) -> None:
+        now = time.time()
+        due = [
+            (repo, job)
+            for repo, job in jobs
+            if not self.body('failure-excerpts', job['id']).exists() and self.excerpt_retry.get(job['id'], 0) <= now
+        ][:EXCERPTS_PER_POLL]
+
+        async def read(repo: str, job: Json) -> None:
+            log = await self.github.text(f'/repos/{self.owner}/{repo}/actions/jobs/{job["id"]}/logs')
+            if log is None:
+                self.excerpt_retry[job['id']] = now + EXCERPT_RETRY
+                return
+            body = self.body('failure-excerpts', job['id'])
+            body.parent.mkdir(parents=True, exist_ok=True)
+            body.write_text(json.dumps(failure_excerpt(log)))
+
+        await asyncio.gather(*(read(repo, job) for repo, job in due))
+
+    def prune(self, now: float) -> None:
+        """Drop jobs and excerpts nothing has confirmed for a day."""
+        if now - self.pruned < PRUNE_EVERY:
+            return
+        self.pruned = now
+        for kind in ('jobs-every-attempt', 'failure-excerpts'):
+            directory = self.github.cache / kind
+            for path in directory.glob('*') if directory.is_dir() else ():
+                if now - path.stat().st_mtime > PRUNE_AFTER:
+                    path.unlink(missing_ok=True)
+                    self.github.forget(path)
+
+
+@dataclass
+class PullRequestIndex:
+    by_head_sha: dict[str, Json]
+    by_branch: dict[str, Json]
+    by_merge_sha: dict[str, Json]
+    by_number: dict[int, Json]
+
+    @classmethod
+    def of(cls, pulls: list[Json]) -> PullRequestIndex:
+        index = cls({}, {}, {}, {})
+        for pr in pulls:
+            index.by_head_sha.setdefault(pr['head']['sha'], pr)
+            index.by_branch.setdefault(pr['head']['ref'], pr)
+            index.by_number[pr['number']] = pr
+            if pr.get('merged_at') and pr.get('merge_commit_sha'):
+                index.by_merge_sha[pr['merge_commit_sha']] = pr
+        return index
+
+    def for_run(self, run: Json) -> Json | None:
+        if run['event'] in PULL_REQUEST_EVENTS:
+            pr = self.by_head_sha.get(run['head_sha']) or self.by_branch.get(run['head_branch'])
+            if pr is None and run.get('pull_requests'):
+                number = run['pull_requests'][0]['number']
+                pr = self.by_number.get(number) or {'number': number, 'html_url': f'{run["repository"]["html_url"]}/pull/{number}'}
+            return pr
+        if run['event'] == 'push':
+            return self.by_merge_sha.get(run['head_sha'])
+        return None
+
+
+@dataclass
+class Failure:
+    """A run with a failed job in any attempt, its failed jobs newest attempt first."""
+
+    when: float
+    run: Json
+    jobs: list[Json]
+    resolution: str
+
+    def latest_attempt_jobs(self) -> list[Json]:
+        return [job for job in self.jobs if job['run_attempt'] == self.jobs[0]['run_attempt']]
+
+
+@dataclass
+class Entry:
+    group: str
+    run: Json
+    jobs: list[Json]
+    failure: Failure | None = None
+
+
+class Board:
+    """The runs grouped by state, each joined to its pull request, tag and typical duration."""
+
+    def __init__(self, poller: ActionsPoller, now: float) -> None:
+        self.now = now
+        self.owner = poller.owner
+        self.excerpt = poller.excerpt
+        self.runs = poller.runs()
+        self.jobs = {run['id']: poller.jobs(run['id']) for run in self.runs}
+        self.pulls = {repo: PullRequestIndex.of(poller.pull_requests(repo)) for repo in poller.repos}
+        self.tags: dict[str, dict[str, list[str]]] = {}
+        for repo in poller.repos:
+            by_sha: dict[str, list[str]] = defaultdict(list)
+            for tag in poller.tags(repo):
+                by_sha[tag['commit']['sha']].append(clean(tag['name']))
+            self.tags[repo] = by_sha
+        self.lanes: dict[tuple[str, int, str], list[Json]] = defaultdict(list)
+        durations: dict[tuple[str, int], list[float]] = defaultdict(list)
+        for run in sorted(self.runs, key=lambda r: r['updated_at'], reverse=True):
+            repo = run['repository']['name']
+            self.lanes[(repo, run['workflow_id'], run['head_branch'])].append(run)
+            took = durations[(repo, run['workflow_id'])]
+            if run['conclusion'] == 'success' and run.get('run_started_at') and len(took) < TYPICAL_OF:
+                took.append(epoch(run['updated_at']) - epoch(run['run_started_at']))
+        self.typical = {lane: statistics.median(took) for lane, took in durations.items() if took}
+        self.failures = sorted(self.collect_failures(), key=lambda f: f.when, reverse=True)
+
+    def pull_request(self, run: Json) -> Json | None:
+        return self.pulls[run['repository']['name']].for_run(run)
+
+    def collect_failures(self) -> list[Failure]:
+        failures = []
+        for run in self.runs:
+            failed_jobs = sorted(
+                (job for job in self.jobs[run['id']] if failed(job)),
+                key=lambda job: (job['run_attempt'], job.get('completed_at') or ''),
+                reverse=True,
+            )
+            if failed_jobs:
+                when = max(epoch(job.get('completed_at') or run['updated_at']) for job in failed_jobs)
+                failures.append(Failure(when, run, failed_jobs, self.resolution(run, failed_jobs[0])))
+            elif run['status'] == 'completed' and failed(run):
+                failures.append(Failure(epoch(run['updated_at']), run, [], self.resolution(run, None)))
+        return failures
+
+    def resolution(self, run: Json, job: Json | None) -> str:
+        """Why a failure no longer stands, or nothing when it does."""
+        if job is not None and run['conclusion'] == 'success' and job['run_attempt'] < run['run_attempt']:
+            return f'attempt {run["run_attempt"]} passed'
+        pr = self.pull_request(run)
+        if run['event'] in PULL_REQUEST_EVENTS and pr and pr.get('state') == 'closed':
+            return f'PR #{pr["number"]} {"merged" if pr.get("merged_at") else "closed"}'
+        lane = self.lanes[(run['repository']['name'], run['workflow_id'], run['head_branch'])]
+        later = [r['run_number'] for r in lane if r['run_number'] > run['run_number'] and r['conclusion'] == 'success']
+        return f'#{min(later)} has passed since' if later else ''
+
+    def entries(self, keep: int) -> dict[str, list[Entry]]:
+        grouped: dict[str, list[Json]] = defaultdict(list)
+        for run in self.runs:
+            grouped[group_of(run)].append(run)
+
+        def current_jobs(run: Json) -> list[Json]:
+            return [job for job in self.jobs[run['id']] if job['run_attempt'] == run['run_attempt'] and job.get('conclusion') != 'skipped']
+
+        return {
+            'RUNNING': [Entry('RUNNING', run, current_jobs(run)) for run in sorted(grouped['RUNNING'], key=lambda r: r['run_started_at'])],
+            'QUEUED': [Entry('QUEUED', run, current_jobs(run)) for run in sorted(grouped['QUEUED'], key=lambda r: r['created_at'])],
+            'FAILED': [Entry('FAILED', f.run, f.jobs, f) for f in self.failures[:keep]],
+            **{
+                group: [Entry(group, run, []) for run in sorted(grouped[group], key=lambda r: r['updated_at'], reverse=True)[:keep]]
+                for group in ('CANCELED', 'SUCCEEDED')
+            },
+        }
+
+    def totals(self) -> dict[str, int]:
+        counts = {group: 0 for group in GROUPS}
+        for run in self.runs:
+            counts[group_of(run)] += 1
+        counts['FAILED'] = len(self.failures)
+        return counts
+
+    def standing_failed_jobs(self, keep: int) -> list[tuple[str, Json]]:
+        return [(f.run['repository']['name'], job) for f in self.failures[:keep] if not f.resolution for job in f.latest_attempt_jobs()]
+
+    def title(self, run: Json) -> str:
+        """The run's whole title. GitHub cuts `display_title` at about 70 characters, so it is the last resort."""
+        pr = self.pull_request(run)
+        if run['event'] in PULL_REQUEST_EVENTS and pr and pr.get('title'):
+            return clean(pr['title'])
+        subject = ((run.get('head_commit') or {}).get('message') or '').split('\n')[0]
+        if run['event'] == 'push' and subject:
+            return clean(subject)
+        return clean(run['display_title'])
+
+
+@dataclass(frozen=True)
+class Cell:
+    """Text with its color and link. A padded or whole cell wraps as one piece."""
+
+    text: str
+    style: str = ''
+    link: str = ''
+    pad: int = 0
+    whole: bool = False
+
+
+Line = list[Cell]
+GAP = Cell('  ')
+
+
+def width_of(text: str) -> int:
+    if text.isascii():
+        return len(text)
+    return sum(0 if unicodedata.combining(c) else 2 if unicodedata.east_asian_width(c) in 'WF' else 1 for c in text)
+
+
+def line_width(line: Line) -> int:
+    return sum(max(cell.pad, width_of(cell.text)) for cell in line)
+
+
+def clip(line: Line, width: int) -> Line:
+    """The line cut to width, ending in an ellipsis where anything was cut."""
+    if line_width(line) <= width:
+        return line
+    out: Line = []
+    used = 0
+    for cell in line:
+        text = cell.text + ' ' * max(0, cell.pad - width_of(cell.text))
+        if used + width_of(text) <= width - 1:
+            out.append(Cell(text, cell.style, cell.link))
+            used += width_of(text)
+            continue
+        kept = ''
+        for char in text:
+            if used + width_of(kept + char) > width - 1:
+                break
+            kept += char
+        out.append(Cell(kept.rstrip() + '…', cell.style, cell.link))
+        break
+    return out
+
+
+def flow(line: Line, width: int, indent: int, hang: int = 2, max_lines: int = 0) -> list[Line]:
+    """The line broken between words to fit width, each later line hanging `hang` further in.
+
+    Padded cells are columns, so they keep their padding while they leave
+    MIN_FREE_TEXT beside them. A word or whole cell wider than the line is left
+    whole, so a URL wraps in the terminal and still copies as one line.
+    """
+    if indent + line_width(line) <= width:
+        return [[Cell(' ' * indent), *line]]
+    last_padded = max((i for i, cell in enumerate(line) if cell.pad), default=-1)
+    columns = line_width(line[: last_padded + 2]) if last_padded >= 0 else 0
+    keep_columns = indent + columns + MIN_FREE_TEXT <= width
+    under = indent + hang
+    words: Line = []
+    for cell in line:
+        if keep_columns and cell.pad:
+            words.append(cell)
+        elif cell.pad or cell.whole:
+            words.append(Cell(cell.text, cell.style, cell.link))
+        else:
+            words += [Cell(word, cell.style, cell.link) for word in re.split(r'( +)', cell.text) if word]
+    lines: list[Line] = [[Cell(' ' * indent)]]
+    used = indent
+    for word in words:
+        size = max(word.pad, width_of(word.text))
+        if not word.pad and word.text.isspace():
+            if len(lines[-1]) > 1:
+                lines[-1].append(word)
+                used += size
+            continue
+        if used + size > width and len(lines[-1]) > 1:
+            while not lines[-1][-1].pad and lines[-1][-1].text.isspace():
+                used -= len(lines[-1].pop().text)
+            lines.append([Cell(' ' * under)])
+            used = under
+        lines[-1].append(word)
+        used += size
+    if max_lines and len(lines) > max_lines:
+        last = lines[max_lines - 1] + [Cell(' '), *(cell for later in lines[max_lines:] for cell in later[1:])]
+        lines = [*lines[: max_lines - 1], clip(last, width)]
+    return lines
+
+
+class AnsiRenderer:
+    def __init__(self, color: bool) -> None:
+        self.color = color
+
+    def cell(self, cell: Cell) -> str:
+        text = cell.text
+        pad = ' ' * max(0, cell.pad - width_of(text))
+        if self.color and cell.style:
+            text = f'\033[{cell.style}m{text}\033[0m'
+        if self.color and cell.link:
+            text = f'\033]8;;{cell.link}\033\\{text}\033]8;;\033\\'
+        return text + pad
+
+    def line(self, line: Line) -> str:
+        return ''.join(self.cell(cell) for cell in line).rstrip()
+
+
+class Layout:
+    """One frame of the board, as lines no wider than the terminal."""
+
+    def __init__(self, board: Board, width: int) -> None:
+        self.board = board
+        self.width = width
+        self.now = board.now
+
+    def when(self, entry: Entry) -> tuple[str, str]:
+        run, group, now = entry.run, entry.group, self.now
+        if group == 'RUNNING':
+            elapsed = now - epoch(run['run_started_at'])
+            typical = self.board.typical.get((run['repository']['name'], run['workflow_id']))
+            if typical is None:
+                return f'running {duration(elapsed)}', GROUP_STYLE[group]
+            late = elapsed > 2 * typical
+            return f'running {duration(elapsed)} of ~{duration(typical)}', GROUP_STYLE['FAILED' if late else group]
+        if group == 'QUEUED':
+            waiting = [job for job in entry.jobs if job['status'] not in ('in_progress', 'completed')]
+            if waiting and len(waiting) < len(entry.jobs):
+                wait = now - min(epoch(job['created_at']) for job in waiting)
+                return f'{duration(now - epoch(run["run_started_at"]))} in, waiting {duration(wait)}', GROUP_STYLE[group]
+            return f'waiting {duration(now - epoch(run["created_at"]))}', GROUP_STYLE[group]
+        if entry.failure is not None:
+            conclusion = (entry.failure.jobs[0] if entry.failure.jobs else run).get('conclusion') or 'failure'
+            text = f'{duration(now - entry.failure.when)} ago' + ('' if conclusion == 'failure' else f', {conclusion.replace("_", " ")}')
+            return text, DIM if entry.failure.resolution else GROUP_STYLE[group]
+        took = epoch(run['updated_at']) - epoch(run.get('run_started_at') or run['created_at'])
+        return f'{duration(now - epoch(run["updated_at"]))} ago, took {duration(took)}', GROUP_STYLE[group]
+
+    def workflow(self, entry: Entry) -> str:
+        """The workflow and run number, and the attempt where a live run is past its first. A failure names its attempts per job."""
+        attempt = entry.run['run_attempt']
+        live_rerun = entry.group in LIVE and attempt > 1
+        return f'{clean(entry.run["name"])} #{entry.run["run_number"]}' + (f' attempt {attempt}' if live_rerun else '')
+
+    def job_name(self, entry: Entry, job: Json) -> str:
+        reran = entry.failure is not None and entry.run['run_attempt'] > 1
+        return clean(job['name']) + (f', attempt {job["run_attempt"]}' if reran else '')
+
+    def trigger(self, run: Json) -> Line:
+        pr = self.board.pull_request(run)
+        branch = clean(run['head_branch'])
+        if run['event'] in PULL_REQUEST_EVENTS:
+            if pr is None:
+                return [Cell(f'PR from {branch}', CYAN, whole=True)]
+            return [Cell(f'PR #{pr["number"]} from {branch}', CYAN, pr.get('html_url') or '', whole=True)]
+        if run['event'] == 'push' and pr:
+            return [Cell(f'PR #{pr["number"]} merged into {branch}', CYAN, pr.get('html_url') or '', whole=True)]
+        verb = {'push': 'push to', 'workflow_dispatch': 'manual on', 'schedule': 'schedule on'}.get(run['event'], f'{run["event"]} on')
+        return [Cell(f'{verb} {branch}', whole=True)]
+
+    def job(self, job: Json) -> tuple[str, str, str, str]:
+        """A job's state, its color, its runner and what it is doing or did."""
+        now, steps = self.now, job.get('steps') or []
+        runner = clean(job.get('runner_name')) or '-'
+        if job['status'] == 'in_progress':
+            step = next((s for s in steps if s['status'] == 'in_progress'), None)
+            detail = 'setting up'
+            if step:
+                detail = f'step {step["number"]}/{len(steps)} {clean(step["name"])}'
+                if step.get('started_at'):
+                    detail += f' ({duration(now - epoch(step["started_at"]))})'
+            return f'running {duration(now - epoch(job["started_at"]))}', YELLOW, runner, detail
+        if job['status'] == 'completed':
+            conclusion = job.get('conclusion') or 'completed'
+            took = ''
+            if job.get('started_at') and job.get('completed_at'):
+                took = f' in {duration(epoch(job["completed_at"]) - epoch(job["started_at"]))}'
+            step = next((s for s in steps if s.get('conclusion') in ('failure', 'timed_out', 'cancelled')), None)
+            detail = f'failed at step {step["number"]} {clean(step["name"])}' if step else ''
+            if not step and not steps and failed(job):
+                detail = 'no steps recorded'
+            color = GREEN if conclusion == 'success' else RED if failed(job) else MAGENTA
+            return conclusion + took, color, runner, detail
+        labels = ', '.join(clean(label) for label in job.get('labels', []))
+        return f'waiting {duration(now - epoch(job["created_at"]))}', CYAN, '-', f'needs {labels}'
+
+    def block(self, entry: Entry, columns: tuple[int, ...]) -> list[Line]:
+        run, failure = entry.run, entry.failure
+        repo = run['repository']
+        resolved = bool(failure and failure.resolution)
+        when, when_style = self.when(entry)
+        head: Line = [
+            Cell(when, when_style, pad=columns[0]),
+            GAP,
+            Cell(clean(repo['name']), DIM if resolved else BOLD, f'{repo["html_url"]}/actions', pad=columns[1]),
+            GAP,
+            Cell(self.workflow(entry), link=run['html_url'], pad=columns[2]),
+            GAP,
+            *self.trigger(run),
+        ]
+        tags = self.board.tags[repo['name']].get(run['head_sha'])
+        if tags:
+            head += [GAP, Cell(f'tag {", ".join(tags)}', GREEN, whole=True)]
+        actor = (run.get('triggering_actor') or run.get('actor') or {}).get('login')
+        if actor and actor != self.board.owner:
+            head += [GAP, Cell(f'by {clean(actor)}', DIM, whole=True)]
+        if failure and failure.resolution:
+            head += [GAP, Cell(failure.resolution, DIM, whole=True)]
+        lines = flow(head, self.width, indent=2, hang=4)
+        title = self.board.title(run)
+        lines += flow([Cell(title, DIM if resolved else '')], self.width, indent=6, hang=0, max_lines=2)
+        handle: Line = [Cell(' ' * 6), Cell(run['head_sha'][:7], DIM), GAP, Cell(run['html_url'], DIM, run['html_url'])]
+        subject = clean(((run.get('head_commit') or {}).get('message') or '').split('\n')[0])
+        room = self.width - line_width(handle) - len(GAP.text)
+        if subject and subject != title and room > 12:
+            handle = clip([*handle, GAP, Cell(subject, DIM)], self.width)
+        lines.append(handle)
+        excerpted = {job['id'] for job in failure.latest_attempt_jobs()} if failure and not failure.resolution else set()
+        jobs = [(job, self.job_name(entry, job), *self.job(job)) for job in entry.jobs]
+        name_width = max((width_of(name) for _, name, *_ in jobs), default=0)
+        state_width = max((width_of(state) for _, _, state, *_ in jobs), default=0)
+        runner_width = max((width_of(runner) for *_, runner, _ in jobs), default=0)
+        for job, name, state, color, runner, detail in jobs:
+            row: Line = [
+                Cell('└ ', DIM),
+                Cell(name, link=job.get('html_url') or '', pad=name_width),
+                GAP,
+                Cell(state, color, pad=state_width),
+                GAP,
+                Cell(runner, pad=runner_width),
+                GAP,
+                Cell(detail, DIM, whole=True),
+            ]
+            lines += flow(row, self.width, indent=6, hang=2)
+            if job['id'] in excerpted:
+                for excerpt in self.board.excerpt(job['id']):
+                    lines.append(clip([Cell(' ' * 8), Cell('│ ', RED), Cell(clean(excerpt))], self.width))
+        return lines
+
+
+def rows_of(line: str, width: int) -> int:
+    return max(1, -(-width_of(ESCAPE.sub('', line)) // max(1, width)))
+
+
+@dataclass
+class PollSummary:
+    """What the header and footer say about the poll the board came from."""
+
+    repos: int
+    interval: float
+    rate: tuple[int, int, int] | None
+    errors: list[str]
+
+
+def render(board: Board, summary: PollSummary, keep: int, width: int, height: int | None, renderer: AnsiRenderer) -> list[str]:
+    layout = Layout(board, width)
+    entries = board.entries(keep)
+    every = [entry for group in GROUPS for entry in entries[group]]
+    columns = (
+        max((width_of(layout.when(e)[0]) for e in every), default=0),
+        max((width_of(clean(e.run['repository']['name'])) for e in every), default=0),
+        max((width_of(layout.workflow(e)) for e in every), default=0),
+    )
+    blocks = {id(e): [renderer.line(line) for line in layout.block(e, columns)] for e in every}
+
+    header: Line = [
+        Cell(time.strftime('%H:%M:%S'), BOLD),
+        GAP,
+        Cell(
+            f'CI runs on {summary.repos} repo{"" if summary.repos == 1 else "s"} for {board.owner}, every {summary.interval:g}s', whole=True
+        ),
+    ]
+    if summary.rate:
+        remaining, limit, reset = summary.rate
+        resets = time.strftime('%H:%M', time.localtime(reset))
+        header += [GAP, Cell(f'· API {remaining} of {limit} left, resets {resets}', DIM, whole=True)]
+    top = [renderer.line(line) for line in flow(header, width, indent=0, hang=10)]
+    bottom = [renderer.line(clip([Cell(error, RED)], width)) for error in summary.errors]
+    if bottom:
+        bottom.insert(0, '')
+
+    admitted = {id(e) for e in every}
+    if height is not None:
+        budget = height - len(top) - len(bottom) - 2 * len(GROUPS)
+        standing = [e for e in entries['FAILED'] if e.failure and not e.failure.resolution]
+        standing_ids = {id(e) for e in standing}
+        rest = sorted(
+            (e for g in ('FAILED', 'CANCELED', 'SUCCEEDED') for e in entries[g] if id(e) not in standing_ids),
+            key=lambda e: e.failure.when if e.failure else epoch(e.run['updated_at']),
+            reverse=True,
+        )
+        admitted = set()
+        for entry in [*entries['RUNNING'], *entries['QUEUED'], *standing, *rest]:
+            cost = sum(rows_of(line, width) for line in blocks[id(entry)])
+            if cost > budget:
+                if entry.group in LIVE or id(entry) in standing_ids:
+                    continue
+                break
+            admitted.add(id(entry))
+            budget -= cost
+
+    totals = board.totals()
+    out = list(top)
+    for group in GROUPS:
+        shown = [e for e in entries[group] if id(e) in admitted]
+        count = f'{len(shown)}' if len(shown) == totals[group] else f'{len(shown)} of {totals[group]}'
+        out += ['', renderer.line([Cell(f'{group} ({count})', GROUP_STYLE[group])])]
+        for entry in shown:
+            out += blocks[id(entry)]
+    return out + bottom
+
+
+class Screen:
+    """The alternate screen, redrawn in place so a frame never flickers or scrolls."""
+
+    def __init__(self, live: bool) -> None:
+        self.live = live
+
+    def __enter__(self) -> Screen:
+        if self.live:
+            sys.stdout.write('\033[?1049h\033[?25l')
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        if self.live:
+            sys.stdout.write('\033[?25h\033[?1049l')
+            sys.stdout.flush()
+
+    def draw(self, lines: list[str]) -> None:
+        if self.live:
+            sys.stdout.write('\033[H' + '\n'.join(line + '\033[K' for line in lines) + '\033[J')
+        else:
+            sys.stdout.write('\n'.join(lines) + '\n')
+        sys.stdout.flush()
+
+
+def registry(names: list[str]) -> tuple[str, list[str]]:
+    try:
+        path = subprocess.run(['repos-registry'], capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as error:
+        sys.exit(f'watch-ci: repos-registry could not name the registry ({error}), so there is no list of repos to watch')
+    data = json.loads(Path(path).read_text())
+    private = [repo['name'] for repo in data['repos'] if repo.get('visibility') == 'private']
+    unknown = sorted(set(names) - set(private))
+    if unknown:
+        print(f'watch-ci: {path} has no private repo named {", ".join(unknown)}', file=sys.stderr)
+        sys.exit(2)
+    return data['owner'], [repo for repo in private if not names or repo in names]
+
+
+def token() -> str:
+    try:
+        return subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        sys.exit('watch-ci: `gh auth token` gave no token to read the API with; run `gh auth login`')
+
+
+async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bool) -> None:
+    cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'watch-ci'
+    headers = {'Authorization': f'Bearer {token()}', 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
+    renderer = AnsiRenderer(sys.stdout.isatty() and 'NO_COLOR' not in os.environ)
+    async with httpx2.AsyncClient(base_url=API, headers=headers, timeout=20) as client:
+        github = GitHub(client, cache)
+        poller = ActionsPoller(github, owner, repos)
+        with Screen(live) as screen:
+            while True:
+                await poller.poll()
+                board = Board(poller, time.time())
+                await poller.read_excerpts(board.standing_failed_jobs(args.keep))
+                summary = PollSummary(len(repos), args.interval, github.rate, list(github.errors))
+                size = shutil.get_terminal_size((120, 0))
+                screen.draw(render(board, summary, args.keep, size.columns, size.lines if live else None, renderer))
+                if args.once:
+                    return
+                await asyncio.sleep(args.interval)
+
+
+def interrupt(*_: object) -> None:
+    raise KeyboardInterrupt
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog='watch-ci',
+        description="Watch the GitHub Actions runs on the registry's private repos, grouped by\n"
+        'state and redrawn in place.\n\n'
+        'Each run names what it ran for: the pull request it tested or merged, the tag on\n'
+        'its commit, its title and its URL. Standing failures show the log lines that\n'
+        'name the failure.',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument('-n', '--interval', type=float, default=1, metavar='SECONDS', help='seconds between polls (default 1)')
+    parser.add_argument('-k', '--keep', type=int, default=10, metavar='RUNS', help='most finished runs listed per group (default 10)')
+    parser.add_argument('--repo', action='append', default=[], metavar='NAME', help='watch only this repo; repeat for more')
+    parser.add_argument('--once', action='store_true', help='print one screen and exit')
+    args = parser.parse_args()
+    owner, repos = registry(args.repo)
+    signal.signal(signal.SIGTERM, interrupt)
+    with contextlib.suppress(KeyboardInterrupt):
+        asyncio.run(watch(args, owner, repos, live=not args.once and sys.stdout.isatty()))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
