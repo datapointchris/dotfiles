@@ -3,12 +3,17 @@
 # requires-python = ">=3.13"
 # dependencies = ["httpx2"]
 # ///
-"""Watch the GitHub Actions runs on the registry's private repos, redrawn in place.
+"""Watch the GitHub Actions runs on every repo in the registry, redrawn in place.
 
     watch-ci [-n SECONDS] [-k RUNS] [--repo NAME]... [--once]
 
-Private repos are the ones whose CI runs on the self-hosted runner, so those are
-the registry rows it polls.
+A repo's run list is read every interval while the repo is live: a run of it is
+unfinished, or one finished in the last HOT_FOR seconds. Every other repo is read
+once each IDLE_EVERY seconds, the repos spread across that time, so a run starting
+there shows within IDLE_EVERY. GitHub's secondary limit allows 900 REST points a
+minute and 100 requests at once, and its docs do not say whether a 304 counts. So
+the idle cadence keeps a registry of a hundred repos under 900 a minute either way,
+and every request waits for one of IN_FLIGHT_MOST slots.
 
 Each run says what it ran for: the trigger, the pull request it tested or merged,
 the tag on its commit, and who started it when that was not the owner. The pull
@@ -41,7 +46,7 @@ shows its age in red, and under its step the lines of the step's log that name
 the failure, read once per job.
 
 Every GET sends If-None-Match with the last ETag, and GitHub does not count a 304
-against the rate limit, so reading every repo's runs each interval is free while
+against the hourly rate limit, so reading a repo's runs is free against it while
 nothing changes. A 304 touches the cached body, so its mtime says when GitHub last
 confirmed it.
 
@@ -62,8 +67,10 @@ the live query fails, live runs' REST jobs are read every JOBS_EVERY.
 
 A repo's pull requests are read when a run newer than the last read appears, and
 its tags when a run finishes, because a pull request list changes on every
-comment and push. A 403 or 429 that is a rate limit holds the API that refused
-it, REST or GraphQL, for as long as GitHub says. Inside tmux it polls only while
+comment and push. A spent hourly limit holds the API that refused it, REST or
+GraphQL, until its reset. Any other 403 or 429 that names a rate limit is the
+secondary limit, which REST and GraphQL share, so it holds both. It holds for the
+`retry-after` GitHub sends, or HOLD_UNSAID seconds where it sends none. Inside tmux it polls only while
 its window is on screen, and polls at once when it comes back.
 
 The screen fits the terminal's height. Running and queued runs are placed first,
@@ -107,6 +114,9 @@ JOBS_RECHECK = 3
 LIVE_EVERY_LEAST = 1.0
 LIVE_QUIET_EVERY = 5.0
 LIVE_NODES_MOST = 100
+IDLE_EVERY = 10.0
+HOT_FOR = 300
+IN_FLIGHT_MOST = 8
 HOLD_UNSAID = 60
 EXCERPT_RETRY = 60
 EXCERPT_ATTEMPTS = 3
@@ -260,22 +270,31 @@ class GitHub:
         self.errors: list[str] = []
         self.rates: dict[str, tuple[int, int, int]] = {}
         self.holds: dict[str, tuple[float, str]] = {}
+        self.slots = asyncio.Semaphore(IN_FLIGHT_MOST)
+
+    async def send(self, method: str, path: str, **options: Any) -> Any:
+        async with self.slots:
+            return await self.client.request(method, path, **options)
 
     def held(self, resource: str, now: float) -> bool:
         return self.holds.get(resource, (0.0, ''))[0] > now
 
     def note_refusal(self, response: Any, limited: bool = False) -> None:
-        """A rate-limit refusal holds the API that gave it, REST's core or GraphQL, until GitHub says to try again."""
+        """A spent hourly limit holds its own API until the reset; a secondary limit holds REST and GraphQL alike."""
         if response.status_code not in (403, 429) and not limited:
             return
         headers = response.headers
-        resource = headers.get('x-ratelimit-resource', 'core')
-        if retry := headers.get('retry-after'):
-            self.holds[resource] = (time.time() + int(retry), f'GitHub asked for {retry}s between requests')
-        elif headers.get('x-ratelimit-remaining') == '0':
+        if headers.get('x-ratelimit-remaining') == '0' and not headers.get('retry-after'):
+            resource = headers.get('x-ratelimit-resource', 'core')
             self.holds[resource] = (float(headers.get('x-ratelimit-reset', time.time() + HOLD_UNSAID)), 'its hourly limit is spent')
-        elif limited:
-            self.holds[resource] = (time.time() + HOLD_UNSAID, 'GitHub refused it as rate limited')
+            return
+        if retry := headers.get('retry-after'):
+            hold = (time.time() + int(retry), f'GitHub asked for {retry}s between requests')
+        elif limited or response.status_code == 429 or 'rate limit' in response.text.lower():
+            hold = (time.time() + HOLD_UNSAID, 'GitHub refused it as the secondary rate limit')
+        else:
+            return
+        self.holds['core'] = self.holds['graphql'] = hold
 
     def load(self, body: Path) -> Any:
         if body not in self.parsed:
@@ -307,7 +326,7 @@ class GitHub:
         if last and last[2] > time.time():
             return
         try:
-            response = await self.client.get('/rate_limit')
+            response = await self.send('GET', '/rate_limit')
             graphql = response.json()['resources']['graphql']
             self.keep_rate('graphql', int(graphql['remaining']), int(graphql['limit']), int(graphql['reset']))
         except httpx2.HTTPError as error:
@@ -322,7 +341,7 @@ class GitHub:
         if body.exists() and etag.exists() and (last := etag.read_text().strip()):
             headers['If-None-Match'] = last
         try:
-            response = await self.client.get(path, headers=headers)
+            response = await self.send('GET', path, headers=headers)
         except httpx2.HTTPError as error:
             self.errors.append(f'{label}: {type(error).__name__} {error}')
             return False
@@ -345,7 +364,7 @@ class GitHub:
     async def text(self, path: str) -> str | None:
         """A job log. The API answers with a redirect to blob storage, which carries no rate headers."""
         try:
-            response = await self.client.get(path, follow_redirects=True, timeout=60)
+            response = await self.send('GET', path, follow_redirects=True, timeout=60)
         except httpx2.HTTPError:
             return None
         first = response.history[0] if response.history else response
@@ -356,7 +375,7 @@ class GitHub:
     async def graphql(self, query: str, variables: Json) -> tuple[Json | None, str]:
         """The query's data, or None and why there is none."""
         try:
-            response = await self.client.post('/graphql', json={'query': query, 'variables': variables})
+            response = await self.send('POST', '/graphql', json={'query': query, 'variables': variables})
         except httpx2.HTTPError as error:
             return None, f'{type(error).__name__} {error}'
         self.note_rate(response.headers)
@@ -395,6 +414,8 @@ class ActionsPoller:
         self.github = github
         self.owner = owner
         self.repos = repos
+        now = time.time()
+        self.idle_turn = {repo: now + IDLE_EVERY * index / len(repos) for index, repo in enumerate(repos)}
         self.references_read: dict[tuple[str, str], float] = {}
         self.excerpt_retry: dict[int, float] = {}
         self.excerpt_attempts: collections.Counter[int] = collections.Counter()
@@ -483,10 +504,15 @@ class ActionsPoller:
     async def poll(self) -> None:
         self.github.errors.clear()
         repo_path = f'/repos/{self.owner}'
+        now = time.time()
+        due = [repo for repo in self.repos if self.run_list_due(repo, now)]
+        for repo in due:
+            if now >= self.idle_turn[repo]:
+                self.idle_turn[repo] = now + IDLE_EVERY
         changed = await asyncio.gather(
             *(
                 self.github.refresh(f'{repo_path}/{repo}/actions/runs?per_page={RUNS_PER_REPO}', self.body('runs', repo), repo)
-                for repo in self.repos
+                for repo in due
             )
         )
         if any(changed):
@@ -505,6 +531,14 @@ class ActionsPoller:
         now = time.time()
         await self.read_jobs(now)
         self.prune(now)
+
+    def run_list_due(self, repo: str, now: float) -> bool:
+        """Every poll while the repo is live or was never read, otherwise once its idle turn comes round."""
+        body = self.body('runs', repo)
+        if not body.exists() or now >= self.idle_turn[repo]:
+            return True
+        runs = (self.github.load(body) or {}).get('workflow_runs', [])
+        return any(run['status'] != 'completed' or now - epoch(run['updated_at']) < HOT_FOR for run in runs)
 
     def references_due(self, kind: str, repo: str, newest: float) -> bool:
         """Whether a run has appeared since this list was last read, in GitHub's clock so local skew never matters."""
@@ -1094,7 +1128,10 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
     header: Line = [
         Cell(time.strftime('%H:%M:%S'), BOLD),
         GAP,
-        Cell(f'CI runs on {summary.repos} repo{"" if summary.repos == 1 else "s"} for {board.owner}, every {summary.interval:g}s'),
+        Cell(
+            f'CI runs on {summary.repos} repo{"" if summary.repos == 1 else "s"} for {board.owner},'
+            f' every {summary.interval:g}s while live, {max(IDLE_EVERY, summary.interval):g}s otherwise'
+        ),
     ]
     if summary.live:
         header += [GAP, Cell(f'· {summary.live}', DIM)]
@@ -1183,12 +1220,12 @@ def registry(names: list[str]) -> tuple[str, list[str]]:
     except (OSError, subprocess.CalledProcessError) as error:
         sys.exit(f'watch-ci: repos-registry could not name the registry ({error}), so there is no list of repos to watch')
     data = json.loads(Path(path).read_text())
-    private = [repo['name'] for repo in data['repos'] if repo.get('visibility') == 'private']
-    unknown = sorted(set(names) - set(private))
+    every = [repo['name'] for repo in data['repos']]
+    unknown = sorted(set(names) - set(every))
     if unknown:
-        print(f'watch-ci: {path} has no private repo named {", ".join(unknown)}', file=sys.stderr)
+        print(f'watch-ci: {path} has no repo named {", ".join(unknown)}', file=sys.stderr)
         sys.exit(2)
-    return data['owner'], [repo for repo in private if not names or repo in names]
+    return data['owner'], [repo for repo in every if not names or repo in names]
 
 
 def token() -> str:
@@ -1260,7 +1297,7 @@ def interrupt(*_: object) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog='watch-ci',
-        description="Watch the GitHub Actions runs on the registry's private repos, grouped by\n"
+        description='Watch the GitHub Actions runs on every repo in the registry, grouped by\n'
         'state and redrawn in place.\n\n'
         'Each run names what it ran for: the pull request it tested or merged, the tag on\n'
         'its commit, the commit itself and its title. Standing failures show the log\n'
