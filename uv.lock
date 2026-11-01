@@ -261,6 +261,7 @@ source = { editable = "." }
 default-groups = ["dev", "docs"]
 dependencies = [
     { name = "httpx2" },
+    { name = "pyselfupdate" },
     { name = "pyyaml" },
     { name = "rich" },
     { name = "structlog" },
@@ -290,6 +291,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "httpx2", specifier = ">=2.9.1" },
+    { name = "pyselfupdate", specifier = ">=0.5.4" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "structlog", specifier = ">=25.0.0" },
@@ -904,6 +906,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/55/b3/6d2b3f149bc5413b0a29761c2c5832d8ce904a1d7f621e86616d96f505cc/pymdown_extensions-10.16.1.tar.gz", hash = "sha256:aace82bcccba3efc03e25d584e6a22d27a8e17caa3f4dd9f207e49b787aa9a91", size = 853277, upload-time = "2025-07-28T16:19:34.167Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e4/06/43084e6cbd4b3bc0e80f6be743b2e79fbc6eed8de9ad8c629939fa55d972/pymdown_extensions-10.16.1-py3-none-any.whl", hash = "sha256:d6ba157a6c03146a7fb122b2b9a121300056384eafeec9c9f9e584adfdb2a32d", size = 266178, upload-time = "2025-07-28T16:19:31.401Z" },
+]
+
+[[package]]
+name = "pyselfupdate"
+version = "0.5.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/51/19/ea453a4cbd40aaa9704ae445910aa5e2f45c721b7baaf8bf17de7097aab1/pyselfupdate-0.5.4.tar.gz", hash = "sha256:ad0e4f24bbe86975721e0c3ff8fa305c4e3ef3eb921692a7e821827a17426aed", size = 35831, upload-time = "2026-10-18T08:05:20.097Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/fd/3f619ddee809b89db974fb85c0dd21aaf1ec0e07f37aefd826d833e8d1c2/pyselfupdate-0.5.4-py3-none-any.whl", hash = "sha256:a7b907b4c15d63483eeac663abe960a95857a456753b3b7c5b9c724379be892d", size = 40719, upload-time = "2026-10-18T08:05:18.813Z" },
 ]
 
 [[package]]

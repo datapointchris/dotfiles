@@ -59,6 +59,7 @@ from dotfiles.providers import pluginsync
 from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
 from dotfiles.providers import syspkg
+from dotfiles.providers import timers
 from dotfiles.providers import toolchain
 from dotfiles.providers import uvtool
 from dotfiles.providers import winget
@@ -1351,6 +1352,21 @@ class StepProvider(SystemConfigProvider):
         return steps.apply(entry.name, privilege, session)
 
 
+@dc.dataclass(frozen=True, slots=True)
+class UserTimerProvider(SystemConfigProvider):
+    """The `user_timers` rows, each a systemd user timer or a LaunchAgent."""
+
+    def state(
+        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], session: MachineContext
+    ) -> sysconfig.State:
+        assert isinstance(entry, catalogs.UserTimer)
+        return timers.observe(entry)
+
+    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, session: MachineContext) -> Result:
+        assert isinstance(entry, catalogs.UserTimer)
+        return timers.apply(entry)
+
+
 def configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
     assert isinstance(entry, catalogs.SystemConfig)
     return entry
@@ -1409,6 +1425,7 @@ PROVIDERS: tuple[Provider, ...] = (
     SystemConfigProvider('login-shell', 'system', Stage.SYSTEM_CONFIG, 'login_shell'),
     MacDefaultProvider('macos-default', 'system', Stage.SYSTEM_CONFIG, 'macos_defaults'),
     StepProvider('step', 'system', Stage.SYSTEM_CONFIG, 'steps'),
+    UserTimerProvider('user-timer', 'system', Stage.SYSTEM_CONFIG, 'user_timers'),
 )
 """The registry, in planning order — which is the two passes.
 

@@ -127,6 +127,8 @@ tmux_plugins: true
 yazi_plugins: true
 nvim_plugins: true
 configure_zsh: true
+# Runs the user_timers that build what the other machines read.
+primary_workstation: true
 
 # Tools this machine has to be able to log in to. Naming one is what makes an
 # unauthenticated machine report itself; `src/dotfiles/resources/auth.py` says

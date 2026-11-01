@@ -1002,3 +1002,51 @@ steps:
     os_family: linux
     network_trust: fleet
     needs_root: true
+
+# Commands this account runs on an interval. `providers/timers.py` installs them
+# and `timer_reports.py` records each run. Windows has neither manager, so every
+# row excludes it.
+user_timers:
+  - name: update-check
+    description: Whether each self-updating tool's last release check succeeded, read from its state file
+    argv: [dotfiles, updates, check, --json]
+    every: 1d
+    excludes_os_family: windows
+
+  - name: repos-fetch
+    description: Fetch the remotes of every clone syncer tracks
+    argv: [syncer, fetch]
+    every: 10m
+    network_trust: fleet
+    excludes_os_family: windows
+
+  # These run only where a manifest sets primary_workstation. What they build
+  # syncs to the other machines, or reads this machine's own sessions.
+  - name: exemplar-pull
+    description: Fast-forward the read-only reference clones under ~/code/refs
+    argv: [syncer, apply, -c, ~/.local/share/terminal-library-fleet/exemplar-repos.json]
+    every: 1w
+    network_trust: fleet
+    feature: primary_workstation
+    excludes_os_family: windows
+  - name: indy-index
+    description: Re-index indy's search store
+    argv: [indy, index]
+    every: 1d
+    network_trust: fleet
+    feature: primary_workstation
+    excludes_os_family: windows
+  - name: usage-export
+    description: Export this machine's shell-history usage
+    argv: [doit, kit, digest, export]
+    every: 1d
+    network_trust: fleet
+    feature: primary_workstation
+    excludes_os_family: windows
+  - name: worker-health
+    description: Whether each headless Claude worker on this machine is still producing
+    argv: [uv, run, --project, ~/.claude, python, ~/.claude/hooks/worker-health, --save, --json]
+    every: 1d
+    network_trust: fleet
+    feature: primary_workstation
+    excludes_os_family: windows

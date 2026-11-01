@@ -7,7 +7,8 @@ shell, and — on a Mac — hold its `defaults` keys where this repo put them.
 
 `install/system.yml` declares all of it. Four kinds share one mechanism and live
 in `src/dotfiles/providers/sysconfig.py`. Preference keys are their own kind, in
-`providers/macdefaults.py`. What is left shares no mechanism at all and is
+`providers/macdefaults.py`. Commands run on an interval are their own kind, in
+`providers/timers.py`. What is left shares no mechanism at all and is
 `providers/steps.py`. Root is `src/dotfiles/privilege.py` and nowhere else. Each
 of those docstrings is the account of how its own rows converge. This page holds
 what no one of them can state.
@@ -76,6 +77,22 @@ install path runs it. WSL borrows its engine from Docker Desktop, and
 `docs/configuration/docker.md` presents that script as the manual escape hatch
 for a machine that cannot have Docker Desktop. Declaring it would make the
 installer run it, and that page promises the reverse.
+
+## A timer row's unit runs `dotfiles timers run`, never the command itself
+
+A row's unit starts `dotfiles timers run <name>` rather than the command. So
+every run is recorded by this repo's code, whatever the command is.
+`timer_reports.py` says what a record holds.
+
+dotfiles posts the record nowhere. Where a machine runs an OTLP agent, the agent
+tails the reports directory and ships each line. That keeps one path for
+everything a machine produces, and the agent queues on disk while the collector
+is out of reach. A machine with no agent keeps the file, and `dotfiles check`
+reads each row's newest run from it.
+
+A row narrowed by `feature: primary_workstation` runs only where a manifest sets
+that feature. What it builds, such as a search index, syncs to the other
+machines, so running it on each would repeat the work.
 
 ## A browser's extensions are configuration where the browser has a policy
 

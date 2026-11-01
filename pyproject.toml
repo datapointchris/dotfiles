@@ -11,6 +11,8 @@ dependencies = [
     # property to it, popping `Authorization` on a cross-origin redirect so the
     # GitHub PAT never reaches the CDN an asset download lands on.
     "httpx2>=2.9.1",
+    # Names each self-updating tool's state file, which `updates.py` reads.
+    "pyselfupdate>=0.5.4",
     "pyyaml>=6.0.3",
     "rich>=13.0.0",
     "structlog>=25.0.0",

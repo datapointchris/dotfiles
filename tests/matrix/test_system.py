@@ -41,7 +41,7 @@ from typing import Any
 import pytest
 import yaml
 
-from dotfiles.providers import schedule
+from dotfiles.providers import periodic_job
 from dotfiles.vocabulary import ExitCode
 from matrix.harness import ANSWERS
 from matrix.harness import REFUSED
@@ -973,7 +973,7 @@ def test_a_timer_the_manifest_declines_is_reported_as_left_behind(
     `enabled = true` stands, and the row reads the timer as differing from what
     this repo declares rather than as declined.
     """
-    monkeypatch.setattr(schedule, 'is_darwin', lambda: False)
+    monkeypatch.setattr(periodic_job, 'is_darwin', lambda: False)
     sandbox.declare(manifest={**LINUX, 'check_schedule': False})
     declare_system(sandbox, SCHEDULE_STEP)
     (sandbox.config / 'dotfiles').mkdir(parents=True, exist_ok=True)
@@ -1003,7 +1003,7 @@ def test_a_first_apply_installs_the_timer_its_own_symlink_pass_turned_on(
     symlink pass deploys, and on a real machine the two are one directory. uv's
     Python pin moves with it, or the apply would run a real `uv python pin`.
     """
-    monkeypatch.setattr(schedule, 'is_darwin', lambda: False)
+    monkeypatch.setattr(periodic_job, 'is_darwin', lambda: False)
     monkeypatch.setenv('XDG_CONFIG_HOME', str(sandbox.home / '.config'))
     write(sandbox.home / '.config' / 'uv' / '.python-version', (sandbox.config / 'uv' / '.python-version').read_text())
     declare_system(sandbox, SCHEDULE_STEP)

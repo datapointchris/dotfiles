@@ -31,6 +31,7 @@ from dotfiles import settings
 from dotfiles import status
 from dotfiles.providers import Kind
 from dotfiles.providers import gotool
+from dotfiles.providers import periodic_job
 from dotfiles.providers import schedule
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
@@ -163,8 +164,8 @@ def want_schedule(*, enabled: bool) -> Path:
 @pytest.fixture
 def linux(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
-    monkeypatch.setattr(schedule, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
-    monkeypatch.setattr(schedule, 'is_darwin', lambda: False)
+    monkeypatch.setattr(periodic_job, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
+    monkeypatch.setattr(periodic_job, 'is_darwin', lambda: False)
     want_schedule(enabled=True)
     return tmp_path / 'config' / 'systemd' / 'user'
 
@@ -223,7 +224,7 @@ def test_the_schedule_runs_the_check_and_nothing_else(linux: Path, fake_bin: Pat
     schedule.apply(BOX)
     execstart = next(line for line in (linux / 'dotfiles-check.service').read_text().splitlines() if line.startswith('ExecStart='))
 
-    assert execstart == f'ExecStart={schedule.INSTALLED} check --refresh'
+    assert execstart == f'ExecStart={periodic_job.INSTALLED} check --refresh'
 
 
 def test_drift_does_not_leave_the_unit_permanently_failed() -> None:
@@ -308,7 +309,7 @@ def test_turning_it_off_removes_a_timer_that_is_already_installed(linux: Path, f
         stopped.append(unit)
         return effects.Completed((), 0, '')
 
-    monkeypatch.setattr(schedule.systemd, 'disable', spy)
+    monkeypatch.setattr(periodic_job.systemd, 'disable', spy)
     removed = schedule.apply(BOX)
 
     assert removed.ok
@@ -330,7 +331,7 @@ def test_a_manifest_that_declines_removes_a_timer_its_trust_domain_turned_on(
     assert leftover.verdict is Verdict.STALE
     assert 'check_schedule is off' in leftover.detail
 
-    monkeypatch.setattr(schedule.systemd, 'disable', lambda _unit: effects.Completed((), 0, ''))
+    monkeypatch.setattr(periodic_job.systemd, 'disable', lambda _unit: effects.Completed((), 0, ''))
 
     assert schedule.apply(declines).ok
     assert not (linux / 'dotfiles-check.timer').exists()
@@ -349,8 +350,8 @@ def test_a_manifest_that_wants_the_timer_overrides_a_config_that_declines(linux:
 def darwin(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv('HOME', str(tmp_path))
     monkeypatch.delenv('XDG_CONFIG_HOME', raising=False)
-    monkeypatch.setattr(schedule, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
-    monkeypatch.setattr(schedule, 'is_darwin', lambda: True)
+    monkeypatch.setattr(periodic_job, 'INSTALLED', tmp_path / 'bin' / 'dotfiles')
+    monkeypatch.setattr(periodic_job, 'is_darwin', lambda: True)
     want_schedule(enabled=True)
     return tmp_path / 'Library' / 'LaunchAgents' / f'{schedule.LABEL}.plist'
 
@@ -381,12 +382,11 @@ def test_the_agent_is_serialized_by_plistlib_on_both_sides(darwin: Path, fake_bi
 
 
 def test_the_unit_declares_the_directories_this_repo_installs_into() -> None:
-    """A user manager inherits no interactive PATH. Measured on scheduler-lxc
-    2026-08-17: headless, it carried only the system default, and the same unit on
-    a desk carried a login session's — so one machine reported twelve installed
-    tools missing and the other reported one difference, with nothing declaring
-    the difference."""
-    unit = schedule.service_content()
+    """A user manager inherits no interactive PATH. On a headless server it carried
+    only the system default, and the same unit on a desk carried a login
+    session's — so one machine reported twelve installed tools missing and the
+    other reported one difference, with nothing declaring the difference."""
+    unit = periodic_job.service_content(schedule.CHECK)
     declared = next(line for line in unit.splitlines() if line.startswith('Environment=PATH='))
 
     entries = declared.removeprefix('Environment=PATH=').split(':')
@@ -401,7 +401,7 @@ def test_the_unit_path_is_declared_rather_than_inherited(monkeypatch: pytest.Mon
     outlive nothing, which is the trap `executable` records for the binary."""
     monkeypatch.setenv('PATH', '/tmp/some-venv/bin:/tmp/fnm_multishells/123/bin')
 
-    assert '/tmp/some-venv/bin' not in schedule.service_content()
+    assert '/tmp/some-venv/bin' not in periodic_job.service_content(schedule.CHECK)
 
 
 def test_the_agent_declares_the_same_directories_as_the_unit() -> None:
@@ -410,17 +410,6 @@ def test_the_agent_declares_the_same_directories_as_the_unit() -> None:
     scheduled run spent 26 requests of the 60-per-hour anonymous GitHub quota and
     zero authenticated ones, because `github_token` gates on `shutil.which('gh')`
     and degrades to an unauthenticated request instead of failing."""
-    job = plistlib.loads(schedule.agent_content())
+    job = plistlib.loads(periodic_job.agent_content(schedule.CHECK))
 
-    entries = job['EnvironmentVariables']['PATH'].split(':')
-    assert str(providers.bin_dir()) in entries
-    assert str(gotool.gobin()) in entries
-    assert '/usr/local/bin' in entries
-
-
-def test_the_agent_path_is_declared_rather_than_inherited(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The same trap as the unit: a plist built from the installing shell's PATH
-    pins the schedule to a venv that outlives nothing."""
-    monkeypatch.setenv('PATH', '/tmp/some-venv/bin:/tmp/fnm_multishells/123/bin')
-
-    assert '/tmp/some-venv/bin' not in plistlib.loads(schedule.agent_content())['EnvironmentVariables']['PATH']
+    assert job['EnvironmentVariables']['PATH'] == periodic_job.unit_path()

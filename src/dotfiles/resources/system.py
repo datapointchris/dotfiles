@@ -36,6 +36,7 @@ from dotfiles.plan import Stage
 from dotfiles.privilege import Escalates
 from dotfiles.providers import sysconfig
 from dotfiles.providers import syspkg
+from dotfiles.providers import timers
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
@@ -131,6 +132,9 @@ class Observed:
     declared system packages installed` and none of the eight is declared.
     """
 
+    stray_timers: dict[str, str] = dc.field(default_factory=dict)
+    """Timer name → the command removing it, for an installed timer no row declares here."""
+
     @property
     def summary(self) -> str:
         """How much of each half is settled, counted through the verdict `diff`
@@ -203,6 +207,7 @@ class SystemResource:
             # side of a subtraction. Taking one would put the narrowed plan back in
             # reach of the next edit.
             undeclared=undeclared_packages(session),
+            stray_timers=timers.strays(declared_timers(session)),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -247,7 +252,21 @@ class SystemResource:
             )
             for name, stray in sorted(observed.undeclared.items())
         )
-        return packages + configuration + undeclared
+        # By hand for the same rule: the unit is named, and removing it is a
+        # command to read.
+        stray_timers = tuple(
+            Change(
+                NAME,
+                Stage.SYSTEM_CONFIG,
+                f'user-timer/{name}',
+                Verdict.UNDECLARED,
+                repair=Repair.BY_HAND,
+                detail='installed, and no user_timers row declares it for this machine',
+                advice=f'undeclared: not in install/system.yml -> {command}',
+            )
+            for name, command in observed.stray_timers.items()
+        )
+        return packages + configuration + undeclared + stray_timers
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot."""
@@ -416,6 +435,12 @@ def declared_names(plan: Plan, manager: str) -> frozenset[str]:
 
 def config_items(plan: Plan) -> list[DesiredItem]:
     return [item for item in plan.for_resource(NAME) if item.stage is Stage.SYSTEM_CONFIG]
+
+
+def declared_timers(session: Session) -> set[str]:
+    """The `user_timers` rows this machine declares, read from `session.plan` for
+    the reason `undeclared_packages` reads it: a narrowed walk must not shrink it."""
+    return {item.entry.name for item in session.plan.for_resource(NAME) if isinstance(item.entry, catalog.UserTimer)}
 
 
 def observe_config(items: list[DesiredItem], session: Session) -> dict[str, sysconfig.State]:

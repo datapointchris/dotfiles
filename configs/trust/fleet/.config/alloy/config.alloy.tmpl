@@ -121,6 +121,35 @@ otelcol.receiver.filelog "token_reports" {
   }
 }
 
+// A run of one of this machine's dotfiles timers, one JSON object a line, mapped
+// onto the check record the inbox reader files a row from and resolves it by: the
+// command's report is the body, the machine is the resource's host.name, and the
+// key, outcome and summary are attributes. The key is the timer's name under its
+// own prefix, so no other producer's row is resolved by a timer's pass.
+otelcol.receiver.filelog "timer_reports" {
+  include          = [string.format("%s/dotfiles/timer-reports/*-%s.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      timestamp = {parse_from = "attributes.timestamp", layout_type = "gotime", layout = "2006-01-02T15:04:05.999999999Z07:00"},
+    },
+    {type = "move", from = "attributes.report", to = "body"},
+    {type = "move", from = "attributes.host", to = "resource[\"host.name\"]"},
+    {type = "add", field = "attributes[\"fleet.check.key\"]", value = "EXPR(\"timer/\" + attributes.timer)"},
+    {type = "move", from = "attributes.outcome", to = "attributes[\"fleet.check.outcome\"]"},
+    {type = "move", from = "attributes.summary", to = "attributes[\"fleet.check.summary\"]"},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "desk.check"},
+  ]
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
 otelcol.exporter.otlphttp "collector" {
   client {
     endpoint = "${OTLP_GATEWAY_ENDPOINT}"
