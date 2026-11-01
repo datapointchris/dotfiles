@@ -31,13 +31,28 @@ request has closed says so and drops its log excerpt. A standing one shows the
 lines of its failed step's log that name the failure, read once per job.
 
 Every GET sends If-None-Match with the last ETag, and GitHub does not count a 304
-against the rate limit, so idle repos are free. A 304 touches the cached body, so
-its mtime says when GitHub last confirmed it. A running run's jobs change on every
-step, so most of those polls are a 200. They refresh every JOBS_EVERY seconds
-rather than every interval to stay well inside the hourly limit. Any other run
-that is not a first-attempt success is read once after its last update, since its
-jobs are then fixed. A repo's pull requests and tags are read when its runs
-change, and every REFERENCES_EVERY seconds otherwise.
+against the rate limit, so reading every repo's runs each interval is free while
+nothing changes. A 304 touches the cached body, so its mtime says when GitHub last
+confirmed it.
+
+A running run's jobs change on every step, so a REST read of them is almost
+never a 304. Every live run's jobs and steps instead come from one GraphQL query,
+sent again as soon as it answers but never more than once a second. GraphQL has
+no 304, so each query costs a point of its own 5,000-point hour, apart from the
+REST limit. Steps are asked for only on jobs the last answer had running, which
+keeps the query at one point until about a hundred jobs and runs are live. A
+bigger query is slower to answer, so many live runs refresh less often rather
+than costing more. The REST jobs carry the runner and the labels a queued job
+needs, which GraphQL's check runs lack, so a live run's REST jobs are read when
+the live view shows a job the REST copy has not seen start or finish. Any other
+run that is not a first-attempt success is read once after its last update. Where
+the live query fails, live runs' REST jobs are read every JOBS_EVERY.
+
+A repo's pull requests are read when a run newer than the last read appears, and
+its tags when a run finishes, because a pull request list changes on every
+comment and push. A 403 or 429 that is a rate limit holds the API that refused
+it, REST or GraphQL, for as long as GitHub says. Inside tmux it polls only while
+its window is on screen, and polls at once when it comes back.
 
 The screen fits the terminal's height. Running and queued runs are placed first,
 then standing failures, then the other finished runs newest first, so a long
@@ -48,6 +63,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import collections
 import contextlib
 import datetime as dt
 import json
@@ -74,8 +90,12 @@ RUNS_PER_REPO = 20
 PULL_REQUESTS_PER_REPO = 30
 TAGS_PER_REPO = 30
 JOBS_EVERY = 15
-REFERENCES_EVERY = 60
+JOBS_RECHECK = 3
+LIVE_EVERY_LEAST = 1.0
+LIVE_NODES_MOST = 100
+HOLD_UNSAID = 60
 EXCERPT_RETRY = 60
+EXCERPT_ATTEMPTS = 3
 EXCERPTS_PER_POLL = 4
 EXCERPT_LINES = 3
 MIN_FREE_TEXT = 20
@@ -108,6 +128,24 @@ FAILURE_SIGNAL = re.compile(
 )
 GO_TEST_LOCATION = re.compile(r'^\s+\S+:\d+: ')
 SIMILAR = re.compile(r'\S*[/\\]\S*|\d+')
+
+# One connection per suite and one per running job, so the query costs a point until LIVE_NODES_MOST of them.
+LIVE_QUERY = """
+query($suites: [ID!]!, $running: [ID!]!) {
+  suites: nodes(ids: $suites) {
+    ... on CheckSuite {
+      checkRuns(first: 100, filterBy: {checkType: LATEST}) {
+        nodes { id databaseId status conclusion startedAt completedAt }
+      }
+    }
+  }
+  running: nodes(ids: $running) {
+    ... on CheckRun {
+      databaseId
+      steps(first: 100) { nodes { number name status conclusion startedAt completedAt } }
+    }
+  }
+}"""
 
 
 def epoch(stamp: str | None) -> float:
@@ -197,7 +235,24 @@ class GitHub:
         self.cache = cache
         self.parsed: dict[Path, Any] = {}
         self.errors: list[str] = []
-        self.rate: tuple[int, int, int] | None = None
+        self.rates: dict[str, tuple[int, int, int]] = {}
+        self.holds: dict[str, tuple[float, str]] = {}
+
+    def held(self, resource: str, now: float) -> bool:
+        return self.holds.get(resource, (0.0, ''))[0] > now
+
+    def note_refusal(self, response: Any, limited: bool = False) -> None:
+        """A rate-limit refusal holds the API that gave it, REST's core or GraphQL, until GitHub says to try again."""
+        if response.status_code not in (403, 429) and not limited:
+            return
+        headers = response.headers
+        resource = headers.get('x-ratelimit-resource', 'core')
+        if retry := headers.get('retry-after'):
+            self.holds[resource] = (time.time() + int(retry), f'GitHub asked for {retry}s between requests')
+        elif headers.get('x-ratelimit-remaining') == '0':
+            self.holds[resource] = (float(headers.get('x-ratelimit-reset', time.time() + HOLD_UNSAID)), 'its hourly limit is spent')
+        elif limited:
+            self.holds[resource] = (time.time() + HOLD_UNSAID, 'GitHub refused it as rate limited')
 
     def load(self, body: Path) -> Any:
         if body not in self.parsed:
@@ -211,12 +266,15 @@ class GitHub:
         self.parsed.pop(body, None)
 
     def note_rate(self, headers: Any) -> None:
+        """The lowest remaining count each resource has reported this window, since answers arrive out of order."""
         try:
             remaining, limit, reset = (int(headers[k]) for k in ('x-ratelimit-remaining', 'x-ratelimit-limit', 'x-ratelimit-reset'))
         except (KeyError, ValueError):
             return
-        if self.rate is None or reset != self.rate[2] or remaining < self.rate[0]:
-            self.rate = (remaining, limit, reset)
+        resource = headers.get('x-ratelimit-resource', 'core')
+        last = self.rates.get(resource)
+        if last is None or reset != last[2] or remaining < last[0]:
+            self.rates[resource] = (remaining, limit, reset)
 
     async def refresh(self, path: str, body: Path, label: str) -> bool:
         """GET path into body, sending the last ETag. True when the body changed."""
@@ -230,6 +288,7 @@ class GitHub:
             self.errors.append(f'{label}: {type(error).__name__} {error}')
             return False
         self.note_rate(response.headers)
+        self.note_refusal(response)
         if response.status_code == 304:
             body.touch()
             return False
@@ -250,9 +309,44 @@ class GitHub:
             response = await self.client.get(path, follow_redirects=True, timeout=60)
         except httpx2.HTTPError:
             return None
-        if response.history:
-            self.note_rate(response.history[0].headers)
+        first = response.history[0] if response.history else response
+        self.note_rate(first.headers)
+        self.note_refusal(first)
         return response.text if response.status_code == 200 else None
+
+    async def graphql(self, query: str, variables: Json) -> tuple[Json | None, str]:
+        """The query's data, or None and why there is none."""
+        try:
+            response = await self.client.post('/graphql', json={'query': query, 'variables': variables})
+        except httpx2.HTTPError as error:
+            return None, f'{type(error).__name__} {error}'
+        self.note_rate(response.headers)
+        try:
+            body = response.json()
+        except ValueError:
+            body = {}
+        problems = body.get('errors') or []
+        self.note_refusal(response, limited=any(p.get('type') == 'RATE_LIMITED' for p in problems))
+        if response.status_code != 200:
+            return None, f'HTTP {response.status_code}'
+        if body.get('data') is None:
+            return None, '; '.join(p.get('message', '') for p in problems) or 'no data in the answer'
+        return body['data'], ''
+
+
+def rest_shaped(node: Json, fields: dict[str, str]) -> Json:
+    """A GraphQL check run or step under the REST job's field names, its enums lowered, its empty times left out."""
+    shaped = {
+        rest: value.lower() if rest in ('status', 'conclusion') and value else value
+        for rest, graph in fields.items()
+        if (value := node.get(graph)) is not None
+    }
+    shaped.setdefault('conclusion', None)
+    return shaped
+
+
+CHECK_RUN_FIELDS = {'status': 'status', 'conclusion': 'conclusion', 'started_at': 'startedAt', 'completed_at': 'completedAt'}
+STEP_FIELDS = {'number': 'number', 'name': 'name', **CHECK_RUN_FIELDS}
 
 
 class ActionsPoller:
@@ -262,9 +356,15 @@ class ActionsPoller:
         self.github = github
         self.owner = owner
         self.repos = repos
-        self.references_read: dict[str, float] = {}
+        self.references_read: dict[tuple[str, str], float] = {}
         self.excerpt_retry: dict[int, float] = {}
+        self.excerpt_attempts: collections.Counter[int] = collections.Counter()
         self.pruned = 0.0
+        self.visible = True
+        self.live_jobs: dict[int, dict[int, Json]] = {}
+        self.running_check_runs: list[str] = []
+        self.live_error = ''
+        self.live_took = 0.0
 
     def body(self, kind: str, name: object) -> Path:
         return self.github.cache / kind / f'{name}.json'
@@ -272,8 +372,60 @@ class ActionsPoller:
     def runs(self) -> list[Json]:
         return [run for repo in self.repos for run in (self.github.load(self.body('runs', repo)) or {}).get('workflow_runs', [])]
 
-    def jobs(self, run_id: int) -> list[Json]:
+    def rest_jobs(self, run_id: int) -> list[Json]:
         return (self.github.load(self.body('jobs-every-attempt', run_id)) or {}).get('jobs', [])
+
+    def jobs(self, run_id: int) -> list[Json]:
+        """The REST jobs, with the live view's status, times and steps laid over each job it has."""
+        live = self.live_jobs.get(run_id, {})
+        return [job | live[job['id']] if job['id'] in live else job for job in self.rest_jobs(run_id)]
+
+    def disagrees(self, run_id: int) -> bool:
+        """Whether the live view has a job the REST copy lacks, or one in another state."""
+        rest = {job['id']: job['status'] for job in self.rest_jobs(run_id)}
+        return any(rest.get(job_id) != live['status'] for job_id, live in self.live_jobs[run_id].items())
+
+    async def follow_live(self, every: float) -> None:
+        """Keep the live view current, one query at a time and at most one each `every` seconds."""
+        while True:
+            started = time.time()
+            if self.visible and not self.github.held('graphql', started):
+                await self.read_live()
+            await asyncio.sleep(max(every - (time.time() - started), 0.0))
+
+    async def read_live(self) -> None:
+        suites = {
+            run['check_suite_node_id']: run['id'] for run in self.runs() if run['status'] != 'completed' and run.get('check_suite_node_id')
+        }
+        if not suites:
+            self.live_jobs, self.running_check_runs, self.live_error = {}, [], ''
+            return
+        asked = list(suites)[:LIVE_NODES_MOST]
+        started = time.perf_counter()
+        data, problem = await self.github.graphql(LIVE_QUERY, {'suites': asked, 'running': self.running_check_runs[:LIVE_NODES_MOST]})
+        self.live_took = time.perf_counter() - started
+        try:
+            if data is None:
+                raise ValueError(problem)
+            steps = {
+                node['databaseId']: [rest_shaped(step, STEP_FIELDS) for step in node['steps']['nodes']] for node in data['running'] if node
+            }
+            live: dict[int, dict[int, Json]] = {}
+            running = []
+            for suite, node in zip(asked, data['suites'], strict=True):
+                if not node:
+                    continue
+                jobs = live[suites[suite]] = {}
+                for check in node['checkRuns']['nodes']:
+                    jobs[check['databaseId']] = rest_shaped(check, CHECK_RUN_FIELDS)
+                    if check['databaseId'] in steps:
+                        jobs[check['databaseId']]['steps'] = steps[check['databaseId']]
+                    if check['status'] == 'IN_PROGRESS':
+                        running.append(check['id'])
+        except (KeyError, TypeError, ValueError) as error:
+            self.live_jobs, self.running_check_runs, self.live_error = {}, [], f'live jobs: {error}'
+            return
+        self.live_jobs, self.running_check_runs, self.live_error = live, running, ''
 
     def pull_requests(self, repo: str) -> list[Json]:
         return self.github.load(self.body('pull-requests', repo)) or []
@@ -287,36 +439,33 @@ class ActionsPoller:
     async def poll(self) -> None:
         self.github.errors.clear()
         repo_path = f'/repos/{self.owner}'
-        changed = await asyncio.gather(
+        await asyncio.gather(
             *(
                 self.github.refresh(f'{repo_path}/{repo}/actions/runs?per_page={RUNS_PER_REPO}', self.body('runs', repo), repo)
                 for repo in self.repos
             )
         )
+        reads = []
+        for repo in self.repos:
+            runs = (self.github.load(self.body('runs', repo)) or {}).get('workflow_runs', [])
+            if self.references_due('pull-requests', repo, max((epoch(r['created_at']) for r in runs), default=0.0)):
+                path = f'{repo_path}/{repo}/pulls?state=all&sort=updated&direction=desc&per_page={PULL_REQUESTS_PER_REPO}'
+                reads.append(self.github.refresh(path, self.body('pull-requests', repo), f'{repo} pull requests'))
+            finished = max((epoch(r['updated_at']) for r in runs if r['status'] == 'completed'), default=0.0)
+            if self.references_due('tags', repo, finished):
+                path = f'{repo_path}/{repo}/tags?per_page={TAGS_PER_REPO}'
+                reads.append(self.github.refresh(path, self.body('tags', repo), f'{repo} tags'))
+        await asyncio.gather(*reads)
         now = time.time()
-        due = [
-            repo
-            for repo, fresh in zip(self.repos, changed, strict=True)
-            if fresh or now - self.references_read.get(repo, 0) >= REFERENCES_EVERY
-        ]
-        for repo in due:
-            self.references_read[repo] = now
-        await asyncio.gather(
-            *(
-                self.github.refresh(
-                    f'{repo_path}/{repo}/pulls?state=all&sort=updated&direction=desc&per_page={PULL_REQUESTS_PER_REPO}',
-                    self.body('pull-requests', repo),
-                    f'{repo} pull requests',
-                )
-                for repo in due
-            ),
-            *(
-                self.github.refresh(f'{repo_path}/{repo}/tags?per_page={TAGS_PER_REPO}', self.body('tags', repo), f'{repo} tags')
-                for repo in due
-            ),
-        )
         await self.read_jobs(now)
         self.prune(now)
+
+    def references_due(self, kind: str, repo: str, newest: float) -> bool:
+        """Whether a run has appeared since this list was last read, in GitHub's clock so local skew never matters."""
+        if self.references_read.get((kind, repo), -1.0) >= newest:
+            return False
+        self.references_read[(kind, repo)] = newest
+        return True
 
     async def read_jobs(self, now: float) -> None:
         reads = []
@@ -325,9 +474,13 @@ class ActionsPoller:
                 continue
             body = self.body('jobs-every-attempt', run['id'])
             confirmed = body.stat().st_mtime if body.exists() else 0.0
-            if run['status'] != 'completed' and now - confirmed < JOBS_EVERY:
-                continue
-            if run['status'] == 'completed' and confirmed >= epoch(run['updated_at']):
+            if run['status'] == 'completed':
+                if confirmed >= epoch(run['updated_at']):
+                    continue
+            elif run['id'] in self.live_jobs and body.exists():
+                if now - confirmed < JOBS_RECHECK or not self.disagrees(run['id']):
+                    continue
+            elif now - confirmed < JOBS_EVERY:
                 continue
             repo = run['repository']['name']
             path = f'/repos/{self.owner}/{repo}/actions/runs/{run["id"]}/jobs?filter=all&per_page=100'
@@ -344,12 +497,13 @@ class ActionsPoller:
 
         async def read(repo: str, job: Json) -> None:
             log = await self.github.text(f'/repos/{self.owner}/{repo}/actions/jobs/{job["id"]}/logs')
-            if log is None:
+            self.excerpt_attempts[job['id']] += 1
+            if log is None and self.excerpt_attempts[job['id']] < EXCERPT_ATTEMPTS:
                 self.excerpt_retry[job['id']] = now + EXCERPT_RETRY
                 return
             body = self.body('failure-excerpts', job['id'])
             body.parent.mkdir(parents=True, exist_ok=True)
-            body.write_text(json.dumps(failure_excerpt(log)))
+            body.write_text(json.dumps(failure_excerpt(log) if log else []))
 
         await asyncio.gather(*(read(repo, job) for repo, job in due))
 
@@ -722,12 +876,13 @@ class Layout:
         lines = flow(head, self.width, indent=2, hang=4)
         title = self.board.title(run)
         lines += flow([Cell(title, DIM if resolved else '')], self.width, indent=6, hang=0, max_lines=2)
-        handle: Line = [Cell(' ' * 6), Cell(run['head_sha'][:7], DIM), GAP, Cell(run['html_url'], DIM, run['html_url'])]
+        handle: Line = [Cell(run['head_sha'][:7], DIM), GAP, Cell(run['html_url'], DIM, run['html_url'], whole=True)]
         subject = clean(((run.get('head_commit') or {}).get('message') or '').split('\n')[0])
-        room = self.width - line_width(handle) - len(GAP.text)
+        room = self.width - 6 - line_width(handle) - len(GAP.text)
         if subject and subject != title and room > 12:
-            handle = clip([*handle, GAP, Cell(subject, DIM)], self.width)
-        lines.append(handle)
+            lines.append(clip([Cell(' ' * 6), *handle, GAP, Cell(subject, DIM)], self.width))
+        else:
+            lines += flow(handle, self.width, indent=6, hang=0)
         excerpted = {job['id'] for job in failure.latest_attempt_jobs()} if failure and not failure.resolution else set()
         jobs = [(job, self.job_name(entry, job), *self.job(job)) for job in entry.jobs]
         name_width = max((width_of(name) for _, name, *_ in jobs), default=0)
@@ -755,13 +910,29 @@ def rows_of(line: str, width: int) -> int:
     return max(1, -(-width_of(ESCAPE.sub('', line)) // max(1, width)))
 
 
+def cut(block: list[str], rows: int, width: int, renderer: AnsiRenderer) -> list[str]:
+    """The block's first lines that fit in rows, its last row counting the jobs left below."""
+    kept: list[str] = []
+    used = 0
+    for i, line in enumerate(block):
+        if used + rows_of(line, width) > rows - 1:
+            hidden = sum(1 for rest in block[i:] if '└ ' in ESCAPE.sub('', rest))
+            more = f'{hidden} more job{"" if hidden == 1 else "s"}' if hidden else 'more'
+            return [*kept, renderer.line(clip([Cell(' ' * 6), Cell(f'└ … {more}, below the bottom of the screen', DIM)], width))]
+        kept.append(line)
+        used += rows_of(line, width)
+    return kept
+
+
 @dataclass
 class PollSummary:
     """What the header and footer say about the poll the board came from."""
 
     repos: int
     interval: float
-    rate: tuple[int, int, int] | None
+    rates: dict[str, tuple[int, int, int]]
+    holds: dict[str, tuple[float, str]]
+    steps_every: float | None
     errors: list[str]
 
 
@@ -783,10 +954,17 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
             f'CI runs on {summary.repos} repo{"" if summary.repos == 1 else "s"} for {board.owner}, every {summary.interval:g}s', whole=True
         ),
     ]
-    if summary.rate:
-        remaining, limit, reset = summary.rate
-        resets = time.strftime('%H:%M', time.localtime(reset))
-        header += [GAP, Cell(f'· API {remaining} of {limit} left, resets {resets}', DIM, whole=True)]
+    if summary.steps_every is not None:
+        header += [GAP, Cell(f'· steps every {summary.steps_every:.1f}s', DIM, whole=True)]
+    for resource, name in (('core', 'REST'), ('graphql', 'GraphQL')):
+        if resource in summary.rates:
+            remaining, limit, reset = summary.rates[resource]
+            resets = time.strftime('%H:%M', time.localtime(reset))
+            header += [GAP, Cell(f'· {name} {remaining} of {limit} left, resets {resets}', DIM, whole=True)]
+    for resource, (until, because) in summary.holds.items():
+        if until > board.now:
+            name = 'GraphQL' if resource == 'graphql' else 'REST'
+            header += [GAP, Cell(f'· {name} held until {time.strftime("%H:%M:%S", time.localtime(until))}: {because}', RED, whole=True)]
     top = [renderer.line(line) for line in flow(header, width, indent=0, hang=10)]
     bottom = [renderer.line(clip([Cell(error, RED)], width)) for error in summary.errors]
     if bottom:
@@ -806,9 +984,12 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
         for entry in [*entries['RUNNING'], *entries['QUEUED'], *standing, *rest]:
             cost = sum(rows_of(line, width) for line in blocks[id(entry)])
             if cost > budget:
-                if entry.group in LIVE or id(entry) in standing_ids:
+                if entry.group not in LIVE and id(entry) not in standing_ids:
+                    break
+                if budget < 2:
                     continue
-                break
+                blocks[id(entry)] = cut(blocks[id(entry)], budget, width, renderer)
+                cost = budget
             admitted.add(id(entry))
             budget -= cost
 
@@ -868,6 +1049,24 @@ def token() -> str:
         sys.exit('watch-ci: `gh auth token` gave no token to read the API with; run `gh auth login`')
 
 
+def on_screen() -> bool:
+    """Whether a tmux client shows this pane. Outside tmux it is always on screen."""
+    pane = os.environ.get('TMUX_PANE')
+    if not pane or not os.environ.get('TMUX'):
+        return True
+    query = '#{session_attached} #{window_active} #{window_zoomed_flag} #{pane_active}'
+    try:
+        shown = subprocess.run(
+            ['tmux', 'display-message', '-p', '-t', pane, query], capture_output=True, text=True, timeout=2
+        ).stdout.split()
+    except (OSError, subprocess.SubprocessError):
+        return True
+    if len(shown) != 4:
+        return True
+    attached, window_active, zoomed, pane_active = shown
+    return attached != '0' and window_active == '1' and (zoomed == '0' or pane_active == '1')
+
+
 async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bool) -> None:
     cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'watch-ci'
     headers = {'Authorization': f'Bearer {token()}', 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
@@ -875,17 +1074,29 @@ async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bo
     async with httpx2.AsyncClient(base_url=API, headers=headers, timeout=20) as client:
         github = GitHub(client, cache)
         poller = ActionsPoller(github, owner, repos)
+        live_every = max(LIVE_EVERY_LEAST, args.interval)
+        follower = None if args.once else asyncio.create_task(poller.follow_live(live_every))
         with Screen(live) as screen:
             while True:
-                await poller.poll()
-                board = Board(poller, time.time())
-                await poller.read_excerpts(board.standing_failed_jobs(args.keep))
-                summary = PollSummary(len(repos), args.interval, github.rate, list(github.errors))
+                started = time.time()
+                poller.visible = not live or on_screen()
+                if not poller.visible:
+                    await asyncio.sleep(args.interval)
+                    continue
+                if not github.held('core', started):
+                    await poller.poll()
+                    if follower is None:
+                        await poller.read_live()
+                        await poller.read_jobs(time.time())
+                    await poller.read_excerpts(Board(poller, time.time()).standing_failed_jobs(args.keep))
+                steps_every = max(live_every, poller.live_took) if poller.live_jobs else None
+                errors = [*github.errors, *([poller.live_error] if poller.live_error else [])]
+                summary = PollSummary(len(repos), args.interval, dict(github.rates), dict(github.holds), steps_every, errors)
                 size = shutil.get_terminal_size((120, 0))
-                screen.draw(render(board, summary, args.keep, size.columns, size.lines if live else None, renderer))
+                screen.draw(render(Board(poller, time.time()), summary, args.keep, size.columns, size.lines if live else None, renderer))
                 if args.once:
                     return
-                await asyncio.sleep(args.interval)
+                await asyncio.sleep(max(args.interval - (time.time() - started), 0.0))
 
 
 def interrupt(*_: object) -> None:
