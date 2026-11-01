@@ -14,21 +14,31 @@ Each run says what it ran for: the trigger, the pull request it tested or merged
 the tag on its commit, and who started it when that was not the owner. The pull
 request comes from the repo's pull request list rather than the run's own
 `pull_requests`, because GitHub empties that once the pull request closes. A push
-run is matched to the pull request whose merge commit it ran on. Under the title
-is the run's URL. It is the one handle a browser and a copy both take whole,
-because `gh run view` takes an id and a repo rather than a URL.
+run is matched to the pull request whose merge commit it ran on.
 
-Under each running or queued run is one line per job: its runner, its current
-step and how long that step has run, or the labels a waiting job needs. A running
-run shows the median of its workflow's last successful runs beside its age.
+The board is one table under a row of column names, the shape of `gh run list`.
+Each run is one row: its repo, workflow and number, age, how long it took, its
+title, and last how a failure resolved, its trigger and its tag. Each job is a
+row below it on the same columns: its step under the title, and its runner or
+attempts last. No row wraps. Text past the edge of the screen is cut with an
+ellipsis, so the columns hold however long a title or a log line runs.
 
-FAILED lists every run with a failed job in any attempt, and under it each failed
-job with its attempt. A run's conclusion is its latest attempt's, so a run whose
-failed job was rerun, or that was cancelled after a job failed, would otherwise
-hide that failure. A failure
+Under each running or queued run is a row per job: how long it has run, its
+runner, and its current step with how long that step has run, or the labels a
+waiting job needs. A running run's TOOK is its time so far over the median of
+its workflow's last successful runs, red once past twice that median. A queued
+run's AGE is how long it has waited. A run is RUNNING once any job of its attempt has started, and
+QUEUED until then, because GitHub calls a whole run queued while any one of its
+jobs waits for a runner.
+
+FAILED lists every run with a failed job in any attempt, and under it one row per
+failed job: its newest failed attempt, and how many attempts failed. A run's
+conclusion is its latest attempt's, so a run whose failed job was rerun, or that
+was cancelled after a job failed, would otherwise hide that failure. A failure
 whose rerun passed, whose workflow has passed on that branch since, or whose pull
-request has closed says so and drops its log excerpt. A standing one shows the
-lines of its failed step's log that name the failure, read once per job.
+request has closed says so in green and drops its log excerpt. A standing one
+shows its age in red, and under its step the lines of the step's log that name
+the failure, read once per job.
 
 Every GET sends If-None-Match with the last ETag, and GitHub does not count a 304
 against the rate limit, so reading every repo's runs each interval is free while
@@ -37,7 +47,9 @@ confirmed it.
 
 A running run's jobs change on every step, so a REST read of them is almost
 never a 304. Every live run's jobs and steps instead come from one GraphQL query,
-sent again as soon as it answers but never more than once a second. GraphQL has
+sent again as soon as it answers but never more than once a second while a job
+is running. While none is, as when every live job waits for a runner, it is sent
+every LIVE_QUIET_EVERY seconds, or at once when a run list changes. GraphQL has
 no 304, so each query costs a point of its own 5,000-point hour, apart from the
 REST limit. Steps are asked for only on jobs the last answer had running, which
 keeps the query at one point until about a hundred jobs and runs are live. A
@@ -78,6 +90,7 @@ import time
 import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -92,13 +105,13 @@ TAGS_PER_REPO = 30
 JOBS_EVERY = 15
 JOBS_RECHECK = 3
 LIVE_EVERY_LEAST = 1.0
+LIVE_QUIET_EVERY = 5.0
 LIVE_NODES_MOST = 100
 HOLD_UNSAID = 60
 EXCERPT_RETRY = 60
 EXCERPT_ATTEMPTS = 3
 EXCERPTS_PER_POLL = 4
 EXCERPT_LINES = 3
-MIN_FREE_TEXT = 20
 TYPICAL_OF = 5
 PRUNE_AFTER = 24 * 3600
 PRUNE_EVERY = 600
@@ -106,6 +119,9 @@ PRUNE_EVERY = 600
 GROUPS = ('RUNNING', 'QUEUED', 'FAILED', 'CANCELED', 'SUCCEEDED')
 LIVE = ('RUNNING', 'QUEUED')
 FAILED_CONCLUSIONS = frozenset({'failure', 'timed_out', 'startup_failure'})
+COLUMN_LABELS = ('REPO', 'RUN / JOB', 'AGE', 'TOOK', 'TITLE / STEP', 'TRIGGER / RUNNER')
+RUN_MOST = 32
+TRIGGER_LEAST = 24
 PULL_REQUEST_EVENTS = frozenset({'pull_request', 'pull_request_target'})
 
 GROUP_STYLE = {'RUNNING': '1;33', 'QUEUED': '1;36', 'FAILED': '1;31', 'CANCELED': '1;35', 'SUCCEEDED': '1;32'}
@@ -116,6 +132,7 @@ GREEN = '32'
 YELLOW = '33'
 MAGENTA = '35'
 CYAN = '36'
+RUN_SYMBOL = {'RUNNING': ('●', YELLOW), 'QUEUED': ('○', CYAN), 'FAILED': ('✗', RED), 'CANCELED': ('⊘', MAGENTA), 'SUCCEEDED': ('✓', GREEN)}
 
 ESCAPE = re.compile(r'\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])')
 CONTROL = re.compile(r'[\x00-\x1f\x7f-\x9f]')
@@ -161,6 +178,12 @@ def duration(seconds: float) -> str:
     if s < 86400:
         return f'{s // 3600}h{s % 3600 // 60}m'
     return f'{s // 86400}d'
+
+
+def ago(seconds: float) -> str:
+    """How long ago, to the minute once past one, since a finished run's seconds say nothing."""
+    s = max(0, int(seconds))
+    return duration(s) if s < 60 or s >= 3600 else f'{s // 60}m'
 
 
 def clean(text: str | None) -> str:
@@ -266,14 +289,14 @@ class GitHub:
         self.parsed.pop(body, None)
 
     def note_rate(self, headers: Any) -> None:
-        """The lowest remaining count each resource has reported this window, since answers arrive out of order."""
+        """The lowest remaining count per resource until its window resets, since GraphQL sometimes answers from a second, fresh window."""
         try:
             remaining, limit, reset = (int(headers[k]) for k in ('x-ratelimit-remaining', 'x-ratelimit-limit', 'x-ratelimit-reset'))
         except (KeyError, ValueError):
             return
         resource = headers.get('x-ratelimit-resource', 'core')
         last = self.rates.get(resource)
-        if last is None or reset != last[2] or remaining < last[0]:
+        if last is None or last[2] <= time.time() or remaining < last[0]:
             self.rates[resource] = (remaining, limit, reset)
 
     async def refresh(self, path: str, body: Path, label: str) -> bool:
@@ -365,6 +388,7 @@ class ActionsPoller:
         self.running_check_runs: list[str] = []
         self.live_error = ''
         self.live_took = 0.0
+        self.run_lists_changed = asyncio.Event()
 
     def body(self, kind: str, name: object) -> Path:
         return self.github.cache / kind / f'{name}.json'
@@ -386,12 +410,16 @@ class ActionsPoller:
         return any(rest.get(job_id) != live['status'] for job_id, live in self.live_jobs[run_id].items())
 
     async def follow_live(self, every: float) -> None:
-        """Keep the live view current, one query at a time and at most one each `every` seconds."""
+        """Keep the live view current: each `every` seconds while a job runs, otherwise each LIVE_QUIET_EVERY or when a run list changes."""
         while True:
             started = time.time()
+            self.run_lists_changed.clear()
             if self.visible and not self.github.held('graphql', started):
                 await self.read_live()
-            await asyncio.sleep(max(every - (time.time() - started), 0.0))
+            await asyncio.sleep(max(started + every - time.time(), 0.0))
+            if not self.running_check_runs:
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(self.run_lists_changed.wait(), max(started + LIVE_QUIET_EVERY - time.time(), 0.0))
 
     async def read_live(self) -> None:
         suites = {
@@ -439,12 +467,14 @@ class ActionsPoller:
     async def poll(self) -> None:
         self.github.errors.clear()
         repo_path = f'/repos/{self.owner}'
-        await asyncio.gather(
+        changed = await asyncio.gather(
             *(
                 self.github.refresh(f'{repo_path}/{repo}/actions/runs?per_page={RUNS_PER_REPO}', self.body('runs', repo), repo)
                 for repo in self.repos
             )
         )
+        if any(changed):
+            self.run_lists_changed.set()
         reads = []
         for repo in self.repos:
             runs = (self.github.load(self.body('runs', repo)) or {}).get('workflow_runs', [])
@@ -625,12 +655,21 @@ class Board:
             return f'PR #{pr["number"]} {"merged" if pr.get("merged_at") else "closed"}'
         lane = self.lanes[(run['repository']['name'], run['workflow_id'], run['head_branch'])]
         later = [r['run_number'] for r in lane if r['run_number'] > run['run_number'] and r['conclusion'] == 'success']
-        return f'#{min(later)} has passed since' if later else ''
+        return f'#{min(later)} passed since' if later else ''
+
+    def group(self, run: Json) -> str:
+        """A live run is RUNNING once any job of its attempt has started. GitHub calls a run queued while any one job waits."""
+        if run['status'] == 'completed':
+            return group_of(run)
+        current = [job for job in self.jobs[run['id']] if job['run_attempt'] == run['run_attempt']]
+        if not current:
+            return group_of(run)
+        return 'RUNNING' if any(job['status'] in ('in_progress', 'completed') for job in current) else 'QUEUED'
 
     def entries(self, keep: int) -> dict[str, list[Entry]]:
         grouped: dict[str, list[Json]] = defaultdict(list)
         for run in self.runs:
-            grouped[group_of(run)].append(run)
+            grouped[self.group(run)].append(run)
 
         def current_jobs(run: Json) -> list[Json]:
             return [job for job in self.jobs[run['id']] if job['run_attempt'] == run['run_attempt'] and job.get('conclusion') != 'skipped']
@@ -646,10 +685,12 @@ class Board:
         }
 
     def totals(self) -> dict[str, int]:
+        """How many runs each group holds that a reader would miss when they are not shown: every live run, every standing failure."""
         counts = {group: 0 for group in GROUPS}
         for run in self.runs:
-            counts[group_of(run)] += 1
-        counts['FAILED'] = len(self.failures)
+            if (group := self.group(run)) in LIVE:
+                counts[group] += 1
+        counts['FAILED'] = sum(1 for f in self.failures if not f.resolution)
         return counts
 
     def standing_failed_jobs(self, keep: int) -> list[tuple[str, Json]]:
@@ -668,13 +709,17 @@ class Board:
 
 @dataclass(frozen=True)
 class Cell:
-    """Text with its color and link. A padded or whole cell wraps as one piece."""
+    """Text with its color and link, padded to `pad` columns on its right, or on its left where `right` aligns it."""
 
     text: str
     style: str = ''
     link: str = ''
     pad: int = 0
-    whole: bool = False
+    right: bool = False
+
+    def padded(self) -> str:
+        space = ' ' * max(0, self.pad - width_of(self.text))
+        return space + self.text if self.right else self.text + space
 
 
 Line = list[Cell]
@@ -691,69 +736,40 @@ def line_width(line: Line) -> int:
     return sum(max(cell.pad, width_of(cell.text)) for cell in line)
 
 
+def fit(text: str, width: int) -> str:
+    """The text cut to width, ending in an ellipsis where anything was cut."""
+    if width_of(text) <= width:
+        return text
+    if width <= 0:
+        return ''
+    kept = ''
+    for char in text:
+        if width_of(kept + char) > width - 1:
+            break
+        kept += char
+    return kept.rstrip() + '…'
+
+
+def column(cell: Cell, width: int, right: bool = False) -> Cell:
+    """The cell cut and padded to a column `width` wide."""
+    return Cell(fit(cell.text, width), cell.style, cell.link, width, right)
+
+
 def clip(line: Line, width: int) -> Line:
-    """The line cut to width, ending in an ellipsis where anything was cut."""
+    """The line cut to width, ending in an ellipsis where anything was cut. Nothing on the board wraps."""
     if line_width(line) <= width:
         return line
     out: Line = []
     used = 0
     for cell in line:
-        text = cell.text + ' ' * max(0, cell.pad - width_of(cell.text))
+        text = cell.padded()
         if used + width_of(text) <= width - 1:
             out.append(Cell(text, cell.style, cell.link))
             used += width_of(text)
             continue
-        kept = ''
-        for char in text:
-            if used + width_of(kept + char) > width - 1:
-                break
-            kept += char
-        out.append(Cell(kept.rstrip() + '…', cell.style, cell.link))
+        out.append(Cell(fit(text.rstrip(), width - used), cell.style, cell.link))
         break
     return out
-
-
-def flow(line: Line, width: int, indent: int, hang: int = 2, max_lines: int = 0) -> list[Line]:
-    """The line broken between words to fit width, each later line hanging `hang` further in.
-
-    Padded cells are columns, so they keep their padding while they leave
-    MIN_FREE_TEXT beside them. A word or whole cell wider than the line is left
-    whole, so a URL wraps in the terminal and still copies as one line.
-    """
-    if indent + line_width(line) <= width:
-        return [[Cell(' ' * indent), *line]]
-    last_padded = max((i for i, cell in enumerate(line) if cell.pad), default=-1)
-    columns = line_width(line[: last_padded + 2]) if last_padded >= 0 else 0
-    keep_columns = indent + columns + MIN_FREE_TEXT <= width
-    under = indent + hang
-    words: Line = []
-    for cell in line:
-        if keep_columns and cell.pad:
-            words.append(cell)
-        elif cell.pad or cell.whole:
-            words.append(Cell(cell.text, cell.style, cell.link))
-        else:
-            words += [Cell(word, cell.style, cell.link) for word in re.split(r'( +)', cell.text) if word]
-    lines: list[Line] = [[Cell(' ' * indent)]]
-    used = indent
-    for word in words:
-        size = max(word.pad, width_of(word.text))
-        if not word.pad and word.text.isspace():
-            if len(lines[-1]) > 1:
-                lines[-1].append(word)
-                used += size
-            continue
-        if used + size > width and len(lines[-1]) > 1:
-            while not lines[-1][-1].pad and lines[-1][-1].text.isspace():
-                used -= len(lines[-1].pop().text)
-            lines.append([Cell(' ' * under)])
-            used = under
-        lines[-1].append(word)
-        used += size
-    if max_lines and len(lines) > max_lines:
-        last = lines[max_lines - 1] + [Cell(' '), *(cell for later in lines[max_lines:] for cell in later[1:])]
-        lines = [*lines[: max_lines - 1], clip(last, width)]
-    return lines
 
 
 class AnsiRenderer:
@@ -767,142 +783,232 @@ class AnsiRenderer:
             text = f'\033[{cell.style}m{text}\033[0m'
         if self.color and cell.link:
             text = f'\033]8;;{cell.link}\033\\{text}\033]8;;\033\\'
-        return text + pad
+        return pad + text if cell.right else text + pad
 
     def line(self, line: Line) -> str:
         return ''.join(self.cell(cell) for cell in line).rstrip()
 
 
+@dataclass(frozen=True)
+class RunRow:
+    """One run's cells in column order: symbol, repo, run, age, took, trigger and title."""
+
+    symbol: str
+    color: str
+    repo: Cell
+    run: Cell
+    age: Cell
+    took: Cell
+    trigger: Line
+    title: str
+
+
+@dataclass(frozen=True)
+class JobRow:
+    """One job's cells: symbol, name, how long it took or has run, its runner or attempts, and its step or the labels it waits for."""
+
+    job: Json
+    symbol: str
+    color: str
+    name: str
+    took: str
+    where: str
+    step: str
+
+
+@dataclass(frozen=True)
+class Columns:
+    """Widths shared by every row on the screen. A job's name spans the repo and run columns, and its step sits under the title.
+
+    The trigger column is last and unpadded, so the screen's edge cuts it first.
+    """
+
+    repo: int
+    run: int
+    age: int
+    took: int
+    title: int
+
+    @property
+    def title_at(self) -> int:
+        return len('  ✓ ') + self.repo + self.run + self.age + self.took + 4 * len(GAP.text)
+
+
+def job_symbol(job: Json) -> tuple[str, str]:
+    if job['status'] == 'in_progress':
+        return RUN_SYMBOL['RUNNING']
+    if job['status'] != 'completed':
+        return RUN_SYMBOL['QUEUED']
+    if job.get('conclusion') == 'success':
+        return RUN_SYMBOL['SUCCEEDED']
+    if failed(job):
+        return RUN_SYMBOL['FAILED']
+    if job.get('conclusion') == 'cancelled':
+        return RUN_SYMBOL['CANCELED']
+    return '·', DIM
+
+
+def step_named(steps: list[Json], step: Json) -> str:
+    """A step by its position, since step numbers skip: a job's post steps are numbered from 25 in an 18-step job."""
+    return f'step {steps.index(step) + 1}/{len(steps)} {clean(step["name"])}'
+
+
 class Layout:
-    """One frame of the board, as lines no wider than the terminal."""
+    """One frame of the board as rows on shared columns, none wider than the terminal."""
 
     def __init__(self, board: Board, width: int) -> None:
         self.board = board
         self.width = width
         self.now = board.now
 
-    def when(self, entry: Entry) -> tuple[str, str]:
-        run, group, now = entry.run, entry.group, self.now
-        if group == 'RUNNING':
-            elapsed = now - epoch(run['run_started_at'])
-            typical = self.board.typical.get((run['repository']['name'], run['workflow_id']))
-            if typical is None:
-                return f'running {duration(elapsed)}', GROUP_STYLE[group]
-            late = elapsed > 2 * typical
-            return f'running {duration(elapsed)} of ~{duration(typical)}', GROUP_STYLE['FAILED' if late else group]
-        if group == 'QUEUED':
-            waiting = [job for job in entry.jobs if job['status'] not in ('in_progress', 'completed')]
-            if waiting and len(waiting) < len(entry.jobs):
-                wait = now - min(epoch(job['created_at']) for job in waiting)
-                return f'{duration(now - epoch(run["run_started_at"]))} in, waiting {duration(wait)}', GROUP_STYLE[group]
-            return f'waiting {duration(now - epoch(run["created_at"]))}', GROUP_STYLE[group]
-        if entry.failure is not None:
-            conclusion = (entry.failure.jobs[0] if entry.failure.jobs else run).get('conclusion') or 'failure'
-            text = f'{duration(now - entry.failure.when)} ago' + ('' if conclusion == 'failure' else f', {conclusion.replace("_", " ")}')
-            return text, DIM if entry.failure.resolution else GROUP_STYLE[group]
-        took = epoch(run['updated_at']) - epoch(run.get('run_started_at') or run['created_at'])
-        return f'{duration(now - epoch(run["updated_at"]))} ago, took {duration(took)}', GROUP_STYLE[group]
+    def trigger(self, entry: Entry) -> Line:
+        """How a failure resolved, then what started the run, its tag, a live rerun's attempt, and who started it when not the owner.
 
-    def workflow(self, entry: Entry) -> str:
-        """The workflow and run number, and the attempt where a live run is past its first. A failure names its attempts per job."""
-        attempt = entry.run['run_attempt']
-        live_rerun = entry.group in LIVE and attempt > 1
-        return f'{clean(entry.run["name"])} #{entry.run["run_number"]}' + (f' attempt {attempt}' if live_rerun else '')
-
-    def job_name(self, entry: Entry, job: Json) -> str:
-        reran = entry.failure is not None and entry.run['run_attempt'] > 1
-        return clean(job['name']) + (f', attempt {job["run_attempt"]}' if reran else '')
-
-    def trigger(self, run: Json) -> Line:
+        The resolution leads so that the screen's edge, cutting this last column, takes the trigger's detail first.
+        """
+        run, failure = entry.run, entry.failure
         pr = self.board.pull_request(run)
         branch = clean(run['head_branch'])
+        said: Line = []
+        resolution = failure.resolution if failure else ''
+        if resolution:
+            said.append(Cell(resolution, GREEN))
         if run['event'] in PULL_REQUEST_EVENTS:
-            if pr is None:
-                return [Cell(f'PR from {branch}', CYAN, whole=True)]
-            return [Cell(f'PR #{pr["number"]} from {branch}', CYAN, pr.get('html_url') or '', whole=True)]
-        if run['event'] == 'push' and pr:
-            return [Cell(f'PR #{pr["number"]} merged into {branch}', CYAN, pr.get('html_url') or '', whole=True)]
-        verb = {'push': 'push to', 'workflow_dispatch': 'manual on', 'schedule': 'schedule on'}.get(run['event'], f'{run["event"]} on')
-        return [Cell(f'{verb} {branch}', whole=True)]
+            named = f'PR #{pr["number"]}' if pr else 'PR'
+            source = f'from {branch}' if resolution.startswith(f'{named} ') else f'{named} from {branch}'
+            said.append(Cell(source, CYAN, (pr or {}).get('html_url') or ''))
+        elif run['event'] == 'push' and pr:
+            said.append(Cell(f'PR #{pr["number"]} merged into {branch}', CYAN, pr.get('html_url') or ''))
+        else:
+            verb = {'push': 'push to', 'workflow_dispatch': 'manual on', 'schedule': 'schedule on'}.get(run['event'], f'{run["event"]} on')
+            said.append(Cell(f'{verb} {branch}'))
+        if tags := self.board.tags[run['repository']['name']].get(run['head_sha']):
+            said.append(Cell(f'tag {", ".join(tags)}', GREEN))
+        if entry.group in LIVE and run['run_attempt'] > 1:
+            said.append(Cell(f'attempt {run["run_attempt"]}'))
+        actor = (run.get('triggering_actor') or run.get('actor') or {}).get('login')
+        if actor and actor != self.board.owner:
+            said.append(Cell(f'by {clean(actor)}', DIM))
+        return [said[0], *(cell for part in said[1:] for cell in (Cell(' · ', DIM), part))]
 
-    def job(self, job: Json) -> tuple[str, str, str, str]:
-        """A job's state, its color, its runner and what it is doing or did."""
+    def run_row(self, entry: Entry) -> RunRow:
+        run, group, now = entry.run, entry.group, self.now
+        repo = run['repository']
+        typical = self.board.typical.get((repo['name'], run['workflow_id']))
+        if group == 'RUNNING':
+            elapsed = now - epoch(run['run_started_at'])
+            age = Cell(duration(now - epoch(run['created_at'])), YELLOW)
+            so_far = duration(elapsed) + (f'/~{duration(typical)}' if typical else '')
+            took = Cell(so_far, RED if typical and elapsed > 2 * typical else YELLOW)
+        elif group == 'QUEUED':
+            age = Cell(duration(now - epoch(run['created_at'])), CYAN)
+            took = Cell('')
+        else:
+            finished = entry.failure.when if entry.failure else epoch(run['updated_at'])
+            standing = entry.failure is not None and not entry.failure.resolution
+            age = Cell(ago(now - finished), RED if standing else '')
+            took = Cell(duration(epoch(run['updated_at']) - epoch(run.get('run_started_at') or run['created_at'])))
+        symbol, color = RUN_SYMBOL[group]
+        return RunRow(
+            symbol,
+            color,
+            Cell(clean(repo['name']), BOLD, f'{repo["html_url"]}/actions'),
+            Cell(f'{clean(run["name"])} #{run["run_number"]}', '', run['html_url']),
+            age,
+            took,
+            self.trigger(entry),
+            self.board.title(run),
+        )
+
+    def job_row(self, job: Json, note: str, runner: bool) -> JobRow:
+        """A job's row. The runner column holds its runner, then `note` and whether it timed out. A failed job's runner is left out."""
         now, steps = self.now, job.get('steps') or []
-        runner = clean(job.get('runner_name')) or '-'
+        symbol, color = job_symbol(job)
+        name = clean(job['name'])
         if job['status'] == 'in_progress':
             step = next((s for s in steps if s['status'] == 'in_progress'), None)
             detail = 'setting up'
             if step:
-                detail = f'step {step["number"]}/{len(steps)} {clean(step["name"])}'
-                if step.get('started_at'):
-                    detail += f' ({duration(now - epoch(step["started_at"]))})'
-            return f'running {duration(now - epoch(job["started_at"]))}', YELLOW, runner, detail
+                detail = step_named(steps, step) + (f' ({duration(now - epoch(step["started_at"]))})' if step.get('started_at') else '')
+            took = duration(now - epoch(job.get('started_at') or job['created_at']))
+            return JobRow(job, symbol, color, name, took, clean(job.get('runner_name')), detail)
         if job['status'] == 'completed':
-            conclusion = job.get('conclusion') or 'completed'
             took = ''
             if job.get('started_at') and job.get('completed_at'):
-                took = f' in {duration(epoch(job["completed_at"]) - epoch(job["started_at"]))}'
-            step = next((s for s in steps if s.get('conclusion') in ('failure', 'timed_out', 'cancelled')), None)
-            detail = f'failed at step {step["number"]} {clean(step["name"])}' if step else ''
-            if not step and not steps and failed(job):
-                detail = 'no steps recorded'
-            color = GREEN if conclusion == 'success' else RED if failed(job) else MAGENTA
-            return conclusion + took, color, runner, detail
+                took = duration(epoch(job['completed_at']) - epoch(job['started_at']))
+            stopped = next((s for s in steps if s.get('conclusion') in ('failure', 'timed_out', 'cancelled')), None)
+            detail = step_named(steps, stopped) if stopped else 'no steps recorded' if failed(job) and not steps else ''
+            timed_out = 'timed out' if job.get('conclusion') == 'timed_out' else ''
+            where = ' · '.join(filter(None, [clean(job.get('runner_name')) if runner else '', note, timed_out]))
+            return JobRow(job, symbol, color, name, took, where, detail)
         labels = ', '.join(clean(label) for label in job.get('labels', []))
-        return f'waiting {duration(now - epoch(job["created_at"]))}', CYAN, '-', f'needs {labels}'
+        return JobRow(job, symbol, color, name, duration(now - epoch(job['created_at'])), '', f'needs {labels}')
 
-    def block(self, entry: Entry, columns: tuple[int, ...]) -> list[Line]:
-        run, failure = entry.run, entry.failure
-        repo = run['repository']
-        resolved = bool(failure and failure.resolution)
-        when, when_style = self.when(entry)
-        head: Line = [
-            Cell(when, when_style, pad=columns[0]),
-            GAP,
-            Cell(clean(repo['name']), DIM if resolved else BOLD, f'{repo["html_url"]}/actions', pad=columns[1]),
-            GAP,
-            Cell(self.workflow(entry), link=run['html_url'], pad=columns[2]),
-            GAP,
-            *self.trigger(run),
+    def rows(self, entry: Entry) -> list[JobRow]:
+        """One row per job. A failure folds a job's failed attempts into one row, its newest, and counts them."""
+        if entry.failure is None:
+            return [self.job_row(job, '', runner=True) for job in entry.jobs]
+        attempts: dict[str, list[Json]] = {}
+        for job in entry.failure.jobs:
+            attempts.setdefault(job['name'], []).append(job)
+        rows = []
+        for tries in attempts.values():
+            newest = tries[0]
+            label = ''
+            if len(tries) > 1:
+                label = f'{len(tries)} attempts'
+            elif entry.run['run_attempt'] > 1:
+                label = f'attempt {newest["run_attempt"]}'
+            rows.append(self.job_row(newest, label, runner=False))
+        return rows
+
+    def block(self, entry: Entry, run: RunRow, jobs: list[JobRow], columns: Columns) -> list[Line]:
+        """The run's row, then a row per job on the same columns, then a standing failure's log lines under its step."""
+        lines = [
+            clip(
+                [
+                    Cell('  '),
+                    Cell(run.symbol, run.color),
+                    Cell(' '),
+                    column(run.repo, columns.repo),
+                    GAP,
+                    column(run.run, columns.run),
+                    GAP,
+                    column(run.age, columns.age, right=True),
+                    GAP,
+                    column(run.took, columns.took, right=True),
+                    GAP,
+                    column(Cell(run.title), columns.title),
+                    GAP,
+                    *run.trigger,
+                ],
+                self.width,
+            )
         ]
-        tags = self.board.tags[repo['name']].get(run['head_sha'])
-        if tags:
-            head += [GAP, Cell(f'tag {", ".join(tags)}', GREEN, whole=True)]
-        actor = (run.get('triggering_actor') or run.get('actor') or {}).get('login')
-        if actor and actor != self.board.owner:
-            head += [GAP, Cell(f'by {clean(actor)}', DIM, whole=True)]
-        if failure and failure.resolution:
-            head += [GAP, Cell(failure.resolution, DIM, whole=True)]
-        lines = flow(head, self.width, indent=2, hang=4)
-        title = self.board.title(run)
-        lines += flow([Cell(title, DIM if resolved else '')], self.width, indent=6, hang=0, max_lines=2)
-        handle: Line = [Cell(run['head_sha'][:7], DIM), GAP, Cell(run['html_url'], DIM, run['html_url'], whole=True)]
-        subject = clean(((run.get('head_commit') or {}).get('message') or '').split('\n')[0])
-        room = self.width - 6 - line_width(handle) - len(GAP.text)
-        if subject and subject != title and room > 12:
-            lines.append(clip([Cell(' ' * 6), *handle, GAP, Cell(subject, DIM)], self.width))
-        else:
-            lines += flow(handle, self.width, indent=6, hang=0)
+        failure = entry.failure
         excerpted = {job['id'] for job in failure.latest_attempt_jobs()} if failure and not failure.resolution else set()
-        jobs = [(job, self.job_name(entry, job), *self.job(job)) for job in entry.jobs]
-        name_width = max((width_of(name) for _, name, *_ in jobs), default=0)
-        state_width = max((width_of(state) for _, _, state, *_ in jobs), default=0)
-        runner_width = max((width_of(runner) for *_, runner, _ in jobs), default=0)
-        for job, name, state, color, runner, detail in jobs:
+        name_width = columns.repo + len(GAP.text) + columns.run - len('└ ✓ ')
+        for job in jobs:
+            passed = job.color == GREEN
             row: Line = [
+                Cell('    '),
                 Cell('└ ', DIM),
-                Cell(name, link=job.get('html_url') or '', pad=name_width),
+                Cell(job.symbol, job.color),
+                Cell(' '),
+                column(Cell(job.name, '', job.job.get('html_url') or ''), name_width),
                 GAP,
-                Cell(state, color, pad=state_width),
+                Cell('', pad=columns.age),
                 GAP,
-                Cell(runner, pad=runner_width),
+                column(Cell(job.took, '' if passed else job.color), columns.took, right=True),
                 GAP,
-                Cell(detail, DIM, whole=True),
+                column(Cell(job.step, DIM), columns.title),
+                GAP,
+                Cell(job.where, DIM if passed else ''),
             ]
-            lines += flow(row, self.width, indent=6, hang=2)
-            if job['id'] in excerpted:
-                for excerpt in self.board.excerpt(job['id']):
-                    lines.append(clip([Cell(' ' * 8), Cell('│ ', RED), Cell(clean(excerpt))], self.width))
+            lines.append(clip(row, self.width))
+            if job.job['id'] in excerpted:
+                for excerpt in self.board.excerpt(job.job['id']):
+                    lines.append(clip([Cell(' ' * columns.title_at), Cell('│ ', RED), Cell(clean(excerpt))], self.width))
         return lines
 
 
@@ -918,7 +1024,7 @@ def cut(block: list[str], rows: int, width: int, renderer: AnsiRenderer) -> list
         if used + rows_of(line, width) > rows - 1:
             hidden = sum(1 for rest in block[i:] if '└ ' in ESCAPE.sub('', rest))
             more = f'{hidden} more job{"" if hidden == 1 else "s"}' if hidden else 'more'
-            return [*kept, renderer.line(clip([Cell(' ' * 6), Cell(f'└ … {more}, below the bottom of the screen', DIM)], width))]
+            return [*kept, renderer.line(clip([Cell(' ' * 4), Cell(f'└ … {more}, below the bottom of the screen', DIM)], width))]
         kept.append(line)
         used += rows_of(line, width)
     return kept
@@ -932,7 +1038,7 @@ class PollSummary:
     interval: float
     rates: dict[str, tuple[int, int, int]]
     holds: dict[str, tuple[float, str]]
-    steps_every: float | None
+    live: str
     errors: list[str]
 
 
@@ -940,32 +1046,48 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
     layout = Layout(board, width)
     entries = board.entries(keep)
     every = [entry for group in GROUPS for entry in entries[group]]
-    columns = (
-        max((width_of(layout.when(e)[0]) for e in every), default=0),
-        max((width_of(clean(e.run['repository']['name'])) for e in every), default=0),
-        max((width_of(layout.workflow(e)) for e in every), default=0),
+    runs = {id(e): layout.run_row(e) for e in every}
+    jobs = {id(e): layout.rows(e) for e in every}
+    every_job = [job for rows in jobs.values() for job in rows]
+
+    def widest(texts: list[str], label: str, most: int = 0) -> int:
+        wanted = max(width_of(text) for text in [label, *texts])
+        return min(wanted, most) if most else wanted
+
+    columns = Columns(
+        repo=widest([r.repo.text for r in runs.values()], COLUMN_LABELS[0]),
+        run=widest([r.run.text for r in runs.values()], COLUMN_LABELS[1], RUN_MOST),
+        age=widest([r.age.text for r in runs.values()], COLUMN_LABELS[2]),
+        took=widest([r.took.text for r in runs.values()] + [j.took for j in every_job], COLUMN_LABELS[3]),
+        title=0,
     )
-    blocks = {id(e): [renderer.line(line) for line in layout.block(e, columns)] for e in every}
+    title_room = max(len(COLUMN_LABELS[4]), width - columns.title_at - len(GAP.text) - TRIGGER_LEAST)
+    texts = [r.title for r in runs.values()] + [j.step for j in every_job]
+    columns = replace(columns, title=widest(texts, COLUMN_LABELS[4], title_room))
+    blocks = {id(e): [renderer.line(line) for line in layout.block(e, runs[id(e)], jobs[id(e)], columns)] for e in every}
 
     header: Line = [
         Cell(time.strftime('%H:%M:%S'), BOLD),
         GAP,
-        Cell(
-            f'CI runs on {summary.repos} repo{"" if summary.repos == 1 else "s"} for {board.owner}, every {summary.interval:g}s', whole=True
-        ),
+        Cell(f'CI runs on {summary.repos} repo{"" if summary.repos == 1 else "s"} for {board.owner}, every {summary.interval:g}s'),
     ]
-    if summary.steps_every is not None:
-        header += [GAP, Cell(f'· steps every {summary.steps_every:.1f}s', DIM, whole=True)]
+    if summary.live:
+        header += [GAP, Cell(f'· {summary.live}', DIM)]
     for resource, name in (('core', 'REST'), ('graphql', 'GraphQL')):
         if resource in summary.rates:
             remaining, limit, reset = summary.rates[resource]
             resets = time.strftime('%H:%M', time.localtime(reset))
-            header += [GAP, Cell(f'· {name} {remaining} of {limit} left, resets {resets}', DIM, whole=True)]
+            header += [GAP, Cell(f'· {name} {remaining} of {limit} left, resets {resets}', DIM)]
     for resource, (until, because) in summary.holds.items():
         if until > board.now:
             name = 'GraphQL' if resource == 'graphql' else 'REST'
-            header += [GAP, Cell(f'· {name} held until {time.strftime("%H:%M:%S", time.localtime(until))}: {because}', RED, whole=True)]
-    top = [renderer.line(line) for line in flow(header, width, indent=0, hang=10)]
+            header += [GAP, Cell(f'· {name} held until {time.strftime("%H:%M:%S", time.localtime(until))}: {because}', RED)]
+    widths = (columns.repo, columns.run, columns.age, columns.took, columns.title)
+    labels: Line = [Cell(' ' * len('  ✓ '))]
+    for label, label_width, right in zip(COLUMN_LABELS[:-1], widths, (False, False, True, True, False), strict=True):
+        labels += [Cell(label, DIM, pad=label_width, right=right), GAP]
+    labels.append(Cell(COLUMN_LABELS[-1], DIM))
+    top = [renderer.line(clip(header, width)), '', renderer.line(clip(labels, width))]
     bottom = [renderer.line(clip([Cell(error, RED)], width)) for error in summary.errors]
     if bottom:
         bottom.insert(0, '')
@@ -997,7 +1119,9 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
     out = list(top)
     for group in GROUPS:
         shown = [e for e in entries[group] if id(e) in admitted]
-        count = f'{len(shown)}' if len(shown) == totals[group] else f'{len(shown)} of {totals[group]}'
+        counted = [e for e in shown if group in LIVE or (e.failure and not e.failure.resolution)]
+        hidden = totals[group] - len(counted)
+        count = f'{len(shown)}' + (f', {hidden} more not shown' if hidden > 0 else '')
         out += ['', renderer.line([Cell(f'{group} ({count})', GROUP_STYLE[group])])]
         for entry in shown:
             out += blocks[id(entry)]
@@ -1089,9 +1213,13 @@ async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bo
                         await poller.read_live()
                         await poller.read_jobs(time.time())
                     await poller.read_excerpts(Board(poller, time.time()).standing_failed_jobs(args.keep))
-                steps_every = max(live_every, poller.live_took) if poller.live_jobs else None
+                live_note = ''
+                if poller.running_check_runs:
+                    live_note = f'steps every {max(live_every, poller.live_took):.1f}s'
+                elif poller.live_jobs:
+                    live_note = f'jobs every {LIVE_QUIET_EVERY:g}s while none runs'
                 errors = [*github.errors, *([poller.live_error] if poller.live_error else [])]
-                summary = PollSummary(len(repos), args.interval, dict(github.rates), dict(github.holds), steps_every, errors)
+                summary = PollSummary(len(repos), args.interval, dict(github.rates), dict(github.holds), live_note, errors)
                 size = shutil.get_terminal_size((120, 0))
                 screen.draw(render(Board(poller, time.time()), summary, args.keep, size.columns, size.lines if live else None, renderer))
                 if args.once:
@@ -1109,8 +1237,8 @@ def main() -> int:
         description="Watch the GitHub Actions runs on the registry's private repos, grouped by\n"
         'state and redrawn in place.\n\n'
         'Each run names what it ran for: the pull request it tested or merged, the tag on\n'
-        'its commit, its title and its URL. Standing failures show the log lines that\n'
-        'name the failure.',
+        'its commit, the commit itself and its title. Standing failures show the log\n'
+        'lines that name the failure.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument('-n', '--interval', type=float, default=1, metavar='SECONDS', help='seconds between polls (default 1)')
