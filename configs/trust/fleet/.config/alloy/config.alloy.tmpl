@@ -150,6 +150,30 @@ otelcol.receiver.filelog "timer_reports" {
   }
 }
 
+// The Claude Code statusline's usage readings, one a line: the account's
+// window percents as the statusline wrote them, which the budget reader takes
+// as this machine's reading. The reading is the body.
+otelcol.receiver.filelog "budget_readings" {
+  include          = [string.format("%s/claude/budget-readings/*-%s.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      timestamp = {parse_from = "attributes.timestamp", layout_type = "gotime", layout = "2006-01-02T15:04:05.999999999Z07:00"},
+    },
+    {type = "move", from = "attributes.reading", to = "body"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "budget.reading"},
+  ]
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
 otelcol.exporter.otlphttp "collector" {
   client {
     endpoint = "${OTLP_GATEWAY_ENDPOINT}"
