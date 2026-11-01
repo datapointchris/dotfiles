@@ -37,7 +37,8 @@ then the run column, then the title, and text cut short ends in an ellipsis.
 
 Under each running or queued run is a row per job: how long it has run, its
 runner, and its current step with how long that step has run, or the labels a
-waiting job needs. A running run's TOOK is its time so far over the median of
+waiting job needs. A job's time takes its symbol's color, so a passed job's is
+green beside its check. A running run's TOOK is its time so far over the median of
 its workflow's last successful runs, red once past twice that median. A queued
 run's AGE is how long it has waited. A run is RUNNING once any job of its attempt has started, and
 QUEUED until then, because GitHub calls a whole run queued while any one of its
@@ -103,6 +104,7 @@ import datetime as dt
 import fcntl
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -1098,7 +1100,7 @@ class Layout:
                 Cell(' '),
                 column(Cell(job.step, DIM), columns.title_at + columns.title - columns.step_at),
                 GAP,
-                column(Cell(job.took, '' if passed else job.color), columns.took, right=True),
+                column(Cell(job.took, job.color), columns.took, right=True),
                 GAP,
                 column(Cell(job.name, '', job.job.get('html_url') or ''), columns.run),
                 GAP,
@@ -1177,18 +1179,16 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
     header: Line = [
         Cell(time.strftime('%H:%M:%S'), BOLD),
         GAP,
-        Cell(
-            f'CI runs on {summary.repos} repo{"" if summary.repos == 1 else "s"} for {board.owner},'
-            f' every {summary.interval:g}s while live, {max(IDLE_EVERY, summary.interval):g}s otherwise'
-        ),
+        Cell(f'Watching {summary.repos} repo{"" if summary.repos == 1 else "s"}'),
     ]
     if summary.live:
         header += [GAP, Cell(f'· {summary.live}', DIM)]
     for resource, name in (('core', 'REST'), ('graphql', 'GraphQL')):
         if resource in summary.rates:
             remaining, limit, reset = summary.rates[resource]
-            resets = time.strftime('%H:%M', time.localtime(reset))
-            header += [GAP, Cell(f'· {name} {remaining} of {limit} left, resets {resets}', DIM)]
+            minutes = math.ceil((reset - board.now) / 60)
+            resets = f'resets {minutes} min from now' if minutes > 0 else 'resets now'
+            header += [GAP, Cell(f'· {name} {remaining}/{limit} left, {resets}', DIM)]
     for resource, (until, because) in summary.holds.items():
         if until > board.now:
             name = 'GraphQL' if resource == 'graphql' else 'REST'
