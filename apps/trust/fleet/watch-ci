@@ -70,8 +70,14 @@ its tags when a run finishes, because a pull request list changes on every
 comment and push. A spent hourly limit holds the API that refused it, REST or
 GraphQL, until its reset. Any other 403 or 429 that names a rate limit is the
 secondary limit, which REST and GraphQL share, so it holds both. It holds for the
-`retry-after` GitHub sends, or HOLD_UNSAID seconds where it sends none. Inside tmux it polls only while
-its window is on screen, and polls at once when it comes back.
+`retry-after` GitHub sends, or HOLD_UNSAID seconds where it sends none.
+
+Every instance watching the same repos shares one poll. The first to start takes a
+lock in the cache directory and polls. Every other instance draws from the cache,
+and from the live view, budgets and errors the leader publishes beside it. Inside
+tmux an instance is watching only while its window is on screen, and the leader
+polls while any instance is watching. When the leader exits the kernel frees the
+lock, and the next instance to try takes over.
 
 The screen fits the terminal's height. Running and queued runs are placed first,
 then standing failures, then the other finished runs newest first, so a long
@@ -85,6 +91,8 @@ import asyncio
 import collections
 import contextlib
 import datetime as dt
+import fcntl
+import hashlib
 import json
 import os
 import re
@@ -117,6 +125,7 @@ LIVE_NODES_MOST = 100
 IDLE_EVERY = 10.0
 HOT_FOR = 300
 IN_FLIGHT_MOST = 8
+VIEWER_FRESH = 5.0
 HOLD_UNSAID = 60
 EXCERPT_RETRY = 60
 EXCERPT_ATTEMPTS = 3
@@ -266,7 +275,7 @@ class GitHub:
     def __init__(self, client: Any, cache: Path) -> None:
         self.client = client
         self.cache = cache
-        self.parsed: dict[Path, Any] = {}
+        self.parsed: dict[Path, tuple[int, Any]] = {}
         self.errors: list[str] = []
         self.rates: dict[str, tuple[int, int, int]] = {}
         self.holds: dict[str, tuple[float, str]] = {}
@@ -297,12 +306,19 @@ class GitHub:
         self.holds['core'] = self.holds['graphql'] = hold
 
     def load(self, body: Path) -> Any:
-        if body not in self.parsed:
+        """The body as last written, read again whenever the file changed, since another instance may lead the polling."""
+        try:
+            stamp = body.stat().st_mtime_ns
+        except OSError:
+            return None
+        kept = self.parsed.get(body)
+        if kept is None or kept[0] != stamp:
             try:
-                self.parsed[body] = json.loads(body.read_bytes())
+                kept = (stamp, json.loads(body.read_bytes()))
             except (OSError, ValueError):
                 return None
-        return self.parsed[body]
+            self.parsed[body] = kept
+        return kept[1]
 
     def forget(self, body: Path) -> None:
         self.parsed.pop(body, None)
@@ -358,7 +374,6 @@ class GitHub:
         staged.write_bytes(response.content)
         staged.replace(body)
         etag.write_text(response.headers.get('etag', ''))
-        self.parsed[body] = response.json()
         return True
 
     async def text(self, path: str) -> str | None:
@@ -414,8 +429,8 @@ class ActionsPoller:
         self.github = github
         self.owner = owner
         self.repos = repos
-        now = time.time()
-        self.idle_turn = {repo: now + IDLE_EVERY * index / len(repos) for index, repo in enumerate(repos)}
+        self.idle_turn: dict[str, float] = {}
+        self.stagger(time.time())
         self.references_read: dict[tuple[str, str], float] = {}
         self.excerpt_retry: dict[int, float] = {}
         self.excerpt_attempts: collections.Counter[int] = collections.Counter()
@@ -531,6 +546,10 @@ class ActionsPoller:
         now = time.time()
         await self.read_jobs(now)
         self.prune(now)
+
+    def stagger(self, now: float) -> None:
+        """Spread the idle repos' next reads across IDLE_EVERY, so they never come due together."""
+        self.idle_turn = {repo: now + IDLE_EVERY * index / len(self.repos) for index, repo in enumerate(self.repos)}
 
     def run_list_due(self, repo: str, now: float) -> bool:
         """Every poll while the repo is live or was never read, otherwise once its idle turn comes round."""
@@ -1095,6 +1114,7 @@ class PollSummary:
     holds: dict[str, tuple[float, str]]
     live: str
     errors: list[str]
+    source: str = ''
 
 
 def render(board: Board, summary: PollSummary, keep: int, width: int, height: int | None, renderer: AnsiRenderer) -> list[str]:
@@ -1144,6 +1164,8 @@ def render(board: Board, summary: PollSummary, keep: int, width: int, height: in
         if until > board.now:
             name = 'GraphQL' if resource == 'graphql' else 'REST'
             header += [GAP, Cell(f'· {name} held until {time.strftime("%H:%M:%S", time.localtime(until))}: {because}', RED)]
+    if summary.source:
+        header += [GAP, Cell(f'· {summary.source}', DIM)]
     labels: Line = [Cell('  '), Cell(COLUMN_LABELS[0], DIM, pad=columns.age, right=True), Cell(' ' * len(' ✓ '))]
     widths = (columns.repo, columns.title, columns.took, columns.run)
     for label, label_width, right in zip(COLUMN_LABELS[1:-1], widths, (False, False, True, False), strict=True):
@@ -1228,6 +1250,92 @@ def registry(names: list[str]) -> tuple[str, list[str]]:
     return data['owner'], [repo for repo in every if not names or repo in names]
 
 
+class SharedPoll:
+    """One instance per repo set polls GitHub, and every other instance draws what it publishes.
+
+    The first instance to take the lock leads. The kernel frees the lock however the leader
+    exits, so the next instance to try takes over. Each instance on screen touches its own file
+    under the viewers directory, and the leader polls while any of them is fresh.
+    """
+
+    def __init__(self, cache: Path, owner: str, repos: list[str]) -> None:
+        key = hashlib.sha256(json.dumps([owner, sorted(repos)]).encode()).hexdigest()[:12]
+        self.lock = cache / f'leader-{key}.lock'
+        self.state = cache / f'shared-{key}.json'
+        self.viewers = cache / f'viewers-{key}'
+        self.mine = self.viewers / str(os.getpid())
+        self.held: int | None = None
+
+    def lead(self) -> bool:
+        """Whether this instance polls: it already leads, or the lock is free and it takes it."""
+        if self.held is not None:
+            return True
+        self.lock.parent.mkdir(parents=True, exist_ok=True)
+        handle = os.open(self.lock, os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            os.close(handle)
+            return False
+        os.ftruncate(handle, 0)
+        os.write(handle, str(os.getpid()).encode())
+        self.held = handle
+        return True
+
+    def seen(self) -> None:
+        self.viewers.mkdir(parents=True, exist_ok=True)
+        self.mine.touch()
+
+    def other_viewers(self, now: float) -> int:
+        """How many other instances were on screen in the last VIEWER_FRESH seconds. A file a crash left behind goes after a day."""
+        fresh = 0
+        with contextlib.suppress(OSError):
+            for path in self.viewers.iterdir():
+                age = now - path.stat().st_mtime
+                if age > PRUNE_AFTER:
+                    path.unlink(missing_ok=True)
+                elif path != self.mine and age < VIEWER_FRESH:
+                    fresh += 1
+        return fresh
+
+    def publish(self, poller: ActionsPoller, github: GitHub, live_note: str, errors: list[str]) -> None:
+        """What the board needs that is not in the cache's bodies: the live view, the budgets, the holds and the errors."""
+        state = {
+            'pid': os.getpid(),
+            'written': time.time(),
+            'live_jobs': {str(run): {str(job): fields for job, fields in jobs.items()} for run, jobs in poller.live_jobs.items()},
+            'running_check_runs': poller.running_check_runs,
+            'live_error': poller.live_error,
+            'live_took': poller.live_took,
+            'rates': github.rates,
+            'holds': github.holds,
+            'live_note': live_note,
+            'errors': errors,
+        }
+        staged = self.state.with_name(self.state.name + '.new')
+        staged.write_text(json.dumps(state))
+        staged.replace(self.state)
+
+    def adopt(self, poller: ActionsPoller, github: GitHub) -> Json:
+        """Lay the leader's last published state over this instance's poller and return it, or nothing when none is readable."""
+        try:
+            state = json.loads(self.state.read_bytes())
+            poller.live_jobs = {int(run): {int(job): fields for job, fields in jobs.items()} for run, jobs in state['live_jobs'].items()}
+            poller.running_check_runs = state['running_check_runs']
+            poller.live_error = state['live_error']
+            poller.live_took = state['live_took']
+            github.rates = {resource: tuple(rate) for resource, rate in state['rates'].items()}
+            github.holds = {resource: tuple(hold) for resource, hold in state['holds'].items()}
+        except (OSError, ValueError, KeyError, TypeError):
+            return {}
+        return state
+
+    def leave(self) -> None:
+        self.mine.unlink(missing_ok=True)
+        if self.held is not None:
+            os.close(self.held)
+
+
 def token() -> str:
     try:
         return subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, check=True).stdout.strip()
@@ -1257,37 +1365,64 @@ async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bo
     cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'watch-ci'
     headers = {'Authorization': f'Bearer {token()}', 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
     renderer = AnsiRenderer(sys.stdout.isatty() and 'NO_COLOR' not in os.environ)
+    shared = SharedPoll(cache, owner, repos)
     async with httpx2.AsyncClient(base_url=API, headers=headers, timeout=20) as client:
         github = GitHub(client, cache)
         poller = ActionsPoller(github, owner, repos)
         live_every = max(LIVE_EVERY_LEAST, args.interval)
-        follower = None if args.once else asyncio.create_task(poller.follow_live(live_every))
-        with Screen(live) as screen:
-            while True:
-                started = time.time()
-                poller.visible = not live or on_screen()
-                if not poller.visible:
-                    await asyncio.sleep(args.interval)
-                    continue
-                if not github.held('core', started):
-                    await poller.poll()
-                    await github.read_graphql_rate()
-                    if follower is None:
-                        await poller.read_live()
-                        await poller.read_jobs(time.time())
-                    await poller.read_excerpts(Board(poller, time.time()).standing_failed_jobs(args.keep))
-                live_note = ''
-                if poller.running_check_runs:
-                    live_note = f'steps every {max(live_every, poller.live_took):.1f}s'
-                elif poller.live_jobs:
-                    live_note = f'jobs every {LIVE_QUIET_EVERY:g}s while none runs'
-                errors = [*github.errors, *([poller.live_error] if poller.live_error else [])]
-                summary = PollSummary(len(repos), args.interval, dict(github.rates), dict(github.holds), live_note, errors)
-                size = shutil.get_terminal_size((120, 0))
-                screen.draw(render(Board(poller, time.time()), summary, args.keep, size.columns, size.lines if live else None, renderer))
-                if args.once:
-                    return
-                await asyncio.sleep(max(args.interval - (time.time() - started), 0.0))
+        live_task: asyncio.Task[None] | None = None
+        try:
+            with Screen(live) as screen:
+                while True:
+                    started = time.time()
+                    on = not live or on_screen()
+                    if on:
+                        shared.seen()
+                    if shared.lead():
+                        if live_task is None and not args.once:
+                            poller.stagger(started)
+                            live_task = asyncio.create_task(poller.follow_live(live_every))
+                        watchers = shared.other_viewers(started)
+                        poller.visible = on or watchers > 0
+                        if not poller.visible:
+                            await asyncio.sleep(args.interval)
+                            continue
+                        if not github.held('core', started):
+                            await poller.poll()
+                            await github.read_graphql_rate()
+                            if live_task is None:
+                                await poller.read_live()
+                                await poller.read_jobs(time.time())
+                            await poller.read_excerpts(Board(poller, time.time()).standing_failed_jobs(args.keep))
+                        live_note = ''
+                        if poller.running_check_runs:
+                            live_note = f'steps every {max(live_every, poller.live_took):.1f}s'
+                        elif poller.live_jobs:
+                            live_note = f'jobs every {LIVE_QUIET_EVERY:g}s while none runs'
+                        errors = [*github.errors, *([poller.live_error] if poller.live_error else [])]
+                        shared.publish(poller, github, live_note, errors)
+                        source = f'polling for {watchers} other window{"" if watchers == 1 else "s"}' if watchers else ''
+                    else:
+                        if not on:
+                            await asyncio.sleep(args.interval)
+                            continue
+                        state = shared.adopt(poller, github)
+                        live_note, errors = state.get('live_note', ''), state.get('errors', [])
+                        source = (
+                            f"drawn from pid {state['pid']}'s poll {time.time() - state['written']:.0f}s ago"
+                            if state
+                            else 'waiting for the polling instance to publish'
+                        )
+                    summary = PollSummary(len(repos), args.interval, dict(github.rates), dict(github.holds), live_note, errors, source)
+                    size = shutil.get_terminal_size((120, 0))
+                    screen.draw(
+                        render(Board(poller, time.time()), summary, args.keep, size.columns, size.lines if live else None, renderer)
+                    )
+                    if args.once:
+                        return
+                    await asyncio.sleep(max(args.interval - (time.time() - started), 0.0))
+        finally:
+            shared.leave()
 
 
 def interrupt(*_: object) -> None:
