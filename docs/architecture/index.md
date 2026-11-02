@@ -108,10 +108,10 @@ every published CLI whose help a headless box can read, without a second list of
 them. A tool that fails that test stays in its machine profile, and
 `fleet-clis.yml` gives the reason for each. A headless pod that installs each
 CLI at its newest release and reads its help is that box, and `fleet-clis-pod`
-is its manifest. It applies the core package tier, the
-toolchains and the packages, and nothing more. `GITHUB_TOKEN` is the only
-credential it needs, because `effects.run` hands the token to git for the private
-repos a Go module or a uv git install clones.
+is its manifest. It applies the toolchains and the packages, and nothing more:
+it runs with no root, and the image it runs in owns its system packages.
+`GITHUB_TOKEN` is the only credential it needs, because `effects.run` hands the
+token to git for the private repos a Go module or a uv git install clones.
 
 A name is declared once. The load refuses a name that two files in one machine's
 composition both declare, and `dotfiles machines check` refuses a name that two
