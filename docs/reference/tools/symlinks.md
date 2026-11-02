@@ -54,8 +54,10 @@ A machine whose manifest sets `deploy_by_copy: true` gets the same three trees
 at the same destinations, written as regular files. A copy is a regular file, so
 ownership can only ever answer *foreign* for one. Provenance is what both target
 refusals and the orphan prune are built out of, so all three go together:
-`--force` is refused at the door, and nothing is ever pruned. A file at a path
-the repo no longer declares stays where it is.
+`--force` is refused at the door, and no copy is ever pruned. A copy at a path
+the repo no longer declares stays where it is. A rendering of a deleted template
+is still pruned there, because the template's history tells it apart from
+somebody's file.
 
 That last one is deliberate rather than a gap. Nothing on disk distinguishes a
 copy this manager wrote from a file somebody put there, and the Windows box is
@@ -96,6 +98,31 @@ rendering, whatever stands where a placeholder sits. `apply` renders over it and
 `apply` refuses it like a foreign link unless given `--force`. A copy machine
 refuses it too, because the template can tell the two apart where a copy
 cannot.
+
+A template deleted from the repo takes its renderings with it. A rendering points
+nowhere, so the broken-link scan never finds one. Git holds the provenance
+instead: every template the repo deleted, and every text each one held. `observe`
+places each deleted template through the source directories this machine selects.
+Where nothing declares that target now, a regular file there is fitted against
+every text the template held. A fit is this manager's rendering, and `apply`
+removes it. Anything else may hold an edit that exists nowhere else, so it is
+reported `undeclared` and left in place. `dotfiles symlinks unlink` takes back
+the same renderings.
+
+This is the previous-generation diff home-manager runs at activation, removing
+what the old generation listed and the new one does not. home-manager stores each
+generation. Here git already holds them, so nothing new is stored. *Rejected:* a
+state file recording what each apply rendered. It is a second record of what git
+already holds, and a machine that lost it would keep its renderings for good.
+*Rejected:* an explicit removal list, as chezmoi's `.chezmoiremove` is. Every
+template deletion would need a second edit, and the forgotten edit is the failure
+this prevents.
+
+Two cases fall outside it. A program writing exactly the text a deleted template
+rendered loses that file at the next apply, which matters for a template written
+to equal what a CLI's own login writes. And a machine whose coordinates changed
+after it rendered a template keeps that rendering, because only the directories
+it selects now are searched.
 
 *Rejected:* a `templates/` tree with a resource of its own. It is a second walk
 with a second collision domain and a new CLI noun, and one file's variants would
