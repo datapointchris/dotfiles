@@ -1870,7 +1870,6 @@ go_tools:
     package: github.com/datapointchris/tmux-tree-editor
     github_repo: datapointchris/tmux-tree-editor
     binary_pattern: "tmux-tree-editor_{version_num}_{os}_{go_arch}.tar.gz"
-    requires_github_auth: true
     description: Rearrange tmux sessions, windows and panes in columns, applied on close
 
   - name: bbkt
