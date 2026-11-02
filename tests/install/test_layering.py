@@ -69,7 +69,8 @@ def relayered(tmp_path: Path, move: str, *, above: str) -> Path:
     and every case below would keep passing while measuring it.
 
     Written as `pyproject.toml`, because that is how `lint-imports` decides to
-    parse a config as TOML rather than as INI.
+    parse a config as TOML rather than as INI. Each in a directory named for the
+    layer it moves, so two mutations in one test never write one file.
     """
     lines = CONFIG.read_text().splitlines(keepends=True)
     opens = lines.index(OPENS, lines.index(CONTRACT))
@@ -80,7 +81,8 @@ def relayered(tmp_path: Path, move: str, *, above: str) -> Path:
     declared.remove(moving)
     declared.insert(declared.index(next(line for line in declared if above in line)), moving)
 
-    config = tmp_path / 'pyproject.toml'
+    config = tmp_path / move / 'pyproject.toml'
+    config.parent.mkdir()
     config.write_text(''.join(lines[: opens + 1] + declared + lines[closes:]))
     return config
 
@@ -136,15 +138,15 @@ def test_a_route_with_no_direct_import_between_its_ends_is_reported(paths_above_
 def test_every_mutation_still_produces_a_config_the_tool_can_analyze(stale_order: Path, paths_above_context: Path) -> None:
     """A guard on `relayered`, which is the only thing here that can be wrong silently.
 
-    Layer order is not an input to graph construction, so equal `Analyzed` lines
-    prove nothing about the package. What they prove is that each mutation parsed:
-    a `relayered` that mangled the TOML exits before analyzing anything, and the
-    three red cases above would then be red for that rather than for a violation.
-    A layer named twice is enough to cause it.
+    An `Analyzed` line says the mutation parsed: a `relayered` that mangled the
+    TOML exits before analyzing anything, and the three red cases above would then
+    be red for that rather than for a violation. A layer named twice is enough to
+    cause it.
+
+    The count is not compared with the declared config's. `test_type_checking.py`
+    writes a probe into the package while its module runs, so another xdist
+    worker's two runs can count one file apart.
     """
-
-    def analyzed(ran: subprocess.CompletedProcess[str]) -> str:
-        return next(line for line in ran.stdout.splitlines() if line.startswith('Analyzed '))
-
-    assert analyzed(contract(stale_order)) == analyzed(contract(CONFIG))
-    assert analyzed(contract(paths_above_context)) == analyzed(contract(CONFIG))
+    for mutation in (stale_order, paths_above_context):
+        ran = contract(mutation)
+        assert any(line.startswith('Analyzed ') for line in ran.stdout.splitlines()), ran.stdout
