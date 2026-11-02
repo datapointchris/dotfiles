@@ -3,7 +3,7 @@ title: IT-managed corporate laptop
 form_factor: 14-inch business laptop
 architecture: x86_64
 cpu: Intel Core Ultra 5, 12 cores
-memory_gb: 16
+memory_gb: 32
 storage: 512 GB NVMe SSD
 gpu: integrated
 operating_systems: [windows-11-wsl2-ubuntu]
