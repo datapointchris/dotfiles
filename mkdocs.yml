@@ -133,6 +133,7 @@ nav:
       - System Configuration: architecture/system-configuration.md
       - Desktop Memory Reservations: architecture/desktop-memory-reservations.md
       - Observability: architecture/observability.md
+      - Persona Reviews: architecture/persona-reviews.md
   - Configuration:
       - configuration/index.md
       - Docker Setup: configuration/docker.md

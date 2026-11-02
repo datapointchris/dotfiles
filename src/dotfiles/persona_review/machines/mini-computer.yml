@@ -1,0 +1,14 @@
+name: mini-computer
+title: Mini PC with a mobile Ryzen 9
+form_factor: mini PC
+architecture: x86_64
+cpu: AMD Ryzen 9 6900HX, 8 cores and 16 threads
+memory_gb: 32
+storage: 1 TB NVMe SSD
+gpu: AMD Radeon 680M, integrated
+operating_systems: [arch-linux, windows-11-wsl2-ubuntu]
+ownership: personally owned, administered by its one user
+
+environment: |
+  A daily-driver desktop on a home network behind a consumer router. Memory is backed by zram swap
+  rather than a swap partition.

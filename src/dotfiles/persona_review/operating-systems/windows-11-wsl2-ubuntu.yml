@@ -1,0 +1,14 @@
+name: windows-11-wsl2-ubuntu
+title: Windows 11 host running Ubuntu 24.04 LTS under WSL2
+family: linux
+install_target: the WSL2 Ubuntu guest, never the Windows host
+package_managers: [apt, snap]
+init_system: systemd, where /etc/wsl.conf enables it
+shell: bash by default
+
+description: |
+  The guest is a lightweight VM that shares the host's network. It mounts the Windows drives under
+  /mnt/c and can launch Windows executables through interop, so code running in the guest reaches the
+  Windows user's files and can start Windows processes. The host's EDR agent sees the guest's
+  network traffic and, depending on the product, its processes. Ubuntu's apt sources are signed by
+  Canonical, and anything installed outside apt bypasses that signing.

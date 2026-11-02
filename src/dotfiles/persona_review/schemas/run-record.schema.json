@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dotfiles:persona-review:run-record:v1",
+  "title": "Persona review run record",
+  "description": "One review run: the scenario, the subject commit it read, the model and CLI that answered, its tokens by kind, and the report or the failure.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "run_id", "mode", "scenario", "subject", "requested_model", "model", "models",
+    "claude_code_version", "max_turns", "num_turns", "started_at", "finished_at", "duration_seconds",
+    "tokens", "tokens_by_model", "failure", "report_schema", "report"
+  ],
+  "properties": {
+    "schema": {"const": "urn:dotfiles:persona-review:run-record:v1"},
+    "run_id": {"type": "string"},
+    "mode": {"description": "model called claude; mock wrote the canned report without a call.", "enum": ["model", "mock"]},
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "persona", "machine", "operating_system", "subject", "submission"],
+      "properties": {
+        "name": {"type": "string"},
+        "persona": {"type": "string"},
+        "machine": {"type": "string"},
+        "operating_system": {"type": "string"},
+        "subject": {"type": "string"},
+        "submission": {"type": "string"}
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "ref", "commit", "committed_at", "paths", "file_count", "export"],
+      "properties": {
+        "repository": {"type": "string"},
+        "ref": {"type": "string"},
+        "commit": {"type": "string"},
+        "committed_at": {"type": "string"},
+        "paths": {"description": "The paths exported, or [\".\"] for the whole tree.", "type": "array", "items": {"type": "string"}},
+        "file_count": {"type": "integer"},
+        "export": {"description": "Where the session read the subject from.", "type": "string"}
+      }
+    },
+    "requested_model": {"type": "string"},
+    "model": {"description": "The model the init frame names, or empty.", "type": "string"},
+    "models": {"description": "Every model the result frame's modelUsage names.", "type": "array", "items": {"type": "string"}},
+    "claude_code_version": {"type": "string"},
+    "max_turns": {"type": "integer"},
+    "num_turns": {"type": ["integer", "null"]},
+    "started_at": {"type": "string"},
+    "finished_at": {"type": "string"},
+    "duration_seconds": {"type": "number"},
+    "tokens": {"$ref": "#/$defs/tokens"},
+    "tokens_by_model": {"type": "object", "additionalProperties": {"$ref": "#/$defs/tokens"}},
+    "failure": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key", "cause"],
+          "properties": {
+            "key": {"enum": ["claude-not-installed", "timed-out", "exited", "signal", "usage-limit", "no-structured-reply"]},
+            "cause": {"type": "string"}
+          }
+        }
+      ]
+    },
+    "report_schema": {"type": "string"},
+    "report": {"description": "The persona's reply, valid against report_schema, or null on failure.", "type": ["object", "null"]}
+  },
+  "$defs": {
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens"],
+      "properties": {
+        "input_tokens": {"type": "integer"},
+        "cache_creation_input_tokens": {"type": "integer"},
+        "cache_read_input_tokens": {"type": "integer"},
+        "output_tokens": {"type": "integer"}
+      }
+    }
+  }
+}

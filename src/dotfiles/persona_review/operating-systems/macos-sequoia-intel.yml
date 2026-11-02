@@ -1,0 +1,12 @@
+name: macos-sequoia-intel
+title: macOS 15 Sequoia on an Intel Mac
+family: macos
+install_target: the user's home directory and Homebrew's prefix under /usr/local
+package_managers: [homebrew]
+init_system: launchd
+shell: zsh by default
+
+description: |
+  System Integrity Protection, Gatekeeper, XProtect and TCC are on by default. Homebrew on Intel
+  installs under /usr/local, which the admin user owns, so a formula's post-install code runs without
+  sudo. LaunchAgents under ~/Library/LaunchAgents start at login without an administrator.

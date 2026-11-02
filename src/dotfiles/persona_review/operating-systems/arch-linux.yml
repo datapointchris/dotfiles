@@ -1,0 +1,13 @@
+name: arch-linux
+title: Arch Linux, rolling release, with a Wayland desktop
+family: linux
+install_target: the whole machine, through pacman and the user's home directory
+package_managers: [pacman, an AUR helper]
+init_system: systemd
+shell: zsh
+
+description: |
+  A rolling release with no LTS branch, so every upgrade moves the whole system forward. Official
+  repository packages are signed by Arch's packager keys. AUR packages are user-submitted PKGBUILDs
+  that build and install with makepkg and carry no such signature. A Wayland compositor such as
+  Hyprland runs the desktop.

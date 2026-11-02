@@ -28,6 +28,8 @@ How the dotfiles repository is organized and why.
   reclaims from the terminal, tmux and audio, and why every ancestor carries its children's sum
 - [Observability](observability.md) — the run record, the log stream and the status file, split by
   who reads each one
+- [Persona Reviews](persona-reviews.md) — a model reviewing a subject as a named reviewer would, for
+  a machine and operating system, and why the subject is exported at a commit
 
 ## A machine is a point on six axes, not a platform string
 

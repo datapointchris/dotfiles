@@ -1,0 +1,9 @@
+name: dotfiles
+title: A personal dotfiles repository with a Python installer CLI
+repository: ~/dotfiles
+ref: main
+
+description: |
+  Shell, editor and terminal configuration, package declarations for each machine, and a Python CLI
+  named `dotfiles` that installs the declared packages and symlinks the configuration into $HOME.
+  `install.sh` bootstraps the CLI, and `install/manifests/` holds one manifest per machine.
