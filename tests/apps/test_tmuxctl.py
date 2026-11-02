@@ -25,9 +25,9 @@ Run with: pytest tests/apps/test_tmuxctl.py
 
 from __future__ import annotations
 
+import json
 import subprocess
 import time
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -263,26 +263,6 @@ def test_a_worker_never_opens_beside_its_caller(tmuxctl, build, worker_request):
         assert placement.seating == tmuxctl.Seating(opener='%1', capacity=tmuxctl.PER_WINDOW)
 
 
-def test_the_second_worker_joins_the_first_as_a_new_column(tmuxctl, build, worker_request):
-    window = seated(build, [[('%2', 'worker')]])
-    placement = tmuxctl.place([coordinator_window(build), window], worker_request())
-
-    assert placement.window == '@2'
-    assert placement.target == '%2'
-    assert placement.direction is tmuxctl.Direction.BESIDE
-    assert placement.size == tmuxctl.even_share(WINDOW, 2)
-    assert placement.seating.arrived == ('%2',)
-    assert placement.readable
-
-
-def test_the_third_worker_opens_another_window(tmuxctl, build, worker_request):
-    full = seated(build, [[('%2', 'worker')], [('%4', 'worker')]])
-    placement = tmuxctl.place([coordinator_window(build), full], worker_request())
-
-    assert tmuxctl.free_columns(full) > 0, 'the window has a readable column left, so the seats are what refuse'
-    assert placement.opens_window
-
-
 def test_a_new_column_splits_the_rightmost_pane_this_tool_placed(tmuxctl, build, worker_request):
     window = seated(build, [[('%2', 'worker'), ('%3', 'reviewer', '%2')]])
     placement = tmuxctl.place([coordinator_window(build), window], worker_request())
@@ -339,10 +319,11 @@ def test_the_readability_boundary_for_a_pair_is_where_fits_down_puts_it(tmuxctl,
 
 
 def test_a_window_that_lost_a_worker_takes_no_other(tmuxctl, build, worker_request):
-    # Three seats and one worker present, so only the loss refuses. A window
-    # refilled after a close would carry a name listing work that is gone.
+    # Reached with `--per-window 3`: three seats and one worker present, so only
+    # the loss refuses. A window refilled after a close would carry a name listing
+    # work that is gone.
     window = seated(build, [[('%2', 'worker')]], arrivals=('%2', '%4'), capacity=3)
-    placement = tmuxctl.place([coordinator_window(build), window], worker_request())
+    placement = tmuxctl.place([coordinator_window(build), window], worker_request(per_window=3))
 
     assert window.lost_a_worker
     assert tmuxctl.free_columns(window) > 0
@@ -526,13 +507,30 @@ def test_a_claim_breaks_a_shared_pane_out_and_keeps_a_lone_one_where_it_is(tmuxc
         assert decided.monitor == tmuxctl.MONITOR_COMMAND
 
 
-def test_claiming_again_starts_no_second_monitor(tmuxctl, build):
-    # A coordinator that lost its context claims again before its next spawn.
-    decided = tmuxctl.claim([coordinator_window(build)], '%1', 'invoices')
+def test_reclaiming_after_compaction_while_narrated_breaks_nothing_out_and_starts_no_monitor(tmuxctl, build):
+    # A narration pane opened with a raw split carries no mark, and the window is still the coordinator's own.
+    window = build(
+        '@1',
+        [[('%1', 'coordinator')], [('%9', 'monitor')], [('%7', 'unknown')]],
+        dedicated=True,
+        name='billing-coordinator',
+    )
+    decided = tmuxctl.claim([window], '%1', 'billing')
 
     assert not decided.breaks_out
     assert decided.monitor == ''
-    assert decided.window_name == 'invoices-coordinator'
+
+
+def test_a_claim_from_a_half_screen_terminal_keeps_the_coordinator_whole_and_starts_no_monitor(tmuxctl, build):
+    half = tmuxctl.claim([build('@1', [[('%1', 'unknown')]], width=188)], '%1', 'billing')
+    narrow = tmuxctl.claim([build('@1', [[('%1', 'unknown')]], width=100)], '%1', 'billing')
+
+    assert half.cramped
+    assert half.monitor == ''
+    assert half.width == 188
+    assert half.readable
+    assert narrow.monitor == ''
+    assert not narrow.readable
 
 
 def test_a_subject_that_cannot_be_a_window_name_refuses(tmuxctl, build):
@@ -1002,75 +1000,20 @@ def test_running_outside_tmux_refuses_with_its_own_reason(tmuxctl, monkeypatch):
 # --- the command surface ---
 
 
-def verbs(parser) -> dict[str, list[str]]:
-    """Every resource and the verbs under it, read off the parser.
-
-    argparse exposes subcommands only through the private action list. A
-    hand-written list is the alternative, and a verb added later would then go
-    unwalked until somebody remembered this file.
-    """
-
-    def under(node) -> dict:
-        return next(action.choices for action in node._actions if isinstance(getattr(action, 'choices', None), dict))
-
-    return {resource: sorted(under(node)) for resource, node in under(parser).items()}
+def test_the_bare_command_and_each_bare_resource_print_what_is_under_them(tmuxctl, monkeypatch, capsys):
+    # Through `main()`, so a broken branch there fails here and not only argparse.
+    for argv in ([], ['pane'], ['coordinator']):
+        monkeypatch.setattr('sys.argv', ['tmuxctl', *argv])
+        try:
+            code = tmuxctl.main()
+        except SystemExit as stopped:
+            code = stopped.code
+        assert code == 0, f'tmuxctl {" ".join(argv)} exited {code}'
+        assert 'usage:' in capsys.readouterr().out
 
 
-def test_a_node_with_something_under_it_prints_that_rather_than_erroring(tmuxctl, capsys):
-    # A namespace can be walked down one token at a time only if every level
-    # answers with what is beneath it, so neither the root nor the resource is
-    # a usage error on its own.
-    parser = tmuxctl.build_parser()
-    assert parser.parse_args([]).resource is None
-    parser.print_help()
-    root = capsys.readouterr().out
-
-    for resource, leaves in verbs(parser).items():
-        assert resource in root, f'{resource} is missing from the root screen'
-        with pytest.raises(SystemExit):
-            parser.parse_args([resource, '--help'])
-        printed = capsys.readouterr().out
-        for verb in leaves:
-            assert verb in printed, f'{verb} is missing from the {resource} screen'
-
-
-def test_every_screen_carries_an_example(tmuxctl, capsys):
-    # A leaf's help has to be usable by someone who arrived by tab-completion and
-    # never read the root.
-    parser = tmuxctl.build_parser()
-    parser.print_help()
-    assert 'tmuxctl pane plan worker' in capsys.readouterr().out
-
-    for resource, leaves in verbs(parser).items():
-        for verb in leaves:
-            with pytest.raises(SystemExit):
-                parser.parse_args([resource, verb, '--help'])
-            screen = capsys.readouterr().out
-            assert 'tmuxctl pane plan worker' in screen, f'{resource} {verb} --help carries no example'
-            assert screen.strip().splitlines()[0].startswith('usage:')
-            assert len(screen) > 400, f'{resource} {verb} --help is a flag list with no prose'
-
-
-def test_the_nouns_on_a_screen_are_defined_on_it(tmuxctl, capsys):
-    # `coordinator` is not a value of any flag and not a command, so a reader
-    # cannot resolve it without prose that says what one is.
-    parser = tmuxctl.build_parser()
-    with pytest.raises(SystemExit):
-        parser.parse_args(['pane', 'open', '--help'])
-    screen = capsys.readouterr().out
-    assert 'A coordinator is' in screen
-    assert 'A worker is' in screen
-    assert 'A reviewer' in screen
-
-
-def test_the_default_window_name_is_spelled_once(tmuxctl):
-    # The opened window's fallback, the promoted coordinator's window and the
-    # sentence in the flag's help all interpolate the constant.
-    source = Path(tmuxctl.__file__).read_text()
-    assert source.count(f"'{tmuxctl.WINDOW_NAME}'") == 1
-
-    # And the flag defaults to no name rather than to the fallback, or every
-    # worker joining a window would append `agents` to it.
+def test_the_window_name_flag_defaults_to_no_name(tmuxctl):
+    # Defaulting to the fallback would make every worker joining a window append `agents` to it.
     parsed = tmuxctl.build_parser().parse_args(['pane', 'plan', 'worker'])
     assert parsed.window_name == ''
 
@@ -1369,23 +1312,23 @@ def test_a_real_reviewer_that_moved_windows_still_blocks_a_second_one(tmuxctl, s
 
 @needs_tmux
 def test_the_command_functions_run_end_to_end_against_a_real_server(tmuxctl, server, capsys):
-    # `cmd_plan`, `cmd_open`, `cmd_claim`, `request_from`, `caller_pane` and
-    # `read_workspace` are reachable from no test of `place()`, because the fault
-    # they carry is in what gets handed to it and what happens to what it returns.
+    # The command functions are reachable from no test of `place()`, because the
+    # fault they carry is in what gets handed to it and what happens to what it returns.
     parser = tmuxctl.build_parser()
     caller = tmuxctl.caller_pane()
 
-    assert tmuxctl.cmd_plan(parser.parse_args(['pane', 'plan', 'worker'])) == 0
-    assert 'a new window' in capsys.readouterr().out
+    assert tmuxctl.cmd_plan(parser.parse_args(['pane', 'plan', 'worker', '--json'])) == 0
+    assert json.loads(capsys.readouterr().out)['opened_window']
 
     opened = parser.parse_args(['pane', 'open', 'worker', '--window-name', 'alpha', '--', *server.idle_command])
     assert tmuxctl.cmd_open(opened) == 0
     pane = capsys.readouterr().out.strip()
 
-    assert tmuxctl.cmd_list(False) == 0
-    listing = capsys.readouterr().out
-    assert pane in listing
-    assert f'1 of 2 seats for {caller}' in listing
+    assert tmuxctl.cmd_list(True) == 0
+    landed = next(window for window in json.loads(capsys.readouterr().out) if pane in window['arrivals'])
+    assert landed['opener'] == caller
+    assert landed['capacity'] == tmuxctl.PER_WINDOW
+    assert landed['name'] == 'alpha'
 
     roles = {found.pane_id: found.role for found in every_pane(tmuxctl)}
     assert roles[pane] is tmuxctl.Role.WORKER

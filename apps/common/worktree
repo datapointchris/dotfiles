@@ -1404,8 +1404,8 @@ def open_session_pane(
     A worker's window name goes to the port as the name of its work, which is how
     the window list says what each worker is doing. How the multiplexer shows it is
     the adapter's business. A reviewer sends none, because it sits under the worker
-    the name already describes. `per_window` is sent only when given, so how many
-    workers share a window by default is the port's to say.
+    the name already describes. `per_window` is sent only when given, so its
+    default and the counts it refuses are the port's to say.
 
     `readable` in the record is the multiplexer's claim that the pane can be
     followed. False is a real answer: it says nowhere on this client can be, which
@@ -1414,7 +1414,7 @@ def open_session_pane(
     role = REVIEWER if below else WORKER
     partner = ['--for', caller] if below else []
     named = ['--window-name', window_name] if window_name and not below else []
-    seats = ['--per-window', str(per_window)] if per_window is not None and not below else []
+    seats = ['--per-window', str(per_window)] if per_window is not None else []
     # The `--` before the prompt keeps a variadic flag such as --add-dir from taking it.
     session = ['claude', '--permission-mode', 'bypassPermissions', *claude_args, '--', prompt]
     made = ctl('pane', 'open', role, *partner, *named, *seats, '--cwd', str(workdir), '--', *session)
@@ -1613,7 +1613,7 @@ def cmd_spawn(
     where = resolve_destination(cwd, checkout, slug)
 
     # The multiplexer can still refuse after the worktree exists: a reviewer's worker
-    # already reviewed, a tmux call that fails. What it would leave is a branch and a
+    # already reviewed, a --per-window under one, a tmux call that fails. What it would leave is a branch and a
     # provisioned checkout that `sweep` will not collect, because nothing was ever pushed
     # and it is held as UNPUBLISHED. So the one thing this command created gets unwound
     # before the refusal reaches the caller.
@@ -1969,7 +1969,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar='N',
         help=(
             "how many of the calling pane's workers share a window side by side; 1 gives this one a window of its own. "
-            'Without it the multiplexer seats two. A worker never opens beside the pane that spawned it'
+            "Without it the multiplexer's default applies. A worker never opens beside the pane that spawned it"
         ),
     )
     spawn.add_argument(
@@ -2050,10 +2050,6 @@ def dispatch(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
         case 'new':
             return cmd_new(args.slug)
         case 'spawn':
-            if args.per_window is not None and args.below:
-                args.subparser.error('no --per-window with --below: a reviewer sits under the pane it reviews, in that window')
-            if args.per_window is not None and args.per_window < 1:
-                args.subparser.error(f'--per-window takes how many workers share a window, one or more, and {args.per_window} is not one')
             return cmd_spawn(
                 args.slug,
                 args.brief,

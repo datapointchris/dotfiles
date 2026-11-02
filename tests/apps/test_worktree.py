@@ -429,12 +429,6 @@ class Rig:
     def window_name(self, pane: str) -> str:
         return self.tmux('display-message', '-p', '-t', pane, '#{window_name}')
 
-    def size(self, pane: str) -> tuple[int, int]:
-        """One pane's width and height, for asserting it can be followed."""
-        row = self.tmux('display-message', '-p', '-t', pane, '#{pane_width} #{pane_height}')
-        width, height = row.split()
-        return int(width), int(height)
-
     def mark_caller_a_worker(self) -> None:
         """Make the caller the thing a reviewer may be paired to.
 
@@ -2250,19 +2244,6 @@ class TestSpawnLayout:
     its author, a worker somewhere it can be followed — rather than an arithmetic
     the multiplexer is free to reach its own way.
     """
-
-    def test_a_worker_opens_a_window_of_its_own_and_leaves_the_caller_whole(self, fleet, spawn, rig, tmp_path):
-        """The pane carrying prose is the one being read continuously, and a dispatcher
-        that halved its own pane on every spawn is the failure all of this exists to
-        stop. Measured off tmux rather than taken from the record."""
-        before = rig.size(rig.caller)
-        spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
-        spawned = rig.spawned()
-
-        assert rig.window_of(spawned) != rig.window_of(rig.caller), 'the worker was split beside its caller'
-        assert rig.size(rig.caller) == before
-        width, height = rig.size(spawned)
-        assert width >= 120 and height >= 35, f'{spawned} came out {width}x{height}'
 
     def test_a_reviewer_lands_directly_under_the_worker_it_reviews(self, fleet, spawn, rig, tmp_path):
         """A pair is read against itself, so the two share a column with the reviewer

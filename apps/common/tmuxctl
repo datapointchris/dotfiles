@@ -63,6 +63,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import fcntl
 import json
 import os
 import re
@@ -71,6 +72,7 @@ import shutil
 import signal
 import subprocess
 import sys
+from collections.abc import Iterator
 from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import replace
@@ -130,6 +132,9 @@ arrivals and the panes still there, whichever way it left -- `pane close`, a
 has to write anything. tmux never reuses a pane id within a server's life, which
 is what makes a recorded id safe to compare.
 """
+
+WINDOW_MARKS = (WINDOW_ROLE, WINDOW_OPENER, WINDOW_CAPACITY, WINDOW_ARRIVALS)
+"""Every per-window mark, in the order `WINDOW_FIELDS` reads them and `release` clears them."""
 
 MONITOR_COMMAND = 'abtop'
 """What goes beside a coordinator in the window it claims.
@@ -319,6 +324,8 @@ class Window:
     """How many workers it was opened to seat side by side."""
     arrivals: tuple[str, ...] = ()
     """Every worker that arrived here, by pane id, whether or not it is still here."""
+    marked: bool = False
+    """True where any of `WINDOW_MARKS` is set on the window, which `release` clears."""
 
     @property
     def lost_a_worker(self) -> bool:
@@ -550,13 +557,13 @@ def place(windows: Sequence[Window], request: Request) -> Placement:
     """Where the requested pane goes. Pure: nothing here touches tmux."""
     if pane_in(windows, request.caller) is None:
         raise Usage(Refusal.UNKNOWN_CALLER, pane=request.caller)
+    if request.per_window < 1:
+        raise Usage(Refusal.BAD_PER_WINDOW, count=request.per_window)
     if request.role is Role.REVIEWER:
         return beneath(windows, request)
     if request.role is Role.WORKER:
         if request.partner:
             raise Usage(Refusal.STRAY_PARTNER)
-        if request.per_window < 1:
-            raise Usage(Refusal.BAD_PER_WINDOW, count=request.per_window)
         placement = alongside(windows, request)
         return replace(placement, title=title(windows, placement, request.window_name))
     raise Usage(Refusal.UNPLACEABLE, role=request.role)
@@ -665,7 +672,7 @@ def alongside(windows: Sequence[Window], request: Request) -> Placement:
         expect=None,
         balance=False,
         readable=readable(home.width, home.height),
-        why=f'no window {request.caller} opened for workers has a seat left, so this worker gets one of its own',
+        why=f'no window {request.caller} opened for workers will take another, so this worker gets one of its own',
         across=home.width,
         seating=Seating(opener=request.caller, capacity=request.per_window),
     )
@@ -747,10 +754,10 @@ def column_in(window: Window, why: str) -> Placement:
 class Claim:
     """What making a pane the coordinator takes, decided before anything moves.
 
-    `breaks_out` is whether the pane shares its window with anything but a
-    monitor, and so has to leave it. `monitor` is the command to start beside it,
-    empty where its window already holds one -- which is a coordinator claiming
-    again, after a compaction or for a second batch.
+    `breaks_out` is whether the pane has to leave a window it shares. `monitor` is
+    the command to start beside it, empty where its window already holds one or
+    where the coordinator would be left unreadable beside it -- `cramped` says
+    which. `width` is what the coordinator keeps once the claim lands.
     """
 
     pane: str
@@ -758,6 +765,9 @@ class Claim:
     window_name: str
     breaks_out: bool
     monitor: str
+    width: int
+    readable: bool
+    cramped: bool = False
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -766,6 +776,9 @@ class Claim:
             'window_name': self.window_name,
             'breaks_out': self.breaks_out,
             'monitor': self.monitor or None,
+            'width': self.width,
+            'readable': self.readable,
+            'cramped': self.cramped,
         }
 
 
@@ -775,23 +788,43 @@ def claim(windows: Sequence[Window], caller: str, subject: str, monitor: str = M
     The subject is required and never guessed. It is the repo for a chain in one
     repo and a short name for a fan-out, and it is what the window list shows.
 
-    Claiming again is harmless. A pane already alone in its window with a monitor
-    beside it keeps both, and only the name follows the subject.
+    Claiming again is harmless. A pane that already holds a claimed window keeps
+    it, whatever else has been opened there since -- a reading pane beside a
+    coordinator is somebody following its work, not company to leave. A monitor
+    already there is kept, and only the name follows the subject.
+
+    The monitor goes beside the coordinator only where both stay readable. On a
+    narrower client the coordinator gets the whole window and no monitor.
     """
     if not usable_handle(subject):
         raise Usage(Refusal.BAD_SUBJECT, subject=subject)
     found = pane_in(windows, caller)
     if found is None:
         raise Usage(Refusal.UNKNOWN_CALLER, pane=caller)
-    window, _ = found
-    company = [pane for pane in window.panes if pane.pane_id != caller and pane.role is not Role.MONITOR]
-    watched = not company and any(pane.role is Role.MONITOR for pane in window.panes)
+    window, pane = found
+    held = window.dedicated and pane.role is Role.COORDINATOR
+    company = [other for other in window.panes if other.pane_id != caller and other.role is not Role.MONITOR]
+    breaks_out = bool(company) and not held
+    watched = not breaks_out and any(other.role is Role.MONITOR for other in window.panes)
+
+    wanted = bool(monitor.strip()) and not watched
+    beside = window.width - MIN_COLUMNS - 1
+    cramped = wanted and not readable(beside, window.height)
+    if watched:
+        width = pane.width
+    elif wanted and not cramped:
+        width = beside
+    else:
+        width = pane.width if held else window.width
     return Claim(
         pane=caller,
         window=window.window_id,
         window_name=f'{subject}{COORDINATOR_SUFFIX}',
-        breaks_out=bool(company),
-        monitor='' if watched or not monitor.strip() else monitor,
+        breaks_out=breaks_out,
+        monitor=monitor if wanted and not cramped else '',
+        width=width,
+        readable=readable(width, window.height),
+        cramped=cramped,
     )
 
 
@@ -818,16 +851,7 @@ none has to be read last with a maxsplit -- which `WINDOW_FIELDS` does have to
 do, because a session name is tmux's to contain anything."""
 
 WINDOW_FIELDS = '\t'.join(
-    (
-        '#{window_id}',
-        '#{window_width}',
-        '#{window_height}',
-        f'#{{@{WINDOW_ROLE}}}',
-        f'#{{@{WINDOW_OPENER}}}',
-        f'#{{@{WINDOW_CAPACITY}}}',
-        f'#{{@{WINDOW_ARRIVALS}}}',
-        '#{session_name}',
-    )
+    ('#{window_id}', '#{window_width}', '#{window_height}', *(f'#{{@{mark}}}' for mark in WINDOW_MARKS), '#{session_name}')
 )
 """The session name is last and is the only free-text field asked for.
 
@@ -1029,16 +1053,19 @@ def parse_window(line: str) -> Window:
     can hold anything, so the split stops before it and whatever it contains --
     spaces, tabs -- stays in the tail instead of shifting a column.
     """
-    window_id, width, height, dedicated, opener, capacity, arrivals, session = line.split('\t', 7)
+    window_id, width, height, *marks, session = line.split('\t', 3 + len(WINDOW_MARKS))
+    mark = dict(zip(WINDOW_MARKS, marks, strict=True))
+    capacity = mark[WINDOW_CAPACITY]
     return Window(
         window_id=window_id,
         width=int(width),
         height=int(height),
         session=session,
-        dedicated=dedicated == str(Role.COORDINATOR),
-        opener=opener,
+        dedicated=mark[WINDOW_ROLE] == str(Role.COORDINATOR),
+        opener=mark[WINDOW_OPENER],
         capacity=int(capacity) if capacity.isdigit() else 0,
-        arrivals=tuple(arrivals.split()),
+        arrivals=tuple(mark[WINDOW_ARRIVALS].split()),
+        marked=any(marks),
     )
 
 
@@ -1132,11 +1159,6 @@ def handle_of(pane_id: str) -> str:
     return handles().get(pane_id, '')
 
 
-def dedicate(window_id: str) -> None:
-    """Record that a coordinator claimed a window."""
-    tmux('set-option', '-w', '-t', window_id, f'@{WINDOW_ROLE}', str(Role.COORDINATOR))
-
-
 def record_seating(pane_id: str, seating: Seating) -> str | None:
     """Write a worker window's seating onto the window holding `pane_id`, with that pane arrived.
 
@@ -1167,6 +1189,25 @@ def caller_pane() -> str:
     return pane
 
 
+@contextlib.contextmanager
+def placement_lock() -> Iterator[None]:
+    """Hold this server's placement lock from reading the windows to recording where a pane went.
+
+    Without it, opens from one pane at the same moment each read the same seats.
+    Four concurrent opens on a fresh server gave four windows of one worker in four
+    runs of five, where two windows of two were due, and a window with one seat
+    left can take two. The lock sits beside the server's socket, so each server
+    has exactly one and nothing has to name it.
+    """
+    socket = os.environ.get('TMUX', '').split(',')[0]
+    if not socket:
+        yield
+        return
+    with open(f'{socket}.placement.lock', 'a') as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        yield
+
+
 def perform_claim(decided: Claim) -> tuple[str, str]:
     """Give the coordinator its window, mark it, and start the monitor beside it.
 
@@ -1178,10 +1219,12 @@ def perform_claim(decided: Claim) -> tuple[str, str]:
     it. Anywhere else `-d` leaves the focus where it was. A pane alone in its
     window keeps it, renamed.
 
-    The window is dedicated before the monitor is started, so a machine without
-    the monitor binary still gets a window `pane list` calls the coordinator's.
-    The monitor command is resolved by its first word, because `shutil.which`
-    takes a binary name and a value carrying an argument would read as missing.
+    Once the pane has its window, every later step is soft and reported. The
+    window is what the claim is for, and a failed mark or monitor after it is a
+    claim that half-landed, not one to retry from the start. The window is marked
+    before the monitor starts, so a machine without the monitor binary still gets a
+    window `pane list` calls the coordinator's. The monitor command is resolved by
+    its first word, because `shutil.which` takes a binary name.
     """
     if decided.breaks_out:
         shown = (tmux_read('display-message', '-p', '-t', decided.pane, '#{window_active}') or '').strip() == '1'
@@ -1190,17 +1233,26 @@ def perform_claim(decided: Claim) -> tuple[str, str]:
     else:
         window = decided.window
         tmux('rename-window', '-t', window, decided.window_name)
-    dedicate(window)
-    mark(decided.pane, Role.COORDINATOR)
 
+    for target, scope, option in ((window, '-w', WINDOW_ROLE), (decided.pane, '-p', PANE_ROLE)):
+        if problem := tmux_soft('set-option', scope, '-t', target, f'@{option}', str(Role.COORDINATOR)):
+            err(f'{target} has its window, and could not be marked a coordinator: {problem}')
+
+    if decided.cramped:
+        err(f'the window is {decided.width} columns, so the coordinator gets it without a monitor beside it')
     if not decided.monitor:
         return window, ''
-    binary = shlex.split(decided.monitor)[0]
-    if shutil.which(binary) is None:
+    if shutil.which(shlex.split(decided.monitor)[0]) is None:
         err(f'{decided.monitor} is not installed, so the coordinator gets its window without one')
         return window, ''
-    made = tmux('split-window', '-d', '-h', '-l', str(MIN_COLUMNS), '-P', '-F', '#{pane_id}', '-t', decided.pane, decided.monitor).strip()
-    mark(made, Role.MONITOR)
+    try:
+        split = ('split-window', '-d', '-h', '-l', str(MIN_COLUMNS), '-P', '-F', '#{pane_id}')
+        made = tmux(*split, '-t', decided.pane, decided.monitor).strip()
+    except TmuxFailed as failed:
+        err(f'the coordinator has its window, and the monitor did not start beside it: {failed}')
+        return window, ''
+    if problem := tmux_soft('set-option', '-p', '-t', made, f'@{PANE_ROLE}', str(Role.MONITOR)):
+        err(f'the monitor in {made} could not be marked as one: {problem}')
     return window, made
 
 
@@ -1361,10 +1413,10 @@ def release(panes: Sequence[str]) -> int:
     if not wanted:
         for line in tmux('list-windows', '-a', '-F', WINDOW_FIELDS).splitlines():
             window = parse_window(line)
-            if not (window.dedicated or window.opener or window.capacity or window.arrivals):
+            if not window.marked:
                 continue
-            for option in (WINDOW_ROLE, WINDOW_OPENER, WINDOW_CAPACITY, WINDOW_ARRIVALS):
-                tmux_soft('set-option', '-wu', '-t', window.window_id, f'@{option}')
+            for mark in WINDOW_MARKS:
+                tmux_soft('set-option', '-wu', '-t', window.window_id, f'@{mark}')
             dropped += 1
     return dropped
 
@@ -1396,6 +1448,9 @@ def describe_claim(decided: Claim) -> str:
     where = f'break {decided.pane} out of {decided.window} into' if decided.breaks_out else f'rename {decided.window} to'
     lines = [f'claim: {where} a window named {decided.window_name}']
     lines.append(f'  and: {decided.monitor} beside it' if decided.monitor else '  and: no monitor started')
+    lines.append(f'width: the coordinator keeps {decided.width} columns')
+    if not decided.readable:
+        lines.append(f'  ▲    under the {MIN_COLUMNS}x{MIN_ROWS} minimum, and there is nowhere on this client that is not')
     return '\n'.join(lines)
 
 
@@ -1525,16 +1580,14 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_open(args: argparse.Namespace) -> int:
-    handle = wanted_handle(args.name or '')
     request = request_from(args)
-    windows = read_workspace()
-
-    # `place()` decides first and the marks are written after, so a refused run
-    # leaves nothing behind and `plan` sees the same workspace `open` does.
-    placement = place(windows, request)
-    err(describe(placement))
-
-    landed = execute(placement, args.command, args.cwd, handle)
+    with placement_lock():
+        handle = wanted_handle(args.name or '')
+        # `place()` decides first and the marks are written after, so a refused run
+        # leaves nothing behind and `plan` sees the same workspace `open` does.
+        placement = place(read_workspace(), request)
+        err(describe(placement))
+        landed = execute(placement, args.command, args.cwd, handle)
     if not landed.as_planned:
         err(f'▲ tmux made {landed.pane} {landed.width}x{landed.height}, and the plan said {placement.size}')
     if not landed.readable:
@@ -1549,9 +1602,11 @@ def cmd_open(args: argparse.Namespace) -> int:
 
 def cmd_claim(subject: str, monitor: str, as_json: bool) -> int:
     """Make the calling pane the coordinator for a subject, and print its window's name."""
-    decided = claim(read_workspace(), caller_pane(), subject, monitor)
-    err(describe_claim(decided))
-    window, watcher = perform_claim(decided)
+    caller = caller_pane()
+    with placement_lock():
+        decided = claim(read_workspace(), caller, subject, monitor)
+        err(describe_claim(decided))
+        window, watcher = perform_claim(decided)
     if as_json:
         emit(decided.as_json() | {'window': window, 'monitor_pane': watcher or None})
     else:
@@ -1671,10 +1726,10 @@ it moves to a window of its own named for its subject, with a monitor beside it.
 
 A worker never opens beside the pane that asked for it. It opens a window of its
 own, or joins one the same pane opened for workers while that window has a seat
-(`--per-window`, two by default), keeps every column readable, and has lost none
-of its workers. A window is named as its workers arrive and never renamed: the
-second adds its name after a dot, so the window reads `phase-3 · phase-4`. A
-window a worker has left takes no other, and closes with its last pane."""
+(`--per-window`), keeps every column readable, and has lost none of its workers.
+A window is named as its workers arrive and never renamed: the second adds its
+name after a dot, so the window reads `phase-3 · phase-4`. A window a worker has
+left takes no other, and closes with its last pane."""
 
 
 ADDRESS = 'a pane, by the handle it was opened under or by its %%id'
@@ -1749,7 +1804,7 @@ def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
             metavar='N',
             help=(
                 "how many of this pane's workers may share a window side by side, while every column stays readable; "
-                f'1 gives this one a window of its own (default: {PER_WINDOW}). A reviewer ignores it'
+                f'1 gives this one a window of its own (default: {PER_WINDOW}). A reviewer ignores any count of one or more'
             ),
         )
         placing.add_argument('--json', action='store_true', help='machine-readable output on stdout')

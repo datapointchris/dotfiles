@@ -13,19 +13,13 @@
 # them however its multiplexer works.
 #
 # `pane open worker` never opens beside the pane that asked. It opens a window
-# or tab, or joins one the same pane opened for workers while it has a seat:
-# `--per-window N`, two by default. A window that lost a worker takes no other.
+# or tab, or joins one the same pane opened for workers while it has a seat
+# (`--per-window N`). A window that lost a worker takes no other.
 # `--window-name NAME` labels where the worker lands, once, at the open: a
 # window the adapter opens takes NAME, and a worker joining one appends
 # " · NAME". A reviewer leaves the label alone, and nothing renames it after.
 # `coordinator claim SUBJECT` gives the calling pane a window of its own named
-# SUBJECT-coordinator, with a monitor beside it. Each adapter reaches that its
-# own way:
-#
-#   tmuxctl    new-window -n names what it opens and rename-window appends.
-#              The seats are user options on the window.
-#   zellijctl  new-tab --name names what it opens. list-tabs --json reads a
-#              tab's name and rename-tab-by-id appends.
+# SUBJECT-coordinator, with a monitor beside it.
 #
 # It execs rather than running the adapter and relaying. The port's meaning is
 # carried by stdout, stderr and the exit code together, and replacing the
