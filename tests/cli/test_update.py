@@ -326,8 +326,8 @@ def test_a_pull_changing_the_dependency_set_reinstalls_the_tool_venv(clone: Path
 
 
 def test_both_repairs_run_in_the_order_the_venv_rebuild_demands(clone: Path, remote: Path, repairs: Path) -> None:
-    """The reinstall replaces the virtualenv this interpreter is running from, so
-    anything after it never happens. Relinking has to be first."""
+    """The relink runs the pulled source, which can import a dependency only the
+    rebuilt venv has. Relinked first, a pull adding one fails every first update."""
     (remote / 'configs' / 'common' / '.config').mkdir(parents=True)
     (remote / 'configs' / 'common' / '.config' / 'x.conf').write_text('changed\n')
     (remote / 'uv.lock').write_text('version = 1\n')
@@ -337,7 +337,7 @@ def test_both_repairs_run_in_the_order_the_venv_rebuild_demands(clone: Path, rem
     result = run_update(clone)
 
     assert result.returncode == ExitCode.CONVERGED, result.stderr
-    assert [call[0] for call in recorded(repairs)] == ['symlinks', 'export', 'tool']
+    assert [call[0] for call in recorded(repairs)] == ['export', 'tool', 'symlinks']
 
 
 def test_a_failed_venv_rebuild_exits_issue_rather_than_reporting_success(clone: Path, remote: Path, fake_bin: Path, tmp_path: Path) -> None:
@@ -440,7 +440,7 @@ def test_a_checkout_with_no_usable_record_runs_both_repairs_and_records_them(
     result = run_update(clone)
 
     assert result.returncode == ExitCode.CONVERGED, result.stderr
-    assert [call[0] for call in recorded(repairs)] == ['symlinks', 'tool']
+    assert [call[0] for call in recorded(repairs)] == ['tool', 'symlinks']
     assert json.loads(repair_record(clone).read_text()) == {'checkout': str(clone.resolve()), 'commit': head}
 
 

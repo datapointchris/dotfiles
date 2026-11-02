@@ -93,10 +93,13 @@ def update(
     """Update this installation: pull the checkout, and repair what no update has repaired yet.
 
     Two things a pull can invalidate, repaired in the order they have to happen.
-    Deployed files that moved leave the machine linked to paths that no longer
-    exist, so the symlinks are rebuilt. A changed dependency set leaves the tool
-    venv resolved against the old one, so it is reinstalled — last, because it
-    replaces the virtualenv this interpreter is running from.
+    A changed dependency set leaves the tool venv resolved against the old one,
+    so it is reinstalled first: the relink runs the pulled source, which can
+    import a dependency only the new venv has. Deployed files that moved leave
+    the machine linked to paths that no longer exist, so the symlinks are
+    rebuilt second, by a child started from the rebuilt venv. The reinstall
+    replaces the virtualenv this interpreter is running from, so after it this
+    process only starts that child and prints through code already loaded.
 
     **Measured from the commit the last update repaired at, never from the HEAD
     before this pull.** Commits reach the checkout by other routes first: a commit
@@ -158,6 +161,11 @@ def update(
         if not relink and not rebuild:
             hint('none of these changes touch a deployed file or a dependency, so there is nothing to apply')
 
+    rebuilt = True
+    if rebuild:
+        hint(f'{rebuild}, so reinstalling dotfiles')
+        rebuilt = reinstall()
+
     linked = True
     if relink:
         hint(f'{relink}, so applying the symlinks')
@@ -174,34 +182,35 @@ def update(
         if not linked:
             error('the symlinks were not rebuilt, so this update is not recorded and the next one retries it')
 
+    whole = linked and rebuilt
     if not rebuild:
-        if not linked:
+        if not whole:
             raise typer.Exit(ExitCode.ISSUE)
         record_repair(now)
         return
 
-    hint(f'{rebuild}, so reinstalling dotfiles')
-    try:
-        pins = uv_lock.read(paths.REPO_ROOT)
-    except uv_lock.Unexportable as unexportable:
-        raise Refusal(
-            f'uv export would not read {paths.REPO_ROOT / uv_lock.LOCK_FILE}, so the tool venv was not rebuilt: {unexportable}'
-        ) from unexportable
-    with tempfile.TemporaryDirectory(prefix='dotfiles-update-') as scratch:
-        held = pins.arguments(Path(scratch)) if pins is not None else []
-        rebuilt = run(['uv', 'tool', 'install', '--reinstall', *held, '--editable', str(paths.REPO_ROOT)], output=Output.STREAM)
-
-    # `os._exit`, not a return: `--reinstall` has just deleted and recreated the
+    # `os._exit`, not a return: `--reinstall` has deleted and recreated the
     # virtualenv this interpreter lives in, so any import from here on — including
     # the ones interpreter shutdown does on its own — reads files that no longer
     # exist. The record is the one write left, through modules already loaded, and
     # the buffers are flushed by hand because `_exit` skips that too.
-    whole = linked and rebuilt.ok
     if whole:
         record_repair(now)
     sys.stdout.flush()
     sys.stderr.flush()
     os._exit(ExitCode.CONVERGED if whole else ExitCode.ISSUE)
+
+
+def reinstall() -> bool:
+    """`uv tool install --reinstall`, held to the lock the pull brought."""
+    try:
+        pins = uv_lock.read(paths.REPO_ROOT)
+    except uv_lock.Unexportable as unexportable:
+        error(f'uv export would not read {paths.REPO_ROOT / uv_lock.LOCK_FILE}, so the tool venv was not rebuilt: {unexportable}')
+        return False
+    with tempfile.TemporaryDirectory(prefix='dotfiles-update-') as scratch:
+        held = pins.arguments(Path(scratch)) if pins is not None else []
+        return run(['uv', 'tool', 'install', '--reinstall', *held, '--editable', str(paths.REPO_ROOT)], output=Output.STREAM).ok
 
 
 def commits_between(older: str, newer: str) -> list[str]:
