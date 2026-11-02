@@ -127,7 +127,9 @@ def render(record: dict[str, Any]) -> None:
     print(f'          {scenario["persona"]} × {scenario["machine"]} × {scenario["operating_system"]} × {scenario["subject"]}')
     print(f'subject   {subject["repository"]} at {subject["commit"][:12]} ({subject["ref"]}), {subject["file_count"]} files')
     print(f'model     {record.get("model") or record["requested_model"]}, Claude Code {record.get("claude_code_version") or "unknown"}')
-    print(f'turns     {record.get("num_turns")} of {record["max_turns"]}, {record["duration_seconds"]}s')
+    requests = record.get('model_requests', 'unknown')
+    counted = f"{record.get('num_turns')} turns by claude's count"
+    print(f'requests  {requests} of {record["max_turns"]} allowed, {counted}, {record["duration_seconds"]}s')
     print(f'tokens    {tokens_line(record["tokens"])}')
     if record.get('failure'):
         print(f'failed    {record["failure"]["key"]}: {record["failure"]["cause"]}')
@@ -172,7 +174,9 @@ def parser() -> argparse.ArgumentParser:
     running.add_argument('--subject')
     running.add_argument('--submission', help="the submitter's words, for a run named by its axes")
     running.add_argument('--model', default='opus', help='the model claude is given (default: opus)')
-    running.add_argument('--max-turns', type=int, help="cap on turns (default: the persona's max_turns)")
+    running.add_argument(
+        '--max-turns', type=int, help="cap on model requests, passed as claude's --max-turns (default: the persona's max_turns)"
+    )
     running.add_argument('--timeout', type=int, default=3600, help='seconds before the call is killed (default: 3600)')
     running.add_argument('--only', action='append', default=[], metavar='PATH', help='export only this subject path; repeatable')
     running.add_argument('--mock', action='store_true', help="write the persona's canned report instead of calling a model")

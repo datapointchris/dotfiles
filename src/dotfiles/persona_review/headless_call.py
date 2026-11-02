@@ -9,6 +9,11 @@ directory so every transcript files under one `~/.claude/projects` folder.
 A call that gives no report ends under one key: `claude-not-installed`, `timed-out`, `exited`,
 `signal`, `usage-limit` or `no-structured-reply`. Its cause is read from stdout as well as stderr,
 because claude prints a refusal on stdout and at most a tag on stderr.
+
+`--max-turns` and the result frame's `num_turns` count different things. The cap counts rounds of
+the query loop, one per model request. `num_turns` counts every user message: the prompt and each
+tool result, so a request that calls two tools in parallel adds two. `model_requests` counts the
+distinct assistant message ids, which is the cap's unit.
 """
 
 from __future__ import annotations
@@ -45,6 +50,7 @@ class Outcome:
     model: str
     models: list[str]
     claude_code_version: str
+    model_requests: int
     num_turns: int | None
     tokens: dict[str, int]
     tokens_by_model: dict[str, dict[str, int]]
@@ -113,6 +119,7 @@ def read_frames(frames: list[dict[str, Any]], started: float) -> Outcome:
         model=str(init.get('model') or ''),
         models=sorted(result.get('modelUsage') or {}),
         claude_code_version=str(init.get('claude_code_version') or ''),
+        model_requests=len({f['message']['id'] for f in frames if f.get('type') == 'assistant' and (f.get('message') or {}).get('id')}),
         num_turns=result.get('num_turns'),
         tokens=tokens,
         tokens_by_model=by_model,

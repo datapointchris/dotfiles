@@ -90,11 +90,9 @@ def start(scenario: Scenario, *, model: str, max_turns: int, timeout: int, only:
     (run_dir / 'task-prompt.md').write_text(task)
 
     tools = [str(tool) for tool in scenario.persona.fields.get('tools') or []]
-    # Claude Code 2.1.316's validator holds no draft 2020-12 meta-schema and refuses a schema naming it.
-    schema = {key: value for key, value in json.loads(scenario.report_schema.read_text()).items() if key != '$schema'}
     command = headless_call.argv(
         model=model,
-        schema=json.dumps(schema),
+        schema=json.dumps(json.loads(scenario.report_schema.read_text())),
         system_prompt_file=system_prompt_file,
         tools=tools,
         subject_dir=subject_dir,
@@ -120,6 +118,7 @@ def start(scenario: Scenario, *, model: str, max_turns: int, timeout: int, only:
         'models': outcome.models,
         'claude_code_version': outcome.claude_code_version,
         'max_turns': max_turns,
+        'model_requests': outcome.model_requests,
         'num_turns': outcome.num_turns,
         'started_at': started_at,
         'finished_at': now(),

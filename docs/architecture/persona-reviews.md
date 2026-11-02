@@ -63,6 +63,6 @@ writes the persona's canned report from `mock-reports/` instead of calling a mod
 the catalog, the prompts or the storage is checked for no tokens. The first real call on a
 changed schema goes to the smallest model with a narrow `--only` and a low `--max-turns`.
 
-The schema handed to `--json-schema` drops its `$schema` key. Claude Code's validator holds no
-draft 2020-12 meta-schema and refuses a schema naming it before any model call. The file keeps
-the key, so a sweep for published JSON Schemas still finds it.
+The schemas declare draft-07. Claude Code checks `--json-schema` with Ajv's default class, which
+holds only the draft-07 meta-schema, and refuses a schema naming draft 2020-12 before any model
+call. A schema in the dialect its validator enforces passes through unchanged.

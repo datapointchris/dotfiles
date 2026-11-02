@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "urn:dotfiles:persona-review:run-record:v1",
   "title": "Persona review run record",
   "description": "One review run: the scenario, the subject commit it read, the model and CLI that answered, its tokens by kind, and the report or the failure.",
@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": [
     "schema", "run_id", "mode", "scenario", "subject", "requested_model", "model", "models",
-    "claude_code_version", "max_turns", "num_turns", "started_at", "finished_at", "duration_seconds",
+    "claude_code_version", "max_turns", "model_requests", "num_turns", "started_at", "finished_at", "duration_seconds",
     "tokens", "tokens_by_model", "failure", "report_schema", "report"
   ],
   "properties": {
@@ -45,13 +45,14 @@
     "model": {"description": "The model the init frame names, or empty.", "type": "string"},
     "models": {"description": "Every model the result frame's modelUsage names.", "type": "array", "items": {"type": "string"}},
     "claude_code_version": {"type": "string"},
-    "max_turns": {"type": "integer"},
-    "num_turns": {"type": ["integer", "null"]},
+    "max_turns": {"description": "The --max-turns cap, which counts model requests.", "type": "integer"},
+    "model_requests": {"description": "Distinct assistant message ids in the frames: the unit max_turns caps.", "type": "integer"},
+    "num_turns": {"description": "The result frame's count of user messages: the prompt plus every tool result.", "type": ["integer", "null"]},
     "started_at": {"type": "string"},
     "finished_at": {"type": "string"},
     "duration_seconds": {"type": "number"},
-    "tokens": {"$ref": "#/$defs/tokens"},
-    "tokens_by_model": {"type": "object", "additionalProperties": {"$ref": "#/$defs/tokens"}},
+    "tokens": {"$ref": "#/definitions/tokens"},
+    "tokens_by_model": {"type": "object", "additionalProperties": {"$ref": "#/definitions/tokens"}},
     "failure": {
       "oneOf": [
         {"type": "null"},
@@ -69,7 +70,7 @@
     "report_schema": {"type": "string"},
     "report": {"description": "The persona's reply, valid against report_schema, or null on failure.", "type": ["object", "null"]}
   },
-  "$defs": {
+  "definitions": {
     "tokens": {
       "type": "object",
       "additionalProperties": false,

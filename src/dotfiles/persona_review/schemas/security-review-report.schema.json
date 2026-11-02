@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "urn:dotfiles:persona-review:security-review-report:v1",
   "title": "Security review report",
   "description": "A security persona's review of one subject for one machine and operating system.",
@@ -18,11 +18,11 @@
     "inventory": {
       "description": "Everything the install brings onto the machine.",
       "type": "array",
-      "items": {"$ref": "#/$defs/installed"}
+      "items": {"$ref": "#/definitions/installed"}
     },
     "findings": {
       "type": "array",
-      "items": {"$ref": "#/$defs/finding"}
+      "items": {"$ref": "#/definitions/finding"}
     },
     "conditions": {
       "description": "What the employee must do before installing, each naming the finding id it clears. Empty unless the verdict is approve-with-conditions.",
@@ -35,7 +35,7 @@
       "items": {"type": "string"}
     }
   },
-  "$defs": {
+  "definitions": {
     "installed": {
       "type": "object",
       "additionalProperties": false,
@@ -83,7 +83,7 @@
             "defense-impairment", "network-exposure", "data-exfiltration", "configuration-weakening", "policy"
           ]
         },
-        "locations": {"type": "array", "items": {"$ref": "#/$defs/location"}},
+        "locations": {"type": "array", "items": {"$ref": "#/definitions/location"}},
         "description": {"description": "What the code does, stated as fact.", "type": "string"},
         "evidence": {"description": "The lines quoted from the subject that show it.", "type": "string"},
         "impact": {"description": "What an attacker gains on this machine and from it.", "type": "string"},
