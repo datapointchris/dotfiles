@@ -1,0 +1,30 @@
+// The record files `fleet` writes on this machine, each record once, named for
+// this machine by its lowercased short hostname.
+
+// A machine snapshot from `fleet machine snapshot take`: one JSON object per file,
+// past filelog's default 1 MiB a record and inside the 16 MiB batch a record has
+// to fit. A snapshot carrying a W3C traceparent lands under the trace that wrote it.
+otelcol.receiver.filelog "machine_snapshots" {
+  include      = [string.format("%s/fleet/snapshots/*-%s.json", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at     = "beginning"
+  storage      = otelcol.storage.file.offsets.handler
+  max_log_size = "8MiB"
+
+  operators = [
+    {
+      type     = "regex_parser",
+      regex    = "\"traceparent\":\\s*\"00-(?P<trace_id>[0-9a-f]{32})-(?P<span_id>[0-9a-f]{16})-",
+      on_error = "send_quiet",
+      trace    = {trace_id = {parse_from = "attributes.trace_id"}, span_id = {parse_from = "attributes.span_id"}},
+    },
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "machine.snapshot"},
+  ]
+
+  multiline {
+    line_start_pattern = "^\\{"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}

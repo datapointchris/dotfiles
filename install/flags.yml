@@ -205,7 +205,7 @@ required:
     description: URL of the OpenTelemetry collector this machine's agent forwards to, such as http://collector.example:4318
     network_trust: fleet
     consumers:
-      - configs/trust/fleet/.config/alloy/config.alloy.tmpl
+      - configs/trust/fleet/.config/alloy/localhost-to-gateway.alloy.tmpl
 
   # The domain the homelab serves its APIs and its identity provider under. Each
   # product CLI's config.toml names its API and the provider as subdomains of

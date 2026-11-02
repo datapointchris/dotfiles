@@ -240,12 +240,15 @@ def alloy(tag: str, target: Target) -> ReleaseArtifact:
 
 ALLOY_ARGUMENTS = (
     'run',
-    f'{HOME}/.config/alloy/config.alloy',
+    f'{HOME}/.config/alloy',
     f'--storage.path={HOME}/.local/state/alloy',
     '--stability.level=public-preview',
     '--disable-reporting',
 )
 """One argument list for the unit and the agent, so both platforms run the same daemon.
+
+The config is a directory. Alloy combines every `*.alloy` file directly inside it
+into one configuration, so one writer's records arrive as one more file there.
 
 The config's exporter keeps its queue in `otelcol.storage.file`, which Alloy ships
 at `public-preview` and refuses to load below that level. The queue lives under
