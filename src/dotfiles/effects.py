@@ -159,14 +159,16 @@ GITHUB_TOKEN_HELPER = '!f() { test "$1" = get && echo username=x-access-token &&
 def with_github_token_for_git(environment: dict[str, str]) -> dict[str, str]:
     """`environment` with a GitHub credential helper added to git's config wherever `GITHUB_TOKEN` is set.
 
-    `evidence.have_github_credentials` accepts the token alone, but git reads no
-    variable, so a private `go install` or `uv` git install on a box without `gh`
-    stopped at `could not read Username`. Command-line scope is read after every
-    config file, so a working `gh auth git-credential` still answers first.
+    Git reads no variable, so without this a private `go install` or `uv` git
+    install on a box with only the token has no credential to offer. Command-line
+    scope is read after every config file, so a working `gh auth git-credential`
+    still answers first. A count git cannot parse is one git refuses anyway, so
+    the helper replaces it rather than stopping every child.
     """
     if not environment.get('GITHUB_TOKEN'):
         return environment
-    count = int(environment.get('GIT_CONFIG_COUNT') or 0)
+    declared = environment.get('GIT_CONFIG_COUNT', '')
+    count = int(declared) if declared.isdigit() else 0
     return {
         **environment,
         'GIT_CONFIG_COUNT': str(count + 1),
