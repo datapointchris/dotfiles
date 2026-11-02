@@ -1121,6 +1121,14 @@ github_releases:
     description: Fitness — mesocycle programming, workout logging, measurements
     tags: [cli, personal]
 
+  # A Linux client for the Mac's chat.db, read over SSH, so its release
+  # publishes no Mac build and a Mac never plans this row.
+  - name: msg
+    repo: datapointchris/msg
+    excludes_os_family: darwin
+    description: Terminal iMessage client
+    tags: [cli, tui, personal]
+
   - name: ypl
     repo: datapointchris/ypl
     release_tag_prefix: "cli/"

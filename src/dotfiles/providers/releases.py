@@ -351,6 +351,11 @@ def lazygit(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'lazygit_{bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='lazygit')
 
 
+def msg(tag: str, target: Target) -> ReleaseArtifact:
+    """One GNU triple, x86_64 Linux alone, with the binary at the tarball's root."""
+    return ReleaseArtifact(f'msg-{bare(tag)}-x86_64-unknown-linux-gnu.tar.gz', Archive.TARBALL, path='msg')
+
+
 def neovim(tag: str, target: Target) -> ReleaseArtifact:
     """Installs a tree rather than a binary: `bin/nvim` plus its runtime."""
     if target.is_darwin:
@@ -538,6 +543,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'lazygit': lazygit,
     'learning': go_release_cli('learning'),
     'meso': go_release_cli('meso'),
+    'msg': msg,
     'neovim': neovim,
     'nomad': go_release_cli('nomad'),
     'ntfy': ntfy,

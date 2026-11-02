@@ -8,6 +8,7 @@ github_releases:
   - learning
   - nomad
   - meso
+  - msg
 
 custom_installers:
   - zmk
