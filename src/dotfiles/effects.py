@@ -152,6 +152,28 @@ NOT_FOUND = 127
 TIMED_OUT = 124
 """What `timeout(1)` exits with, so a bounded probe reports what the shell would."""
 
+GITHUB_TOKEN_HELPER = '!f() { test "$1" = get && echo username=x-access-token && echo "password=$GITHUB_TOKEN"; }; f'
+"""A git credential helper answering from `$GITHUB_TOKEN`, which git's shell expands only when asked."""
+
+
+def with_github_token_for_git(environment: dict[str, str]) -> dict[str, str]:
+    """`environment` with a GitHub credential helper added to git's config wherever `GITHUB_TOKEN` is set.
+
+    `evidence.have_github_credentials` accepts the token alone, but git reads no
+    variable, so a private `go install` or `uv` git install on a box without `gh`
+    stopped at `could not read Username`. Command-line scope is read after every
+    config file, so a working `gh auth git-credential` still answers first.
+    """
+    if not environment.get('GITHUB_TOKEN'):
+        return environment
+    count = int(environment.get('GIT_CONFIG_COUNT') or 0)
+    return {
+        **environment,
+        'GIT_CONFIG_COUNT': str(count + 1),
+        f'GIT_CONFIG_KEY_{count}': 'credential.https://github.com.helper',
+        f'GIT_CONFIG_VALUE_{count}': GITHUB_TOKEN_HELPER,
+    }
+
 
 @dataclass(frozen=True)
 class Completed:
@@ -246,7 +268,7 @@ def run(
     is a crash rather than a reported failure.
     """
     argv = tuple(command)
-    environment = {**os.environ, **(env or {})}
+    environment = with_github_token_for_git({**os.environ, **(env or {})})
     for name in unset:
         environment.pop(name, None)
     directory = str(cwd) if cwd else None

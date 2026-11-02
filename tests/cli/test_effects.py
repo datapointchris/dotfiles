@@ -96,6 +96,16 @@ def test_the_environment_is_added_to_rather_than_replacing_the_inherited_one() -
     assert completed.ok
 
 
+def test_git_answers_github_from_the_token_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A box with no `gh` and no git config still clones a private repo."""
+    monkeypatch.setenv('GITHUB_TOKEN', 'ghp_fromtheenvironment')
+    monkeypatch.setenv('GIT_CONFIG_GLOBAL', '/dev/null')
+    monkeypatch.setenv('GIT_CONFIG_NOSYSTEM', '1')
+    monkeypatch.setenv('GIT_TERMINAL_PROMPT', '0')
+    asked = run(['git', 'credential', 'fill'], output=Output.QUIET, stdin_text='protocol=https\nhost=github.com\n\n')
+    assert 'password=ghp_fromtheenvironment' in asked.stdout.splitlines()
+
+
 def test_a_command_that_will_not_answer_is_a_timeout_rather_than_a_hang() -> None:
     """The failure this prevents is silent rather than loud: the binary being run
     is whatever a declaration names, and a GUI blocks on its event loop until a
