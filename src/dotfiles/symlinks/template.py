@@ -26,6 +26,7 @@ import os
 import re
 import string
 import tempfile
+from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Mapping
 from pathlib import Path
@@ -107,11 +108,44 @@ def is_rendering_of(source: Path, text: str) -> bool:
 def texts_held(source: Path) -> Iterator[str]:
     """The template's text as it stands, then as each commit touching it held it, newest first."""
     yield source.read_text()
-    revisions = run(['git', '-C', str(source.parent), 'rev-list', 'HEAD', '--', source.name], output=Output.QUIET)
+    yield from texts_committed(source.parent, Path(source.name))
+
+
+def texts_committed(directory: Path, path: Path) -> Iterator[str]:
+    """The file at `path`, relative to `directory`, as each commit touching it held it, newest first.
+
+    Nothing is read from the working tree, so this answers for a template the repo
+    has deleted. The commit that deleted it holds no text and yields nothing.
+    """
+    revisions = run(['git', '-C', str(directory), 'rev-list', 'HEAD', '--', str(path)], output=Output.QUIET)
     for revision in revisions.stdout.split() if revisions.ok else ():
-        shown = run(['git', '-C', str(source.parent), 'show', f'{revision}:./{source.name}'], output=Output.QUIET)
+        shown = run(['git', '-C', str(directory), 'show', f'{revision}:./{path}'], output=Output.QUIET)
         if shown.ok:
             yield shown.stdout
+
+
+def deleted(repo: Path, trees: Iterable[str]) -> tuple[Path, ...]:
+    """Every template under these trees that a commit deleted and the repo does not carry again, relative to the repo.
+
+    `--no-renames`, so a template moved elsewhere counts as deleted from where it
+    was. Its old target is only left behind where nothing deploys there now, and
+    the caller decides that. A repo with no history answers with nothing, and a
+    shallow clone with only the deletions its history reaches.
+    """
+    pathspecs = [f'{tree}/*{SUFFIX}' for tree in trees]
+    log = run(
+        ['git', '-C', str(repo), 'log', '-z', '--diff-filter=D', '--no-renames', '--name-only', '--format=', '--', *pathspecs],
+        output=Output.QUIET,
+    )
+    if not log.ok:
+        return ()
+    named = (Path(name.strip('\n')) for name in log.stdout.split('\0') if name.strip('\n'))
+    return tuple(path for path in dict.fromkeys(named) if not (repo / path).exists())
+
+
+def was_rendering_of(repo: Path, path: Path, text: str) -> bool:
+    """Whether the text is the template once at `path` in the repo, as any commit held it, filled in with any values at all."""
+    return any(fits(held, text) for held in texts_committed(repo, path))
 
 
 def fits(template_text: str, text: str) -> bool:

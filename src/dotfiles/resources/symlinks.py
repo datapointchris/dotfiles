@@ -45,6 +45,7 @@ import enum
 import functools
 import shutil
 from collections.abc import Callable
+from collections.abc import Collection
 from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Mapping
@@ -147,6 +148,25 @@ class Rendered:
 
 
 @dc.dataclass(frozen=True, slots=True)
+class OrphanedRendering:
+    """A regular file at the target of a template the repo deleted, where nothing declares that target now.
+
+    The rendered twin of an orphan link. `template.deleted` finds its template in
+    git history, since the file itself points at nothing.
+    """
+
+    target: Path
+
+    templates: tuple[Link, ...]
+    """Each deleted template that landed here. More than one where a template
+    moved between source directories and was deleted from both."""
+
+    ours: bool
+    """Whether the file is a rendering of a text one of them held, filled with any
+    values. Only then is it this manager's to remove."""
+
+
+@dc.dataclass(frozen=True, slots=True)
 class Observed:
     links: tuple[Link, ...]
     """What the repo declares. Read here rather than in `diff`, because deriving
@@ -213,6 +233,11 @@ class Observed:
     only copy of a file this repo cannot regenerate, and on the machine that
     deploys by copy that is the machine most likely to be holding one.
     """
+
+    orphaned_renderings: tuple[OrphanedRendering, ...]
+    """Files left at the target of a template the repo deleted. Found on a copy
+    machine as well, since fitting a file against the template's old texts needs
+    no link."""
 
     rendered: dict[Path, Rendered]
     """What is at each template's target, on a link machine and a copy machine
@@ -406,17 +431,28 @@ def sources(repo: Path, coordinates: axes.Coordinates, home: Path) -> Iterator[t
 
 def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...]:
     """Every link this machine should have. Pure: a walk of the repo, no `$HOME` reads."""
+    return placed(session, coordinates, files_in)
+
+
+def files_in(source_dir: Path) -> list[Path]:
+    if not source_dir.exists():
+        return []
+    return [item for item in sorted(source_dir.rglob('*')) if item.is_file() or item.is_symlink()]
+
+
+def placed(session: Session, coordinates: axes.Coordinates, files: Callable[[Path], Iterable[Path]]) -> tuple[Link, ...]:
+    """A link for each file `files` names under each source directory, where this machine deploys it.
+
+    The file need not exist, so a template the repo deleted is placed by the same
+    rules as one it carries.
+    """
     reserved = core.console_script_names(session.repo / 'pyproject.toml')
     home = session.home.resolve()
     claimable = home.joinpath(*next(below for tree, below, _ in TREES if tree == APPS_TREE))
 
     links = []
     for source_dir, destination, origin in sources(session.repo, coordinates, home):
-        if not source_dir.exists():
-            continue
-        for item in sorted(source_dir.rglob('*')):
-            if not (item.is_file() or item.is_symlink()):
-                continue
+        for item in files(source_dir):
             relative = item.relative_to(source_dir)
             if core.should_exclude(relative):
                 continue
@@ -425,6 +461,44 @@ def declared(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...
                 continue
             links.append(Link(source=item, target=destination / lands, origin=origin, root=source_dir))
     return tuple(links)
+
+
+def deleted_templates(session: Session, coordinates: axes.Coordinates) -> tuple[Link, ...]:
+    """Each template the repo deleted, placed where this machine would deploy it were the repo still carrying it.
+
+    Placed through the source directories this machine selects now. A machine
+    whose coordinates have changed since it rendered one keeps that rendering.
+    """
+    gone = [session.repo / path for path in template.deleted(session.repo, [tree for tree, _, _ in TREES])]
+    if not gone:
+        return ()
+    return placed(session, coordinates, lambda source_dir: [path for path in gone if path.is_relative_to(source_dir)])
+
+
+def orphaned_renderings(repo: Path, deleted: Iterable[Link], wanted: Collection[Path]) -> tuple[OrphanedRendering, ...]:
+    """The regular file at each deleted template's target, where nothing in `wanted` lands there now.
+
+    The one decision of what is an orphaned rendering and whether it is this
+    manager's. `observe`, `perform` and the unlink pass each ask it.
+    """
+    by_target: dict[Path, list[Link]] = {}
+    for link in deleted:
+        if link.target not in wanted:
+            by_target.setdefault(link.target, []).append(link)
+    return tuple(
+        OrphanedRendering(target, tuple(gone), renders_one_of(repo, gone, target))
+        for target, gone in by_target.items()
+        if target.is_file() and not target.is_symlink()
+    )
+
+
+def renders_one_of(repo: Path, templates: Iterable[Link], target: Path) -> bool:
+    """Whether the target holds a rendering of any text one of these deleted templates held."""
+    try:
+        text = target.read_text()
+    except (OSError, UnicodeDecodeError):
+        return False
+    return any(template.was_rendering_of(repo, link.source.relative_to(repo), text) for link in templates)
 
 
 class SymlinksResource:
@@ -439,9 +513,12 @@ class SymlinksResource:
         # Cleared here because this is the one place that re-reads the repo, so it
         # is where a run's idea of what is declared begins.
         index.cache_clear()
+        deleted_index.cache_clear()
         links = declared(session, plan.machine.coordinates)
         deployed = [link for link in links if not link.rendered]
         rendered = measure_rendered(session, [link for link in links if link.rendered])
+        wanted = {link.target for link in links}
+        orphaned = orphaned_renderings(session.repo, deleted_index(session, plan.machine.coordinates).values(), wanted)
         if session.machine.wants(DEPLOY_BY_COPY):
             return Observed(
                 links=links,
@@ -451,6 +528,7 @@ class SymlinksResource:
                 adoptable=frozenset(),
                 content={link.target: compare(link) for link in deployed},
                 orphans=(),
+                orphaned_renderings=orphaned,
                 rendered=rendered,
                 env_file=session.env_file,
                 home=session.home.resolve(),
@@ -466,7 +544,6 @@ class SymlinksResource:
             if ownership[link.target] is core.Ownership.FOREIGN and (session.force or core.is_untouched_skeleton(link.target)):
                 adoptable.add(link.target)
 
-        wanted = {link.target for link in links}
         scanned = core.find_broken_symlinks(session.home.resolve(), session.repo)
         orphans = tuple(path for path in scanned.found if path not in wanted)
         return Observed(
@@ -477,6 +554,7 @@ class SymlinksResource:
             adoptable=frozenset(adoptable),
             content={},
             orphans=orphans,
+            orphaned_renderings=orphaned,
             rendered=rendered,
             env_file=session.env_file,
             unreadable=scanned.skipped,
@@ -496,6 +574,7 @@ class SymlinksResource:
             )
             for path in observed.orphans
         )
+        changes.extend(orphaned_rendering_change(orphaned, observed.home) for orphaned in observed.orphaned_renderings)
         # `UNKNOWN` with `Repair.NONE`, which `Change.unmeasured` reads as no
         # evidence either way. The orphan scan did not reach these, so nothing
         # here differs and nothing established that it does not — and a run that
@@ -515,7 +594,7 @@ class SymlinksResource:
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
-        """Create one link, or remove one orphan.
+        """Create one link, or remove one orphan link or orphaned rendering.
 
         Re-checked live rather than trusting what `diff` saw: an earlier change in
         the same run may have created the parent directory, and the target may have
@@ -523,11 +602,15 @@ class SymlinksResource:
         foreign between the report and the write is still not overwritten.
 
         An orphan is told apart by what it is addressed by. A declared link's
-        address is `origin/path-in-the-repo`; an orphan has nothing declaring it,
-        so it is addressed by its absolute path in `$HOME`.
+        address is `origin/path-in-the-repo`; an orphan link has nothing declaring
+        it, so it is addressed by its absolute path in `$HOME`. An orphaned
+        rendering is addressed by its deleted template's `origin/path-in-the-repo`,
+        which `deleted_index` holds and `index` never does.
         """
         link = link_for(session, change)
         if link is None:
+            if (gone := deleted_index(session, session.machine.coordinates).get(change.item)) is not None:
+                return prune_rendering(session, change, gone)
             target = Path(change.item)
             if not target.is_absolute():
                 return Outcome(change, OutcomeStatus.REFUSED, 'nothing in the repo declares this link any more')
@@ -782,6 +865,50 @@ def prune(change: Change, target: Path) -> Outcome:
     return Outcome(change, OutcomeStatus.DONE, f'removed {target}')
 
 
+def prune_rendering(session: Session, change: Change, gone: Link) -> Outcome:
+    """Remove a rendering of a template the repo deleted, after deciding again whether it is one.
+
+    `orphaned_renderings` decides, as it did for `diff`, because the file is a
+    regular file and an edit since `diff` read it would make it somebody's.
+    """
+    coordinates = session.machine.coordinates
+    wanted = {link.target for link in index(session, coordinates).values()}
+    landing = [link for link in deleted_index(session, coordinates).values() if link.target == gone.target]
+    found = orphaned_renderings(session.repo, landing, wanted)
+    if not (found and found[0].ours):
+        return Outcome(change, OutcomeStatus.REFUSED, f'{gone.target} is no longer a rendering of it, so it was left as it was')
+    try:
+        gone.target.unlink()
+    except OSError as problem:
+        return Outcome(change, OutcomeStatus.FAILED, str(problem))
+    return Outcome(change, OutcomeStatus.DONE, f'removed {gone.target}')
+
+
+def orphaned_rendering_change(orphaned: OrphanedRendering, home: Path) -> Change:
+    """Remove a rendering, and name a file that is not one, because it may hold
+    edits that exist nowhere else."""
+    where = paths.under_home(orphaned.target, home)
+    address = orphaned.templates[0].address
+    if orphaned.ours:
+        return Change(
+            NAME,
+            Stage.SYMLINKS,
+            address,
+            Verdict.STALE,
+            repair=Repair.AUTOMATIC,
+            detail=f'deleted from the repo, and {where} is a rendering of it',
+        )
+    return Change(
+        NAME,
+        Stage.SYMLINKS,
+        address,
+        Verdict.UNDECLARED,
+        repair=Repair.BY_HAND,
+        detail=f'deleted from the repo, and {where} is not a rendering of it',
+        advice=f'undeclared: edited since it was rendered, or written by something else -> rm {where}',
+    )
+
+
 def verdict(link: Link, observed: Observed) -> Change | None:
     """One row's finding, or None where the target is already what it should be.
 
@@ -1008,13 +1135,14 @@ def rendered_verdict(link: Link, observed: Observed) -> Change | None:
 
 
 def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]]:
-    """Take back every rendered file, and name what stays.
+    """Take back every rendered file, including one whose template the repo deleted, and name what stays.
 
     A target that is a rendering of its template, with this machine's values or
     earlier ones, is this manager's output and goes. Anything else is left with
     its reason.
     """
-    templates = [link for link in declared(session, session.machine.coordinates) if link.rendered]
+    links = declared(session, session.machine.coordinates)
+    templates = [link for link in links if link.rendered]
     measured = measure_rendered(session, templates)
     removed = 0
     kept: list[tuple[Path, str]] = []
@@ -1051,6 +1179,13 @@ def remove_rendered(session: Session) -> tuple[int, tuple[tuple[Path, str], ...]
 
             case _ as unmatched:
                 assert_never(unmatched)
+
+    deleted = deleted_templates(session, session.machine.coordinates)
+    for orphaned in orphaned_renderings(session.repo, deleted, {link.target for link in links}):
+        if orphaned.ours:
+            removed += unlink_rendering(orphaned.target, kept)
+        else:
+            kept.append((orphaned.target, f'is not a rendering of {orphaned.templates[0].address}'))
 
     return removed, tuple(kept)
 
@@ -1090,6 +1225,16 @@ def index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link]
 
 def link_for(session: Session, change: Change) -> Link | None:
     return index(session, session.machine.coordinates).get(change.item)
+
+
+@functools.lru_cache(maxsize=1)
+def deleted_index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link]:
+    """Deleted templates by address, derived once for the run for the reason `index` is.
+
+    `deleted_templates` runs a `git log` over the whole history, which per change
+    would run once per orphan the run prunes.
+    """
+    return {link.address: link for link in deleted_templates(session, coordinates)}
 
 
 RESOURCE = SymlinksResource()

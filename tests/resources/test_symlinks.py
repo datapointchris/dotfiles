@@ -703,23 +703,65 @@ def test_a_changed_value_renders_again(session: Session, repo: Path, home: Path)
     assert rendered_target(home).read_text() == 'server = "http://new:2"\n'
 
 
-def test_a_rendering_of_a_template_s_earlier_committed_text_renders_again(session: Session, repo: Path, home: Path) -> None:
+def commit_all(repo: Path) -> None:
+    """Commit the repo as it stands, making it a git repository first."""
     identity = {**os.environ, 'GIT_AUTHOR_NAME': 'T', 'GIT_AUTHOR_EMAIL': 't@t', 'GIT_COMMITTER_NAME': 'T', 'GIT_COMMITTER_EMAIL': 't@t'}
+    if not (repo / '.git').exists():
+        subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+    subprocess.run(['git', '-C', str(repo), 'add', '-A'], check=True, env=identity)
+    subprocess.run(['git', '-C', str(repo), 'commit', '-qm', 'change'], check=True, env=identity)
 
-    def commit(text: str) -> None:
-        declare(repo, APP_TEMPLATE, text)
-        subprocess.run(['git', '-C', str(repo), 'add', '-A'], check=True, env=identity)
-        subprocess.run(['git', '-C', str(repo), 'commit', '-qm', 'template'], check=True, env=identity)
 
-    subprocess.run(['git', 'init', '-q', str(repo)], check=True)
-    commit('server = "http://${APP_SERVER}:1"\n')
+def test_a_rendering_of_a_template_s_earlier_committed_text_renders_again(session: Session, repo: Path, home: Path) -> None:
+    declare(repo, APP_TEMPLATE, 'server = "http://${APP_SERVER}:1"\n')
+    commit_all(repo)
     answer(session, 'inside')
     apply(session)
-    commit('server = "https://${APP_SERVER}"\n')
+    declare(repo, APP_TEMPLATE, 'server = "https://${APP_SERVER}"\n')
+    commit_all(repo)
 
     apply(session)
 
     assert rendered_target(home).read_text() == 'server = "https://inside"\n'
+
+
+def test_a_template_the_repo_deleted_takes_its_rendering_with_it_and_names_an_edited_one(session: Session, repo: Path, home: Path) -> None:
+    """Git history stands in for the provenance a rendered file lacks. An edited
+    rendering may hold the only copy of the edit, so it is named and left."""
+    other = 'configs/trust/fleet/.config/other/other.toml.tmpl'
+    declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
+    declare(repo, other, TEMPLATE_TEXT)
+    commit_all(repo)
+    answer(session, 'http://inside:8888')
+    apply(session)
+    edited = home / '.config' / 'other' / 'other.toml'
+    edited.write_text(edited.read_text() + 'kept = true\n')
+    (repo / APP_TEMPLATE).unlink()
+    (repo / other).unlink()
+    commit_all(repo)
+
+    found = changes(session)
+    apply(session)
+
+    assert sorted((change.item, change.verdict, change.repair) for change in found) == [
+        (APP_TEMPLATE, Verdict.STALE, Repair.AUTOMATIC),
+        (other, Verdict.UNDECLARED, Repair.BY_HAND),
+    ]
+    assert not rendered_target(home).exists()
+    assert edited.read_text() == 'server = "http://inside:8888"\nkept = true\n'
+
+
+def test_a_template_moved_to_another_source_directory_is_never_pruned(session: Session, repo: Path, home: Path) -> None:
+    """History lists the old path as deleted, and the target is still declared."""
+    common = declare(repo, 'configs/common/.config/app/app.toml.tmpl', TEMPLATE_TEXT)
+    commit_all(repo)
+    answer(session, 'http://inside:8888')
+    apply(session)
+    common.rename(declare(repo, APP_TEMPLATE, ''))
+    commit_all(repo)
+
+    assert changes(session) == ()
+    assert rendered_target(home).read_text() == 'server = "http://inside:8888"\n'
 
 
 def test_a_link_at_the_target_is_replaced_rather_than_written_through(session: Session, repo: Path, home: Path) -> None:

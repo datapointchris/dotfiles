@@ -705,7 +705,7 @@ symlinks_app = typer.Typer(no_args_is_help=True, help='Deployed dotfiles: the re
 def symlinks_plan(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
-    """Show which declared links `apply` would deploy or prune."""
+    """Show which declared links and rendered files `apply` would deploy, and what it would prune."""
     verbosity(verbose, quiet)
     survey('symlinks', machine, Lens.PLAN, as_json, refresh=False)
 
@@ -714,7 +714,7 @@ def symlinks_plan(
 def symlinks_check(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
-    """Report broken or missing symlinks without touching any."""
+    """Report broken, missing or leftover symlinks and rendered files without touching any."""
     verbosity(verbose, quiet)
     survey('symlinks', machine, Lens.CHECK, as_json, refresh=False)
 
@@ -727,7 +727,7 @@ def symlinks_apply(
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Deploy every declared symlink, pruning the ones whose source is gone.
+    """Deploy every declared symlink and rendered file, pruning broken links and unedited renderings of deleted templates.
 
     Only what differs is written. `--force` is the deliberate answer to a
     refusal, for adopting a machine that already had dotfiles of its own, and a
@@ -765,7 +765,7 @@ def symlinks_unlink(
     machine: str = MachineOption,
     force: bool = typer.Option(False, '--force', help='Required: this removes everything this repo deployed'),
 ) -> None:
-    """Remove everything this repo deployed, symlink or copy.
+    """Remove everything this repo deployed: symlinks, copies and rendered files.
 
     A machine that deploys by copy is unlinked by the declaration rather than by a
     sweep: a copy carries no provenance, so the only targets that can be spoken
