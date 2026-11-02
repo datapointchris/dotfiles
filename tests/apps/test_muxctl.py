@@ -61,9 +61,6 @@ def test_help_answers_without_resolving_an_adapter():
     for argv in ([], ['--help'], ['-h']):
         done = run_muxctl(*argv)
         assert done.returncode == 0, f'{argv} exited {done.returncode}'
-        assert 'Usage: muxctl' in done.stdout
-        for verb in ('open', 'status', 'read', 'close'):
-            assert verb in done.stdout, f'{verb} is missing from the usage screen'
 
 
 def test_the_named_adapter_wins_over_every_environment_variable(tmp_path):

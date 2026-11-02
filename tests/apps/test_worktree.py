@@ -320,10 +320,9 @@ RIG_COLUMNS = 260
 RIG_ROWS = 76
 """Big enough that the placement has a choice to make.
 
-Two readable columns need 241 and two readable rows need 72. Below either, every
-worker request falls through to opening a window of its own and every layout
-assertion measures a fresh full-size window instead of a placement — so no change
-to the packing, the reflow or the promotion could turn one red."""
+Two readable columns need 241 and two readable rows need 72. Below either, a second
+worker cannot join the first and a reviewer cannot sit under its worker readably,
+so no change to the seating or the pairing could turn a layout assertion red."""
 
 CLAUDE_STUB = r"""
 __PREAMBLE__
@@ -430,12 +429,6 @@ class Rig:
     def window_name(self, pane: str) -> str:
         return self.tmux('display-message', '-p', '-t', pane, '#{window_name}')
 
-    def size(self, pane: str) -> tuple[int, int]:
-        """One pane's width and height, for asserting it can be followed."""
-        row = self.tmux('display-message', '-p', '-t', pane, '#{pane_width} #{pane_height}')
-        width, height = row.split()
-        return int(width), int(height)
-
     def mark_caller_a_worker(self) -> None:
         """Make the caller the thing a reviewer may be paired to.
 
@@ -444,17 +437,6 @@ class Rig:
         would bring its own placement into the measurement.
         """
         self.tmux('set-option', '-p', '-t', self.caller, '@place_role', 'worker')
-
-    def add_pane_before_the_caller(self) -> str:
-        """Put an unrelated pane at index 0, so the caller no longer leads its window.
-
-        That is the ordinary arrangement rather than a contrivance — a session is rarely
-        the first pane of the window it is in — and a rig that only ever makes the caller
-        pane 0 cannot see a layout handing the main pane to somebody else.
-        """
-        before = set(self.panes())
-        self.tmux('split-window', '-d', '-b', '-h', '-t', self.caller, '-c', '/tmp', 'sleep 300')
-        return (set(self.panes()) - before).pop()
 
 
 @pytest.fixture
@@ -2050,10 +2032,9 @@ class TestSpawnBrief:
         assert rig.panes() == [rig.caller]
 
     def test_a_refused_split_takes_back_the_worktree_it_had_just_cut(self, fleet, spawn, bin_dir, rig, tmp_path):
-        """tmux runs out of room in a full window, which is the everyday case for a
-        coordinator dispatching a fourth agent. What a refusal must not leave is a branch
-        and a provisioned checkout — `sweep` will not collect one, because nothing was
-        ever pushed and it is held as UNPUBLISHED.
+        """The multiplexer can refuse after the worktree is cut. What a refusal must not
+        leave is a branch and a provisioned checkout — `sweep` will not collect one,
+        because nothing was ever pushed and it is held as UNPUBLISHED.
         """
         refuse_to_open_a_pane(bin_dir)
 
@@ -2264,29 +2245,6 @@ class TestSpawnLayout:
     the multiplexer is free to reach its own way.
     """
 
-    def test_a_worker_is_packed_beside_the_caller_and_can_be_followed(self, fleet, spawn, rig, tmp_path):
-        """The port's whole promise, measured off tmux rather than taken from the
-        record. The window assertion is what keeps the rest honest: below 241
-        columns nothing fits beside the caller, every request opens a window of
-        its own, and the size below is then the whole window rather than a
-        placement."""
-        spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
-        spawned = rig.spawned()
-
-        assert rig.window_of(spawned) == rig.window_of(rig.caller), 'the worker opened a window instead of packing'
-        width, height = rig.size(spawned)
-        assert width >= 120 and height >= 35, f'{spawned} came out {width}x{height}'
-
-    def test_a_spawn_never_makes_the_caller_unreadable(self, fleet, spawn, rig, tmp_path):
-        """The pane carrying prose is the one being read continuously, and a dispatcher
-        that halved its own pane on every spawn is the failure all of this exists to
-        stop."""
-        spawn(fleet['primary'], 'alpha', '--brief', str(brief_at(tmp_path / 'b.md')))
-
-        assert rig.window_of(rig.spawned()) == rig.window_of(rig.caller), 'nothing was split beside the caller'
-        width, height = rig.size(rig.caller)
-        assert width >= 120 and height >= 35, f'the caller was left {width}x{height}'
-
     def test_a_reviewer_lands_directly_under_the_worker_it_reviews(self, fleet, spawn, rig, tmp_path):
         """A pair is read against itself, so the two share a column with the reviewer
         beneath. The caller is marked a worker first because that is what it is in the
@@ -2323,40 +2281,41 @@ class TestSpawnLayout:
 class TestSpawnWindowName:
     """A worker's slug goes on the window it lands in, so the window list says what each is doing.
 
-    The caller shares its window with a pane opened by hand, which is how a
-    coordinator usually sits. Nothing is placed beside such a pane, so the first
-    worker opens a window of its own and the second joins it.
+    A worker never opens beside its caller, so the first opens a window of its own
+    and the second joins it.
     """
 
-    def worker(self, spawn, fleet, tmp_path: Path, slug: str) -> str:
-        result = spawn(fleet['primary'], slug, '--brief', str(brief_at(tmp_path / f'{slug}.md')), '--json')
+    def worker(self, spawn, fleet, tmp_path: Path, slug: str, *flags: str) -> str:
+        result = spawn(fleet['primary'], slug, '--brief', str(brief_at(tmp_path / f'{slug}.md')), *flags, '--json')
         assert result.returncode == 0, plain(result.stderr)
         return json.loads(result.stdout)['pane']
 
-    def test_a_worker_that_opens_a_window_names_it_with_its_slug(self, fleet, spawn, rig, tmp_path):
-        rig.add_pane_before_the_caller()
+    def test_a_second_worker_joins_the_first_and_appends_its_slug(self, fleet, spawn, rig, tmp_path):
         alpha = self.worker(spawn, fleet, tmp_path, 'alpha')
-
-        assert rig.window_of(alpha) != rig.window_of(rig.caller), 'the worker joined the caller instead of opening a window'
         assert rig.window_name(alpha) == 'alpha'
 
-    def test_a_second_worker_in_that_window_appends_its_slug(self, fleet, spawn, rig, tmp_path):
-        rig.add_pane_before_the_caller()
-        alpha = self.worker(spawn, fleet, tmp_path, 'alpha')
         beta = self.worker(spawn, fleet, tmp_path, 'beta')
-
         assert rig.window_of(beta) == rig.window_of(alpha), 'the second worker opened a window of its own'
         assert rig.window_name(beta) == 'alpha · beta'
 
-    def test_a_session_in_the_checkout_takes_the_window_name_it_was_given(self, fleet, spawn, rig, tmp_path):
-        rig.add_pane_before_the_caller()
+    def test_per_window_one_gives_a_worker_a_window_of_its_own(self, fleet, spawn, rig, tmp_path):
+        alpha = self.worker(spawn, fleet, tmp_path, 'alpha')
+        beta = self.worker(spawn, fleet, tmp_path, 'beta', '--per-window', '1')
+
+        assert rig.window_of(beta) != rig.window_of(alpha)
+        assert rig.window_name(beta) == 'beta'
+
+    def test_a_session_in_the_checkout_opens_its_own_window_under_the_name_it_was_given(self, fleet, spawn, rig, tmp_path):
+        """What a review lead is started as: no slug, a window name, and a session that must register."""
         result = spawn(fleet['primary'], '--brief', str(brief_at(tmp_path / 'lead.md')), '--window-name', 'repo-pr7-review', '--json')
 
         assert result.returncode == 0, plain(result.stderr)
-        assert rig.window_name(json.loads(result.stdout)['pane']) == 'repo-pr7-review'
+        made = json.loads(result.stdout)
+        assert made['session'], 'the session never registered'
+        assert rig.window_of(made['pane']) != rig.window_of(rig.caller)
+        assert rig.window_name(made['pane']) == 'repo-pr7-review'
 
     def test_a_reviewer_under_one_of_them_leaves_the_name_as_it_was(self, fleet, run, spawn, rig, tmp_path):
-        rig.add_pane_before_the_caller()
         alpha = self.worker(spawn, fleet, tmp_path, 'alpha')
         self.worker(spawn, fleet, tmp_path, 'beta')
 
