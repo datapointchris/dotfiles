@@ -1,124 +1,27 @@
 machine: wsl-work-workstation
 platform: wsl
 
-# Installation
 system_packages: workstation
 
+# A workstation only. This box is nonfleet, so it takes neither `fleet-member` nor
+# `personal-desk`, and none of the personal data CLIs. claude.ai is blocked from
+# this network as well: the docs do not load, and the installer's curl gets a
+# certificate no CA here signs, so claude-code would be a failed install on every
+# apply.
+profiles: [workstation]
+
 go_tools:
-  - task
-  - cheat
-  - terraform-docs
-  - gum
-  - lazydocker
-  - jactionlint
-  # - goose
-  # - gofumpt
-  # - golangci-lint
-  - gdu
-  - sesh
-  - tmux-tree-editor
-  - todoui
   - bbkt
   - jira
-  - ifiles
-  - gowall
-  - triangle
-  - ascii-image-converter
 
 github_releases:
-  - gh
-  - fzf
-  - neovim
-  - lazygit
-  - yazi
-  - glow
-  - duf
-  - tflint
-  - terraformer
-  - terrascan
-  - trivy
-  - zk
-  - shellcheck
-  - hadolint
-  - tree-sitter
-  - taplo
-  - just
-  - atuin
   - win32yank
-  - tenv
-  - yq
-  - duckdb
-  - asl-language-server
 
-custom_installers:
-  # - bats
-  - awscli
-  # claude.ai is blocked from this network — the docs do not load either, and the
-  # installer's curl gets a certificate no CA here signs. Declared, it is a failed
-  # install on every apply forever, which is how a red apply stops being read.
-  # - claude-code
-  - terraform-ls
-  - mount-s3
-  - bashselfupdate
-  - theme
-  - font
-
-cargo_packages: [fnm, ripgrep, bat, fd-find, sd, eza, zoxide, git-delta, oxker, broot, watchexec-cli, stylua]
-
-npm_globals:
-  - typescript-language-server
-  - typescript
-  - bash-language-server
-  - yaml-language-server
-  - vscode-langservers-extracted
-  - gh-actions-language-server
-  - eslint
-  - prettier
-  - markdownlint-cli
-  - sass
-
-uv_tools:
-  - ruff
-  - mypy
-  - basedpyright
-  - codespell
-  - sqlfluff
-  - djlint
-  - keymap-drawer
-  - numpy
-  - jupyterlab
-  - pre-commit
-  - git-filter-repo
-  - tldr
-  - doit
-  - howto
-  - refcheck
-  - syncer
-  - dectl
-  - sparkxray-cli
-  - doppeldata-cli
-  - safekeep
-
-shell_plugins: true
-tmux_plugins: true
-yazi_plugins: true
-nvim_plugins: true
-configure_zsh: true
-
-# Tools this machine has to be able to log in to. Naming one is what makes an
-# unauthenticated machine report itself; `src/dotfiles/resources/auth.py` says
-# how each is asked, and never repairs one — a login is interactive and personal.
-#
-# The personal data CLIs are absent because this box does not install them. bbkt
-# and jira are this machine's own, and neither is on any other.
+# bbkt and jira are this machine's own, and neither is on any other.
 #
 # Not atuin. Its `trust/nonfleet` config turns `auto_sync` off, so no server holds
 # an account for this box and there is no login to be missing — the binary still
-# records, searches and answers locally. Declared, the check carries a row about
-# it on every run that nobody will ever act on. `scheduler.yml` leaves it out for
-# the same reason.
+# records, searches and answers locally.
 auth:
-  - gh
-  - aws
   - bbkt
   - jira

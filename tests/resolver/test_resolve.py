@@ -232,10 +232,17 @@ def test_the_plan_is_ordered_by_stage(declaration: catalog.Catalog) -> None:
 
 
 def test_an_item_names_what_pulled_it_in(declaration: catalog.Catalog) -> None:
+    """A profile's row names the profile, so `machines show` answers which file to edit."""
     plan = planned(declaration, 'linux-lxc-server')
 
-    assert plan.for_section('go_tools')[0].reason.selector == 'manifest:go_tools'
+    assert {item.name: item.reason.selector for item in plan.for_section('go_tools')} == {
+        'task': 'profile:shell',
+        'gdu': 'profile:shell',
+        'sops': 'profile:fleet-shell',
+    }
     assert plan.for_section('system_packages')[0].reason.selector == 'tier:core'
+    own = {item.name: item.reason.selector for item in planned(declaration, 'scheduler').for_section('custom_installers')}
+    assert own['git'] == 'manifest:custom_installers'
 
 
 def test_an_entry_that_installs_no_binary_has_no_executable_to_look_for(tmp_path: Path) -> None:

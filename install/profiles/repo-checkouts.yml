@@ -1,0 +1,10 @@
+# A box that keeps Chris's repositories checked out and commits to them, whether a
+# person or a scheduled job does the committing.
+
+profiles: [repo-checkouts-clis]
+
+uv_tools:
+  - pre-commit  # runs a repo's commit hooks
+
+auth:
+  - gh  # the private repos

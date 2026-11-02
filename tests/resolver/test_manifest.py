@@ -15,22 +15,31 @@ from dotfiles import machine as machines
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def build(root: Path, manifest: dict[str, Any], flags: dict[str, Any] | None = None) -> Path:
-    """A synthetic install tree holding one manifest and a flags.yml."""
+def build(
+    root: Path, manifest: dict[str, Any], flags: dict[str, Any] | None = None, profiles: dict[str, dict[str, Any]] | None = None
+) -> Path:
+    """A synthetic install tree holding one manifest, its profiles and a flags.yml."""
     install = root / 'install'
     (install / 'manifests').mkdir(parents=True, exist_ok=True)
     (install / 'manifests' / 'box.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
     (install / 'flags.yml').write_text(yaml.safe_dump(flags or {}, sort_keys=False))
+    for name, body in (profiles or {}).items():
+        (install / 'profiles').mkdir(exist_ok=True)
+        (install / 'profiles' / f'{name}.yml').write_text(yaml.safe_dump(body, sort_keys=False))
     return root
 
 
-def load(root: Path, manifest: dict[str, Any], flags: dict[str, Any] | None = None) -> machines.Machine:
-    return machines.load('box', build(root, manifest, flags))
+def load(
+    root: Path, manifest: dict[str, Any], flags: dict[str, Any] | None = None, profiles: dict[str, dict[str, Any]] | None = None
+) -> machines.Machine:
+    return machines.load('box', build(root, manifest, flags, profiles))
 
 
-def issues(root: Path, manifest: dict[str, Any], flags: dict[str, Any] | None = None) -> list[str]:
+def issues(
+    root: Path, manifest: dict[str, Any], flags: dict[str, Any] | None = None, profiles: dict[str, dict[str, Any]] | None = None
+) -> list[str]:
     with pytest.raises(machines.MachineError) as refused:
-        machines.load('box', build(root, manifest, flags))
+        machines.load('box', build(root, manifest, flags, profiles))
     return [str(issue) for issue in refused.value.issues]
 
 
@@ -61,6 +70,48 @@ def test_every_manifest_in_the_repo_loads(name: str) -> None:
 
     assert loaded.name == name
     assert axes.incoherent(loaded.coordinates) == ()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Profiles
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_manifest_takes_everything_its_profiles_reach(tmp_path: Path) -> None:
+    """Nested two deep, with a name, a gate, a flag and a login in different files."""
+    machine = load(
+        tmp_path,
+        {**LINUX, 'profiles': ['desk'], 'go_tools': ['own']},
+        flags={'flags': [{'name': 'SHELL_VI_MODE', 'default': True}]},
+        profiles={
+            'desk': {'profiles': ['shell'], 'go_tools': ['task'], 'auth': ['gh']},
+            'shell': {'go_tools': ['gdu'], 'tmux_plugins': True, 'nvim_plugins': True, 'flags': {'SHELL_VI_MODE': False}},
+        },
+    )
+
+    go_tools = machine.subscription('go_tools')
+    assert machine.profiles == ('desk', 'shell')
+    assert go_tools.names == {'own', 'task', 'gdu'}
+    assert dict(go_tools.origins) == {'task': 'desk', 'gdu': 'shell'}
+    assert machine.subscription('tmux_plugins').origin == 'shell'
+    assert machine.wants('nvim_plugins')
+    assert machine.flags['SHELL_VI_MODE'] == 'false'
+    assert machine.auth == ('gh',)
+
+
+@pytest.mark.parametrize(
+    ('manifest', 'profiles', 'refusal'),
+    [
+        ({'go_tools': ['task']}, {'shell': {'go_tools': ['task']}}, 'go_tools names task in both the manifest and profile shell'),
+        ({}, {'shell': {'system_packages': 'core'}}, 'profile shell declares system_packages, which only a manifest may'),
+        ({}, {}, 'names profile shell, which has no file at'),
+    ],
+    ids=['a name in two files', 'a machine-only key in a profile', 'a profile with no file'],
+)
+def test_a_profile_is_refused_where_it_would_copy_or_cannot_apply(tmp_path: Path, manifest: dict, profiles: dict, refusal: str) -> None:
+    found = issues(tmp_path, {**LINUX, 'profiles': ['shell'], **manifest}, profiles=profiles)
+
+    assert any(refusal in issue for issue in found), found
 
 
 def test_every_catalog_section_has_a_subscription_rule() -> None:

@@ -38,6 +38,7 @@ from dotfiles import catalog
 from dotfiles import create_bundle
 from dotfiles import github_release
 from dotfiles import machine as machines
+from dotfiles import plan as planning
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -89,19 +90,20 @@ def declared_releases() -> set[str]:
 def build_corpus() -> list[Case]:
     """Every (tool, os, arch) any manifest actually asks for, deduplicated.
 
-    Asked of `machine.load` and `Subscription.wants` rather than of the manifest
-    files, because what a manifest asks for is not what its `github_releases:`
-    key literally contains — `true` means the whole section, absent means none,
-    and a list means membership. Re-reading the key here would be a second copy
-    of that grammar, and it is the copy that would be wrong the first time a
-    machine spells its subscription the other way.
+    Asked of `machine.load`, `Subscription.wants` and `plan.available` rather
+    than of the manifest files, because what a manifest asks for is not what its
+    `github_releases:` key literally contains — `true` means the whole section,
+    absent means none, a list means membership, and the profiles it names add
+    theirs. Re-reading the key here would be a second copy of that grammar, and it
+    is the copy that would be wrong the first time a machine spells its
+    subscription the other way.
     """
     declared = declaration()
     cases: set[Case] = set()
     for name in machines.names(REPO_ROOT):
         machine = machines.load(name, REPO_ROOT)
         for entry in declared.section('github_releases'):
-            if machine.subscription('github_releases').wants(entry):
+            if machine.subscription('github_releases').wants(entry) and planning.available(entry, machine.coordinates):
                 cases.update((entry.name, *target) for target in OS_TARGETS[machine.coordinates.os_family])
     return sorted(cases)
 

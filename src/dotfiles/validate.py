@@ -93,6 +93,8 @@ def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
             findings.extend(Finding('manifest', Severity.ERROR, f'{name}: {issue.message}') for issue in refused.issues)
 
     findings.extend(unresolved_names(declared, manifests))
+    findings.extend(copied_names(manifests))
+    findings.extend(unreached_profiles(root, manifests))
     findings.extend(uninstallable(declared))
     findings.extend(unprobeable(manifests))
     findings.extend(unbuildable_assets(declared))
@@ -122,24 +124,22 @@ def named_sections() -> tuple[str, ...]:
 
 
 def unresolved_names(declared: catalogs.Catalog, manifests: dict[str, machines.Machine]) -> list[Finding]:
-    """A manifest naming an entry that does not exist.
+    """A manifest or profile naming an entry that does not exist.
 
     The check the whole command was written for, and the one the resolver cannot
     make: subscription is a membership test over the catalog's entries, so a name
     matching nothing is silently dropped rather than refused. It is invisible from
     the machine where the commit happens — a typo in `linux-lxc-server.yml` costs
-    nothing on the Mac until that server is rebuilt.
+    nothing on the Mac until that server is rebuilt. A profile's typo is reported
+    once, however many machines compose it.
     """
-    findings: list[Finding] = []
+    found: dict[tuple[str, str], None] = {}
     for section in named_sections():
         available = {entry.name for entry in declared.section(section)}
-        for name, manifest in manifests.items():
-            missing = manifest.subscription(section).names - available
-            findings.extend(
-                Finding(section, Severity.ERROR, f'manifest {name!r} names {absent!r}, which no {section} entry declares')
-                for absent in sorted(missing)
-            )
-    return findings
+        for manifest in manifests.values():
+            for absent in sorted(manifest.subscription(section).names - available):
+                found[section, f'{manifest.declarer(section, absent)} names {absent!r}, which no {section} entry declares'] = None
+    return [Finding(section, Severity.ERROR, message) for section, message in found]
 
 
 def uninstallable(declared: catalogs.Catalog) -> list[Finding]:
@@ -177,11 +177,56 @@ def unprobeable(manifests: dict[str, machines.Machine]) -> list[Finding]:
     outside the exit code — so a typo in an `auth:` list reads as a machine with
     nothing wrong with it while the login it meant to ask about goes unasked.
     """
-    findings = []
-    for name, manifest in sorted(manifests.items()):
-        for tool in sorted(set(manifest.auth) - set(auth.PROBES)):
-            findings.append(Finding('auth', Severity.ERROR, f'manifest {name!r} names {tool!r}, which has no probe in resources/auth.py'))
-    return findings
+    messages = {
+        f'{manifest.declarer("auth", tool)} names {tool!r}, which has no probe in resources/auth.py': None
+        for _, manifest in sorted(manifests.items())
+        for tool in sorted(set(manifest.auth) - set(auth.PROBES))
+    }
+    return [Finding('auth', Severity.ERROR, message) for message in messages]
+
+
+def copied_names(manifests: dict[str, machines.Machine]) -> list[Finding]:
+    """A name two files declare, which no single machine composes together.
+
+    The load refuses a name declared twice inside one machine. This is the other
+    half: a profile and a manifest, or two manifests, each listing the same tool
+    for machines that never meet. That is a copy, and removing copies is what
+    profiles are for, so the fix is a profile both machines take.
+
+    An error though a machine could install from it, because the commit hook stops
+    only on an error, and the hook is what keeps a copy from landing.
+    """
+    declarers: dict[tuple[str, str], set[str]] = {}
+    for manifest in manifests.values():
+        for key in machines.LISTED_KEYS:
+            names = manifest.auth if key == 'auth' else manifest.subscription(machines.SECTION_OF[key]).names
+            for name in names:
+                declarers.setdefault((key, name), set()).add(manifest.declarer(key, name))
+    return [
+        Finding(
+            key,
+            Severity.ERROR,
+            f'{key} entry {name!r} is declared by {" and ".join(sorted(files))}; name it once, in a profile each machine takes',
+        )
+        for (key, name), files in sorted(declarers.items())
+        if len(files) > 1
+    ]
+
+
+def unreached_profiles(root: Path, manifests: dict[str, machines.Machine]) -> list[Finding]:
+    """A profile no manifest composes, which is a declaration nothing installs.
+
+    Only checked once every manifest has loaded, because a manifest that failed to
+    load may be the one that names it.
+    """
+    if len(manifests) < len(machines.names(root)):
+        return []
+    reached = set(chain.from_iterable(manifest.profiles for manifest in manifests.values()))
+    return [
+        Finding('profile', Severity.WARNING, f'profile {profile!r} is composed by no manifest, so nothing installs what it declares')
+        for profile in machines.profile_names(root)
+        if profile not in reached
+    ]
 
 
 def unbuildable_assets(declared: catalogs.Catalog) -> list[Finding]:

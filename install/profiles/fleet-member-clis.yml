@@ -1,0 +1,14 @@
+# The CLIs Chris publishes that a `fleet-member` box carries. `fleet-clis` composes
+# this file, so a CLI added here also reaches a box that takes every one.
+
+go_tools:
+  - fleet
+  - forge
+
+github_releases:
+  - icb
+  - ypl
+
+git_uv_tools:
+  - homelab
+  - claude-code-metrics  # `ccm`

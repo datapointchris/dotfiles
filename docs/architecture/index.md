@@ -84,6 +84,65 @@ booleans is refused by name rather than as merely unknown — `RETIRED_KEYS` in
 this machine runs. `bash install.sh --machine <name>` bootstraps the CLI and
 stops, printing the `dotfiles apply` that converges the machine.
 
+## A manifest names its profiles, and every tool is declared in one file
+
+The manifests were flat lists, so each tool a group of machines shared was
+copied into every one of them, and a new machine meant another full copy. The
+pattern now is Puppet's roles and profiles. The manifest is the role. It holds
+what only that machine is: its coordinates, its `system_packages` tier, flatpak,
+how it deploys, and whether it serves bundles or runs the primary's timers.
+`MACHINE_ONLY` in `src/dotfiles/machine.py` is that set, and a profile declaring
+one of them is refused. Everything else a manifest could list lives in
+`install/profiles/`, and a manifest names the profiles it takes. A profile may
+name others, so a desk names one profile and gets the shell and the workstation
+tooling through it.
+
+The boundaries came from measuring, not from naming categories first. Grouping
+every entry of the flat manifests by which machines carried it gave a handful of
+sets that the same machines shared, and each became a profile. Where `scheduler`
+and `wsl-work-workstation` differ from the desks, a boundary falls. That is why
+`fleet-member` and `repo-checkouts` are separate profiles: `scheduler` takes both,
+and the nonfleet workstation takes only the second.
+
+Each profile that carries CLIs Chris publishes keeps them in a `<profile>-clis`
+file it composes, and `fleet-clis` composes every one of those. So a box can take
+every published CLI and nothing else, without a second list of them. A headless
+pod that installs each CLI at its newest release and reads its help is that box,
+and `fleet-clis-pod` is its manifest. It applies the core package tier, the
+toolchains and the packages, and nothing more. `GITHUB_TOKEN` is the only
+credential it needs, because `effects.run` hands the token to git for the private
+repos a Go module or a uv git install clones.
+
+A name is declared once. The load refuses a name that two files in one machine's
+composition both declare, and `dotfiles machines check` refuses a name that two
+files declare anywhere. The second is an error rather than a warning, though a
+machine could install from it, because the commit hook stops only on an error and
+the hook is what keeps a copy from landing.
+
+A profile names a tool for every machine that takes it, including one that cannot
+run it. The catalog row says where it cannot: `excludes_os_family` and
+`requires_wsl_host`, which `available()` in `src/dotfiles/plan.py` reads. atuin's
+release is the case. Every shell takes it, and a Mac gets brew's bottle instead,
+because upstream ships no Intel-mac binary.
+
+`dotfiles machines show` prints the profiles a machine composes, and each row's
+reason names the profile that pulled it in as `profile:<name>`.
+
+*Rejected:* a manifest taking a profile minus some names. `wsl-work-workstation`
+would have been a desk minus claude-code and `fleet-member`'s tools, and reading
+what it installs would mean reading two files and subtracting. Moving the
+boundary says the same thing in one place.
+
+*Rejected:* the pod narrowing a desk's manifest with `--owner`. That flag narrows
+a run rather than a declaration, so the pod would declare a whole desk and
+install a fraction of it, and `dotfiles check` there would report the rest
+missing.
+
+*Rejected:* a profile selecting catalog rows by a tag, the way `tier: core`
+selects system packages. A tool would then reach a machine through a name in one
+file or a tag in another, and finding why a machine has it would mean reading
+both.
+
 ## The Windows side is a machine, not a bridge
 
 Group policy on that box forbids symlink creation, so its manifest declares

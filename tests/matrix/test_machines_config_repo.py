@@ -1052,7 +1052,7 @@ def test_a_json_leaf_puts_one_parseable_document_on_stdout_and_nothing_beside_it
     assert isinstance(ran.document, shape)
 
 
-PLAN_KEYS = {'machine', 'platform', 'coordinates', 'features', 'flags', 'auth', 'check_schedule', 'items'}
+PLAN_KEYS = {'machine', 'platform', 'coordinates', 'features', 'profiles', 'flags', 'auth', 'check_schedule', 'items'}
 ITEM_KEYS = {'section', 'provider', 'resource', 'stage', 'name', 'executable', 'evidence_path', 'precondition', 'selector'}
 REGISTER_KEYS = {'name', 'kind', 'path', 'description', 'restore', 'tags', 'consumers', 'narrowing', 'requires_values', 'file_must_exist'}
 FINDING_KEYS = {'section', 'severity', 'message'}

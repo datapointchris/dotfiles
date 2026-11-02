@@ -1,7 +1,7 @@
-"""A machine manifest and `flags.yml`, read once into one object.
+"""A machine manifest, the profiles it composes, and `flags.yml`, read once into one object.
 
-Two things live here that were spread across a shell script and six near-identical
-Python functions.
+Three things live here. The first two were spread across a shell script and six
+near-identical Python functions.
 
 **What the machine subscribes to.** `filter_go_packages_by_manifest` and its five
 siblings are the same three branches — `true` means all, an empty list means
@@ -15,6 +15,15 @@ and collapsing the two states stops macOS installing casks at all.
 derived from it — the platform, the coordinates, every flag's value. Nothing is
 detected, because a fresh machine has no `~/.env` to read and guessing instead is
 how a wsl manifest once deployed the linux shell layer for a whole install.
+
+**What the machine composes.** A manifest names profiles from `install/profiles/`,
+and a profile may name more. Puppet's roles and profiles is the pattern: the
+manifest is the role, and says what the machine *is* (`MACHINE_ONLY`), while each
+profile carries a set of tools that several machines share. Every profile reached
+is merged into the manifest before anything below reads it, so a subscription
+never knows a profile existed. A name may be declared once per machine. Two files
+naming it is the copy profiles exist to remove, so the load refuses it rather than
+taking the union.
 """
 
 from __future__ import annotations
@@ -134,6 +143,46 @@ does not read like the others. It is here because the question it answers has th
 same shape: a boolean about this machine that no catalog section speaks for.
 `resources/symlinks.py` holds what it costs."""
 
+MANIFEST_KEYS = frozenset(
+    {
+        'machine',
+        'platform',
+        'coordinates',
+        'profiles',
+        'flags',
+        'auth',
+        'check_schedule',
+        *FEATURES,
+        *(key for _, key in SUBSCRIPTIONS.values() if key),
+    }
+)
+
+MACHINE_ONLY = frozenset(
+    {
+        'machine',
+        'platform',
+        'coordinates',
+        'system_packages',
+        'flatpak',
+        'deploy_by_copy',
+        'serve_bundles',
+        'primary_workstation',
+        'check_schedule',
+    }
+)
+"""Keys a profile may not declare, because each says what one machine is: its axes,
+the OS packages and desktop runtime its system takes, and how it deploys. A box
+whose system someone else owns takes the same profiles as one Chris owns, and
+differs only here."""
+
+PROFILE_KEYS = MANIFEST_KEYS - MACHINE_ONLY
+
+LISTED_KEYS = (*(key for spelling, key in SUBSCRIPTIONS.values() if spelling is Spelling.NAMES), 'auth')
+"""Keys whose value is a list of names, which composition joins across files."""
+
+SECTION_OF = {key: section for section, (_, key) in SUBSCRIPTIONS.items() if key}
+"""The catalog section each manifest key speaks for."""
+
 RETIRED_KEYS = {
     key: 'install is derived from the corresponding name-list now (go_tools non-empty → Go)' for key in ('go', 'rust', 'nvm', 'uv', 'tenv')
 }
@@ -165,6 +214,14 @@ class Subscription:
     global floor beside a per-machine ceiling is a window neither file states, and
     a reader has to assemble it from two places at the moment it matters.
     """
+
+    origins: Mapping[str, str] = dc.field(default_factory=dict)
+    """The profile naming each entry, for every entry a profile names. An entry the
+    manifest names itself is absent, as is everything in an undeclared section."""
+
+    origin: str = ''
+    """The profile declaring the whole section, for a gate or `true`. '' is the
+    manifest, or nobody."""
 
     def wants(self, entry: catalog.Entry) -> bool:
         if self.coverage is Coverage.NONE:
@@ -343,6 +400,12 @@ class Machine:
     probes and a test asserts the two sets match in both directions.
     """
 
+    profiles: tuple[str, ...] = ()
+    """Every profile this machine composes, each once, in the order the load read them."""
+
+    auth_origins: Mapping[str, str] = dc.field(default_factory=dict)
+    """The profile naming each `auth` tool, as `Subscription.origins` is for a section."""
+
     check_schedule: bool | None = None
     """Whether this machine installs the periodic `dotfiles check`. None leaves it to
     `[schedule] enabled` in the deployed config, and `schedule.answer` says why a
@@ -382,6 +445,14 @@ class Machine:
     def subscription(self, section: str) -> Subscription:
         return self.subscriptions[section]
 
+    def declarer(self, key: str, name: str) -> str:
+        """Which file names `name` under `key`, as a finding should say it."""
+        if key == 'auth':
+            profile = self.auth_origins.get(name, '')
+        else:
+            profile = self.subscriptions[SECTION_OF[key]].origins.get(name, '')
+        return f'profile {profile!r}' if profile else f'manifest {self.name!r}'
+
     @property
     def required_values(self) -> tuple[Requirement, ...]:
         return tuple(entry for entry in self.requirements if not entry.is_file)
@@ -396,6 +467,7 @@ class Machine:
             'platform': self.platform_label,
             'coordinates': self.coordinates.as_dict(),
             'features': sorted(self.features),
+            'profiles': list(self.profiles),
             'flags': dict(self.flags),
             'auth': list(self.auth),
             'check_schedule': self.check_schedule,
@@ -406,6 +478,157 @@ def names(root: Path | None = None) -> list[str]:
     """Every manifest in the repo, read from disk and listed nowhere."""
     directory = (root / 'install' / 'manifests') if root else paths.MANIFESTS_DIR
     return sorted(path.stem for path in directory.glob('*.yml')) if directory.is_dir() else []
+
+
+def profile_names(root: Path | None = None) -> list[str]:
+    """Every profile in the repo, read from disk and listed nowhere."""
+    directory = (root / 'install' / 'profiles') if root else paths.PROFILES_DIR
+    return sorted(path.stem for path in directory.glob('*.yml')) if directory.is_dir() else []
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Composition:
+    """A manifest with every profile it reaches merged in."""
+
+    declared: Mapping[str, Any]
+    profiles: tuple[str, ...]
+    origins: Mapping[str, Mapping[str, str]]
+    """Key, then name, to the profile declaring it. The manifest's own names are absent."""
+    key_origins: Mapping[str, str]
+    """A scalar key a profile declared, to that profile."""
+
+
+def entry_name(item: Any) -> str | None:
+    """The name a listed item declares: the item, or a mapping's `name`."""
+    if isinstance(item, str):
+        return item
+    if isinstance(item, Mapping) and isinstance(item.get('name'), str):
+        return item['name']
+    return None
+
+
+def compose(name: str, declared: Mapping[str, Any], root: Path | None, issues: list[DeclarationIssue]) -> Composition:
+    """Merge every profile the manifest reaches, refusing anything declared twice.
+
+    A list key joins its names, and each name comes from one file. A scalar key
+    such as a plugin gate, and each flag, is set by one file. A profile reached by
+    two paths is read once, because the same file twice is not a copy.
+    """
+    composer = Composer(name, root, issues, {key: value for key, value in declared.items() if key != 'profiles'})
+    composer.merge(declared, '')
+    for profile in included(declared, 'the manifest', name, issues):
+        composer.visit(profile, ())
+    return Composition(
+        declared=composer.merged,
+        profiles=tuple(composer.reached),
+        origins={key: {entry: by for entry, by in named.items() if by} for key, named in composer.names.items()},
+        key_origins={key: by for key, by in composer.scalars.items() if by},
+    )
+
+
+@dc.dataclass
+class Composer:
+    """The state of one composition. Every `by` is a profile, or '' for the manifest."""
+
+    machine: str
+    root: Path | None
+    issues: list[DeclarationIssue]
+    merged: dict[str, Any]
+    reached: list[str] = dc.field(default_factory=list)
+    names: dict[str, dict[str, str]] = dc.field(default_factory=dict)
+    scalars: dict[str, str] = dc.field(default_factory=dict)
+    flags: dict[str, str] = dc.field(default_factory=dict)
+
+    def refuse(self, message: str) -> None:
+        self.issues.append(DeclarationIssue(self.machine, message))
+
+    def visit(self, profile: str, chain: tuple[str, ...]) -> None:
+        if profile in chain:
+            self.refuse(f'profile {profile} includes itself through {" → ".join((*chain, profile))}')
+            return
+        if profile in self.reached:
+            return
+        directory = (self.root / 'install' / 'profiles') if self.root else paths.PROFILES_DIR
+        source = directory / f'{profile}.yml'
+        if not source.is_file():
+            self.refuse(
+                f'names profile {profile}, which has no file at {source}. Available: {", ".join(profile_names(self.root)) or "none"}'
+            )
+            return
+        self.reached.append(profile)
+        body = yaml.safe_load(source.read_text()) or {}
+        if not isinstance(body, Mapping):
+            self.refuse(f'profile {profile} is a {type(body).__name__} where a mapping is expected')
+            return
+        for key in sorted(set(body) - PROFILE_KEYS):
+            self.refuse(
+                f'profile {profile} declares {key}, which ' + ('only a manifest may' if key in MACHINE_ONLY else 'no reader consumes')
+            )
+        self.merge({key: value for key, value in body.items() if key in PROFILE_KEYS}, profile)
+        for child in included(body, f'profile {profile}', self.machine, self.issues):
+            self.visit(child, (*chain, profile))
+
+    def merge(self, body: Mapping[str, Any], by: str) -> None:
+        for key, value in body.items():
+            if key == 'profiles':
+                continue
+            if key in LISTED_KEYS:
+                self.listed(key, value, by)
+            elif key == 'flags':
+                self.flagged(value, by)
+            elif key in self.scalars:
+                self.refuse(f'{key} is set by both {where(self.scalars[key])} and {where(by)}')
+            else:
+                self.scalars[key] = by
+                self.merged[key] = value
+
+    def listed(self, key: str, value: Any, by: str) -> None:
+        if by and value is not None and not isinstance(value, list):
+            self.refuse(f'{where(by)} declares {key} as a {type(value).__name__}, where a list of names is expected')
+            return
+        if by:
+            current = self.merged.get(key)
+            if current is not True:
+                self.merged[key] = [*(current if isinstance(current, list) else ()), *(value or ())]
+        seen = self.names.setdefault(key, {})
+        for item in value if isinstance(value, list) else ():
+            entry = entry_name(item)
+            if entry is None:
+                continue
+            if entry in seen:
+                twice = 'twice in ' + where(by) if seen[entry] == by else f'in both {where(seen[entry])} and {where(by)}'
+                self.refuse(f'{key} names {entry} {twice}; each name is declared in one file')
+                continue
+            seen[entry] = by
+
+    def flagged(self, value: Any, by: str) -> None:
+        if not isinstance(value, Mapping):
+            if by:
+                self.refuse(f'{where(by)} declares flags as a {type(value).__name__}, where a mapping is expected')
+            return
+        flags = self.merged['flags'] = dict(self.merged.get('flags') or {}) if by else dict(value)
+        for flag, setting in value.items():
+            if by and flag in self.flags:
+                self.refuse(f'flag {flag} is set by both {where(self.flags[flag])} and {where(by)}')
+                continue
+            self.flags[flag] = by
+            flags[flag] = setting
+
+
+def where(by: str) -> str:
+    return f'profile {by}' if by else 'the manifest'
+
+
+def included(body: Mapping[str, Any], subject: str, name: str, issues: list[DeclarationIssue]) -> tuple[str, ...]:
+    value = body.get('profiles')
+    if value is None:
+        return ()
+    if not isinstance(value, list) or not all(isinstance(profile, str) for profile in value):
+        issues.append(
+            DeclarationIssue(name, f'{subject} declares profiles as a {type(value).__name__}, where a list of profile names is expected')
+        )
+        return ()
+    return tuple(value)
 
 
 def manifest_path(name: str, root: Path | None = None) -> Path:
@@ -440,11 +663,13 @@ def load(name: str, root: Path | None = None) -> Machine:
         raise MachineError((DeclarationIssue(name, f'is a {type(declared).__name__} where a mapping is expected'),))
 
     issues.extend(unknown_keys(name, declared))
+    composition = compose(name, declared, root, issues)
+    composed = composition.declared
     coordinates = declared_coordinates(name, declared, issues)
-    flags = resolved_flags(declared, flag_data or {}, issues)
-    auth = declared_auth_tools(name, declared, issues)
+    flags = resolved_flags(composed, flag_data or {}, issues)
+    auth = declared_auth_tools(name, composed, issues)
     check_schedule = declared_check_schedule(name, declared, issues)
-    subscriptions = {section: subscribe(section, declared, name, issues) for section in catalog.SECTIONS}
+    subscriptions = {section: subscribe(section, composition, name, issues) for section in catalog.SECTIONS}
 
     if issues:
         raise MachineError(tuple(issues))
@@ -453,10 +678,12 @@ def load(name: str, root: Path | None = None) -> Machine:
         name=declared.get('machine') or name,
         coordinates=coordinates,
         subscriptions=subscriptions,
-        features=frozenset(feature for feature in FEATURES if declared.get(feature) is True),
+        features=frozenset(feature for feature in FEATURES if composed.get(feature) is True),
         flags=flags,
         requirements=requirements(flag_data or {}, declared.get('machine') or name, coordinates),
         source=source,
+        profiles=composition.profiles,
+        auth_origins=composition.origins.get('auth', {}),
         auth=auth,
         check_schedule=check_schedule,
     )
@@ -514,21 +741,11 @@ def declared_check_schedule(name: str, declared: Mapping[str, Any], issues: list
 
 
 def unknown_keys(name: str, declared: Mapping[str, Any]) -> list[DeclarationIssue]:
-    known = {
-        'machine',
-        'platform',
-        'coordinates',
-        'flags',
-        'auth',
-        'check_schedule',
-        *FEATURES,
-        *(key for _, key in SUBSCRIPTIONS.values() if key),
-    }
     return [
         DeclarationIssue(
             name, f'declares {key} — {RETIRED_KEYS[key]}' if key in RETIRED_KEYS else f'declares {key}, which no reader consumes'
         )
-        for key in sorted(set(declared) - known)
+        for key in sorted(set(declared) - MANIFEST_KEYS)
     ]
 
 
@@ -595,7 +812,13 @@ def from_axes(name: str, overrides: Mapping[str, Any], issues: list[DeclarationI
     return point
 
 
-def subscribe(section: str, declared: Mapping[str, Any], name: str, issues: list[DeclarationIssue]) -> Subscription:
+def subscribe(section: str, composition: Composition, name: str, issues: list[DeclarationIssue]) -> Subscription:
+    _, key = SUBSCRIPTIONS[section]
+    subscription = declared_subscription(section, composition.declared, name, issues)
+    return dc.replace(subscription, origins=composition.origins.get(key, {}), origin=composition.key_origins.get(key, ''))
+
+
+def declared_subscription(section: str, declared: Mapping[str, Any], name: str, issues: list[DeclarationIssue]) -> Subscription:
     spelling, key = SUBSCRIPTIONS[section]
 
     if spelling is Spelling.WHOLESALE:
@@ -667,9 +890,6 @@ def named_entries(section: str, value: Any, name: str, issues: list[DeclarationI
         )
         constraints[entry] = spelled
 
-    for entry in sorted(constraints):
-        if names.count(entry) > 1:
-            issues.append(DeclarationIssue(name, f'{section} lists {entry} more than once, so which constraints apply is ambiguous'))
     return frozenset(names), constraints
 
 

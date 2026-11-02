@@ -7,10 +7,10 @@ The offline WSL box died at the node phase with `fnm not found`, even though
 pattern, description, tags. Three independent faults stacked up behind that one
 message:
 
-1. **No manifest listed it.** Every manifest spells out its `cargo_packages`, and
-   none of them named `fnm`, so the cargo phase never had it to install. An entry
-   in `packages.yml` only describes *how* a tool installs; the manifest decides
-   *whether* it installs on this machine.
+1. **No manifest listed it.** None named `fnm` under `cargo_packages`, so the
+   cargo phase never had it to install. An entry in `packages.yml` only describes
+   *how* a tool installs; the manifest and the profiles it takes decide *whether*
+   it installs on this machine.
 2. **The bundle could not have downloaded it anyway.** `{target}` expands to a Rust
    target triple, and fnm names its assets after the OS word — `fnm-linux.zip`,
    `fnm-macos.zip` — so the URL would have 404'd. The zip repackager also assumed

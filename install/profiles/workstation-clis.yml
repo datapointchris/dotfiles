@@ -1,0 +1,17 @@
+# The CLIs Chris publishes that a `workstation` carries on any network. `fleet-clis`
+# composes this file, so a CLI added here also reaches a box that takes every one.
+
+go_tools:
+  - todoui
+
+custom_installers:
+  - theme
+  - font
+
+uv_tools:
+  - howto
+  - refcheck
+  - dectl
+  - sparkxray-cli
+  - doppeldata-cli
+  - safekeep

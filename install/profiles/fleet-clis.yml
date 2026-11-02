@@ -1,0 +1,16 @@
+# Every CLI Chris publishes that installs on a headless Linux box, and nothing
+# else: no shell, no toolchain beyond what the CLIs need, no desktop, no logins.
+# Each file below is also part of the machine profile named in its own name, so
+# a CLI is declared once and reaches both.
+#
+# Three published tools are not here. webviewrs opens a window on any argument,
+# `--help` included, so it is unreadable without a display. asl-language-server
+# is an editor's server that runs on node, which only npm_globals brings, so it
+# sits in the workstation profile. bbkt is wsl-work-workstation's own and lives
+# in that manifest.
+
+profiles:
+  - repo-checkouts-clis
+  - fleet-member-clis
+  - workstation-clis
+  - personal-desk-clis
