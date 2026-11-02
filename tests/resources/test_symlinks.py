@@ -744,8 +744,8 @@ def test_a_template_the_repo_deleted_takes_its_rendering_with_it_and_names_an_ed
     apply(session)
 
     assert sorted((change.item, change.verdict, change.repair) for change in found) == [
-        (str(rendered_target(home.resolve())), Verdict.STALE, Repair.AUTOMATIC),
-        (str(edited.resolve()), Verdict.UNDECLARED, Repair.BY_HAND),
+        (APP_TEMPLATE, Verdict.STALE, Repair.AUTOMATIC),
+        (other, Verdict.UNDECLARED, Repair.BY_HAND),
     ]
     assert not rendered_target(home).exists()
     assert edited.read_text() == 'server = "http://inside:8888"\nkept = true\n'

@@ -196,6 +196,9 @@ def show(session: Session) -> None:
     for path in observed.orphans:
         err_console.print(f'  [red]✗[/] {path} (source gone)')
 
+    for orphaned in observed.orphaned_renderings:
+        err_console.print(f'  [red]✗[/] {orphaned.target} (template gone: {orphaned.templates[0].address})')
+
     # Only the declared links that drifted. `verdicts` also holds a row per orphan,
     # and an orphan is by definition not declared — that is why it is pruned rather
     # than repaired — so counting it here would report a healthy machine as having
