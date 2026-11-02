@@ -102,6 +102,7 @@ uv_tools:
   - git-filter-repo
   - tldr
   - doit
+  - howto
   - refcheck
   - syncer
   - keymap-align

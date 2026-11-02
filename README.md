@@ -114,16 +114,16 @@ See [CLAUDE.md](CLAUDE.md) for the full philosophy (it's longer than it needs to
 
 ## Tool Discovery
 
-Installed something six months ago and forgot about it? `doit` has you covered:
+Installed something six months ago and forgot about it? `howto` finds it, and `doit` says whether you use it:
 
 ```bash
-doit kit list             # See everything, every collection
-doit show ripgrep         # Details, examples, why you installed it
-doit find git             # Find git-related tools, cards and shortcuts
+howto list                # See everything, every collection
+howto show ripgrep        # Details, examples, why you installed it
+howto find git            # Find git-related tools, cards and shortcuts
 doit kit unused           # What you own, can run, and never do
 ```
 
-Tools are documented with usage examples and tips in the `terminal-library` registry, which `doit content sync` keeps current. It is authored content rather than machine config, so it lives in its own repo and changing it needs no deploy.
+Tools are documented with usage examples and tips in the `terminal-library` registry, which `howto library sync` keeps current. It is authored content rather than machine config, so it lives in its own repo and changing it needs no deploy.
 
 ## Common Tasks
 
@@ -141,7 +141,7 @@ dotfiles apply --reinstall --entry lazygit  # Install one entry again, whatever 
 dotfiles symlinks apply                 # Deploy configs (also: plan, check, show, unlink)
 
 # Discovery
-doit find python                        # Find Python tools
+howto find python                       # Find Python tools
 ```
 
 Run `dotfiles` for all commands, or `task --list-all` when working inside the repo.

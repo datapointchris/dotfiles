@@ -10,7 +10,7 @@ cannot say — why the tool exists, what it deliberately does not do, and how it
 couples to the rest of this repo.
 
 The sidebar lists those pages. For the tools themselves, `eza ~/.local/bin`
-is what this machine actually has installed, and `doit kit list` is the
+is what this machine actually has installed, and `howto list` is the
 searchable roster across the fleet.
 
 ## Pages

@@ -1686,6 +1686,10 @@ uv_tools:
       index: datapointchris
       description: What to do now, and everything that decides it — the draw, the dashboard, the cards and Labs
 
+    - name: howto
+      index: datapointchris
+      description: Search and show reference cards, Labs, a tool registry, and the shell's own functions and keybindings
+
     - name: indy
       index: datapointchris
       description: Semantic search index for local codebases, docs, and notes

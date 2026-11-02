@@ -331,7 +331,7 @@ its own words.
 ## What lives in `apps/` and what leaves it
 
 The `apps/` scripts (`notes`, `packup`, …) are **independent user tools** with
-their own identity and `doit find` discovery. Folding them into
+their own identity and `howto find` discovery. Folding them into
 `dotfiles <subcommand>` would be a regression, not a consolidation.
 
 An app leaves this directory when its data outgrows a file. `patterns` captured

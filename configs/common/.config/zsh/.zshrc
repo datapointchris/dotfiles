@@ -114,7 +114,7 @@ apply_shell_keybindings() {
   # space is taken, and ^X^K — the obvious pick for a picker — is kill-buffer.
   bindkey "^X^A" doshell-ask-widget
   bindkey "^X^E" doshell-explain-widget
-  bindkey "^X^D" doit-choose-widget
+  bindkey "^X^D" howto-choose-widget
   return 0
 }
 
@@ -221,7 +221,7 @@ zstyle ':completion:*' cache-path "$XDG_CACHE_HOME"/zsh/zcompcache
 # start.
 #
 # `ZSH_SOURCED` holds the generated blocks that are not completions — zoxide's
-# `cd` wrapper, direnv's hook, fzf's keybindings, atuin's init, doit's widgets.
+# `cd` wrapper, direnv's hook, fzf's keybindings, atuin's init, howto's widgets.
 # Those define aliases, hooks and keybindings that have to exist before the first
 # prompt, so they are sourced where they sit and their order is load-bearing.
 #
@@ -419,6 +419,9 @@ cache_completion nomad nomad completion zsh
 # script is static; the network call happens inside `<tool> __complete`.
 cache_completion ifiles ifiles completion zsh
 cache_completion ypl ypl completion zsh
+# howto writes its own, and it globs card and Lab ids off the library rather
+# than calling howto, so Tab spawns nothing.
+cache_completion howto howto shell completion zsh
 
 # The Typer tools and doit are completions too, and they are sourced rather than
 # autoloaded — which puts them below compinit, not here. See "SOURCED
@@ -611,16 +614,15 @@ doshell-explain-widget() {
 }
 zle -N doshell-explain-widget
 
-# The line-editor half of `doit choose`: a ZLE widget that apply_shell_keybindings
-# binds, plus dochoose for the same pick without a chord. A subprocess cannot
-# reach into its parent's line editor, so doit emits the block and this only
-# caches it — the same split doit's completion block uses, and `-b doit` ages its
-# own cache key against the one binary.
+# The line-editor half of `howto choose`: a ZLE widget that apply_shell_keybindings
+# binds, plus howto-choose-next for the same pick without a chord. A subprocess
+# cannot reach into its parent's line editor, so howto emits the block and this
+# only caches it, and `-b howto` ages its own cache key against the binary.
 #
 # Here rather than among the completions because this is a prompt-line widget,
 # and it sits with the two it is bound beside. Ungated: this only defines two
 # functions, and it prints nothing until a key is pressed.
-cache_eval -b doit doit-widgets doit shell widgets zsh
+cache_eval -b howto howto-widgets howto shell widgets zsh
 
 # ------------------------------------------------------------------ #
 # PATH SETUP

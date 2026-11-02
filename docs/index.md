@@ -50,8 +50,8 @@ exists rather than how to call it:
 ```bash
 dotfiles --help      # every machine operation, from anywhere
 task --list-all      # the repo's own tasks: setup, tests, docs (from inside the repo)
-doit kit list        # everything indexed, by collection
-doit find <term>     # search tools, functions, aliases and keybindings at once
+howto list           # everything indexed, by collection
+howto find <term>    # search tools, functions, aliases and keybindings at once
 theme list
 ```
 

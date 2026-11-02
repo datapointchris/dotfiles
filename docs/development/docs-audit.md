@@ -245,7 +245,7 @@ paths and links were all valid.
 | `reference/tools/tasks.md` | Both front doors call `install/ops/` | They reach `src/dotfiles/`; `ops/` holds one script |
 | `reference/tools/symlinks.md` | "Only the resolved platform's overlay file is linked" | The coordinate overlays, keeping their axis path |
 | `architecture/management-interface.md` | Group→Contents table | `--list` prints it, and it had drifted |
-| `index.md` | `menu <term>` | Left with the menu suite; it is `doit find` |
+| `index.md` | `menu <term>` | Left with the menu suite; it is `howto find` |
 | `development/testing.md` | Three test layers, two of them bats | One runner |
 
 Two were code rather than docs, found by writing the page that would have had to
@@ -402,7 +402,7 @@ the branch point is the list; this is where each went.
 - **`architecture/tool-composition.md` was deleted rather than moved.** Its
   central claim — never build the picker in, compose at the shell — is a
   position since reversed: the interactive picker is `choose` and never `apply`,
-  with `theme choose` and `doit labs choose` as the shape. A page can go stale by
+  with `theme choose` and `howto labs choose` as the shape. A page can go stale by
   being overtaken rather
   than by being wrong about its own repo, and nothing mechanical finds that
   either.
