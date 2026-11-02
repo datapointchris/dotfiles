@@ -11,4 +11,4 @@ flatpak: false
 # fleet-shell's atuin login is the one this box asks for: history sync is the whole
 # reason atuin is here rather than left to zsh, and a box that exists to be SSHed
 # into has nothing to do with a GitHub or an AWS credential.
-profiles: [lean-shell, fleet-shell]
+profiles: [lean-shell, shell-tuis, fleet-shell]

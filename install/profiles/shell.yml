@@ -10,9 +10,7 @@ github_releases:
   - gh          # GitHub CLI
   - fzf         # fuzzy finder — backs the shell functions
   - neovim      # editor for on-box config/log edits
-  - lazygit     # git TUI
-  - yazi        # file-manager TUI
-  - glow        # render markdown/docs over SSH
+  - glow       # render markdown/docs over SSH
   - duf         # disk-free at a glance
   - atuin       # shell history (zsh init expects it)
   - shellcheck  # debug shell scripts on the box
@@ -23,10 +21,9 @@ github_releases:
   # re-measure a release:
   # `objdump -T tree-sitter | rg -o 'GLIBC_[0-9.]+' | sort -uV | tail -1`.
 
-cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker]
+cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta]
 
 shell_plugins: true
 tmux_plugins: true
-yazi_plugins: true
 nvim_plugins: true
 configure_zsh: true

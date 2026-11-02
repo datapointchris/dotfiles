@@ -1,7 +1,7 @@
 # A desk Chris develops at, on any network: the shell, his checkouts, and the
 # language servers, linters and infrastructure tools the editor and the repos call.
 
-profiles: [shell, repo-checkouts, workstation-clis]
+profiles: [shell, shell-tuis, repo-checkouts, workstation-clis]
 
 go_tools:
   - cheat
