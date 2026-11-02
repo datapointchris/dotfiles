@@ -852,9 +852,13 @@ class TmuxSyncProvider(PluginSyncProvider):
             return reason
         declared = pluginsync.declared(session.home)
         missing = pluginsync.uninstalled(declared, directory)
-        if not missing:
-            return ''
-        return f'{len(missing)} of the {len(declared)} plugins tmux.conf declares are not installed: {pluginsync.listed(missing)}'
+        stray = pluginsync.undeclared(declared, directory)
+        said = []
+        if missing:
+            said.append(f'{len(missing)} of the {len(declared)} plugins tmux.conf declares are not installed: {pluginsync.listed(missing)}')
+        if stray:
+            said.append(f'{len(stray)} plugin checkouts tmux.conf no longer declares are still on disk: {pluginsync.listed(stray)}')
+        return '; '.join(said)
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
         directory = tmux_plugins_dir(session)

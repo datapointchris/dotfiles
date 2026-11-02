@@ -122,6 +122,14 @@ def test_a_half_cloned_plugin_counts_as_uninstalled(tmux: Tmux) -> None:
     assert pluginsync.uninstalled(('tmux-yank', 'tmux-cpu'), tmux.plugins) == ('tmux-yank',)
 
 
+def test_a_checkout_the_config_dropped_is_undeclared_and_tpm_never_is(tmux: Tmux) -> None:
+    for name in ('tpm', 'tmux-yank', 'tmux-fzf'):
+        (tmux.plugins / name / '.git').mkdir(parents=True, exist_ok=True)
+    (tmux.plugins / 'half-cloned').mkdir()
+
+    assert pluginsync.undeclared(('tmux-yank',), tmux.plugins) == ('tmux-fzf',)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Running TPM
 # ─────────────────────────────────────────────────────────────────────────────

@@ -116,6 +116,19 @@ def uninstalled(names: tuple[str, ...], plugins_dir: Path) -> tuple[str, ...]:
     return tuple(name for name in names if not (plugins_dir / name / '.git').exists())
 
 
+def undeclared(names: tuple[str, ...], plugins_dir: Path) -> tuple[str, ...]:
+    """Checkouts TPM cloned that the config no longer names, which `clean_plugins` removes.
+
+    TPM loads only what the config declares, so one of these never runs. Nothing
+    else removes it, so a plugin dropped from tmux.conf would stay on every machine
+    that ever cloned it. `tpm` is left out by name: dotfiles clones it, not TPM.
+    """
+    if not plugins_dir.is_dir():
+        return ()
+    found = (entry.name for entry in plugins_dir.iterdir() if (entry / '.git').exists())
+    return tuple(sorted(name for name in found if name != 'tpm' and name not in names))
+
+
 def blocked(home: Path, plugins_dir: Path) -> str:
     """Why TPM cannot run right now, or '' where it can.
 
@@ -202,6 +215,8 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
         return Result(False, f'{reason}. {diagnostics(config, plugins_dir)}', kind=Kind.PREREQUISITE_MISSING)
 
     installer = plugins_dir / 'tpm' / 'bin' / 'install_plugins'
+    cleaner = plugins_dir / 'tpm' / 'bin' / 'clean_plugins'
+    cleaned = None
     with tempfile.TemporaryDirectory(prefix='dotfiles-tpm-') as scratch:
         socket = Path(scratch) / f'tmux-{os.getuid()}' / 'default'
         socket.parent.mkdir(mode=0o700)
@@ -225,6 +240,10 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
                 output=Output.QUIET,
             )
             installed = run([str(installer)], env=environment, unset=detached, show=tpm_line)
+            # On the same throwaway, because clean_plugins asks a bare `tmux` for
+            # the plugin path exactly as the installer does.
+            if installed.ok and undeclared(declared(home), plugins_dir):
+                cleaned = run([str(cleaner)], env=environment, unset=detached, show=tpm_line)
         finally:
             run(
                 ['tmux', '-S', str(socket), 'kill-server'],
@@ -242,7 +261,16 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
             f'TPM plugin installation failed (exit {installed.returncode}): {said}. {diagnostics(config, plugins_dir)}',
             kind=Kind.COMMAND_FAILED,
         )
-    return Result(True, f'TPM installed the plugins {config.name} declares', kind=Kind.APPLIED)
+    if cleaned is not None and not cleaned.ok:
+        said = cleaned.transcript.strip() or f'TPM exited {cleaned.returncode}'
+        failed = f'TPM could not remove the plugins {config.name} no longer declares (exit {cleaned.returncode})'
+        return Result(
+            False,
+            f'{failed}: {said}. {diagnostics(config, plugins_dir)}',
+            kind=Kind.COMMAND_FAILED,
+        )
+    removed = ' and removed the ones it no longer does' if cleaned is not None else ''
+    return Result(True, f'TPM installed the plugins {config.name} declares{removed}', kind=Kind.APPLIED)
 
 
 def diagnostics(config: Path, plugins_dir: Path) -> str:
