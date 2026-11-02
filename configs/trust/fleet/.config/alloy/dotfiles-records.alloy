@@ -5,12 +5,18 @@
 //
 // A JSON record carrying a W3C traceparent lands under the trace that wrote it.
 // One without the field passes through unparsed.
+//
+// The runs directory holds thousands of files, and each poll opens every one and
+// matches its fingerprint against the rest. So its two tails poll every 30s
+// rather than every 200ms. That is a fifteenth of the CPU, and no reader of these
+// records works within minutes.
 
 // A dotfiles run: one JSON object per file, its closing brace at the first column.
 otelcol.receiver.filelog "dotfiles_runs" {
-  include  = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.json", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
-  start_at = "beginning"
-  storage  = otelcol.storage.file.offsets.handler
+  include       = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.json", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at      = "beginning"
+  storage       = otelcol.storage.file.offsets.handler
+  poll_interval = "30s"
 
   operators = [
     {
@@ -33,9 +39,10 @@ otelcol.receiver.filelog "dotfiles_runs" {
 
 // Each command a dotfiles run made, one JSON object a line.
 otelcol.receiver.filelog "dotfiles_effects" {
-  include  = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.jsonl", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
-  start_at = "beginning"
-  storage  = otelcol.storage.file.offsets.handler
+  include       = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.jsonl", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at      = "beginning"
+  storage       = otelcol.storage.file.offsets.handler
+  poll_interval = "30s"
 
   operators = [
     {
