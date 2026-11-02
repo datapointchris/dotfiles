@@ -61,7 +61,7 @@ def observe(entry: catalogs.UserTimer, now: dt.datetime | None = None) -> State:
     if installed.verdict is not Verdict.MATCHED:
         return installed
     now = now or dt.datetime.now(dt.UTC)
-    again = f'`dotfiles timers run {entry.name}` runs it now'
+    again = f'dotfiles timers run {entry.name}'
     try:
         last = timer_reports.latest(entry.name)
     except OSError as failed:
@@ -69,17 +69,15 @@ def observe(entry: catalogs.UserTimer, now: dt.datetime | None = None) -> State:
     if last is None:
         since = installed_at(entry)
         if since is not None and now - since > overdue_after(entry):
-            return State(
-                Verdict.STALE, f'no run recorded since it was installed at {since:%Y-%m-%d %H:%MZ}; {again}', repair=Repair.BY_HAND
-            )
+            return State(Verdict.STALE, f'no run recorded since it was installed at {since:%Y-%m-%d %H:%MZ}', Repair.BY_HAND, again)
         return State(Verdict.MATCHED)
     at = run_at(last)
     if at is None:
         return State(Verdict.UNKNOWN, f'its newest run names no readable time: {last.get("timestamp")!r}', repair=Repair.NONE)
     if last.get('outcome') != 'pass':
-        return State(Verdict.STALE, f'its run at {at:%Y-%m-%d %H:%MZ} failed: {last.get("summary", "")}; {again}', repair=Repair.BY_HAND)
+        return State(Verdict.STALE, f'its run at {at:%Y-%m-%d %H:%MZ} failed: {last.get("summary", "")}', Repair.BY_HAND, again)
     if now - at > overdue_after(entry):
-        return State(Verdict.STALE, f'its newest run was at {at:%Y-%m-%d %H:%MZ}, and it runs every {entry.every}', repair=Repair.BY_HAND)
+        return State(Verdict.STALE, f'its newest run was at {at:%Y-%m-%d %H:%MZ}, and it runs every {entry.every}', Repair.BY_HAND, again)
     return State(Verdict.MATCHED)
 
 

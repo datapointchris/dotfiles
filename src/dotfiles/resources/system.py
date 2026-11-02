@@ -224,6 +224,7 @@ class SystemResource:
                 observed.config[item.address].verdict,
                 repair=observed.config[item.address].repair,
                 detail=observed.config[item.address].detail,
+                advice=observed.config[item.address].advice,
                 desired=item,
                 privileged=registry.needs_root(item),
             )

@@ -54,7 +54,7 @@ def test_a_box_with_no_agent_hears_of_a_failing_run_from_check(installed_probe: 
     timer_reports.record(timer_reports.run(probe))
     failing = timers.observe(probe)
 
-    assert (failing.verdict, failing.repair) == (Verdict.STALE, Repair.BY_HAND)
+    assert (failing.verdict, failing.repair, failing.advice) == (Verdict.STALE, Repair.BY_HAND, 'dotfiles timers run probe')
     assert 'failed: probe exited 1' in failing.detail
 
 

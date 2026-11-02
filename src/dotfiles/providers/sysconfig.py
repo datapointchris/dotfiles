@@ -60,6 +60,8 @@ class State:
     verdict: Verdict
     detail: str = ''
     repair: Repair = Repair.AUTOMATIC
+    # The command a reader runs, which a `Repair.BY_HAND` row must carry.
+    advice: str = ''
 
 
 def current_user() -> str:
