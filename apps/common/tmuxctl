@@ -1194,10 +1194,9 @@ def placement_lock() -> Iterator[None]:
     """Hold this server's placement lock from reading the windows to recording where a pane went.
 
     Without it, opens from one pane at the same moment each read the same seats.
-    Four concurrent opens on a fresh server gave four windows of one worker in four
-    runs of five, where two windows of two were due, and a window with one seat
-    left can take two. The lock sits beside the server's socket, so each server
-    has exactly one and nothing has to name it.
+    Four at once open four windows of one where two windows of two are due, and a
+    window with one seat left can take two. The lock sits beside the server's
+    socket, so each server has exactly one and nothing has to name it.
     """
     socket = os.environ.get('TMUX', '').split(',')[0]
     if not socket:
