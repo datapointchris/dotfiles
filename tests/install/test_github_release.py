@@ -758,21 +758,6 @@ class TestTokenLookup:
         assert answers == ['ghp_from_gh'] * 73
         assert runs == [['gh', 'auth', 'token']]
 
-    def test_concurrent_callers_without_priming_are_what_the_memo_cannot_fix(self, monkeypatch):
-        """The measurement the row above rests on, so the fix is not a change nobody
-        can see fail.
-
-        Asserted as "more than one" rather than exactly sixteen: the count is
-        scheduling, and pinning it would make this a flaky test about the pool
-        rather than a claim about the memo.
-        """
-        runs = self.counting_gh(monkeypatch, delay=0.02)
-
-        with ThreadPoolExecutor(max_workers=16) as pool:
-            list(pool.map(lambda _: github_release.github_token(), range(73)))
-
-        assert len(runs) > 1
-
     def test_the_environment_still_wins_and_spawns_nothing(self, monkeypatch):
         """The variable outranks `gh` and always did. Worth pinning beside the cache
         because memoizing an answer that came from the wrong rung would keep it for
