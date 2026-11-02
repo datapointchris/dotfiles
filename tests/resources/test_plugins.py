@@ -385,12 +385,20 @@ def install_tpm(live: Session) -> Path:
     return plugins
 
 
-def test_an_undeployed_tmux_conf_is_a_change_rather_than_an_empty_plugin_list(tmp_path: Path) -> None:
+def tmux_installed(fake_bin: Path) -> None:
+    """A `tmux` on PATH, because the plugin list is read only where one is installed."""
+    tmux = fake_bin / 'tmux'
+    tmux.write_text('#!/bin/sh\nexit 0\n')
+    tmux.chmod(0o755)
+
+
+def test_an_undeployed_tmux_conf_is_a_change_rather_than_an_empty_plugin_list(tmp_path: Path, fake_bin: Path) -> None:
     """The bug this ordering exists to stop. `apply` measures once, up front — so a
     fresh machine is observed *before* the symlink pass deploys `tmux.conf`, and
     reading its absence as "declares no plugins" would plan nothing, install
     nothing, and report a converged machine whose plugins arrive one apply later.
     """
+    tmux_installed(fake_bin)
     live = session(tmp_path)
     install_tpm(live)
 
@@ -399,7 +407,8 @@ def test_an_undeployed_tmux_conf_is_a_change_rather_than_an_empty_plugin_list(tm
     assert 'no plugin list to read' in reported['tmux-sync/tpm']
 
 
-def test_a_tmux_with_every_declared_plugin_cloned_reports_nothing(tmp_path: Path) -> None:
+def test_a_tmux_with_every_declared_plugin_cloned_reports_nothing(tmp_path: Path, fake_bin: Path) -> None:
+    tmux_installed(fake_bin)
     live = session(tmp_path)
     plugins = install_tpm(live)
     (live.home / '.config' / 'tmux' / 'tmux.conf').write_text("set -g @plugin 'tmux-plugins/tmux-yank'\n")

@@ -658,7 +658,7 @@ def test_nothing_but_probe_ever_asks_a_helper_for_a_credential(sandbox: Sandbox,
     assert witness.is_file()
 
 
-def test_a_probe_refuses_to_let_a_helper_prompt(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
+def test_a_probe_refuses_to_let_a_helper_prompt(sandbox: Sandbox, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch) -> None:
     """Both variables reach the helper, because they belong to different programs.
 
     git's suppresses the terminal prompt it falls back to when no helper answers;
@@ -667,6 +667,7 @@ def test_a_probe_refuses_to_let_a_helper_prompt(sandbox: Sandbox, cli: Callable[
     than out of the probe's answer, because the answer would be the same either
     way — and set for the child alone, which the second assertion is about.
     """
+    monkeypatch.delenv('GIT_TERMINAL_PROMPT', raising=False)
     witness = sandbox.root / 'environment'
     helper = helper_script(
         sandbox,

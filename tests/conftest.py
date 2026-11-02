@@ -23,6 +23,10 @@ import subprocess
 # time any fixture runs, the module-level constant is already computed.
 os.environ.setdefault('_TYPER_FORCE_DISABLE_TERMINAL', '1')
 
+# Rich fixes a console's width when COLUMNS is set as it is built, and GNU readline exports 80.
+os.environ.pop('COLUMNS', None)
+os.environ.pop('LINES', None)
+
 import importlib.machinery  # noqa: E402
 import importlib.util  # noqa: E402
 import shutil  # noqa: E402
