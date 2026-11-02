@@ -998,9 +998,10 @@ github_releases:
 
   # The uniform install method: the same musl release binary on every Linux platform
   # (Arch + WSL). macOS is the lone exception (brew — see system_packages) because atuin
-  # ships no Intel-mac binary. atuin.sh guards darwin so only Linux reaches this path.
+  # ships no Intel-mac binary, so a Mac never plans this row.
   - name: atuin
     repo: atuinsh/atuin
+    excludes_os_family: darwin
     description: SQLite-backed shell history capturing command, exit, cwd, and session
     tags: [cli, shell, history]
 
@@ -1206,9 +1207,11 @@ custom_installers:
 
   # Distributed from AWS's own bucket, which serves only `latest/` and no version.
   # `repo` is where the version lives: awslabs publishes the same builds as GitHub
-  # releases, so currency costs one API call instead of the whole tarball.
+  # releases, so currency costs one API call instead of the whole tarball. AWS
+  # builds it for Linux only.
   - name: mount-s3
     repo: awslabs/mountpoint-s3
+    excludes_os_family: darwin
     release_tag_prefix: mountpoint-s3-
     url: https://s3.amazonaws.com/mountpoint-s3-release
     description: Mountpoint for Amazon S3 — mount an S3 bucket as a local filesystem (Linux only, GPG-verified)

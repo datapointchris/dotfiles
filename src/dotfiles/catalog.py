@@ -210,6 +210,13 @@ def supersedes_problems(rows: tuple[str, ...]) -> tuple[str, ...]:
     )
 
 
+def os_family_problems(excluded: str) -> tuple[str, ...]:
+    """An `excludes_os_family` naming no OS family, which would exclude nothing."""
+    if not excluded or excluded in set(axes.AXIS_TYPES['os_family']):
+        return ()
+    return (f'excludes os_family {excluded!r}, which is not an OS family. Known: {", ".join(axes.AXIS_TYPES["os_family"])}',)
+
+
 def repo_segments(value: str) -> list[str]:
     """A `repo`, `github_repo` or `package` field reduced to its path segments.
 
@@ -542,6 +549,11 @@ class GithubRelease(Entry):
     requires_wsl_host: bool = False
     checksum: str = CHECKSUM_REQUIRED
 
+    excludes_os_family: str = ''
+    """An OS family that takes this tool from somewhere else, `CustomInstaller`'s
+    field for a release. atuin is the case: a profile names it for every shell,
+    and a Mac takes brew's bottle because upstream ships no Intel-mac binary."""
+
     supersedes: tuple[str, ...] = ()
     """Package names this release took over from, which a machine may still have.
 
@@ -576,7 +588,12 @@ class GithubRelease(Entry):
         return owner_of(self.repo)
 
     def problems(self) -> tuple[str, ...]:
-        return (*checksum_problems(self, self.checksum), *supersedes_problems(self.supersedes), *Entry.problems(self))
+        return (
+            *checksum_problems(self, self.checksum),
+            *supersedes_problems(self.supersedes),
+            *os_family_problems(self.excludes_os_family),
+            *Entry.problems(self),
+        )
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -613,6 +630,9 @@ class CustomInstaller(Entry):
     @property
     def owner(self) -> str | None:
         return owner_of(self.repo) if self.repo else None
+
+    def problems(self) -> tuple[str, ...]:
+        return (*os_family_problems(self.excludes_os_family), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1011,10 +1031,7 @@ class SystemConfig(Entry):
             for axis, value in self.narrowing.items()
             if value not in set(axes.AXIS_TYPES[axis])
         ]
-        if self.excludes_os_family and self.excludes_os_family not in set(axes.AXIS_TYPES['os_family']):
-            known = ', '.join(axes.AXIS_TYPES['os_family'])
-            wrong.append(f'excludes os_family {self.excludes_os_family!r}, which is not an OS family. Known: {known}')
-        return (*wrong, *Entry.problems(self))
+        return (*wrong, *os_family_problems(self.excludes_os_family), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
