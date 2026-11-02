@@ -743,6 +743,24 @@ def test_a_rebuilt_entry_is_checked_against_upstream_before_it_reaches_checksums
     assert second.checksums == [f'{sha256_of_bytes(STALE)}  {ASSET.filename}']
 
 
+def test_a_private_release_is_bundled_and_verified_through_the_asset_api(cache_home, wire, tmp_path, monkeypatch):
+    """A private repo's browser URLs 404 whatever token is sent, so both the asset
+    and its checksums file arrive only through the REST asset endpoint."""
+    served = upstream_serving(PAYLOAD)
+    api = f'https://api.github.com/repos/{REPO}/releases/assets'
+    wire({RELEASE_API: served[RELEASE_API], f'{api}/1': PAYLOAD, f'{api}/2': served[CHECKSUMS_URL]})
+    monkeypatch.setattr(github_release, 'github_token', lambda: 'a-token')
+    cache = DownloadCache(enabled=True)
+    destination = tmp_path / 'out' / ASSET.filename
+    bundle = create_bundle.Bundle(tmp_path / 'installers', 'linux', 'x86_64', 'a-machine', BUILT_AT)
+
+    cache.fetch(ASSET, destination, '  fd')
+    create_bundle.verify_against_upstream(bundle, cache, destination, ASSET)
+
+    assert destination.read_bytes() == PAYLOAD
+    assert bundle.checksums == [f'{sha256_of_bytes(PAYLOAD)}  {ASSET.filename}']
+
+
 def test_a_release_with_no_checksums_file_is_verified_against_githubs_digest(cache_home, wire, tmp_path):
     """GitHub computes a sha256 for every asset it stores, so a project that publishes
     no checksums file still reaches the install machine verified."""

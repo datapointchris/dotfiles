@@ -278,14 +278,20 @@ def fetch_latest_version(repo: str) -> str:
     return tag
 
 
-def download(url: str, destination: Path) -> None:
+def download(url: str, destination: Path, asset: BundleAsset | None = None) -> None:
     """Fetch one asset, retrying what can pass on a second try.
 
     A 404 or any other client error is the same answer every time, so it is
     asked once. A timeout, a rate limit or a server error is retried.
+
+    A GitHub release asset that 404s is asked once more through the REST asset
+    endpoint. The browser URL 404s on a private repo whatever token is
+    presented, and that endpoint is the one route serving a private asset.
+    Public assets never reach it, so a build makes no extra API call for them.
     """
     destination.parent.mkdir(parents=True, exist_ok=True)
     last_error = ''
+    status = 0
 
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         try:
@@ -302,7 +308,40 @@ def download(url: str, destination: Path) -> None:
         if attempt < DOWNLOAD_ATTEMPTS:
             log.warning(f'Retry {attempt}/{DOWNLOAD_ATTEMPTS} for {url} ({last_error})')
 
+    if status == 404 and asset is not None and asset.release is not None:
+        refused_privately = private_download(asset, destination)
+        if refused_privately is None:
+            return
+        last_error = f'{last_error}, and the asset API said {refused_privately}'
     raise BundleError(f'Failed to download {url}: {last_error}')
+
+
+def checksums_file(repo: str, tag: str, name: str, asset_id: int) -> bytes:
+    """A release's checksums file, through the asset API where a private repo's browser URL 404s."""
+    try:
+        return github_release.request(f'https://github.com/{repo}/releases/download/{tag}/{name}')
+    except httpx2.HTTPStatusError as refused:
+        if refused.response.status_code != 404 or not github_release.github_token():
+            raise
+    return github_release.asset_bytes(repo, asset_id)
+
+
+def private_download(asset: BundleAsset, destination: Path) -> str | None:
+    """A release asset through the REST asset endpoint: None once written, else why not."""
+    if not github_release.github_token():
+        return 'nothing, because no GitHub token is available'
+    repo, tag = asset.release or ('', '')
+    published = github_release.release_assets(repo, tag)
+    if published is None:
+        return f'nothing readable about release {tag}'
+    listed = published.get(asset.filename)
+    if listed is None:
+        return f'release {tag} lists no {asset.filename}'
+    try:
+        destination.write_bytes(github_release.asset_bytes(repo, listed.id))
+    except (httpx2.HTTPError, OSError) as refused:
+        return github_release.Fetched.failed(refused).reason
+    return None
 
 
 # Install scripts never go through this cache. They are served from unversioned
@@ -385,7 +424,7 @@ class DownloadCache:
         # an entry with no verdict about its bytes — which is re-checked, and is
         # the answer a cold build already gets.
         self.forget_digest_verdict(asset)
-        download(asset.url, destination)
+        download(asset.url, destination, asset)
         self.downloads += 1
 
         if not self.enabled:
@@ -795,7 +834,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, as
     expected = digest
     if checksum_asset is not None:
         try:
-            checksums_text = github_release.request(f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}').decode()
+            checksums_text = checksums_file(repo, tag, checksum_asset, published[checksum_asset].id).decode()
         except (httpx2.HTTPError, UnicodeDecodeError) as error:
             raise BundleError(f'Failed to download {checksum_asset} from {repo}: {error}') from error
 

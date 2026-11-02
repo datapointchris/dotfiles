@@ -781,6 +781,11 @@ class Fetched:
         return cls(False, f'{named}: {said}' if said else named)
 
 
+def asset_bytes(repo: str, asset_id: int) -> bytes:
+    """One release asset through the REST asset endpoint, the one route serving a private repo's."""
+    return request(f'https://api.github.com/repos/{repo}/releases/assets/{asset_id}', accept='application/octet-stream')
+
+
 def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', asset_name: str = '') -> Fetched:
     """The browser URL 404s on a private repo whatever token is presented; only
     the REST asset endpoint serves those, and only with an octet-stream Accept.
@@ -810,9 +815,7 @@ def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', a
         listed = published.get(asset_name)
         if listed is not None:
             try:
-                destination.write_bytes(
-                    request(f'https://api.github.com/repos/{repo}/releases/assets/{listed.id}', accept='application/octet-stream')
-                )
+                destination.write_bytes(asset_bytes(repo, listed.id))
             except (httpx2.HTTPError, OSError) as refused:
                 first = Fetched.failed(refused).reason
                 log_warning(f'Asset API download failed for {asset_name} ({first}), falling back to the public URL')
