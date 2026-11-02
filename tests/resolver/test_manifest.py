@@ -92,8 +92,9 @@ def test_a_manifest_takes_everything_its_profiles_reach(tmp_path: Path) -> None:
     go_tools = machine.subscription('go_tools')
     assert machine.profiles == ('desk', 'shell')
     assert go_tools.names == {'own', 'task', 'gdu'}
-    assert dict(go_tools.origins) == {'task': 'desk', 'gdu': 'shell'}
-    assert machine.subscription('tmux_plugins').origin == 'shell'
+    assert dict(machine.declarers['go_tools']) == {'own': '', 'task': 'desk', 'gdu': 'shell'}
+    assert machine.declarer('tmux_plugins') == "profile 'shell'"
+    assert machine.declarer('flags', 'SHELL_VI_MODE') == "profile 'shell'"
     assert machine.wants('nvim_plugins')
     assert machine.flags['SHELL_VI_MODE'] == 'false'
     assert machine.auth == ('gh',)

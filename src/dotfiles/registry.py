@@ -213,7 +213,7 @@ class CatalogProvider(Provider):
                 evidence_path=getattr(entry, 'installed_path', ''),
                 precondition=precondition_of(entry),
                 entry=subscription.resolved(entry),
-                reason=Reason(self.section, selector_of(self.section, subscription, entry.name)),
+                reason=Reason(self.section, selector_of(self.section, machine, entry.name)),
             )
             for entry in declaration.section(self.section)
             if subscription.wants(entry) and planning.available(entry, machine.coordinates)
@@ -1779,10 +1779,12 @@ def precondition_of(entry: catalogs.Entry) -> planning.Precondition:
     return planning.Precondition.NONE
 
 
-def selector_of(section: str, subscription: machines.Subscription, name: str) -> str:
+def selector_of(section: str, machine: machines.Machine, name: str) -> str:
+    subscription = machine.subscription(section)
     if subscription.tier:
         return f'tier:{subscription.tier}'
-    if profile := subscription.origins.get(name, subscription.origin):
+    _, key = machines.SUBSCRIPTIONS[section]
+    if profile := machine.profile_declaring(key or '', name) or machine.profile_declaring(key or ''):
         return f'profile:{profile}'
     if subscription.declared:
         return f'manifest:{section}'

@@ -299,7 +299,7 @@ def flags(machine, observed: Observed) -> list[Change]:
                     name,
                     Verdict.STALE,
                     repair=Repair.AUTOMATIC,
-                    detail=f'the manifest declares {expected}',
+                    detail=f'{machine.declarer("flags", name)} declares {expected}',
                     observed=written,
                 )
             )

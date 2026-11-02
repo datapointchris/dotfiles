@@ -29,11 +29,16 @@ def planned(declaration: catalog.Catalog, name: str, **kwargs: Any) -> planning.
     return resolve.resolve(declaration, machines.load(name, REPO_ROOT), **kwargs)
 
 
-def synthetic(tmp_path: Path, declared: dict[str, Any], manifest: dict[str, Any], **narrowing: Any) -> planning.Plan:
+def synthetic(
+    tmp_path: Path, declared: dict[str, Any], manifest: dict[str, Any], profiles: dict[str, Any] | None = None, **narrowing: Any
+) -> planning.Plan:
     install = tmp_path / 'install'
     (install / 'manifests').mkdir(parents=True, exist_ok=True)
     (install / 'packages.yml').write_text(yaml.safe_dump(declared, sort_keys=False))
     (install / 'manifests' / 'box.yml').write_text(yaml.safe_dump(manifest, sort_keys=False))
+    for name, body in (profiles or {}).items():
+        (install / 'profiles').mkdir(exist_ok=True)
+        (install / 'profiles' / f'{name}.yml').write_text(yaml.safe_dump(body, sort_keys=False))
     (install / 'flags.yml').write_text('{}')
     return resolve.resolve(catalog.load(install / 'packages.yml'), machines.load('box', tmp_path), **narrowing)
 
@@ -231,18 +236,21 @@ def test_the_plan_is_ordered_by_stage(declaration: catalog.Catalog) -> None:
     assert stages == sorted(stages)
 
 
-def test_an_item_names_what_pulled_it_in(declaration: catalog.Catalog) -> None:
+def test_an_item_names_the_file_that_pulled_it_in(declaration: catalog.Catalog, tmp_path: Path) -> None:
     """A profile's row names the profile, so `machines show` answers which file to edit."""
-    plan = planned(declaration, 'linux-lxc-server')
+    plan = synthetic(
+        tmp_path,
+        {'go_tools': [{'name': name, 'package': f'example.com/{name}'} for name in ('own', 'task', 'gdu')]},
+        {'machine': 'box', 'platform': 'linux', 'profiles': ['desk'], 'go_tools': ['own']},
+        profiles={'desk': {'profiles': ['shell'], 'go_tools': ['task']}, 'shell': {'go_tools': ['gdu']}},
+    )
 
     assert {item.name: item.reason.selector for item in plan.for_section('go_tools')} == {
-        'task': 'profile:shell',
+        'own': 'manifest:go_tools',
+        'task': 'profile:desk',
         'gdu': 'profile:shell',
-        'sops': 'profile:fleet-shell',
     }
-    assert plan.for_section('system_packages')[0].reason.selector == 'tier:core'
-    own = {item.name: item.reason.selector for item in planned(declaration, 'scheduler').for_section('custom_installers')}
-    assert own['git'] == 'manifest:custom_installers'
+    assert planned(declaration, 'linux-lxc-server').for_section('system_packages')[0].reason.selector == 'tier:core'
 
 
 def test_an_entry_that_installs_no_binary_has_no_executable_to_look_for(tmp_path: Path) -> None:

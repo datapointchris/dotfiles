@@ -199,8 +199,7 @@ def copied_names(manifests: dict[str, machines.Machine]) -> list[Finding]:
     declarers: dict[tuple[str, str], set[str]] = {}
     for manifest in manifests.values():
         for key in machines.LISTED_KEYS:
-            names = manifest.auth if key == 'auth' else manifest.subscription(machines.SECTION_OF[key]).names
-            for name in names:
+            for name in manifest.declarers.get(key, {}):
                 declarers.setdefault((key, name), set()).add(manifest.declarer(key, name))
     return [
         Finding(

@@ -1,15 +1,11 @@
 """A machine manifest, the profiles it composes, and `flags.yml`, read once into one object.
 
-Three things live here. The first two were spread across a shell script and six
-near-identical Python functions.
-
-**What the machine subscribes to.** `filter_go_packages_by_manifest` and its five
-siblings are the same three branches — `true` means all, an empty list means
-none, a list means membership — written once per section, diverging on which
-`--format` each supported. One `Subscription` says it once, and says the third
-state out loud: a section the manifest never mentions is *undeclared*, which is
-not the same as declared-empty. No manifest names `macos_casks` or `mas_apps`,
-and collapsing the two states stops macOS installing casks at all.
+**What the machine subscribes to.** One `Subscription` per section says which
+of its entries the machine takes: `true` means all, an empty list means none,
+and a list means membership. It says the fourth state out loud: a section the
+manifest never mentions is *undeclared*, which is not the same as
+declared-empty. No manifest names `macos_casks` or `mas_apps`, and collapsing
+the two states stops macOS installing casks at all.
 
 **What the machine is.** `MACHINE` selects the manifest and everything else is
 derived from it — the platform, the coordinates, every flag's value. Nothing is
@@ -20,10 +16,10 @@ how a wsl manifest once deployed the linux shell layer for a whole install.
 and a profile may name more. Puppet's roles and profiles is the pattern: the
 manifest is the role, and says what the machine *is* (`MACHINE_ONLY`), while each
 profile carries a set of tools that several machines share. Every profile reached
-is merged into the manifest before anything below reads it, so a subscription
-never knows a profile existed. A name may be declared once per machine. Two files
-naming it is the copy profiles exist to remove, so the load refuses it rather than
-taking the union.
+is merged into the manifest before a subscription is built, and `Machine.declarers`
+keeps which file declared each name, so a plan row or a finding can say which file
+to edit. A name may be declared once per machine. Two files naming it is the copy
+profiles exist to remove, so the load refuses it rather than taking the union.
 """
 
 from __future__ import annotations
@@ -215,14 +211,6 @@ class Subscription:
     a reader has to assemble it from two places at the moment it matters.
     """
 
-    origins: Mapping[str, str] = dc.field(default_factory=dict)
-    """The profile naming each entry, for every entry a profile names. An entry the
-    manifest names itself is absent, as is everything in an undeclared section."""
-
-    origin: str = ''
-    """The profile declaring the whole section, for a gate or `true`. '' is the
-    manifest, or nobody."""
-
     def wants(self, entry: catalog.Entry) -> bool:
         if self.coverage is Coverage.NONE:
             return False
@@ -403,8 +391,9 @@ class Machine:
     profiles: tuple[str, ...] = ()
     """Every profile this machine composes, each once, in the order the load read them."""
 
-    auth_origins: Mapping[str, str] = dc.field(default_factory=dict)
-    """The profile naming each `auth` tool, as `Subscription.origins` is for a section."""
+    declarers: Mapping[str, Mapping[str, str]] = dc.field(default_factory=dict)
+    """Key, then name, to the profile that declared it, or '' for the manifest. A
+    scalar key's name is '', and a flag is a name under `flags`."""
 
     check_schedule: bool | None = None
     """Whether this machine installs the periodic `dotfiles check`. None leaves it to
@@ -445,12 +434,13 @@ class Machine:
     def subscription(self, section: str) -> Subscription:
         return self.subscriptions[section]
 
-    def declarer(self, key: str, name: str) -> str:
-        """Which file names `name` under `key`, as a finding should say it."""
-        if key == 'auth':
-            profile = self.auth_origins.get(name, '')
-        else:
-            profile = self.subscriptions[SECTION_OF[key]].origins.get(name, '')
+    def profile_declaring(self, key: str, name: str = '') -> str:
+        """The profile that declared `name` under `key`, or '' where the manifest did."""
+        return self.declarers.get(key, {}).get(name, '')
+
+    def declarer(self, key: str, name: str = '') -> str:
+        """Which file declared `name` under `key`, as a finding should say it."""
+        profile = self.profile_declaring(key, name)
         return f'profile {profile!r}' if profile else f'manifest {self.name!r}'
 
     @property
@@ -492,10 +482,8 @@ class Composition:
 
     declared: Mapping[str, Any]
     profiles: tuple[str, ...]
-    origins: Mapping[str, Mapping[str, str]]
-    """Key, then name, to the profile declaring it. The manifest's own names are absent."""
-    key_origins: Mapping[str, str]
-    """A scalar key a profile declared, to that profile."""
+    declarers: Mapping[str, Mapping[str, str]]
+    """`Machine.declarers`, as the walk recorded it."""
 
 
 def entry_name(item: Any) -> str | None:
@@ -518,12 +506,7 @@ def compose(name: str, declared: Mapping[str, Any], root: Path | None, issues: l
     composer.merge(declared, '')
     for profile in included(declared, 'the manifest', name, issues):
         composer.visit(profile, ())
-    return Composition(
-        declared=composer.merged,
-        profiles=tuple(composer.reached),
-        origins={key: {entry: by for entry, by in named.items() if by} for key, named in composer.names.items()},
-        key_origins={key: by for key, by in composer.scalars.items() if by},
-    )
+    return Composition(declared=composer.merged, profiles=tuple(composer.reached), declarers=composer.declarers)
 
 
 @dc.dataclass
@@ -535,9 +518,7 @@ class Composer:
     issues: list[DeclarationIssue]
     merged: dict[str, Any]
     reached: list[str] = dc.field(default_factory=list)
-    names: dict[str, dict[str, str]] = dc.field(default_factory=dict)
-    scalars: dict[str, str] = dc.field(default_factory=dict)
-    flags: dict[str, str] = dc.field(default_factory=dict)
+    declarers: dict[str, dict[str, str]] = dc.field(default_factory=dict)
 
     def refuse(self, message: str) -> None:
         self.issues.append(DeclarationIssue(self.machine, message))
@@ -576,10 +557,10 @@ class Composer:
                 self.listed(key, value, by)
             elif key == 'flags':
                 self.flagged(value, by)
-            elif key in self.scalars:
-                self.refuse(f'{key} is set by both {where(self.scalars[key])} and {where(by)}')
+            elif '' in (setter := self.declarers.setdefault(key, {})):
+                self.refuse(f'{key} is set by both {where(setter[""])} and {where(by)}')
             else:
-                self.scalars[key] = by
+                setter[''] = by
                 self.merged[key] = value
 
     def listed(self, key: str, value: Any, by: str) -> None:
@@ -590,7 +571,7 @@ class Composer:
             current = self.merged.get(key)
             if current is not True:
                 self.merged[key] = [*(current if isinstance(current, list) else ()), *(value or ())]
-        seen = self.names.setdefault(key, {})
+        seen = self.declarers.setdefault(key, {})
         for item in value if isinstance(value, list) else ():
             entry = entry_name(item)
             if entry is None:
@@ -607,11 +588,12 @@ class Composer:
                 self.refuse(f'{where(by)} declares flags as a {type(value).__name__}, where a mapping is expected')
             return
         flags = self.merged['flags'] = dict(self.merged.get('flags') or {}) if by else dict(value)
+        setters = self.declarers.setdefault('flags', {})
         for flag, setting in value.items():
-            if by and flag in self.flags:
-                self.refuse(f'flag {flag} is set by both {where(self.flags[flag])} and {where(by)}')
+            if by and flag in setters:
+                self.refuse(f'flag {flag} is set by both {where(setters[flag])} and {where(by)}')
                 continue
-            self.flags[flag] = by
+            setters[flag] = by
             flags[flag] = setting
 
 
@@ -665,25 +647,25 @@ def load(name: str, root: Path | None = None) -> Machine:
     issues.extend(unknown_keys(name, declared))
     composition = compose(name, declared, root, issues)
     composed = composition.declared
-    coordinates = declared_coordinates(name, declared, issues)
+    coordinates = declared_coordinates(name, composed, issues)
     flags = resolved_flags(composed, flag_data or {}, issues)
     auth = declared_auth_tools(name, composed, issues)
-    check_schedule = declared_check_schedule(name, declared, issues)
-    subscriptions = {section: subscribe(section, composition, name, issues) for section in catalog.SECTIONS}
+    check_schedule = declared_check_schedule(name, composed, issues)
+    subscriptions = {section: subscribe(section, composed, name, issues) for section in catalog.SECTIONS}
 
     if issues:
         raise MachineError(tuple(issues))
 
     return Machine(
-        name=declared.get('machine') or name,
+        name=composed.get('machine') or name,
         coordinates=coordinates,
         subscriptions=subscriptions,
         features=frozenset(feature for feature in FEATURES if composed.get(feature) is True),
         flags=flags,
-        requirements=requirements(flag_data or {}, declared.get('machine') or name, coordinates),
+        requirements=requirements(flag_data or {}, composed.get('machine') or name, coordinates),
         source=source,
         profiles=composition.profiles,
-        auth_origins=composition.origins.get('auth', {}),
+        declarers=composition.declarers,
         auth=auth,
         check_schedule=check_schedule,
     )
@@ -812,13 +794,7 @@ def from_axes(name: str, overrides: Mapping[str, Any], issues: list[DeclarationI
     return point
 
 
-def subscribe(section: str, composition: Composition, name: str, issues: list[DeclarationIssue]) -> Subscription:
-    _, key = SUBSCRIPTIONS[section]
-    subscription = declared_subscription(section, composition.declared, name, issues)
-    return dc.replace(subscription, origins=composition.origins.get(key, {}), origin=composition.key_origins.get(key, ''))
-
-
-def declared_subscription(section: str, declared: Mapping[str, Any], name: str, issues: list[DeclarationIssue]) -> Subscription:
+def subscribe(section: str, declared: Mapping[str, Any], name: str, issues: list[DeclarationIssue]) -> Subscription:
     spelling, key = SUBSCRIPTIONS[section]
 
     if spelling is Spelling.WHOLESALE:
