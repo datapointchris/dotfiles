@@ -7,8 +7,7 @@
 # turn-shell-history-into-shortcuts skill reads.
 #
 # The flat ~/.local/state/zsh/history keeps being written too, so it stays the
-# fallback for anything reading history — `doit kit usage` and `doit review`
-# both prefer atuin and drop back to it on a box where atuin cannot be asked.
+# fallback for anything reading history on a box where atuin cannot be asked.
 
 # History stays on this machine and no `sync_address` names anywhere to send it.
 # This box reaches the other machines by git alone, and what is typed here is not
@@ -17,8 +16,7 @@
 #
 # Local capture is unaffected: Ctrl-R, exit codes, cwd and `atuin stats` all work
 # without an account. `dotfiles auth check` follows this flag and asks for no
-# login. `doit review` and `doit kit` answer about this box alone, since no other
-# box's history reaches it.
+# login.
 auto_sync = false
 
 # dotfiles installs and upgrades atuin from install/packages.yml, so its own
