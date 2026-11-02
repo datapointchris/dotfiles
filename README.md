@@ -114,13 +114,13 @@ See [CLAUDE.md](CLAUDE.md) for the full philosophy (it's longer than it needs to
 
 ## Tool Discovery
 
-Installed something six months ago and forgot about it? `howto` finds it, and `doit` says whether you use it:
+Installed something six months ago and forgot about it? `howto` finds it, and `atuin` says whether you use it:
 
 ```bash
 howto list                # See everything, every collection
 howto show ripgrep        # Details, examples, why you installed it
 howto find git            # Find git-related tools, cards and shortcuts
-doit kit unused           # What you own, can run, and never do
+atuin stats               # What you run most
 ```
 
 Tools are documented with usage examples and tips in the `terminal-library` registry, which `howto library sync` keeps current. It is authored content rather than machine config, so it lives in its own repo and changing it needs no deploy.

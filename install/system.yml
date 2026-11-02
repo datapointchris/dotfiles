@@ -1036,13 +1036,6 @@ user_timers:
     network_trust: fleet
     feature: primary_workstation
     excludes_os_family: windows
-  - name: usage-export
-    description: Export this machine's shell-history usage
-    argv: [doit, kit, digest, export]
-    every: 1d
-    network_trust: fleet
-    feature: primary_workstation
-    excludes_os_family: windows
   - name: worker-health
     description: Whether each headless Claude worker on this machine is still producing
     argv: [uv, run, --project, ~/.claude, python, ~/.claude/hooks/worker-health, --save, --json]
