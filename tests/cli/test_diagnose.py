@@ -209,6 +209,12 @@ def test_an_empty_diagnosis_is_falsey() -> None:
     assert diagnose.Diagnosis(unavailable=('lsof is missing',))
 
 
+@pytest.fixture
+def lsof_timeout_lifted(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Real `lsof` walks every process, so a loaded box outlasts the production bound."""
+    monkeypatch.setattr(diagnose, 'PROBE_TIMEOUT_SECONDS', 60.0)
+
+
 def unavailable_probe() -> str:
     """What is missing here that the holder fixture needs, or '' when nothing is."""
     if not diagnose.shutil.which('lsof'):
@@ -242,6 +248,7 @@ def held_binary(tmp_path: Path) -> tuple[Path, subprocess.Popen[bytes]]:
     return held, child
 
 
+@pytest.mark.usefixtures('lsof_timeout_lifted')
 def test_the_process_holding_a_running_binary_is_named(tmp_path: Path) -> None:
     """The ntfy case, which took three commands by hand: the message named the
     path and nothing said what was holding it."""
@@ -258,6 +265,7 @@ def test_the_process_holding_a_running_binary_is_named(tmp_path: Path) -> None:
         child.wait()
 
 
+@pytest.mark.usefixtures('lsof_timeout_lifted')
 def test_nothing_holding_a_file_is_an_answer_too(tmp_path: Path) -> None:
     """Distinct from a probe that could not run, which is the pairing this asserts."""
     if not diagnose.shutil.which('lsof'):
@@ -287,6 +295,7 @@ def test_a_known_failure_with_no_path_is_returned_untouched() -> None:
     assert diagnose.explain('ghrelease/x', message) == message
 
 
+@pytest.mark.usefixtures('lsof_timeout_lifted')
 def test_a_busy_binary_is_explained_and_the_unit_named(tmp_path: Path) -> None:
     """The ntfy case end to end. The provider's message is kept as the first
     line, because it is what the run actually reported."""
