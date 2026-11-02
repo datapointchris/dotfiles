@@ -129,7 +129,8 @@ def deleted(repo: Path, trees: Iterable[str]) -> tuple[Path, ...]:
 
     `--no-renames`, so a template moved elsewhere counts as deleted from where it
     was. Its old target is only left behind where nothing deploys there now, and
-    the caller decides that. A repo with no history answers with nothing.
+    the caller decides that. A repo with no history answers with nothing, and a
+    shallow clone with only the deletions its history reaches.
     """
     pathspecs = [f'{tree}/*{SUFFIX}' for tree in trees]
     log = run(

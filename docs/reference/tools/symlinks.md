@@ -55,19 +55,18 @@ at the same destinations, written as regular files. A copy is a regular file, so
 ownership can only ever answer *foreign* for one. Provenance is what both target
 refusals and the orphan prune are built out of, so all three go together:
 `--force` is refused at the door, and no copy is ever pruned. A copy at a path
-the repo no longer declares stays where it is. A rendering of a deleted template
-is still pruned there, because the template's history tells it apart from
-somebody's file.
+the repo no longer declares stays where it is.
 
-That last one is deliberate rather than a gap. Nothing on disk distinguishes a
-copy this manager wrote from a file somebody put there, and the Windows box is
+Leaving that copy is deliberate rather than a gap. Nothing on disk distinguishes
+a copy this manager wrote from a file somebody put there, and the Windows box is
 where the only copy of a file this repo cannot regenerate is most likely to be
-sitting.
+sitting. A rendering of a deleted template is still pruned there, because the
+template's history tells it apart from somebody's file.
 
 `dotfiles symlinks unlink` survives the loss by asking a different question.
 Pruning has to ask about a path nothing declares, which is the question a copy
-cannot answer. Unlinking asks only about paths the repo names, and every path
-this mechanism has ever written is one of them.
+cannot answer. Unlinking asks about a copy only at a path the repo declares,
+where comparing bytes answers it.
 
 The module docstring in `src/dotfiles/resources/symlinks.py` carries the rest of
 what copy retires and why each was given up in the open.
@@ -118,11 +117,13 @@ already holds, and a machine that lost it would keep its renderings for good.
 template deletion would need a second edit, and the forgotten edit is the failure
 this prevents.
 
-Two cases fall outside it. A program writing exactly the text a deleted template
-rendered loses that file at the next apply, which matters for a template written
-to equal what a CLI's own login writes. And a machine whose coordinates changed
-after it rendered a template keeps that rendering, because only the directories
-it selects now are searched.
+A program writing exactly the text a deleted template rendered loses that file at
+the next apply. That matters for a template written to equal what a CLI's own
+login writes. A machine whose coordinates changed after it rendered a template
+keeps that rendering, because only the directories it selects now are searched.
+A target the repo still declares is never pruned. So a template replaced by a
+plain file, or moved and edited in one commit, leaves its old rendering to that
+target's own row, which refuses it as somebody's file.
 
 *Rejected:* a `templates/` tree with a resource of its own. It is a second walk
 with a second collision domain and a new CLI noun, and one file's variants would
