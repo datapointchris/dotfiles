@@ -1866,6 +1866,13 @@ go_tools:
     binary_pattern: "helpnav_{version_num}_{os}_{go_arch}.tar.gz"
     description: Browse any CLI's help as a tree and leave with the command typed
 
+  - name: tmux-tree-editor
+    package: github.com/datapointchris/tmux-tree-editor
+    github_repo: datapointchris/tmux-tree-editor
+    binary_pattern: "tmux-tree-editor_{version_num}_{os}_{go_arch}.tar.gz"
+    requires_github_auth: true
+    description: Rearrange tmux sessions, windows and panes in columns, applied on close
+
   - name: bbkt
     package: github.com/datapointchris/bbkt
     github_repo: datapointchris/bbkt

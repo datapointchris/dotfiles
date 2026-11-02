@@ -17,6 +17,7 @@ go_tools:
   - golangci-lint
   - gdu
   - sesh
+  - tmux-tree-editor
   - sops
   - todoui
   - forge
