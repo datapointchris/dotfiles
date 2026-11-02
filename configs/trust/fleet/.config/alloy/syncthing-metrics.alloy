@@ -1,0 +1,43 @@
+// Syncthing's own metrics, scraped from its GUI listener on loopback. The listener
+// answers /metrics with no credential while the GUI sets none, so this file holds
+// no secret. Every series Syncthing serves is kept: each folder's state, summary
+// counts and conflicts, each configured folder and device with its paused flag,
+// and the build's version.
+prometheus.scrape "syncthing" {
+  targets    = [{"__address__" = "127.0.0.1:8384"}]
+  job_name   = "syncthing"
+  forward_to = [otelcol.receiver.prometheus.syncthing.receiver]
+}
+
+// Each sample becomes an OTLP metric point, with the scrape's job as service.name.
+// The scrape forwards no TYPE metadata below the experimental stability level, so
+// every point arrives as a gauge.
+otelcol.receiver.prometheus "syncthing" {
+  output {
+    metrics = [otelcol.processor.transform.syncthing_host_and_counters.input]
+  }
+}
+
+// A scrape sets no host.name, so the machine is added as the resource's, the way
+// the record files name it: the lowercased short hostname.
+//
+// Each counter becomes a cumulative monotonic sum again. Syncthing names every
+// counter it serves with `_total` and no gauge with it, as Prometheus' naming
+// convention asks.
+otelcol.processor.transform "syncthing_host_and_counters" {
+  error_mode = "ignore"
+
+  metric_statements {
+    context    = "resource"
+    statements = [string.format("set(attributes[\"host.name\"], %q)", string.to_lower(string.split(constants.hostname, ".")[0]))]
+  }
+
+  metric_statements {
+    context    = "metric"
+    statements = [`convert_gauge_to_sum("cumulative", true) where IsMatch(metric.name, "_total$")`]
+  }
+
+  output {
+    metrics = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
