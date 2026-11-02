@@ -2,7 +2,7 @@
 
 `place()` is a pure function over window dimensions, the panes already there, and
 what is being placed. That is the whole reason the module is arranged this way:
-the size rule, pair adjacency and the coordinator's promotion are the behavior
+the size rule, pair adjacency and which window a worker may join are the behavior
 worth pinning, and every one of them is reachable here for the cost of building a
 dataclass.
 
@@ -54,12 +54,15 @@ def layout(
     session: str = 'system',
     dedicated: bool = False,
     name: str = '',
-    named: bool = False,
+    opener: str = '',
+    capacity: int = 0,
+    arrivals: tuple[str, ...] = (),
 ):
     """A window laid out the way tmux lays one out.
 
     `columns` is a list of columns, each a list of `(pane_id, role)` or
-    `(pane_id, role, pair)`.
+    `(pane_id, role, pair)`. `opener`, `capacity` and `arrivals` are the seating
+    marks a window opened for a worker carries.
 
     The two axes hand their remainder to opposite ends, and that is tmux's own
     behavior rather than an inconsistency here. Columns are reflowed left to
@@ -108,7 +111,9 @@ def layout(
         dedicated=dedicated,
         panes=tuple(panes),
         name=name,
-        named=named,
+        opener=opener,
+        capacity=capacity,
+        arrivals=arrivals,
     )
 
 
@@ -235,30 +240,52 @@ def test_one_predicate_decides_readable_on_both_axes(tmuxctl):
 # --- the target layout, built one placement at a time ---
 
 
-def test_the_first_worker_goes_beside_the_coordinator(tmuxctl, build, worker_request):
-    window = build('@1', [[('%1', 'coordinator')]])
-    placement = tmuxctl.place([window], worker_request())
+def coordinator_window(build):
+    """A coordinator as `coordinator claim` leaves it: alone with its monitor, in a window it claimed."""
+    return build('@1', [[('%1', 'coordinator')], [('%9', 'monitor')]], dedicated=True, name='billing-coordinator')
 
-    assert placement.window == '@1'
-    assert placement.target == '%1'
+
+def seated(build, columns, window_id='@2', arrivals=None, capacity=2, opener='%1', **kwargs):
+    """A window opened for `opener`'s workers, by default with every worker in it arrived and still there."""
+    if arrivals is None:
+        arrivals = tuple(spec[0] for column in columns for spec in column if spec[1] == 'worker')
+    return build(window_id, columns, opener=opener, capacity=capacity, arrivals=arrivals, **kwargs)
+
+
+def test_a_worker_never_opens_beside_its_caller(tmuxctl, build, worker_request):
+    # Whatever the caller is. A coordinator's window has room for two more
+    # columns here, and an unmarked shell's window as much, and neither is split.
+    for caller in (coordinator_window(build), build('@1', [[('%1', 'unknown')]])):
+        placement = tmuxctl.place([caller], worker_request())
+
+        assert placement.opens_window
+        assert placement.near == '@1', 'the window opens beside the caller, so it lands in its session'
+        assert placement.seating == tmuxctl.Seating(opener='%1', capacity=tmuxctl.PER_WINDOW)
+
+
+def test_the_second_worker_joins_the_first_as_a_new_column(tmuxctl, build, worker_request):
+    window = seated(build, [[('%2', 'worker')]])
+    placement = tmuxctl.place([coordinator_window(build), window], worker_request())
+
+    assert placement.window == '@2'
+    assert placement.target == '%2'
     assert placement.direction is tmuxctl.Direction.BESIDE
     assert placement.size == tmuxctl.even_share(WINDOW, 2)
+    assert placement.seating.arrived == ('%2',)
     assert placement.readable
 
 
-def test_the_second_worker_makes_the_third_column(tmuxctl, build, worker_request):
-    window = build('@1', [[('%1', 'coordinator')], [('%2', 'worker'), ('%3', 'reviewer', '%2')]])
-    placement = tmuxctl.place([window], worker_request())
+def test_the_third_worker_opens_another_window(tmuxctl, build, worker_request):
+    full = seated(build, [[('%2', 'worker')], [('%4', 'worker')]])
+    placement = tmuxctl.place([coordinator_window(build), full], worker_request())
 
-    assert placement.window == '@1'
-    assert placement.size == tmuxctl.even_share(WINDOW, 3) == 125
-    assert placement.promote is None
-    assert placement.readable
+    assert tmuxctl.free_columns(full) > 0, 'the window has a readable column left, so the seats are what refuse'
+    assert placement.opens_window
 
 
 def test_a_new_column_splits_the_rightmost_pane_this_tool_placed(tmuxctl, build, worker_request):
-    window = build('@1', [[('%1', 'coordinator')], [('%2', 'worker'), ('%3', 'reviewer', '%2')]])
-    placement = tmuxctl.place([window], worker_request())
+    window = seated(build, [[('%2', 'worker'), ('%3', 'reviewer', '%2')]])
+    placement = tmuxctl.place([coordinator_window(build), window], worker_request())
 
     # The worker, not its reviewer: a column is split at its top pane so the new
     # column arrives beside the whole pair rather than beside its lower half.
@@ -308,66 +335,58 @@ def test_the_readability_boundary_for_a_pair_is_where_fits_down_puts_it(tmuxctl,
     assert not tmuxctl.place([short], reviewer_request('%2', caller='%2')).readable
 
 
-# --- overflow: the third pair promotes the coordinator ---
+# --- which window a worker joins, and which it never does ---
 
 
-def full_window(build, window_id: str = '@1', session: str = 'system'):
-    """The measured target layout: a coordinator and two pairs, all three columns used."""
-    return build(
-        window_id,
-        [
-            [('%1', 'coordinator')],
-            [('%2', 'worker'), ('%3', 'reviewer', '%2')],
-            [('%4', 'worker'), ('%5', 'reviewer', '%4')],
-        ],
-        session=session,
-    )
+def test_a_window_that_lost_a_worker_takes_no_other(tmuxctl, build, worker_request):
+    # Three seats and one worker present, so only the loss refuses. A window
+    # refilled after a close would carry a name listing work that is gone.
+    window = seated(build, [[('%2', 'worker')]], arrivals=('%2', '%4'), capacity=3)
+    placement = tmuxctl.place([coordinator_window(build), window], worker_request())
+
+    assert window.lost_a_worker
+    assert tmuxctl.free_columns(window) > 0
+    assert placement.opens_window
 
 
-def test_a_third_pair_moves_the_coordinator_out_rather_than_opening_a_window(tmuxctl, build, worker_request):
-    placement = tmuxctl.place([full_window(build)], worker_request())
+def test_per_window_one_is_a_window_of_its_own_from_both_sides(tmuxctl, build, worker_request):
+    # A window opened to seat one takes nobody else, and a request for one joins nobody.
+    alone = seated(build, [[('%2', 'worker')]], capacity=1)
+    roomy = seated(build, [[('%4', 'worker')]], window_id='@3')
 
-    assert placement.promote is not None
-    assert placement.promote.pane == '%1'
-    assert not placement.opens_window
-    assert placement.window == '@1'
-
-
-def test_the_third_pair_takes_the_column_the_coordinator_vacated(tmuxctl, build, worker_request):
-    placement = tmuxctl.place([full_window(build)], worker_request())
-
-    # Three pairs in that window afterwards, at the same 125 columns the
-    # coordinator and two pairs had. The freed column is reused, not left empty.
-    assert placement.size == tmuxctl.even_share(WINDOW, 3)
-    # Split off the rightmost pair, so the new column arrives on the right rather
-    # than pushing both existing pairs sideways.
-    assert placement.target == '%4'
-    assert placement.readable
+    assert tmuxctl.place([coordinator_window(build), alone], worker_request()).opens_window
+    assert tmuxctl.place([coordinator_window(build), roomy], worker_request(per_window=1)).opens_window
+    assert not tmuxctl.place([coordinator_window(build), roomy], worker_request()).opens_window
 
 
-def test_the_promotion_moves_the_coordinator_and_never_the_pane_that_called(tmuxctl, build, worker_request):
-    # A worker that dispatches would otherwise break itself out of the pairs
-    # window and take the dashboard with it.
-    window = full_window(build)
-    for caller in ('%1', '%2', '%4'):
-        placement = tmuxctl.place([window], worker_request(caller=caller))
-        assert placement.promote.pane == '%1', f'{caller} promoted {placement.promote.pane}'
+def test_a_seat_is_never_taken_where_the_column_would_be_unreadable(tmuxctl, build, worker_request):
+    # Three seats asked for, and a 250-column client holds two readable columns.
+    wide = seated(build, [[('%2', 'worker')], [('%4', 'worker')]], capacity=3)
+    narrow = seated(build, [[('%2', 'worker')], [('%4', 'worker')]], capacity=3, width=250)
+
+    joined = tmuxctl.place([coordinator_window(build), wide], worker_request(per_window=3))
+    assert joined.window == '@2'
+    assert joined.size == tmuxctl.even_share(WINDOW, 3)
+    assert tmuxctl.place([coordinator_window(build), narrow], worker_request(per_window=3)).opens_window
 
 
-def test_the_promoted_coordinator_gets_one_minimum_slot_of_monitor_beside_it(tmuxctl, build, worker_request):
-    placement = tmuxctl.place([full_window(build)], worker_request())
+def test_another_callers_worker_window_is_never_joined(tmuxctl, build, worker_request):
+    # Two coordinators in one tmux session keep their work apart.
+    theirs = seated(build, [[('%2', 'worker')]], opener='%8')
+    placement = tmuxctl.place([coordinator_window(build), theirs], worker_request())
 
-    assert placement.promote.monitor_width == tmuxctl.MIN_COLUMNS
-    assert placement.promote.monitor_command == tmuxctl.MONITOR_COMMAND
-    # The coordinator keeps everything the monitor and its divider do not take,
-    # which is still well over a readable width on this client.
-    assert tmuxctl.readable(WINDOW - tmuxctl.MIN_COLUMNS - 1, HEIGHT)
+    assert placement.opens_window
 
 
-def test_a_promoted_window_is_never_placed_into_even_with_no_monitor_in_it(tmuxctl, build):
+def test_a_per_window_under_one_refuses(tmuxctl, build, worker_request):
+    with pytest.raises(tmuxctl.Usage) as raised:
+        tmuxctl.place([coordinator_window(build)], worker_request(per_window=0))
+    assert refusal(tmuxctl, raised) is tmuxctl.Refusal.BAD_PER_WINDOW
+
+
+def test_a_claimed_window_is_never_placed_into_even_with_no_monitor_in_it(tmuxctl, build):
     # The monitor is best effort, so it cannot be what marks the window. A machine
-    # without the binary would otherwise get the next pair placed on top of the
-    # coordinator that was just moved out.
+    # without the binary still gets a window no worker lands in.
     with_monitor = build('@2', [[('%1', 'coordinator')], [('%9', 'monitor')]], dedicated=True)
     without_monitor = build('@2', [[('%1', 'coordinator')]], dedicated=True)
 
@@ -378,152 +397,61 @@ def test_a_promoted_window_is_never_placed_into_even_with_no_monitor_in_it(tmuxc
     assert tmuxctl.eligible(build('@2', [[('%1', 'coordinator')]]))
 
 
-def test_a_fourth_pair_opens_a_window_because_nothing_is_left_to_promote(tmuxctl, build, worker_request):
-    pairs = build(
-        '@1',
-        [
-            [('%2', 'worker'), ('%3', 'reviewer', '%2')],
-            [('%4', 'worker'), ('%5', 'reviewer', '%4')],
-            [('%6', 'worker'), ('%7', 'reviewer', '%6')],
-        ],
-    )
-    promoted = build('@2', [[('%1', 'coordinator')], [('%9', 'monitor')]], dedicated=True)
-    placement = tmuxctl.place([pairs, promoted], worker_request())
-
-    assert placement.opens_window
-    assert placement.promote is None
-    assert placement.size is None, 'nothing is divided, so a number there would measure a window that does not exist'
-    assert placement.near == '@2'
-
-
-def test_a_fifth_pair_fills_the_overflow_window_rather_than_opening_another(tmuxctl, build, worker_request):
-    # The overflow window is a candidate like any other, not a place things were
-    # sent once. Opening a window per pair would leave a row of windows holding
-    # one agent each, and every one of those is a window to switch to.
-    full = build(
-        '@1',
-        [
-            [('%2', 'worker'), ('%3', 'reviewer', '%2')],
-            [('%4', 'worker'), ('%5', 'reviewer', '%4')],
-            [('%6', 'worker'), ('%7', 'reviewer', '%6')],
-        ],
-    )
-    overflow = build('@3', [[('%10', 'worker'), ('%11', 'reviewer', '%10')]])
-    promoted = build('@2', [[('%1', 'coordinator')], [('%9', 'monitor')]], dedicated=True)
-    placement = tmuxctl.place([full, overflow, promoted], worker_request())
-
-    assert placement.window == '@3'
-    assert not placement.opens_window
-    assert placement.size == tmuxctl.even_share(WINDOW, 2)
-
-
-def test_the_coordinator_is_never_moved_back_when_a_pair_finishes(tmuxctl, build, worker_request):
-    # Room opens up in the pairs window and the coordinator stays where it is.
-    # Moving out is triggered by need; moving back is triggered by nothing, and a
-    # layout that reflowed on every completion would move everything under the
-    # eye reading it.
-    pairs = build('@1', [[('%2', 'worker'), ('%3', 'reviewer', '%2')]])
-    promoted = build('@2', [[('%1', 'coordinator')], [('%9', 'monitor')]], dedicated=True)
-    placement = tmuxctl.place([pairs, promoted], worker_request())
-
-    assert placement.window == '@1'
-    assert placement.promote is None
-
-
 # --- a window is named for the work in it, once, when a worker lands ---
 
 
-def coordinator_beside_a_hand_made_pane(build):
-    """The coordinator's window as it usually is: shared with a shell, so never placed into."""
-    return build('@1', [[('%1', 'coordinator')], [('%8', 'unknown')]])
-
-
 def test_a_worker_that_opens_a_window_names_it_with_its_work(tmuxctl, build, worker_request):
-    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build)], worker_request(window_name='alpha'))
+    placement = tmuxctl.place([coordinator_window(build)], worker_request(window_name='alpha'))
 
     assert placement.opens_window
     assert placement.title == 'alpha'
 
 
 def test_a_window_opened_for_a_worker_with_no_name_is_called_the_default(tmuxctl, build, worker_request):
-    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build)], worker_request())
+    placement = tmuxctl.place([coordinator_window(build)], worker_request())
 
     assert placement.opens_window
     assert placement.title == tmuxctl.WINDOW_NAME
 
 
-def test_a_worker_joining_a_named_window_appends_its_name(tmuxctl, build, worker_request):
-    alpha = build('@2', [[('%2', 'worker')]], name='alpha', named=True)
-    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build), alpha], worker_request(window_name='beta'))
+def test_a_worker_joining_a_window_appends_its_name(tmuxctl, build, worker_request):
+    alpha = seated(build, [[('%2', 'worker')]], name='alpha')
+    placement = tmuxctl.place([coordinator_window(build), alpha], worker_request(window_name='beta'))
 
     assert placement.window == '@2'
     assert placement.title == 'alpha · beta'
 
 
-def test_a_window_nobody_named_takes_the_name_outright(tmuxctl, build, worker_request):
-    # The coordinator's own window before its promotion, named by tmux.conf's
-    # automatic-rename format. Appending would leave the coordinator's title on
-    # the window it later leaves to its workers.
-    home = build('@1', [[('%1', 'coordinator')]], name='Narrate skill overview')
-    placement = tmuxctl.place([home], worker_request(window_name='alpha'))
-
-    assert placement.window == '@1'
-    assert placement.title == 'alpha'
-
-
 def test_a_worker_with_no_name_leaves_an_existing_window_as_it_is(tmuxctl, build, worker_request):
-    alpha = build('@2', [[('%2', 'worker')]], name='alpha', named=True)
-    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build), alpha], worker_request())
+    alpha = seated(build, [[('%2', 'worker')]], name='alpha')
+    placement = tmuxctl.place([coordinator_window(build), alpha], worker_request())
 
     assert placement.window == '@2'
     assert placement.title is None
 
 
 def test_a_name_the_window_already_carries_is_not_added_again(tmuxctl, build, worker_request):
-    # A worker respawned into the same work, after its first pane died and was closed.
-    pair = build('@2', [[('%2', 'worker')]], name='alpha · beta', named=True)
-    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build), pair], worker_request(window_name='alpha'))
+    alpha = seated(build, [[('%2', 'worker')]], name='alpha')
+    placement = tmuxctl.place([coordinator_window(build), alpha], worker_request(window_name='alpha'))
 
     assert placement.window == '@2'
     assert placement.title is None
 
 
 def test_a_reviewer_leaves_its_workers_window_name_alone(tmuxctl, build, reviewer_request):
-    alpha = build('@2', [[('%2', 'worker')]], name='alpha', named=True)
-    placement = tmuxctl.place([coordinator_beside_a_hand_made_pane(build), alpha], reviewer_request('%2', window_name='beta'))
+    alpha = seated(build, [[('%2', 'worker')]], name='alpha')
+    placement = tmuxctl.place([coordinator_window(build), alpha], reviewer_request('%2', window_name='beta'))
 
     assert placement.title is None
-
-
-def test_the_promoted_coordinator_window_never_carries_a_workers_name(tmuxctl, build, worker_request):
-    placement = tmuxctl.place([full_window(build)], worker_request(window_name='gamma'))
-
-    assert placement.promote.window_name == f'{tmuxctl.WINDOW_NAME}-coordinator'
-    # The worker's name goes on the window the coordinator vacated, where the worker lands.
-    assert placement.title == 'gamma'
 
 
 # --- density is a ceiling, not a target ---
 
 
-def test_a_pair_alone_in_a_window_keeps_the_whole_width(tmuxctl, build):
-    window = build('@1', [[('%2', 'worker'), ('%3', 'reviewer', '%2')]])
-    assert window.columns[0][0].width == WINDOW
-    assert tmuxctl.even_share(WINDOW, 1) == WINDOW
-
-
 def test_a_partly_full_window_is_filled_before_an_emptier_one(tmuxctl, build, worker_request):
-    fuller = build('@1', [[('%2', 'worker')], [('%4', 'worker')]])
-    emptier = build('@3', [[('%6', 'worker')]])
-    placement = tmuxctl.place([emptier, fuller], worker_request(caller='%2'))
-
-    assert placement.window == '@1'
-
-
-def test_a_tie_between_two_roomy_windows_goes_to_the_callers_own(tmuxctl, build, worker_request):
-    mine = build('@3', [[('%1', 'coordinator')]])
-    other = build('@1', [[('%6', 'worker')]])
-    placement = tmuxctl.place([other, mine], worker_request(caller='%1'))
+    fuller = seated(build, [[('%2', 'worker')], [('%4', 'worker')]], window_id='@3', capacity=3)
+    emptier = seated(build, [[('%6', 'worker')]], window_id='@2', capacity=3)
+    placement = tmuxctl.place([coordinator_window(build), emptier, fuller], worker_request(per_window=3))
 
     assert placement.window == '@3'
 
@@ -536,23 +464,14 @@ def test_windows_are_ordered_numerically_so_at_two_comes_before_at_eleven(tmuxct
 
 
 def test_a_worker_never_lands_in_another_tmux_session(tmuxctl, build, worker_request):
-    # Fullness outranks the caller's own window, and without a session term that
-    # sends the pane to a window in a session the caller cannot see.
-    elsewhere = build('@1', [[('%8', 'coordinator')], [('%9', 'worker')]], session='alpha')
-    home = build('@2', [[('%1', 'coordinator')]], session='beta')
+    # A window the caller opened, from a session it has since left, is a pane it
+    # cannot see, in a window it did not mean to touch.
+    elsewhere = seated(build, [[('%2', 'worker')]], session='alpha')
+    home = build('@1', [[('%1', 'coordinator')]], session='beta', dedicated=True)
     placement = tmuxctl.place([elsewhere, home], worker_request(caller='%1'))
 
-    assert placement.window == '@2'
-
-
-def test_a_full_session_opens_a_window_rather_than_borrowing_another_sessions(tmuxctl, build, worker_request):
-    elsewhere = build('@1', [[('%8', 'worker')]], session='alpha')
-    home = full_window(build, '@2', session='beta')
-    placement = tmuxctl.place([elsewhere, home], worker_request(caller='%2'))
-
-    # Promotion first, and it stays inside beta either way.
-    assert placement.window == '@2'
-    assert placement.promote is not None
+    assert placement.opens_window
+    assert placement.near == '@1'
 
 
 # --- a pane this tool did not place ---
@@ -568,11 +487,11 @@ def test_a_window_holding_a_hand_made_pane_is_never_placed_into(tmuxctl, build, 
     # Adding a column reflows every column in the window, so there is no way to
     # place beside somebody's pane without resizing it. Opening a window costs
     # nothing; losing a pane opened by hand is not recoverable.
-    shared = build('@1', [[('%1', 'coordinator')], [('%9', 'unknown')]], width=500)
+    shared = seated(build, [[('%2', 'worker')], [('%8', 'unknown')]], width=500)
     assert tmuxctl.free_columns(shared) > 0, 'the window has room, so eligibility is what refuses'
     assert not tmuxctl.eligible(shared)
 
-    placement = tmuxctl.place([shared], worker_request())
+    placement = tmuxctl.place([coordinator_window(build), shared], worker_request())
     assert placement.opens_window
 
 
@@ -590,43 +509,37 @@ def test_a_window_too_small_for_one_readable_pane_reports_no_room(tmuxctl, build
     assert tmuxctl.free_columns(build('@1', [[('%1', 'coordinator')]], height=20)) == 0
 
 
-def test_a_window_holding_nothing_this_tool_placed_is_left_alone(tmuxctl, build, worker_request):
-    theirs = build('@1', [[('%8', 'unknown')], [('%9', 'unknown')]])
-    mine = build('@2', [[('%1', 'coordinator')]])
-    placement = tmuxctl.place([theirs, mine], worker_request())
-
-    assert not tmuxctl.eligible(theirs)
-    assert placement.window == '@2'
+# --- a coordinator, made only by claiming ---
 
 
-# --- the first dispatch, where nothing carries a mark ---
+def test_a_claim_breaks_a_shared_pane_out_and_keeps_a_lone_one_where_it_is(tmuxctl, build):
+    shared = build('@1', [[('%1', 'unknown')], [('%8', 'unknown')]])
+    alone = build('@1', [[('%1', 'unknown')]])
+
+    broken = tmuxctl.claim([shared], '%1', 'billing')
+    kept = tmuxctl.claim([alone], '%1', 'billing')
+
+    assert broken.breaks_out
+    assert not kept.breaks_out
+    for decided in (broken, kept):
+        assert decided.window_name == 'billing-coordinator'
+        assert decided.monitor == tmuxctl.MONITOR_COMMAND
 
 
-def test_the_first_caller_is_the_coordinator_and_plan_says_so_too(tmuxctl, build, worker_request):
-    # Nothing on a fresh server carries a mark, so without this no window is
-    # eligible and every placement opens one of its own.
-    bare = build('@1', [[('%0', 'unknown')]])
-    placement = tmuxctl.place([bare], worker_request(caller='%0'))
+def test_claiming_again_starts_no_second_monitor(tmuxctl, build):
+    # A coordinator that lost its context claims again before its next spawn.
+    decided = tmuxctl.claim([coordinator_window(build)], '%1', 'invoices')
 
-    assert not placement.opens_window
-    assert placement.target == '%0'
-    assert placement.size == tmuxctl.even_share(WINDOW, 2)
+    assert not decided.breaks_out
+    assert decided.monitor == ''
+    assert decided.window_name == 'invoices-coordinator'
 
 
-def test_a_second_caller_does_not_become_a_second_coordinator(tmuxctl, build, worker_request):
-    # Once the server has a coordinator, an unmarked caller stays unmarked --
-    # otherwise any shell someone dispatched from would crown itself.
-    window = build('@1', [[('%1', 'coordinator')], [('%9', 'unknown')]], session='alpha')
-    crowned = tmuxctl.crown([window], '%9')
-    roles = {pane.pane_id: pane.role for pane in crowned[0].panes}
-
-    assert roles['%9'] is tmuxctl.Role.UNKNOWN
-    assert roles['%1'] is tmuxctl.Role.COORDINATOR
-
-
-def test_crown_leaves_a_marked_caller_exactly_as_it_found_it(tmuxctl, build):
-    window = build('@1', [[('%1', 'coordinator')], [('%2', 'worker')]])
-    assert tmuxctl.crown([window], '%2') == (window,)
+def test_a_subject_that_cannot_be_a_window_name_refuses(tmuxctl, build):
+    for subject in ('', 'two words', '-flag'):
+        with pytest.raises(tmuxctl.Usage) as raised:
+            tmuxctl.claim([build('@1', [[('%1', 'unknown')]])], '%1', subject)
+        assert refusal(tmuxctl, raised) is tmuxctl.Refusal.BAD_SUBJECT
 
 
 # --- what refuses, and why ---
@@ -729,17 +642,22 @@ def test_an_empty_window_keeps_the_only_reading_there_is(tmuxctl):
 def test_a_session_name_with_a_space_in_it_parses_whole(tmuxctl):
     # A tmux session name can hold a space. A field after it would be shifted by
     # its contents, so it is last and the split stops before it.
-    assert tmuxctl.parse_window('@1\t377\t81\t\ttwo words') == ('@1', 377, 81, False, 'two words')
+    assert tmuxctl.parse_window('@1\t377\t81\t\t\t\t\ttwo words').session == 'two words'
     assert tmuxctl.WINDOW_FIELDS.endswith('#{session_name}')
 
 
 def test_a_tab_inside_a_session_name_cannot_shift_a_column(tmuxctl):
-    assert tmuxctl.parse_window('@1\t377\t81\t\tde\tinitiative') == ('@1', 377, 81, False, 'de\tinitiative')
+    window = tmuxctl.parse_window('@1\t377\t81\t\t\t\t\tde\tinitiative')
+    assert (window.width, window.height, window.session) == (377, 81, 'de\tinitiative')
 
 
-def test_a_dedicated_window_is_read_off_its_own_option(tmuxctl):
-    assert tmuxctl.parse_window('@1\t377\t81\tcoordinator\tsystem')[3] is True
-    assert tmuxctl.parse_window('@1\t377\t81\t\tsystem')[3] is False
+def test_the_window_marks_are_read_off_their_own_options(tmuxctl):
+    assert tmuxctl.parse_window('@1\t377\t81\tcoordinator\t\t\t\tsystem').dedicated
+    bare = tmuxctl.parse_window('@1\t377\t81\t\t\t\t\tsystem')
+    assert (bare.dedicated, bare.opener, bare.capacity, bare.arrivals) == (False, '', 0, ())
+
+    seated = tmuxctl.parse_window('@2\t377\t81\t\t%1\t2\t%3 %5\tsystem')
+    assert (seated.opener, seated.capacity, seated.arrivals) == ('%1', 2, ('%3', '%5'))
 
 
 def test_only_one_free_text_field_is_ever_asked_for(tmuxctl):
@@ -818,12 +736,17 @@ def recorded(tmuxctl, monkeypatch):
     return run
 
 
+def joining(build, columns=None, name=''):
+    """A coordinator and one window of its workers with a seat left, so a worker placed now splits."""
+    return [coordinator_window(build), seated(build, columns or [[('%2', 'worker')]], name=name)]
+
+
 def test_every_target_is_a_pane_or_window_id_and_never_an_index(tmuxctl, build, worker_request, recorded):
     # Indices renumber on every split, so an index read before one names a
     # different pane after it. Measured while the geometry for this was taken:
     # splitting index 2 and then targeting index 3 hit the first column's lower
     # half rather than the second column.
-    calls = recorded(tmuxctl.place([full_window(build)], worker_request()))
+    calls = recorded(tmuxctl.place(joining(build), worker_request()))
 
     targets = [call[call.index('-t') + 1] for call in calls if '-t' in call]
     assert targets, 'nothing was targeted at all, so this proves nothing'
@@ -831,8 +754,7 @@ def test_every_target_is_a_pane_or_window_id_and_never_an_index(tmuxctl, build, 
 
 
 def test_the_new_pane_is_named_by_tmux_rather_than_matched_back_afterwards(tmuxctl, build, worker_request, recorded):
-    window = build('@1', [[('%1', 'coordinator')]])
-    calls = recorded(tmuxctl.place([window], worker_request()))
+    calls = recorded(tmuxctl.place(joining(build), worker_request()))
 
     split = next(call for call in calls if 'split-window' in call)
     assert '-P' in split
@@ -853,8 +775,7 @@ def test_the_placed_pane_carries_its_role_on_itself(tmuxctl, build, reviewer_req
 def test_a_new_column_is_split_without_a_size_and_reflowed_afterwards(tmuxctl, build, worker_request, recorded):
     # Asking tmux for a column wider than the pane being split is refused
     # outright, and a reflow would overwrite the requested size anyway.
-    window = build('@1', [[('%1', 'coordinator')]])
-    calls = recorded(tmuxctl.place([window], worker_request()))
+    calls = recorded(tmuxctl.place(joining(build), worker_request()))
 
     split = next(call for call in calls if 'split-window' in call)
     assert '-l' not in split
@@ -876,8 +797,7 @@ def test_a_new_column_spans_the_full_window_height(tmuxctl, build, worker_reques
     # Without `-f`, `split-window -h` splits the pane rather than the window, and
     # the top pane of a stacked pair owns only the upper half of its column. A
     # second pair placed that way measured 125x20 beside a 251-wide reviewer.
-    window = build('@1', [[('%1', 'coordinator')], [('%2', 'worker'), ('%3', 'reviewer', '%2')]])
-    calls = recorded(tmuxctl.place([window], worker_request()))
+    calls = recorded(tmuxctl.place(joining(build, [[('%2', 'worker'), ('%3', 'reviewer', '%2')]]), worker_request()))
 
     assert '-f' in next(call for call in calls if 'split-window' in call)
 
@@ -891,21 +811,22 @@ def test_a_reviewer_is_never_spanned_across_the_window(tmuxctl, build, reviewer_
     assert '-f' not in next(call for call in calls if 'split-window' in call)
 
 
-def test_a_promotion_marks_its_window_before_it_starts_the_monitor(tmuxctl, build, worker_request, recorded):
-    calls = recorded(tmuxctl.place([full_window(build)], worker_request()))
+def test_a_claim_dedicates_its_window_before_it_starts_the_monitor(tmuxctl, build, recorded):
+    tmuxctl.perform_claim(tmuxctl.claim([build('@1', [[('%1', 'unknown')], [('%8', 'unknown')]])], '%1', 'billing'))
+    calls = recorded.calls
 
     verbs = [call[1] for call in calls]
     assert verbs.index('break-pane') < verbs.index('split-window')
     broken = next(call for call in calls if 'break-pane' in call)
     assert broken[broken.index('-s') + 1] == '%1'
-    assert '-d' in broken, 'the coordinator is mid-turn, so the focus stays where it was'
+    assert broken[broken.index('-n') + 1] == 'billing-coordinator'
 
     dedication = next(call for call in calls if 'set-option' in call and '-w' in call)
     assert dedication[-2:] == [f'@{tmuxctl.WINDOW_ROLE}', 'coordinator']
     assert calls.index(dedication) < verbs.index('split-window')
 
 
-def test_a_monitor_command_with_an_argument_is_resolved_by_its_first_word(tmuxctl, build, worker_request, monkeypatch, recorded):
+def test_a_monitor_command_with_an_argument_is_resolved_by_its_first_word(tmuxctl, build, monkeypatch, recorded):
     # `shutil.which` takes a binary name, so a value carrying an argument came
     # back missing while the shell tmux runs it through would have found it.
     seen: list[str] = []
@@ -917,45 +838,37 @@ def test_a_monitor_command_with_an_argument_is_resolved_by_its_first_word(tmuxct
         return f'/usr/bin/{name}' if name in ('btop', 'tmux') else None
 
     monkeypatch.setattr(tmuxctl.shutil, 'which', which)
-    placement = tmuxctl.place([full_window(build)], worker_request(monitor_command='btop --utf-force'))
-    calls = recorded(placement)
+    tmuxctl.perform_claim(tmuxctl.claim([build('@1', [[('%1', 'unknown')]])], '%1', 'billing', 'btop --utf-force'))
 
     assert 'btop' in seen
-    monitor = [call for call in calls if 'split-window' in call and 'btop --utf-force' in call]
+    monitor = [call for call in recorded.calls if 'split-window' in call and 'btop --utf-force' in call]
     assert monitor, 'the monitor never started, so a command with a flag cannot carry one'
 
 
 def test_a_new_window_opens_beside_the_caller_so_it_lands_in_that_session(tmuxctl, build, worker_request, recorded):
-    pairs = build(
-        '@1',
-        [
-            [('%2', 'worker'), ('%3', 'reviewer', '%2')],
-            [('%4', 'worker'), ('%5', 'reviewer', '%4')],
-            [('%6', 'worker'), ('%7', 'reviewer', '%6')],
-        ],
-    )
-    promoted = build('@2', [[('%1', 'coordinator')], [('%9', 'monitor')]], dedicated=True)
-    calls = recorded(tmuxctl.place([pairs, promoted], worker_request()))
+    calls = recorded(tmuxctl.place([coordinator_window(build)], worker_request()))
 
     opened = next(call for call in calls if 'new-window' in call)
-    assert opened[opened.index('-t') + 1] == '@2'
+    assert opened[opened.index('-t') + 1] == '@1'
     assert '-a' in opened
 
 
-def test_a_joined_window_is_renamed_only_once_the_command_is_running(tmuxctl, build, worker_request, recorded):
-    # Renamed before the split, a refused split would leave the window naming a
-    # worker that never arrived.
-    alpha = build('@2', [[('%2', 'worker')]], name='alpha', named=True)
-    calls = recorded(tmuxctl.place([coordinator_beside_a_hand_made_pane(build), alpha], worker_request(window_name='beta')))
+def test_a_joined_window_is_renamed_and_seated_only_once_the_command_is_running(tmuxctl, build, worker_request, recorded):
+    # Written before the split, a refused split would leave the window naming,
+    # and counting, a worker that never arrived.
+    calls = recorded(tmuxctl.place(joining(build, name='alpha'), worker_request(window_name='beta')))
 
     verbs = [call[1] for call in calls]
     assert calls[verbs.index('rename-window')][2:] == ['-t', '@2', 'alpha · beta']
     assert verbs.index('respawn-pane') < verbs.index('rename-window')
 
+    arrivals = next(call for call in calls if f'@{tmuxctl.WINDOW_ARRIVALS}' in call)
+    assert arrivals[-1] == '%2 %99', 'the pane tmux just made is added to the window it joined'
+    assert verbs.index('respawn-pane') < calls.index(arrivals)
+
 
 def test_the_command_reaches_the_pane_as_one_quoted_argument(tmuxctl, build, worker_request, recorded):
-    window = build('@1', [[('%1', 'coordinator')]])
-    calls = recorded(tmuxctl.place([window], worker_request()), command=('claude', 'read the brief'))
+    calls = recorded(tmuxctl.place([coordinator_window(build)], worker_request()), command=('claude', 'read the brief'))
 
     respawn = next(call for call in calls if 'respawn-pane' in call)
     assert respawn[-1] == "claude 'read the brief'"
@@ -963,21 +876,19 @@ def test_the_command_reaches_the_pane_as_one_quoted_argument(tmuxctl, build, wor
 
 
 def test_the_command_starts_only_once_the_pane_keeps_its_corpse(tmuxctl, build, worker_request, recorded):
-    window = build('@1', [[('%1', 'coordinator')]])
-    calls = recorded(tmuxctl.place([window], worker_request()), command=('claude', 'read the brief'))
+    calls = recorded(tmuxctl.place([coordinator_window(build)], worker_request()), command=('claude', 'read the brief'))
 
-    split = next(call for call in calls if 'split-window' in call)
+    opened = next(call for call in calls if 'new-window' in call)
     keep = next(call for call in calls if 'remain-on-exit' in call)
     respawn = next(call for call in calls if 'respawn-pane' in call)
-    assert split[-1] == tmuxctl.PLACEHOLDER_COMMAND
+    assert opened[-1] == tmuxctl.PLACEHOLDER_COMMAND
     assert calls.index(keep) < calls.index(respawn)
 
 
 def test_the_pane_is_read_back_and_compared_against_what_was_announced(tmuxctl, build, worker_request, monkeypatch):
     # `place()` announces a size and nothing below it was held to that number.
     # The read-back is what makes a mismatch reportable rather than invisible.
-    window = build('@1', [[('%1', 'coordinator')]])
-    placement = tmuxctl.place([window], worker_request())
+    placement = tmuxctl.place(joining(build), worker_request())
 
     class Completed:
         def __init__(self, stdout):
@@ -1091,27 +1002,36 @@ def test_running_outside_tmux_refuses_with_its_own_reason(tmuxctl, monkeypatch):
 # --- the command surface ---
 
 
-PANE_VERBS = ('list', 'current', 'plan', 'open', 'status', 'read', 'close', 'release')
-"""Every verb under the `pane` resource, so a new one cannot be added without a
-help screen. Each test below walks all of them rather than a sample."""
+def verbs(parser) -> dict[str, list[str]]:
+    """Every resource and the verbs under it, read off the parser.
+
+    argparse exposes subcommands only through the private action list. A
+    hand-written list is the alternative, and a verb added later would then go
+    unwalked until somebody remembered this file.
+    """
+
+    def under(node) -> dict:
+        return next(action.choices for action in node._actions if isinstance(getattr(action, 'choices', None), dict))
+
+    return {resource: sorted(under(node)) for resource, node in under(parser).items()}
 
 
 def test_a_node_with_something_under_it_prints_that_rather_than_erroring(tmuxctl, capsys):
     # A namespace can be walked down one token at a time only if every level
     # answers with what is beneath it, so neither the root nor the resource is
     # a usage error on its own.
-    assert tmuxctl.build_parser().parse_args([]).resource is None
-    assert tmuxctl.build_parser().parse_args(['pane']).pane_verb is None
-
     parser = tmuxctl.build_parser()
+    assert parser.parse_args([]).resource is None
     parser.print_help()
-    assert 'pane' in capsys.readouterr().out
+    root = capsys.readouterr().out
 
-    with pytest.raises(SystemExit):
-        parser.parse_args(['pane', '--help'])
-    printed = capsys.readouterr().out
-    for verb in PANE_VERBS:
-        assert verb in printed, f'{verb} is missing from the resource screen'
+    for resource, leaves in verbs(parser).items():
+        assert resource in root, f'{resource} is missing from the root screen'
+        with pytest.raises(SystemExit):
+            parser.parse_args([resource, '--help'])
+        printed = capsys.readouterr().out
+        for verb in leaves:
+            assert verb in printed, f'{verb} is missing from the {resource} screen'
 
 
 def test_every_screen_carries_an_example(tmuxctl, capsys):
@@ -1121,20 +1041,14 @@ def test_every_screen_carries_an_example(tmuxctl, capsys):
     parser.print_help()
     assert 'tmuxctl pane plan worker' in capsys.readouterr().out
 
-    for verb in PANE_VERBS:
-        with pytest.raises(SystemExit):
-            parser.parse_args(['pane', verb, '--help'])
-        screen = capsys.readouterr().out
-        assert 'tmuxctl pane plan worker' in screen, f'{verb} --help carries no example'
-        assert screen.strip().splitlines()[0].startswith('usage:')
-
-
-def test_every_verb_says_what_it_does_and_not_only_what_it_is_called(tmuxctl, capsys):
-    parser = tmuxctl.build_parser()
-    for verb in PANE_VERBS:
-        with pytest.raises(SystemExit):
-            parser.parse_args(['pane', verb, '--help'])
-        assert len(capsys.readouterr().out) > 400, f'{verb} --help is a flag list with no prose'
+    for resource, leaves in verbs(parser).items():
+        for verb in leaves:
+            with pytest.raises(SystemExit):
+                parser.parse_args([resource, verb, '--help'])
+            screen = capsys.readouterr().out
+            assert 'tmuxctl pane plan worker' in screen, f'{resource} {verb} --help carries no example'
+            assert screen.strip().splitlines()[0].startswith('usage:')
+            assert len(screen) > 400, f'{resource} {verb} --help is a flag list with no prose'
 
 
 def test_the_nouns_on_a_screen_are_defined_on_it(tmuxctl, capsys):
@@ -1211,17 +1125,20 @@ def test_release_drops_the_marks_and_the_window_dedication(tmuxctl, monkeypatch)
         if 'list-panes' in argv:
             return Completed('@1\t%1\t0\t0\t377\t80\tcoordinator\t\t\n@1\t%9\t0\t0\t377\t80\t\t\t\n')
         if 'list-windows' in argv:
-            return Completed('@1\t377\t81\tcoordinator\tsystem\n')
+            return Completed('@1\t377\t81\tcoordinator\t\t\t\tsystem\n@2\t377\t81\t\t%1\t2\t%4\tsystem\n@3\t377\t81\t\t\t\t\tsystem\n')
         return Completed('')
 
     monkeypatch.setattr(tmuxctl.subprocess, 'run', record)
     monkeypatch.setattr(tmuxctl.shutil, 'which', lambda name: f'/usr/bin/{name}')
 
-    assert tmuxctl.release([]) == 2
+    assert tmuxctl.release([]) == 3, 'one pane and two windows carried a mark'
 
     unsets = [call for call in calls if 'set-option' in call]
     assert any('-pu' in call and call[-1] == f'@{tmuxctl.PANE_ROLE}' for call in unsets)
     assert any('-wu' in call and call[-1] == f'@{tmuxctl.WINDOW_ROLE}' for call in unsets)
+    seating = {f'@{tmuxctl.WINDOW_OPENER}', f'@{tmuxctl.WINDOW_CAPACITY}', f'@{tmuxctl.WINDOW_ARRIVALS}'}
+    assert seating <= {call[-1] for call in unsets if '@2' in call}
+    assert not any('@3' in call for call in unsets), 'a window with no mark is left alone'
     # The unmarked pane is left alone, which is the same rule the placement obeys.
     assert not any('%9' in call for call in unsets)
 
@@ -1315,18 +1232,23 @@ def server(tmuxctl, tmux_socket, monkeypatch):
         subprocess.run(['tmux', *blank, '-S', socket, 'kill-server'], capture_output=True, text=True)
 
 
-@needs_tmux
-def test_a_real_first_dispatch_places_beside_the_caller_and_plan_agrees(tmuxctl, server):
-    # `plan` and `open` decided differently on exactly this placement, because one
-    # marked the caller first and the other did not.
-    caller = tmuxctl.caller_pane()
-    before = tmuxctl.place(tmuxctl.read_workspace(), tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller))
-    assert not before.opens_window
-    assert before.size == tmuxctl.even_share(WINDOW, 2)
+def window_of(server, pane: str) -> tuple[str, str]:
+    """The id and name of the window a pane is in, read off the server."""
+    window_id, name = server.run('display-message', '-p', '-t', pane, '#{window_id}\t#{window_name}').split('\t')
+    return window_id, name
 
-    landed = tmuxctl.execute(before, server.idle_command, '')
+
+@needs_tmux
+def test_a_real_first_worker_opens_a_window_of_its_own(tmuxctl, server):
+    caller = tmuxctl.caller_pane()
+    landed = tmuxctl.execute(
+        tmuxctl.place(tmuxctl.read_workspace(), tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)), server.idle_command, ''
+    )
+
     assert landed.as_planned
-    assert sorted((left, width) for width, _, left, _, _ in server.geometry().values()) == [(0, 188), (189, 188)]
+    assert window_of(server, landed.pane)[0] != window_of(server, caller)[0]
+    assert server.geometry()[caller][0] == WINDOW, 'the caller was split'
+    assert landed.width == WINDOW
 
 
 @needs_tmux
@@ -1355,7 +1277,7 @@ def test_a_real_pair_divides_one_column_between_two_readable_halves(tmuxctl, ser
     lower_width, lower_height, lower_left, lower_top, _ = below
 
     assert left == lower_left, 'a reviewer shares its worker column'
-    assert width == lower_width == tmuxctl.even_share(WINDOW, 2)
+    assert width == lower_width == WINDOW
     assert top < lower_top, 'the reviewer sits below its worker, never above it'
     assert height + lower_height + 1 == column, 'the pair divides the column the worker had, less a divider row'
     assert tmuxctl.readable(width, height)
@@ -1363,71 +1285,68 @@ def test_a_real_pair_divides_one_column_between_two_readable_halves(tmuxctl, ser
     assert reviewer.as_planned
 
 
-@needs_tmux
-def test_a_real_second_pair_reaches_the_three_column_target(tmuxctl, server):
+@pytest.fixture
+def dispatch(tmuxctl, server):
+    """Place a pane from the server's first pane, the way `pane open` does, and return what landed."""
     caller = tmuxctl.caller_pane()
-    for _ in range(2):
-        request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-        worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
-        review = tmuxctl.Request(role=tmuxctl.Role.REVIEWER, caller=caller, partner=worker.pane)
-        tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '')
 
-    widths = sorted({width for width, _, _, _, _ in server.geometry().values()})
-    lefts = sorted({left for _, _, left, _, _ in server.geometry().values()})
-    assert widths == [tmuxctl.even_share(WINDOW, 3)]
-    assert lefts == [0, 126, 252]
+    def place(role, name: str = '', partner: str = ''):
+        request = tmuxctl.Request(role=role, caller=caller, partner=partner, window_name=name)
+        return tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
+
+    return place
 
 
 @needs_tmux
-def test_a_real_hand_made_pane_is_never_resized_by_a_placement(tmuxctl, server):
-    # `split-window -h -f` reflows every column, so placing beside a pane opened
-    # by hand is the same act as resizing it. Measured before this refused: a
-    # 200-wide hand-made pane came back at 100.
-    caller = tmuxctl.caller_pane()
-    # Narrow, so the window genuinely has a column left over. A hand-made pane
-    # taking half the window would be refused for having no room, and the test
-    # would pass without the invariant doing any work.
-    server.run('split-window', '-d', '-h', '-l', str(tmuxctl.MIN_COLUMNS), '-t', caller)
-    theirs = {pane: seen[0] for pane, seen in server.geometry().items() if pane != caller and seen[4] == ''}
-    assert theirs, 'the fixture did not produce an unmarked pane'
+def test_a_real_window_seats_two_workers_names_them_once_and_a_third_opens_another(tmuxctl, server, dispatch):
+    alpha = dispatch(tmuxctl.Role.WORKER, 'alpha')
+    assert window_of(server, alpha.pane)[1] == 'alpha'
 
-    request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-    home = next(window for window in tmuxctl.crown(tmuxctl.read_workspace(), caller) if window.holds(caller))
-    assert tmuxctl.free_columns(home) > 0, 'no room left, so eligibility is not what refuses'
+    beta = dispatch(tmuxctl.Role.WORKER, 'beta')
+    assert window_of(server, beta.pane) == window_of(server, alpha.pane)
+    assert window_of(server, alpha.pane)[1] == 'alpha · beta'
+    geometry = server.geometry()
+    assert sorted((geometry[pane][2], geometry[pane][0]) for pane in (alpha.pane, beta.pane)) == [(0, 188), (189, 188)]
 
-    placement = tmuxctl.place(tmuxctl.read_workspace(), request)
-    assert placement.opens_window
+    dispatch(tmuxctl.Role.REVIEWER, partner=alpha.pane)
+    assert window_of(server, alpha.pane)[1] == 'alpha · beta', 'a reviewer leaves the name alone'
 
-    tmuxctl.execute(placement, server.idle_command, '')
-    after = {pane: seen[0] for pane, seen in server.geometry().items()}
-    for pane, width in theirs.items():
-        assert after[pane] == width, f'{pane} was resized from {width} to {after[pane]}'
+    gamma = dispatch(tmuxctl.Role.WORKER, 'gamma')
+    assert window_of(server, gamma.pane)[0] != window_of(server, alpha.pane)[0]
+    assert window_of(server, gamma.pane)[1] == 'gamma'
 
 
 @needs_tmux
-def test_a_real_promotion_dedicates_its_window_without_a_monitor(tmuxctl, server, monkeypatch):
-    # The degraded path: no monitor binary, and the window still has to stop
-    # being a placement target.
+def test_a_real_window_that_lost_a_worker_takes_no_other_and_keeps_its_name(tmuxctl, server, dispatch):
+    alpha = dispatch(tmuxctl.Role.WORKER, 'alpha')
+    beta = dispatch(tmuxctl.Role.WORKER, 'beta')
+    tmuxctl.cmd_close(beta.pane, False)
+
+    gamma = dispatch(tmuxctl.Role.WORKER, 'gamma')
+    assert window_of(server, gamma.pane)[0] != window_of(server, alpha.pane)[0]
+    assert window_of(server, alpha.pane)[1] == 'alpha · beta', 'nothing renames a window after a close'
+
+
+@needs_tmux
+def test_a_real_claim_breaks_out_names_and_watches_and_a_second_claim_adds_nothing(tmuxctl, server, dispatch):
     caller = tmuxctl.caller_pane()
-    for _ in range(2):
-        request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-        worker = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
-        review = tmuxctl.Request(role=tmuxctl.Role.REVIEWER, caller=caller, partner=worker.pane)
-        tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), review), server.idle_command, '')
+    server.run('split-window', '-d', '-h', '-t', caller)
 
-    third = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller, monitor_command='nosuchmonitor-xyz')
-    placement = tmuxctl.place(tmuxctl.read_workspace(), third)
-    assert placement.promote is not None
-    tmuxctl.execute(placement, server.idle_command, '')
+    window, monitor = tmuxctl.perform_claim(tmuxctl.claim(tmuxctl.read_workspace(), caller, 'billing', 'sleep 300'))
+    home = next(found for found in tmuxctl.read_workspace() if found.holds(caller))
+    assert home.window_id == window
+    assert home.name == 'billing-coordinator'
+    assert home.dedicated
+    assert {pane.pane_id: pane.role for pane in home.panes} == {caller: tmuxctl.Role.COORDINATOR, monitor: tmuxctl.Role.MONITOR}
+    assert server.run('display-message', '-p', '-t', caller, '#{window_active}') == '1', 'the view followed the pane it was on'
 
-    homes = [window for window in tmuxctl.read_workspace() if window.holds(caller)]
-    assert len(homes) == 1
-    assert homes[0].dedicated
-    assert not tmuxctl.eligible(homes[0])
+    tmuxctl.perform_claim(tmuxctl.claim(tmuxctl.read_workspace(), caller, 'invoices', 'sleep 300'))
+    again = next(found for found in tmuxctl.read_workspace() if found.holds(caller))
+    assert again.name == 'invoices-coordinator'
+    assert len(again.panes) == 2, 'a second claim started a second monitor'
 
-    # And the next worker does not land on top of the coordinator that just left.
-    following = tmuxctl.place(tmuxctl.read_workspace(), tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller))
-    assert following.window != homes[0].window_id
+    worker = dispatch(tmuxctl.Role.WORKER, 'alpha')
+    assert window_of(server, worker.pane)[0] != window
 
 
 @needs_tmux
@@ -1449,74 +1368,48 @@ def test_a_real_reviewer_that_moved_windows_still_blocks_a_second_one(tmuxctl, s
 
 
 @needs_tmux
-def test_a_real_window_takes_its_first_workers_name_and_appends_the_next(tmuxctl, server):
-    """The caller's window starts on automatic-rename, as a fresh window does.
-
-    The first name replaces the automatic one and switches automatic-rename off,
-    which is what stops the format renaming the window as its panes change. The
-    second reads the first back off the server and appends to it. The reviewer
-    changes nothing.
-    """
+def test_the_command_functions_run_end_to_end_against_a_real_server(tmuxctl, server, capsys):
+    # `cmd_plan`, `cmd_open`, `cmd_claim`, `request_from`, `caller_pane` and
+    # `read_workspace` are reachable from no test of `place()`, because the fault
+    # they carry is in what gets handed to it and what happens to what it returns.
+    parser = tmuxctl.build_parser()
     caller = tmuxctl.caller_pane()
 
-    def place(role, name: str = '', partner: str = ''):
-        request = tmuxctl.Request(role=role, caller=caller, partner=partner, window_name=name)
-        return tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
-
-    def window() -> list[str]:
-        return server.run('display-message', '-p', '-t', caller, '#{automatic-rename}\t#{window_name}').split('\t')
-
-    assert window()[0] == '1', 'the fixture window is not on automatic-rename, so nothing below is tested'
-
-    alpha = place(tmuxctl.Role.WORKER, 'alpha')
-    assert window() == ['0', 'alpha']
-
-    place(tmuxctl.Role.WORKER, 'beta')
-    assert window() == ['0', 'alpha · beta']
-
-    place(tmuxctl.Role.REVIEWER, partner=alpha.pane)
-    assert window() == ['0', 'alpha · beta']
-
-
-@needs_tmux
-def test_the_command_functions_run_end_to_end_against_a_real_server(tmuxctl, server, capsys):
-    # `cmd_plan`, `cmd_open`, `request_from`, `caller_pane` and `read_workspace`
-    # are reachable from no test of `place()`, because the fault they carry is in
-    # what gets handed to it and what happens to what it returns.
-    parser = tmuxctl.build_parser()
-
     assert tmuxctl.cmd_plan(parser.parse_args(['pane', 'plan', 'worker'])) == 0
-    planned = capsys.readouterr().out
-    assert 'beside' in planned
+    assert 'a new window' in capsys.readouterr().out
 
-    opened = parser.parse_args(['pane', 'open', 'worker', '--', *server.idle_command])
+    opened = parser.parse_args(['pane', 'open', 'worker', '--window-name', 'alpha', '--', *server.idle_command])
     assert tmuxctl.cmd_open(opened) == 0
     pane = capsys.readouterr().out.strip()
 
     assert tmuxctl.cmd_list(False) == 0
     listing = capsys.readouterr().out
     assert pane in listing
-    assert 'coordinator' in listing and 'worker' in listing
+    assert f'1 of 2 seats for {caller}' in listing
 
-    # The plan said beside, and the pane the command made is where it said.
-    live = every_pane(tmuxctl)
-    placed = [p for p in live if p.pane_id == pane]
-    assert placed[0].role is tmuxctl.Role.WORKER
-    assert placed[0].width == tmuxctl.even_share(WINDOW, 2)
+    roles = {found.pane_id: found.role for found in every_pane(tmuxctl)}
+    assert roles[pane] is tmuxctl.Role.WORKER
+    assert roles[caller] is tmuxctl.Role.UNKNOWN, 'opening a worker made its caller a coordinator'
+
+    # No monitor binary: the degraded path still gives the coordinator its window.
+    claimed = parser.parse_args(['coordinator', 'claim', 'billing', '--monitor', 'nosuchmonitor-xyz'])
+    assert tmuxctl.COORDINATOR_VERBS['claim'](claimed) == 0
+    assert capsys.readouterr().out.strip() == 'billing-coordinator'
+    home = next(found for found in tmuxctl.read_workspace() if found.holds(caller))
+    assert home.dedicated
+    assert home.name == 'billing-coordinator'
 
 
 @needs_tmux
-def test_a_real_release_clears_every_mark_it_wrote(tmuxctl, server):
+def test_a_real_release_clears_every_mark_it_wrote(tmuxctl, server, dispatch):
     caller = tmuxctl.caller_pane()
-    request = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=caller)
-    tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), request), server.idle_command, '')
-    tmuxctl.mark(caller, tmuxctl.Role.COORDINATOR)
+    dispatch(tmuxctl.Role.WORKER, 'alpha')
+    tmuxctl.perform_claim(tmuxctl.claim(tmuxctl.read_workspace(), caller, 'billing', 'nosuchmonitor-xyz'))
 
-    assert tmuxctl.release([]) >= 2
-    live = every_pane(tmuxctl)
-    roles = {pane.role for pane in live}
-    assert roles == {tmuxctl.Role.UNKNOWN}
-    assert not any(window.dedicated for window in tmuxctl.read_workspace())
+    assert tmuxctl.release([]) >= 4
+    assert {pane.role for pane in every_pane(tmuxctl)} == {tmuxctl.Role.UNKNOWN}
+    marked = [window for window in tmuxctl.read_workspace() if window.dedicated or window.opener or window.arrivals]
+    assert not marked
 
 
 # --- handles: the address that survives what a pane's neighbors do not ---
@@ -1556,8 +1449,8 @@ def test_a_correct_placement_in_an_uneven_window_reports_as_planned(tmuxctl, bui
     # The check exists to catch a placement tmux did not honor. Graded against
     # the share the reflow applies rather than the one the new pane receives, it
     # fired on every correct placement in a window whose width has a remainder.
-    window = build('@1', [[('%1', 'coordinator')]], width=250, height=60)
-    placement = tmuxctl.place([window], worker_request())
+    window = seated(build, [[('%2', 'worker')]], width=250, height=60)
+    placement = tmuxctl.place([coordinator_window(build), window], worker_request())
 
     assert placement.size == tmuxctl.even_share(250, 2)
     assert placement.expect == tmuxctl.final_share(250, 2)
