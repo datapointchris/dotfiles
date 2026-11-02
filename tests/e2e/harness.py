@@ -1036,8 +1036,8 @@ def probe_of(item: DesiredItem) -> str:
 
     A plugin is a checkout and puts nothing on PATH, so `clone.destination` is
     asked where it belongs — the declaration's answer, which TPM is separately
-    *told*, and not a directory named here. Without this the zsh plugins, TPM and
-    tmux-fzf would be silently unexamined, which is coverage the shell script had.
+    *told*, and not a directory named here. Without this the zsh plugins and TPM
+    would be silently unexamined, which is coverage the shell script had.
     Asked home-relative and left that way: `exec_script` exports the container's
     `HOME`, so `"$HOME"` is the one spelling that is right in every environment
     and this stays a pure function of the item.
