@@ -84,7 +84,6 @@ from harness import UNDER_TEST
 from harness import Declared
 from harness import Environment
 from harness import Machine
-from harness import authenticate_git
 from harness import build_base
 from harness import clear_shadow_calls
 from harness import container_name
@@ -327,7 +326,6 @@ def container(request: pytest.FixtureRequest) -> Iterator[Machine]:
                 subject.exec(f'printf %s {shlex.quote(environment.env_file)} > {environment.home}/.env', check=True)
 
         copy_repo(subject)
-        authenticate_git(subject)
         plant_python_shadow(subject)
 
         yield subject
@@ -367,7 +365,6 @@ def builder(request: pytest.FixtureRequest) -> Iterator[Machine]:
     subject = Machine(environment=exchange.BUILDER, container=name)
     try:
         copy_repo(subject)
-        authenticate_git(subject)
         exchange.install_uv(subject)
         exchange.serve_shelf(subject)
         # Its own shelf by the same name the peer uses, so one script and one
@@ -561,7 +558,6 @@ def over_base(base: str, container_environment: Environment) -> Iterator[Machine
     subject = Machine(environment=container_environment, container=name)
     try:
         copy_repo(subject)
-        authenticate_git(subject)
         yield subject
     finally:
         docker('rm', '-f', name)

@@ -1,0 +1,11 @@
+# What a shell on a `network_trust: fleet` box adds where someone types at it. A box
+# nobody types at leaves it out: an atuin login there is a red line on every check
+# that nobody acts on, and its history is not worth syncing. A nonfleet box has no
+# account on the sync server to log in to.
+
+go_tools:
+  - sops  # decrypt deployment secrets in place
+
+# Naming a tool is what makes the machine report the login missing until it is done.
+auth:
+  - atuin

@@ -1,0 +1,29 @@
+# A desk Chris owns on a `network_trust: fleet` network: a workstation, a member
+# the coding agents work on, and what only his own desks carry. A box whose system
+# someone else owns takes this too, because nothing here touches the system layer
+# its manifest declares.
+
+profiles: [workstation, fleet-shell, fleet-member, personal-desk-clis]
+
+go_tools:
+  - goose
+  - gopls
+  - sqls
+  - docker-language-server
+
+github_releases:
+  - alloy
+  - gh-dash
+  - ntfy
+  # Chris publishes it, but it opens the terminal before it parses an argument,
+  # so a headless box cannot read its help.
+  - abtop
+
+# The personal data CLIs, each logged in by hand.
+auth:
+  - homelab
+  - icb
+  - learning
+  - meso
+  - nomad
+  - ypl

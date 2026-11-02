@@ -480,11 +480,10 @@ def mount_s3(request: Request) -> Result:
     --version` reports the number in that tag. That is what makes skipping
     possible at all: comparing against the release API costs one request, where
     the alternative is fetching the tarball to find out what is in it.
+
+    macOS never reaches this: the entry excludes darwin, because AWS builds none.
     """
     tarball_url = mount_s3_tarball(request.entry, request.target)
-    if not tarball_url:
-        return Result(True, 'mount-s3 has no macOS build, so nothing is installed here', kind=Kind.UNSUPPORTED_HERE)
-
     installed = evidence.reported_version(request.entry.executable)
     if kept := left_alone(request, installed is not None, tarball_url):
         return kept

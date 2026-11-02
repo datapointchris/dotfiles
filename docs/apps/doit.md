@@ -24,13 +24,13 @@ The cards and Labs went to a second repo,
 traveling with the tool. Content is authored far more often than code. Co-locating them would have
 meant cutting a release every time a card changed.
 
-## A machine gets doit only if its manifest names it
+## A machine gets doit only if its manifest or a profile it takes names it
 
 Six symlinked scripts became one `uv_tools` install from the owner's package index, alongside
 `refcheck` and `safekeep` — category 4 in
 [App Installation Patterns](../learnings/app-installation-patterns.md). That distinction is the one
 to carry. A symlinked app lands on every machine that gets `apps/` symlinks, while a uv tool reaches
-only the machines whose manifest declares it.
+only the machines whose manifest, or a profile it composes, declares it.
 
 ## `register.yml` is config, and config stays out of the repo
 

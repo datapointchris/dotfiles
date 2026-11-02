@@ -1,0 +1,12 @@
+# The shell with its interactive extras switched off, for a box that is SSHed into
+# to diagnose rather than lived in. The plugins stay installed, so turning one back
+# on for a debugging session is a ~/.env edit rather than a reinstall, which is the
+# point of the flag layer sitting on top of the tool lists.
+
+profiles: [shell]
+
+flags:
+  SHELL_VI_MODE: false
+  SHELL_AUTOSUGGESTIONS: false
+  SHELL_SYNTAX_HIGHLIGHTING: false
+  SHELL_FORGIT: false

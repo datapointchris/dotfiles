@@ -33,7 +33,8 @@ separate decision because it is a long networked run, and it is worth seeing
 The manifest decides what a machine gets. They are in `install/manifests/`, and
 `eza -1 install/manifests/` is the current list — one per machine type, ranging
 from a full workstation to `linux-lxc-server`, which installs only the `core`
-package tier.
+package tier. A manifest names the profiles in `install/profiles/` that carry
+the tools several machines share.
 
 There are no manual prerequisites on any platform. The apply sets up Homebrew,
 and writes `ZDOTDIR` into the system zshenv itself, picking `/etc/zsh/zshenv` or

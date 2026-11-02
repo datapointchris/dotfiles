@@ -1,19 +1,10 @@
 machine: scheduler
 platform: linux
 
-# Nobody types here. Same reasoning as linux-lxc-server: the shell exists to be
-# SSHed into when a run goes wrong, not to be lived in. The plugins are still
-# installed, so turning one back on for a debugging session is a ~/.env edit.
-flags:
-  SHELL_VI_MODE: false
-  SHELL_AUTOSUGGESTIONS: false
-  SHELL_SYNTAX_HIGHLIGHTING: false
-  SHELL_FORGIT: false
-
-# The box the fleet's unattended work runs on, rather than a desk. A workstation
-# has to be awake for a weekly sweep to happen at all, and its graders compete
-# with whoever is using it. What that costs this machine is every repo on disk
-# and a grader pool's worth of RAM.
+# The box unattended work runs on, rather than a desk. A workstation has to be
+# awake for a weekly sweep to happen at all, and its graders compete with whoever
+# is using it. What that costs this machine is every repo on disk and a grader
+# pool's worth of RAM.
 #
 # The repos arrive as clones and are graded as clones, which is the same input a
 # worktree gave: `git worktree add` checks out tracked files only, so no gitignored
@@ -22,77 +13,32 @@ flags:
 system_packages: core
 flatpak: false
 
-go_tools:
-  - fleet     # the sweep, the schedule, and the timer that fires them
-  - forge     # the scheduled version check asks it which files carry a version stamp
-  - task      # Taskfile runner used across the repos
-  - gdu       # the clones fill a disk, and this is how that gets diagnosed
-  # The scheduled fix agent commits through the repo's own hooks, and a Go
-  # repo's hooks call these two by name.
-  - gofumpt
-  - golangci-lint
-  - ifiles    # the remote's transport, for `dotfiles bundle serve`
+# Nobody types here, so the shell is lean-shell's and fleet-shell is left out.
+profiles: [lean-shell, repo-checkouts, fleet-member]
+
+custom_installers:
+  # The agent-trailers hook is declared in git config, which Debian 12's git is
+  # too old to run.
+  - git
 
 # Runs `dotfiles bundle serve` as a user unit, the builder restricted machines
 # request bundles from. It reads the token from the service environment.
 serve_bundles: true
 
-git_uv_tools:
-  - claude-code-metrics  # `ccm`, for the weekly scan and friction-check jobs on this box
-  - homelab   # the scheduled CI-runner upgrade applies through it as this box's service client, from service.env
-
-custom_installers:
-  - claude-code   # the grader
-  # The agent-trailers hook is declared in git config, which Debian 12's git is
-  # too old to run.
-  - git
-  - bats          # the commit hook of a repo with tests/*.bats, for the fix job
-
-github_releases:
-  - gh          # GitHub CLI
-  - fzf         # fuzzy finder — backs the shell functions
-  - neovim      # editor for on-box config/log edits
-  # Not tree-sitter: every release nvim-treesitter accepts links a newer glibc than
-  # Debian 12 carries, so the loader refuses it and no parser ever builds. Neovim
-  # highlights with its own syntax files instead. To re-measure a release:
-  # `objdump -T tree-sitter | rg -o 'GLIBC_[0-9.]+' | sort -uV | tail -1`.
-  - glow       # render markdown/docs over SSH
-  - duf         # disk-free at a glance
-  - atuin       # shell history (zsh init expects it)
-  - shellcheck  # debug shell scripts on the box
-  - yq          # the bats suites the fix job's commit hook runs read YAML through mikefarah's yq
-  - syncthing  # replicates the shared directories this box serves
-  - icb         # reads and closes tracked issues as this box's service client, from service.env
-  - ypl         # `ypl server status` as this box's ypl-svc- client, from service.env
-
-cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta]
-
-npm_globals: []
-uv_tools:
-  - pre-commit  # runs a repo's commit hooks when the fix job commits there
-  - doit        # the usage-digest job runs `doit kit digest run` on this box
-  - syncer      # the repos-pull job fast-forwards every checkout on this box through it
-
-shell_plugins: true
-tmux_plugins: true
-yazi_plugins: false
-nvim_plugins: true
-configure_zsh: true
-
-# `gh` for the private repos the sweep clones, `claude` for the graders it spawns.
-# Naming a tool is what makes this machine report the login as missing until it is
-# done, which on a box nobody watches is the difference between a sweep that
-# grades nothing and one that says why.
+# `gh` comes from repo-checkouts, for the private repos the sweep clones, and
+# `claude` is for the graders it spawns. Naming a tool is what makes this machine
+# report the login missing until it is done, which on a box nobody watches is the
+# difference between a sweep that grades nothing and one that says why. icb, ypl,
+# homelab and claude-code-metrics authenticate as this box's service clients from
+# service.env, so none is named.
 #
 # Not atuin. This resource declares a login, and what zsh init needs is the
 # binary — `atuin init zsh` runs and the shell starts clean with no session at
-# all, measured 2026-08-16 on this box. Nobody types here, so there is no history
-# worth syncing to the server, and declaring it produces a red line on every
-# check that nobody will ever act on. The binary stays in `github_releases`.
-# ATUIN_SYNC_ADDRESS still has to be set here: it is required of every fleet
-# machine, and this one shares every coordinate with linux-lxc-server.
+# all, measured 2026-08-16 on this box. There is no history worth syncing to the
+# server, and declaring it produces a red line on every check that nobody will
+# ever act on. ATUIN_SYNC_ADDRESS still has to be set here: it is required of
+# every fleet machine, and this one shares every coordinate with linux-lxc-server.
 auth:
-  - gh
   - claude
 
 # The daily check runs here as one of fleet's scheduled jobs. Its unit loads the

@@ -25,8 +25,8 @@ repos_registry: ~/.local/share/terminal-library-fleet/repos.json
 # version bump be one edit and a sweep instead of a forge release.
 #
 # The binary and this file arrive together, so requiring it strands nothing:
-# install/manifests/ selects forge only for the machines this trust tree
-# deploys to. A machine holding one without the other is mid-provision, and
+# install/manifests/ and the profiles they name select forge only for the
+# machines this trust tree deploys to. A machine holding one without the other is mid-provision, and
 # forge names the key rather than guessing. `forge config show` reports which
 # layer answered.
 versions_file: ~/.local/share/terminal-library-fleet/pinned-versions.json

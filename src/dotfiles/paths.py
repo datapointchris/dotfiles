@@ -63,6 +63,7 @@ PRE_COMMIT_CONFIG = REPO_ROOT / '.pre-commit-config.yaml'
 INSTALL_DIR = REPO_ROOT / 'install'
 PACKAGES_FILE = INSTALL_DIR / 'packages.yml'
 MANIFESTS_DIR = INSTALL_DIR / 'manifests'
+PROFILES_DIR = INSTALL_DIR / 'profiles'
 FLAGS_FILE = INSTALL_DIR / 'flags.yml'
 
 # State rather than cache or data: it survives runs, nobody authored it, and

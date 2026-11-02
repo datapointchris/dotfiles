@@ -1,0 +1,17 @@
+# The CLIs Chris publishes that a headless Linux box can install and read the
+# help of, and nothing else: no shell, no toolchain beyond what the CLIs need, no
+# desktop, no logins. Each file below is also part of the machine profile named
+# in its own name, so a CLI is declared once and reaches both.
+#
+# A published tool stays out of these leaves when a headless box cannot read its
+# help, and sits in its machine profile instead:
+#   webviewrs opens a window on any argument, `--help` included.
+#   abtop opens the terminal before it parses an argument.
+#   asl-language-server is an editor's server, run on the node npm_globals brings.
+# bbkt is wsl-work-workstation's own and lives in that manifest.
+
+profiles:
+  - repo-checkouts-clis
+  - fleet-member-clis
+  - workstation-clis
+  - personal-desk-clis

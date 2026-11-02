@@ -28,7 +28,7 @@ alongside `refcheck` and `syncer` — category 4 in
 [App Installation Patterns](../learnings/app-installation-patterns.md).
 
 That is the difference worth knowing. A symlinked app arrives on every machine that gets `apps/`
-symlinks; a uv tool arrives only where a manifest names it. `linux-lxc-server` deliberately
+symlinks; a uv tool arrives only where a manifest or its profiles name it. `linux-lxc-server` deliberately
 does not, because it takes no Python CLIs at all.
 
 Its terminal style comes from [pytermstyle](https://github.com/datapointchris/pytermstyle), the

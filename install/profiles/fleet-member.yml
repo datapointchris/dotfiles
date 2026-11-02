@@ -1,0 +1,18 @@
+# A box coding agents work on: it replicates the shared directories, runs Claude
+# Code, and commits through each repo's own hooks. Only a `network_trust: fleet`
+# box takes it.
+
+profiles: [fleet-member-clis]
+
+go_tools:
+  # An agent commits through the repo's own hooks, and a Go repo's hooks call
+  # these two by name.
+  - gofumpt
+  - golangci-lint
+
+github_releases:
+  - syncthing
+
+custom_installers:
+  - claude-code
+  - bats  # the commit hook of a repo with tests/*.bats

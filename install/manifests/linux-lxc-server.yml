@@ -1,62 +1,14 @@
 machine: linux-lxc-server
 platform: linux
 
-# Feature flags — overrides for install/flags.yml defaults. A box that exists to
-# be SSHed into for diagnosis wants a fast shell, not a personal one. The
-# plugins are still installed (shell_plugins below), so turning one back on for
-# a debugging session is a ~/.env edit rather than a reinstall — which is the
-# whole point of the flag layer sitting on top of the manifest.
-flags:
-  SHELL_VI_MODE: false
-  SHELL_AUTOSUGGESTIONS: false
-  SHELL_SYNTAX_HIGHLIGHTING: false
-  SHELL_FORGIT: false
-
-# Minimal profile for a headless LXC or small Linux box (Debian/Ubuntu, apt).
-# The goal is a comfortable shell to SSH into and diagnose from — not a full
-# workstation. `system_packages: core` installs only the tier-tagged base from
-# packages.yml (no docker/media/GUI); every tool list below is deliberately
-# short. See docs/learnings/minimal-manifest-for-servers.md.
-
-# Installation
+# A headless LXC or small Linux box (Debian/Ubuntu, apt). The goal is a
+# comfortable shell to SSH into and diagnose from, not a workstation.
+# `system_packages: core` installs only the tier-tagged base from packages.yml, with
+# no docker, media or GUI. See docs/learnings/minimal-manifest-for-servers.md.
 system_packages: core
 flatpak: false
 
-go_tools:
-  - task      # Taskfile runner used across the repos
-  - gdu       # fast disk-usage analyzer (fills-up diagnosis)
-  - sops      # decrypt deployment secrets in place
-
-github_releases:
-  - gh          # GitHub CLI
-  - fzf         # fuzzy finder — backs the shell functions
-  - neovim      # editor for on-box config/log edits
-  - lazygit     # git TUI
-  - yazi        # file-manager TUI
-  - glow        # render markdown/docs over SSH
-  - duf         # disk-free at a glance
-  - atuin       # shell history (zsh init expects it)
-  # Not tree-sitter, for scheduler.yml's reason: these boxes run Debian 12, whose
-  # glibc is older than any release nvim-treesitter accepts links against.
-  - shellcheck # debug shell scripts on the box
-
-custom_installers: []
-
-cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker]
-
-npm_globals: []
-uv_tools: []
-git_uv_tools: []
-
-shell_plugins: true
-tmux_plugins: true
-yazi_plugins: true
-nvim_plugins: true
-configure_zsh: true
-
-# Tools this machine has to be able to log in to. Only atuin: history sync is the
-# whole reason it is installed here rather than left to zsh, and a box that exists
-# to be SSHed into has nothing to do with a GitHub or an AWS credential. Naming a
-# tool is what makes this machine report the login as missing until it is done.
-auth:
-  - atuin
+# fleet-shell's atuin login is the one this box asks for: history sync is the whole
+# reason atuin is here rather than left to zsh, and a box that exists to be SSHed
+# into has nothing to do with a GitHub or an AWS credential.
+profiles: [lean-shell, fleet-shell]

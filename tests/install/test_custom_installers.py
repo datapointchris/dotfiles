@@ -522,15 +522,6 @@ class TestAwscli:
 
 
 class TestMountS3:
-    def test_macos_has_no_build_to_install(self, declared, home, bundle, effected):
-        _, fetches = effected()
-
-        result = custom.install(declared.find('custom_installers', 'mount-s3'), DARWIN)
-
-        assert result.ok
-        assert result.kind is Kind.UNSUPPORTED_HERE
-        assert fetches.urls == []
-
     def test_an_unpinned_signing_key_refuses_the_install(self, declared, home, bundle, effected, monkeypatch):
         """The key is served from the same bucket as the tarball it signs, so
         importing whatever KEYS holds proves only that the bucket agrees with

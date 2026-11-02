@@ -57,8 +57,14 @@ with none of it, so an apply or a check that reaches for that data breaks there.
 | Go app | `packages.yml` `go_tools` | `providers/gotool.py` → `~/go/bin/` |
 | Script app | `apps/common/` or `apps/<axis>/<value>/` | symlinked flat to `~/.local/bin/` by `TREES` in `resources/symlinks.py` |
 | Personal CLI (theme, font) | a function in `providers/custom.py` | clone to `~/.local/share/<tool>/`, symlink the bin |
-| Python tool on a package index | `packages.yml` `uv_tools`, with `index:` naming a `uv_indexes` key, **and** each machine's manifest | `providers/uvtool.py` |
-| Python tool from a private git repo | `packages.yml` `git_uv_tools` **and** each machine's manifest | `providers/uvtool.py` |
+| Python tool on a package index | `packages.yml` `uv_tools`, with `index:` naming a `uv_indexes` key, **and** one profile or manifest | `providers/uvtool.py` |
+| Python tool from a private git repo | `packages.yml` `git_uv_tools` **and** one profile or manifest | `providers/uvtool.py` |
+
+**A tool's name goes in one file: the profile every machine that wants it already takes.** A manifest
+holds only what that machine is and its own tools, and names its profiles from `install/profiles/`.
+A CLI Chris publishes goes in a `<profile>-clis` file, so `fleet-clis` reaches it too. Where no
+profile fits the machines that want it, the boundary moves. `dotfiles machines check` refuses a name
+two files declare. `docs/architecture/index.md` holds why.
 
 An app that is part of the CLI's own surface becomes a module in `src/dotfiles/` with a
 `[project.scripts]` entry; a standalone tool stays in `apps/`. `prs` cannot move at all:

@@ -210,6 +210,13 @@ def supersedes_problems(rows: tuple[str, ...]) -> tuple[str, ...]:
     )
 
 
+def os_family_problems(excluded: str) -> tuple[str, ...]:
+    """An `excludes_os_family` naming no OS family, which would exclude nothing."""
+    if not excluded or excluded in set(axes.AXIS_TYPES['os_family']):
+        return ()
+    return (f'excludes os_family {excluded!r}, which is not an OS family. Known: {", ".join(axes.AXIS_TYPES["os_family"])}',)
+
+
 def repo_segments(value: str) -> list[str]:
     """A `repo`, `github_repo` or `package` field reduced to its path segments.
 
@@ -300,6 +307,19 @@ class Entry:
     version: str = ''
     min_version: str = ''
     max_version: str = ''
+
+    excludes_os_family: str = ''
+    """An OS family this entry can never apply on, because the tool comes from
+    somewhere else there or cannot run at all.
+
+    On the base because a profile names a tool for every machine that takes it,
+    so any section can hold one that a family cannot have, and `plan.available`
+    reads it off every entry. Negative because the positive form names one
+    family, and a row true of two out of three cannot say so without a narrowing
+    language this file does not have. awscli is a Homebrew formula on macOS and
+    AWS's installer elsewhere. `check-schedule` is a systemd timer or a
+    LaunchAgent, and Windows is neither.
+    """
 
     requires_github_auth: bool = False
     """Whether reaching this entry's upstream needs a GitHub login.
@@ -447,6 +467,7 @@ class Entry:
         if self.version_source not in VERSION_SOURCES:
             found.append(f"declares 'version_source' as {self.version_source!r}, which is not one of {', '.join(sorted(VERSION_SOURCES))}")
 
+        found.extend(os_family_problems(self.excludes_os_family))
         return tuple(found)
 
 
@@ -598,17 +619,6 @@ class CustomInstaller(Entry):
     install_url: str = ''
     installed_path: str = ''
     bundle_install_script: bool = False
-
-    excludes_os_family: str = ''
-    """An OS family this installer must never run on, because something else
-    already supplies the tool there.
-
-    Same shape as `excludes_host` on SystemPackage and for the same reason: the
-    entry is not *declined* on that machine, it cannot apply. awscli is the case
-    — a Homebrew formula on macOS and AWS's own 73MB installer everywhere else —
-    and without this the Mac planned it, ran the function, and had it report
-    success having done nothing, on every run of a converged machine.
-    """
 
     @property
     def owner(self) -> str | None:
@@ -969,22 +979,6 @@ class SystemConfig(Entry):
     themselves, so the field went back out under the same rule that admitted it.
     """
 
-    excludes_os_family: str = ''
-    """An OS family this row can never describe, for a row that fits every other.
-
-    The negative form, for the reason `SystemPackage.excludes_host` and
-    `CustomInstaller.excludes_os_family` are negative: the positive fields above
-    name *one* value, and a row true of two families out of three cannot say so
-    without a narrowing language this file deliberately does not have.
-
-    `check-schedule` is the case. It is a systemd user timer or a LaunchAgent, and
-    Windows is neither — the row reached `providers/schedule.py`, took the systemd
-    branch because the dispatch there is a two-way, and was saved from running
-    `systemctl` only by a `which` guard. What it left was `UNKNOWN` on every run of
-    a machine where nothing is wrong and nothing can be repaired, which is the
-    reading `available()` exists to prevent.
-    """
-
     requires_package: str = ''
     """Only where this machine's plan installs that system package. Configuring
     docker's group on a server that never installs docker would create a group
@@ -1011,9 +1005,6 @@ class SystemConfig(Entry):
             for axis, value in self.narrowing.items()
             if value not in set(axes.AXIS_TYPES[axis])
         ]
-        if self.excludes_os_family and self.excludes_os_family not in set(axes.AXIS_TYPES['os_family']):
-            known = ', '.join(axes.AXIS_TYPES['os_family'])
-            wrong.append(f'excludes os_family {self.excludes_os_family!r}, which is not an OS family. Known: {known}')
         return (*wrong, *Entry.problems(self))
 
 

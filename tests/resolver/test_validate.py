@@ -45,12 +45,21 @@ other questions wait for the next run — the same short-circuit the catalog get
 for the same reason."""
 
 
-def tree(root: Path, *, packages: dict[str, Any] | None = None, manifests: dict[str, dict[str, Any]] | None = None) -> Path:
+def tree(
+    root: Path,
+    *,
+    packages: dict[str, Any] | None = None,
+    manifests: dict[str, dict[str, Any]] | None = None,
+    profiles: dict[str, dict[str, Any]] | None = None,
+) -> Path:
     install = root / 'install'
     (install / 'manifests').mkdir(parents=True, exist_ok=True)
     (install / 'packages.yml').write_text(yaml.safe_dump(packages or {}, sort_keys=False))
     for name, content in (manifests or {}).items():
         (install / 'manifests' / f'{name}.yml').write_text(yaml.safe_dump(content, sort_keys=False))
+    for name, content in (profiles or {}).items():
+        (install / 'profiles').mkdir(exist_ok=True)
+        (install / 'profiles' / f'{name}.yml').write_text(yaml.safe_dump(content, sort_keys=False))
     return root
 
 
@@ -128,6 +137,25 @@ def test_a_retired_runtime_gate_is_caught_by_the_manifest_loader(tmp_path: Path,
 # ─────────────────────────────────────────────────────────────────────────────
 # The three questions no single file can answer about itself
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_name_two_manifests_copy_is_an_error_and_an_unused_profile_a_warning(tmp_path: Path) -> None:
+    """Two machines that never compose together each listing `task` is the copy
+    profiles remove, and the hook stops a commit only on an error."""
+    task = [{'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'}]
+    root = tree(
+        tmp_path,
+        packages={'go_tools': task},
+        manifests={name: {**LINUX, 'machine': name, 'go_tools': ['task']} for name in ('one', 'two')},
+        profiles={'orphan': {}},
+    )
+
+    found = validate.declaration(root)
+
+    assert messages(found, Severity.ERROR) == [
+        "go_tools entry 'task' is declared by manifest 'one' and manifest 'two'; name it once, in a profile each machine takes"
+    ]
+    assert messages(found, Severity.WARNING) == ["profile 'orphan' is composed by no manifest, so nothing installs what it declares"]
 
 
 @pytest.mark.parametrize(

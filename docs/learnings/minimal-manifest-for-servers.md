@@ -17,10 +17,11 @@ the gap bit repeatedly.
 
 One minimal manifest, plus a tiered system-package model.
 
-- **`install/manifests/linux-lxc-server.yml`** — the one minimal profile. It exists
-  to be SSHed into and diagnosed from, so every tool list on it is deliberately
-  short, and there is no npm or uv tooling and no GUI installer at all. Read the
-  manifest for what it carries; each line there says why that tool is on a server.
+- **`install/manifests/linux-lxc-server.yml`** — the one minimal manifest. It exists
+  to be SSHed into and diagnosed from, so it takes the lean shell profiles and
+  nothing else: no npm or uv tooling and no GUI installer at all.
+  `install/profiles/shell.yml` is what it carries, and each line there says why
+  that tool is on a server.
 
 - **System-package tiers, one list.** Each entry in `system_packages`
   (`install/packages.yml`) may carry `tier: core`; untagged entries default to
@@ -56,7 +57,8 @@ environment".
 
 ## Related Files
 
-- `install/manifests/linux-lxc-server.yml` — the minimal profile
+- `install/manifests/linux-lxc-server.yml` — the minimal manifest
+- `install/profiles/shell.yml` — the tools every box Chris logs in to carries, a server included
 - `install/packages.yml` — `system_packages` tier convention (`tier: core`)
 - `src/dotfiles/machine.py` — `Subscription.wants`, where the tier narrows the single `system_packages` list
 - `shell/pkg/apt/apt.sh` — the apt layer

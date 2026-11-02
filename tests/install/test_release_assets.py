@@ -29,6 +29,7 @@ import pytest
 from dotfiles import catalog
 from dotfiles import github_release
 from dotfiles import machine as machines
+from dotfiles import plan as planning
 from dotfiles.coordinates import Arch
 from dotfiles.coordinates import OSFamily
 from dotfiles.coordinates import Target
@@ -97,21 +98,21 @@ def strings(asset: ReleaseArtifact) -> tuple[str, ...]:
 def families_asked_for() -> dict[str, frozenset[OSFamily]]:
     """Which OS families a machine in this repo actually installs each release on.
 
-    Read through `machine.subscription(...).wants` rather than off the manifests'
-    keys, for `test_release_urls.build_corpus`'s reason: `true` means the whole
-    section and a list means membership, so re-reading the key would be a second
-    copy of that grammar and the copy that goes wrong first.
+    Read through `machine.subscription(...).wants` and `plan.available` rather
+    than off the manifests' keys, for `test_release_urls.build_corpus`'s reason:
+    `true` means the whole section and a list means membership, so re-reading the
+    key would be a second copy of that grammar and the copy that goes wrong first.
 
     It is what scopes the two distinctness rules below to something true. atuin
     names a linux triple on both branches and win32yank is one Windows binary —
-    neither is a broken branch, and no manifest asks for either on a Mac.
+    neither is a broken branch, and neither is available on a Mac.
     """
     declared = catalog.load()
     found: dict[str, set[OSFamily]] = {}
     for name in machines.names(REPO_ROOT):
         machine = machines.load(name, REPO_ROOT)
         for entry in declared.section('github_releases'):
-            if machine.subscription('github_releases').wants(entry):
+            if machine.subscription('github_releases').wants(entry) and planning.available(entry, machine.coordinates):
                 found.setdefault(entry.name, set()).add(machine.coordinates.os_family)
     return {entry: frozenset(families) for entry, families in found.items()}
 

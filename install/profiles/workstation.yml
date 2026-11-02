@@ -1,0 +1,67 @@
+# A desk Chris develops at, on any network: the shell, his checkouts, and the
+# language servers, linters and infrastructure tools the editor and the repos call.
+
+profiles: [shell, repo-checkouts, workstation-clis]
+
+go_tools:
+  - cheat
+  - terraform-docs
+  - gum
+  - lazydocker
+  - jactionlint
+  - sesh
+  - gowall
+  - triangle
+  - ascii-image-converter
+
+github_releases:
+  - tflint
+  - terraformer
+  - terrascan
+  - trivy
+  - zk
+  - hadolint
+  - tree-sitter
+  - taplo
+  - just
+  - tenv
+  - duckdb
+  # Chris publishes it, but it is an editor's server rather than a CLI, and it
+  # runs on the node that npm_globals below brings.
+  - asl-language-server
+
+custom_installers:
+  - awscli
+  - terraform-ls
+  - mount-s3
+  - bashselfupdate
+
+cargo_packages: [fnm, sd, broot, watchexec-cli, stylua]
+
+npm_globals:
+  - typescript-language-server
+  - typescript
+  - bash-language-server
+  - yaml-language-server
+  - vscode-langservers-extracted
+  - gh-actions-language-server
+  - eslint
+  - prettier
+  - markdownlint-cli
+  - sass
+
+uv_tools:
+  - ruff
+  - mypy
+  - basedpyright
+  - codespell
+  - sqlfluff
+  - djlint
+  - keymap-drawer
+  - numpy
+  - jupyterlab
+  - git-filter-repo
+  - tldr
+
+auth:
+  - aws

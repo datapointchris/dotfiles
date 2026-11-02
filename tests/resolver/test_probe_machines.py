@@ -83,6 +83,7 @@ def probe_root(tmp_path: Path) -> Path:
     (install / 'manifests').mkdir(parents=True)
     for declaration in ('packages.yml', 'flags.yml'):
         shutil.copy(REPO_ROOT / 'install' / declaration, install / declaration)
+    shutil.copytree(REPO_ROOT / 'install' / 'profiles', install / 'profiles')
 
     for probe in PROBES:
         source = catalog.raw_sections(REPO_ROOT / 'install' / 'manifests' / f'{probe.derived_from}.yml')

@@ -1,0 +1,32 @@
+# The terminal on every box Chris logs in to, from a desk to a server reached only
+# over SSH. Each tool earns its place on the smallest of those boxes, which is why
+# nothing here is a language toolchain or needs a display.
+
+go_tools:
+  - task      # Taskfile runner used across the repos
+  - gdu       # fast disk-usage analyzer (fills-up diagnosis)
+
+github_releases:
+  - gh          # GitHub CLI
+  - fzf         # fuzzy finder — backs the shell functions
+  - neovim      # editor for on-box config/log edits
+  - lazygit     # git TUI
+  - yazi        # file-manager TUI
+  - glow        # render markdown/docs over SSH
+  - duf         # disk-free at a glance
+  - atuin       # shell history (zsh init expects it)
+  - shellcheck  # debug shell scripts on the box
+  - yq          # YAML through mikefarah's yq, which the bats suites also read through
+  # Not tree-sitter, which `workstation` carries. Every release nvim-treesitter
+  # accepts links a newer glibc than Debian 12 has, so the loader refuses it there
+  # and no parser builds. Neovim highlights with its own syntax files instead. To
+  # re-measure a release:
+  # `objdump -T tree-sitter | rg -o 'GLIBC_[0-9.]+' | sort -uV | tail -1`.
+
+cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker]
+
+shell_plugins: true
+tmux_plugins: true
+yazi_plugins: true
+nvim_plugins: true
+configure_zsh: true

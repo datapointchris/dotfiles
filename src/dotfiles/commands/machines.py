@@ -171,6 +171,10 @@ def render(plan: planning.Plan) -> None:
     for axis, value in machine.coordinates.as_dict().items():
         console.print(f'{EVIDENCE_INDENT}{axis:<16} {value}')
 
+    if machine.profiles:
+        section('profiles', f'{len(machine.profiles)} composed from install/profiles/, in the order read')
+        console.print(f'{EVIDENCE_INDENT}{" ".join(machine.profiles)}')
+
     section('flags', f'{len(machine.flags)} feature switch(es) written to ~/.env')
     for flag, value in machine.flags.items():
         console.print(f'{EVIDENCE_INDENT}{flag:<26} {value}')

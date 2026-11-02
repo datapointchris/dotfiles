@@ -1,0 +1,24 @@
+# The CLIs Chris publishes that only a `personal-desk` carries. `fleet-clis`
+# composes this file, so a CLI added here also reaches a box that takes every one.
+
+go_tools:
+  - helpnav
+
+github_releases:
+  - learning
+  - nomad
+  - meso
+
+custom_installers:
+  - zmk
+
+uv_tools:
+  - keymap-align
+  - indy
+  - logsift
+  - typos
+  - runthrough
+  - git-graph
+
+git_uv_tools:
+  - digest

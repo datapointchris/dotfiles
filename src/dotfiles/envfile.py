@@ -71,7 +71,7 @@ def render(machine: Machine) -> str:
         '# ================================================================',
         '# Machine Environment',
         '# ================================================================',
-        f'# Generated from install/manifests/{machine.name}.yml and install/flags.yml.',
+        f'# Generated from install/manifests/{machine.name}.yml, its profiles, and install/flags.yml.',
         '# Refresh with: dotfiles env apply',
         '#',
         '# Everything above the OVERRIDES marker is regenerated and will be',
