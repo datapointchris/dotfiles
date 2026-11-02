@@ -10,7 +10,6 @@ go_tools:
   - lazydocker
   - jactionlint
   - sesh
-  - tmux-tree-editor
   - gowall
   - triangle
   - ascii-image-converter

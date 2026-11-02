@@ -1,7 +1,7 @@
 machine: fleet-clis-pod
 platform: linux
 
-# A headless pod that installs every CLI Chris publishes at its newest release,
+# A headless pod that installs the CLIs Chris publishes at their newest releases,
 # so a job can read each one's help. It runs as a user with passwordless sudo,
 # with GITHUB_TOKEN as its one credential, and is thrown away when the job ends:
 #
@@ -10,10 +10,9 @@ platform: linux
 #   dotfiles toolchains apply --machine fleet-clis-pod
 #   dotfiles packages apply --machine fleet-clis-pod
 #
-# The core tier because the CLIs' installers assume it, as they do on every other
-# machine: theme's install script calls jq, and a private Go module resolves
-# through git. An image that already carries the tier makes this a measurement
-# rather than an install.
+# The core tier, because the CLIs' installers assume the base every other machine
+# has, such as jq and git. An image that already carries the tier makes this a
+# measurement rather than an install.
 system_packages: core
 
 profiles: [fleet-clis]

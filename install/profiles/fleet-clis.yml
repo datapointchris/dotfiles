@@ -1,13 +1,14 @@
-# Every CLI Chris publishes that installs on a headless Linux box, and nothing
-# else: no shell, no toolchain beyond what the CLIs need, no desktop, no logins.
-# Each file below is also part of the machine profile named in its own name, so
-# a CLI is declared once and reaches both.
+# The CLIs Chris publishes that a headless Linux box can install and read the
+# help of, and nothing else: no shell, no toolchain beyond what the CLIs need, no
+# desktop, no logins. Each file below is also part of the machine profile named
+# in its own name, so a CLI is declared once and reaches both.
 #
-# Three published tools are not here. webviewrs opens a window on any argument,
-# `--help` included, so it is unreadable without a display. asl-language-server
-# is an editor's server that runs on node, which only npm_globals brings, so it
-# sits in the workstation profile. bbkt is wsl-work-workstation's own and lives
-# in that manifest.
+# A published tool stays out of these leaves when a headless box cannot read its
+# help, and sits in its machine profile instead:
+#   webviewrs opens a window on any argument, `--help` included.
+#   abtop opens the terminal before it parses an argument.
+#   asl-language-server is an editor's server, run on the node npm_globals brings.
+# bbkt is wsl-work-workstation's own and lives in that manifest.
 
 profiles:
   - repo-checkouts-clis

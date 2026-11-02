@@ -3,6 +3,7 @@
 
 go_tools:
   - todoui
+  - tmux-tree-editor
 
 custom_installers:
   - theme

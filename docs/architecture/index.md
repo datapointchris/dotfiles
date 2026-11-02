@@ -86,29 +86,29 @@ stops, printing the `dotfiles apply` that converges the machine.
 
 ## A manifest names its profiles, and every tool is declared in one file
 
-The manifests were flat lists, so each tool a group of machines shared was
-copied into every one of them, and a new machine meant another full copy. The
-pattern now is Puppet's roles and profiles. The manifest is the role. It holds
-what only that machine is: its coordinates, its `system_packages` tier, flatpak,
-how it deploys, and whether it serves bundles or runs the primary's timers.
-`MACHINE_ONLY` in `src/dotfiles/machine.py` is that set, and a profile declaring
-one of them is refused. Everything else a manifest could list lives in
-`install/profiles/`, and a manifest names the profiles it takes. A profile may
-name others, so a desk names one profile and gets the shell and the workstation
-tooling through it.
+A tool several machines share is declared once, in a profile, so adding a
+machine means naming its profiles rather than copying a list. The pattern is
+Puppet's roles and profiles. The manifest is the role. It holds what only that
+machine is, and `MACHINE_ONLY` in `src/dotfiles/machine.py` lists those keys. A
+profile declaring one of them is refused. Everything else a manifest could list
+lives in `install/profiles/`, and a manifest names the profiles it takes. A
+profile may name others, so a desk names one profile and gets the shell and the
+workstation tooling through it.
 
-The boundaries came from measuring, not from naming categories first. Grouping
-every entry of the flat manifests by which machines carried it gave a handful of
-sets that the same machines shared, and each became a profile. Where `scheduler`
-and `wsl-work-workstation` differ from the desks, a boundary falls. That is why
+The boundaries come from measuring, not from naming categories first. A profile
+is a set of entries the same machines all carry, so a boundary falls wherever
+grouping entries by the machines that want them splits a set. `scheduler` and
+`wsl-work-workstation` are where the splits fall today. That is why
 `fleet-member` and `repo-checkouts` are separate profiles: `scheduler` takes both,
 and the nonfleet workstation takes only the second.
 
 Each profile that carries CLIs Chris publishes keeps them in a `<profile>-clis`
 file it composes, and `fleet-clis` composes every one of those. So a box can take
-every published CLI and nothing else, without a second list of them. A headless
-pod that installs each CLI at its newest release and reads its help is that box,
-and `fleet-clis-pod` is its manifest. It applies the core package tier, the
+every published CLI whose help a headless box can read, without a second list of
+them. A tool that fails that test stays in its machine profile, and
+`fleet-clis.yml` gives the reason for each. A headless pod that installs each
+CLI at its newest release and reads its help is that box, and `fleet-clis-pod`
+is its manifest. It applies the core package tier, the
 toolchains and the packages, and nothing more. `GITHUB_TOKEN` is the only
 credential it needs, because `effects.run` hands the token to git for the private
 repos a Go module or a uv git install clones.
@@ -129,8 +129,8 @@ because upstream ships no Intel-mac binary.
 reason names the profile that pulled it in as `profile:<name>`.
 
 *Rejected:* a manifest taking a profile minus some names. `wsl-work-workstation`
-would have been a desk minus claude-code and `fleet-member`'s tools, and reading
-what it installs would mean reading two files and subtracting. Moving the
+would have been a desk minus most of what makes it one, and reading what it
+installs would mean reading two files and subtracting. Moving the
 boundary says the same thing in one place.
 
 *Rejected:* the pod narrowing a desk's manifest with `--owner`. That flag narrows

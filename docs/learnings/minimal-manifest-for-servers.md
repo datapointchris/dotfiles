@@ -18,8 +18,8 @@ the gap bit repeatedly.
 One minimal manifest, plus a tiered system-package model.
 
 - **`install/manifests/linux-lxc-server.yml`** — the one minimal manifest. It exists
-  to be SSHed into and diagnosed from, so it takes only the `lean-shell` and
-  `fleet-shell` profiles: no npm or uv tooling and no GUI installer at all.
+  to be SSHed into and diagnosed from, so it takes the lean shell profiles and
+  nothing else: no npm or uv tooling and no GUI installer at all.
   `install/profiles/shell.yml` is what it carries, and each line there says why
   that tool is on a server.
 
