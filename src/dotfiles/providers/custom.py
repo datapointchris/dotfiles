@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
+import itertools
 import os
 import re
 import shutil
@@ -517,6 +518,10 @@ def mount_s3(request: Request) -> Result:
 def verify_signature(archive: Path, tarball_url: str, keys_url: str, staging: Path) -> str:
     """'' when the tarball's detached signature checks out, else why it does not.
 
+    KEYS comes from the same bucket as the tarball, so only the pinned keys stay in
+    the scratch keyring. `gpg --verify` accepts a signature from any key it holds,
+    and this leaves it holding no key an attacker could have added beside them.
+
     Fails closed on a bad signature or an unpinned key, and warns without refusing
     when the signature or gpg itself is unavailable — the same split the shell made,
     for the same reason: a machine with no gnupg has not been shown a bad signature,
@@ -538,12 +543,25 @@ def verify_signature(archive: Path, tarball_url: str, keys_url: str, staging: Pa
     effects.run(['gpg', '--quiet', '--import', str(keys)], env=environment, output=Output.QUIET)
 
     listed = effects.run(['gpg', '--list-keys', '--with-colons'], env=environment, output=Output.QUIET)
-    fingerprints = {line.split(':')[9] for line in listed.stdout.splitlines() if line.startswith('fpr:')}
-    if not fingerprints & set(MOUNT_S3_KEYS):
+    imported = primary_fingerprints(listed.stdout)
+    if not imported & set(MOUNT_S3_KEYS):
         return 'the mount-s3 signing key is not one of the pinned fingerprints'
 
+    unpinned = sorted(imported - set(MOUNT_S3_KEYS))
+    if unpinned and not effects.run(['gpg', '--batch', '--yes', '--delete-keys', *unpinned], env=environment, output=Output.QUIET).ok:
+        return 'the mount-s3 KEYS file holds an unpinned key that could not be removed'
+
     verified = effects.run(['gpg', '--verify', str(signature), str(archive)], env=environment, output=Output.QUIET)
-    return '' if verified.ok else 'the mount-s3 GPG signature did not verify'
+    return '' if verified.ok else 'the mount-s3 GPG signature did not verify against a pinned key'
+
+
+def primary_fingerprints(listing: str) -> set[str]:
+    """Each key's own fingerprint in `--with-colons` output: the `fpr:` after a `pub:`, never one after a `sub:`."""
+    return {
+        after.split(':')[9]
+        for before, after in itertools.pairwise(listing.splitlines())
+        if before.startswith('pub:') and after.startswith('fpr:')
+    }
 
 
 def have_fuse() -> bool:

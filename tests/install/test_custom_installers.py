@@ -528,7 +528,7 @@ class TestMountS3:
         itself."""
         reports(monkeypatch, **{'mount-s3': None})
         monkeypatch.setattr(custom.shutil, 'which', lambda name: '/usr/bin/gpg' if name == 'gpg' else None)
-        effected(Runs(**{'--list-keys': Completed(('gpg',), 0, 'fpr:::::::::DEADBEEF:\n')}))
+        effected(Runs(**{'--list-keys': Completed(('gpg',), 0, 'pub:::::::::\nfpr:::::::::DEADBEEF:\n')}))
 
         result = custom.install(declared.find('custom_installers', 'mount-s3'), LINUX)
 
@@ -542,7 +542,7 @@ class TestMountS3:
         effected(
             Runs(
                 **{
-                    '--list-keys': Completed(('gpg',), 0, f'fpr:::::::::{custom.MOUNT_S3_KEYS[0]}:\n'),
+                    '--list-keys': Completed(('gpg',), 0, f'pub:::::::::\nfpr:::::::::{custom.MOUNT_S3_KEYS[0]}:\n'),
                     '--verify': Completed(('gpg',), 1, 'BAD signature'),
                 }
             )
@@ -553,6 +553,22 @@ class TestMountS3:
         assert not result.ok
         assert result.kind is Kind.UNVERIFIED
         assert 'did not verify' in result.detail
+
+    def test_a_key_added_beside_the_pinned_ones_is_removed_before_verifying(self, declared, home, bundle, effected, monkeypatch):
+        """`gpg --verify` accepts a signature from any key it holds, so a rogue key in
+        KEYS would sign a tampered tarball if it stayed."""
+        reports(monkeypatch, **{'mount-s3': None})
+        monkeypatch.setattr(custom.shutil, 'which', lambda name: '/usr/bin/gpg' if name == 'gpg' else None)
+        listing = (
+            f'pub:::::::::\nfpr:::::::::{custom.MOUNT_S3_KEYS[0]}:\npub:::::::::\nfpr:::::::::ROGUE:\nsub:::::::::\nfpr:::::::::ROGUESUB:\n'
+        )
+        runs, _ = effected(Runs(**{'--list-keys': Completed(('gpg',), 0, listing)}))
+
+        custom.install(declared.find('custom_installers', 'mount-s3'), LINUX)
+
+        deleted = next(call for call in runs.calls if '--delete-keys' in call)
+        assert deleted[deleted.index('--delete-keys') + 1 :] == ('ROGUE',)
+        assert runs.calls.index(deleted) < next(index for index, call in enumerate(runs.calls) if '--verify' in call)
 
     def test_no_gpg_warns_rather_than_refusing(self, declared, home, bundle, effected, monkeypatch, capsys):
         """A machine with no gnupg has not been shown a bad signature, it has been
