@@ -63,6 +63,18 @@ nothing but its token counts, however much it had read. So the system prompt nam
 reviewer to group its tool calls, and asks for the report by four fifths of the cap. Whatever it did
 not reach goes in `limitations`, which is worth more than no report.
 
+## A run streams its frames, so a person can watch it and a dead run keeps its work
+
+`--output-format json` prints one array when the session ends. A long review would sit silent for
+as long as it ran, and a timeout, a kill or a Ctrl-C would leave nothing: no frames, and a record
+reading zero tokens. So a run reads `stream-json` a line at a time. Each frame goes to `frames.jsonl`
+as it arrives, and each step prints to stderr with the request count and the context size, which
+leaves stdout for the record.
+
+An assistant frame's `usage` carries only the output counted so far, so a run with no result frame
+reads its tokens from the session's transcript, and the record's `tokens_from` says so. Ctrl-C ends
+the session and still stores the record, under the key `interrupted`, and exits 130.
+
 ## Severity is CVSS v4.0's five bands, classified by CWE and ATT&CK
 
 The rubric uses the qualitative bands FIRST publishes for CVSS v4.0: critical, high, medium, low,

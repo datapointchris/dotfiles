@@ -1,4 +1,4 @@
-"""One confined `claude -p` review session, and what its frames say about how it ended.
+"""One confined `claude -p` review session, read frame by frame as it runs, and how it ended.
 
 argv states the whole confinement. `--tools` names every tool the persona may use, and
 `--setting-sources ''` with `--safe-mode` keeps the machine's settings, CLAUDE.md, hooks and MCP
@@ -9,14 +9,20 @@ directory so every transcript files under one `~/.claude/projects` folder.
 its own inside the start directory and each `--add-dir`, and `--permission-prompts none` refuses it
 everywhere else. Pre-approving a read tool lifts that limit.
 
-A call that gives no report ends under one key: `claude-not-installed`, `timed-out`, `exited`,
-`signal`, `usage-limit` or `no-structured-reply`. Its cause is read from stdout as well as stderr,
-because claude prints a refusal on stdout and at most a tag on stderr.
+Frames arrive as `stream-json`, so `on_frame` sees each one as it happens and a call that dies has
+already handed over what it printed. A call that gives no report ends under one key:
+`claude-not-installed`, `timed-out`, `interrupted`, `exited`, `signal`, `usage-limit` or
+`no-structured-reply`. Its cause is read from stdout as well as stderr, because claude prints a
+refusal on stdout and at most a tag on stderr.
 
 `--max-turns` and the result frame's `num_turns` count different things. The cap counts rounds of
 the query loop, one per model request. `num_turns` counts every user message: the prompt and each
 tool result, so a request that calls two tools in parallel adds two. `model_requests` counts the
 distinct assistant message ids, which is the cap's unit.
+
+Tokens come from the result frame. A call that ends without one has them read from the session's
+transcript, because an assistant frame's `usage` carries only the output counted so far. A transcript
+holds each request's final counts, but not what a side call such as WebSearch spent.
 """
 
 from __future__ import annotations
@@ -26,7 +32,9 @@ import json
 import os
 import signal
 import subprocess
+import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +45,7 @@ READ_TOOLS = frozenset({'Read', 'Glob', 'Grep'})
 """Never pre-approved, so they stay inside the start directory and the `--add-dir`."""
 
 STREAM_CHARS = 600
+EXIT_GRACE_SECONDS = 10
 
 TOKEN_KINDS = {
     'input_tokens': 'inputTokens',
@@ -49,10 +58,10 @@ TOKEN_KINDS = {
 
 @dc.dataclass(frozen=True)
 class Outcome:
-    frames: list[dict[str, Any]]
     report: dict[str, Any] | None
     failure_key: str
     cause: str
+    session_id: str
     model: str
     models: list[str]
     claude_code_version: str
@@ -60,6 +69,7 @@ class Outcome:
     num_turns: int | None
     tokens: dict[str, int]
     tokens_by_model: dict[str, dict[str, int]]
+    tokens_from: str
     duration_seconds: float
 
 
@@ -70,7 +80,7 @@ def argv(
         'claude', '-p',
         '--model', model,
         '--effort', effort,
-        '--output-format', 'json', '--verbose',
+        '--output-format', 'stream-json', '--verbose',
         '--json-schema', schema,
         '--system-prompt-file', str(system_prompt_file),
         '--tools', ','.join(tools),
@@ -83,35 +93,89 @@ def argv(
     ]  # fmt: skip
 
 
-def call(command: list[str], *, prompt: str, cwd: Path, timeout: int) -> Outcome:
+def call(
+    command: list[str],
+    *,
+    prompt_file: Path,
+    stderr_file: Path,
+    cwd: Path,
+    timeout: float,
+    on_frame: Callable[[dict[str, Any]], None],
+) -> Outcome:
     env = {key: value for key, value in os.environ.items() if key not in SPAWNER_MARKERS}
     started = time.monotonic()
     try:
-        done = subprocess.run(command, input=prompt, cwd=cwd, env=env, capture_output=True, text=True, timeout=timeout)
+        with prompt_file.open() as stdin, stderr_file.open('w') as stderr:
+            process = subprocess.Popen(
+                command, stdin=stdin, stdout=subprocess.PIPE, stderr=stderr, cwd=cwd, env=env, encoding='utf-8', errors='replace'
+            )
     except FileNotFoundError as exc:
-        return failed('claude-not-installed', str(exc), started)
-    except subprocess.TimeoutExpired as exc:
-        return failed('timed-out', f'no answer after {timeout}s' + printed(exc.stdout, exc.stderr), started, decoded(exc.stdout))
-    if done.returncode < 0:
-        return failed('signal', f'killed by {signal_name(-done.returncode)}' + printed(done.stdout, done.stderr), started, done.stdout)
-    frames = parsed(done.stdout)
+        return dc.replace(read_frames([], started), failure_key='claude-not-installed', cause=str(exc))
+
+    frames: list[dict[str, Any]] = []
+    stray: list[str] = []
+    stopped: list[str] = []
+
+    def stop(key: str, signal_child: Callable[[], None]) -> None:
+        stopped.append(key)
+        signal_child()
+
+    timer = threading.Timer(timeout, stop, ('timed-out', process.kill))
+    with process:
+        timer.start()
+        # Caught rather than ignored: an ignored interrupt is inherited, and claude could not be stopped.
+        previous = signal.signal(signal.SIGINT, lambda *_: stop('interrupted', process.terminate))
+        try:
+            for line in process.stdout or ():
+                frame = json_object(line)
+                if frame is None:
+                    stray.append(line)
+                else:
+                    frames.append(frame)
+                    on_frame(frame)
+        except BaseException:
+            process.kill()
+            raise
+        finally:
+            timer.cancel()
+            signal.signal(signal.SIGINT, previous)
+            wait_for_exit(process)
+
     outcome = read_frames(frames, started)
-    if done.returncode and outcome.failure_key == 'no-structured-reply':
+    if outcome.report is not None:
+        return outcome
+    said = printed(''.join(stray), stderr_file.read_text(errors='replace'))
+    if stopped:
+        cause = f'no answer after {timeout}s' if stopped[0] == 'timed-out' else 'interrupted from the terminal'
+        return dc.replace(outcome, failure_key=stopped[0], cause=cause + said)
+    if process.returncode < 0:
+        return dc.replace(outcome, failure_key='signal', cause=f'killed by {signal_name(-process.returncode)}' + said)
+    if process.returncode and outcome.failure_key == 'no-structured-reply':
         # A turn cap exits 1 with its cause in the result frame; a crash leaves no frame and only the streams.
-        cause = (
-            outcome.cause
-            if any(f.get('type') == 'result' for f in frames)
-            else printed(done.stdout, done.stderr).removeprefix('; ').strip()
-        )
-        return dc.replace(outcome, failure_key='exited', cause=f'exited {done.returncode}: {cause}')
+        cause = outcome.cause if any(f.get('type') == 'result' for f in frames) else said.removeprefix('; ').strip()
+        return dc.replace(outcome, failure_key='exited', cause=f'exited {process.returncode}: {cause}')
     return outcome
+
+
+def wait_for_exit(process: subprocess.Popen[str]) -> None:
+    """A child that has closed stdout gets a moment to exit, then is killed, so none outlives its reader."""
+    try:
+        process.wait(timeout=EXIT_GRACE_SECONDS)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
 
 
 def read_frames(frames: list[dict[str, Any]], started: float) -> Outcome:
     """The outcome a session's frames describe, whether a model or the mock wrote them."""
     init = next((f for f in frames if f.get('type') == 'system' and f.get('subtype') == 'init'), {})
     result = next((f for f in reversed(frames) if f.get('type') == 'result'), {})
+    model = str(init.get('model') or '')
+    session_id = str(init.get('session_id') or '')
     tokens, by_model = frame_tokens(result)
+    tokens_from = 'result' if result else 'unmeasured'
+    if not result and (counted := transcript_tokens(session_id)):
+        tokens, by_model, tokens_from = counted, {model: counted}, 'transcript'
     report = result.get('structured_output')
     key, cause = '', ''
     if limit := refused_by_limit(frames):
@@ -120,33 +184,28 @@ def read_frames(frames: list[dict[str, Any]], started: float) -> Outcome:
         key = 'no-structured-reply'
         cause = frame_cause(result) if result else 'no result frame'
     return Outcome(
-        frames=frames,
         report=report if not key else None,
         failure_key=key,
         cause=cause,
-        model=str(init.get('model') or ''),
+        session_id=session_id,
+        model=model,
         models=sorted(result.get('modelUsage') or {}),
         claude_code_version=str(init.get('claude_code_version') or ''),
         model_requests=len({f['message']['id'] for f in frames if f.get('type') == 'assistant' and (f.get('message') or {}).get('id')}),
         num_turns=result.get('num_turns'),
         tokens=tokens,
         tokens_by_model=by_model,
+        tokens_from=tokens_from,
         duration_seconds=round(time.monotonic() - started, 1),
     )
 
 
-def failed(key: str, cause: str, started: float, stdout: str = '') -> Outcome:
-    outcome = read_frames(parsed(stdout), started)
-    return dc.replace(outcome, report=None, failure_key=key, cause=cause)
-
-
-def parsed(stdout: str) -> list[dict[str, Any]]:
+def json_object(line: str) -> dict[str, Any] | None:
     try:
-        loaded = json.loads(stdout)
+        loaded = json.loads(line)
     except ValueError:
-        return []
-    frames = loaded if isinstance(loaded, list) else [loaded]
-    return [frame for frame in frames if isinstance(frame, dict)]
+        return None
+    return loaded if isinstance(loaded, dict) else None
 
 
 def frame_tokens(result: dict[str, Any]) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
@@ -157,6 +216,21 @@ def frame_tokens(result: dict[str, Any]) -> tuple[dict[str, int], dict[str, dict
         return {kind: sum(counts[kind] for counts in by_model.values()) for kind in TOKEN_KINDS}, by_model
     usage = result.get('usage') or {}
     return {kind: int(usage.get(kind) or 0) for kind in TOKEN_KINDS}, {}
+
+
+def transcript_tokens(session_id: str) -> dict[str, int] | None:
+    """A session's tokens by kind from its transcript, for a call that ended without a result frame."""
+    config_home = Path(os.environ.get('CLAUDE_CONFIG_DIR') or Path.home() / '.claude')
+    found = next(config_home.glob(f'projects/*/{session_id}.jsonl'), None) if session_id else None
+    if found is None:
+        return None
+    final_usage: dict[str, dict[str, Any]] = {}
+    for line in found.read_text(errors='replace').splitlines():
+        row = json_object(line) or {}
+        message = row.get('message') or {}
+        if row.get('type') == 'assistant' and message.get('id'):
+            final_usage[message['id']] = message.get('usage') or {}
+    return {kind: sum(int(usage.get(kind) or 0) for usage in final_usage.values()) for kind in TOKEN_KINDS}
 
 
 def refused_by_limit(frames: list[dict[str, Any]]) -> str:
@@ -176,21 +250,14 @@ def frame_cause(result: dict[str, Any]) -> str:
     return ': '.join([*parts, said] if said else parts) or 'the result frame names no cause'
 
 
-def printed(stdout: str | bytes | None, stderr: str | bytes | None) -> str:
+def printed(stdout: str, stderr: str) -> str:
     said = [f'{name}: {flat}' for name, stream in (('stdout', stdout), ('stderr', stderr)) if (flat := one_line(stream))]
     return '; ' + '; '.join(said) if said else ' and printed nothing'
 
 
-def one_line(stream: str | bytes | None) -> str:
-    flat = ' '.join(decoded(stream).split())
+def one_line(stream: str | None) -> str:
+    flat = ' '.join((stream or '').split())
     return flat if len(flat) <= STREAM_CHARS else flat[:STREAM_CHARS] + '…'
-
-
-def decoded(stream: str | bytes | None) -> str:
-    # A timed-out run's partial output arrives as bytes whatever `text=True` asked for.
-    if isinstance(stream, bytes):
-        return stream.decode('utf-8', errors='replace')
-    return stream or ''
 
 
 def signal_name(number: int) -> str:

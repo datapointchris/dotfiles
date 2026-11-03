@@ -1,8 +1,10 @@
 """`persona-review`: put a reviewer persona in front of a subject, for a machine and operating system.
 
 `list` and `matrix` read the catalog, `run` calls a model, and `runs` and `show` read stored runs
-without one. `run --mock` does everything a real run does except the call, writing the persona's
-canned report instead, so a change to the catalog, prompts or storage is exercised for no tokens.
+without one. `run` prints each step the session takes to stderr as it happens, and the record or
+report to stdout at the end. `run --mock` does everything a real run does except the call, writing
+the persona's canned report instead, so a change to the catalog, prompts or storage is exercised for
+no tokens.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from dotfiles.persona_review import matrix
 from dotfiles.persona_review import runs
 from dotfiles.persona_review.matrix import CatalogError
 
+EXIT_INTERRUPTED = 130
 SEVERITIES = ('critical', 'high', 'medium', 'low', 'informational')
 TOKEN_LABELS = {
     'input_tokens': 'uncached input',
@@ -72,6 +75,10 @@ def show_matrix(args: argparse.Namespace) -> int:
     return 0
 
 
+def narrate(line: str) -> None:
+    print(line, file=sys.stderr, flush=True)
+
+
 def run(args: argparse.Namespace) -> int:
     catalog = matrix.load()
     axes = (args.persona, args.machine, args.operating_system, args.subject)
@@ -90,13 +97,22 @@ def run(args: argparse.Namespace) -> int:
     max_turns = args.max_turns or int(scenario.persona.fields.get('max_turns') or 50)
     effort = args.effort or scenario.effort
     record = runs.start(
-        scenario, model=args.model, effort=effort, max_turns=max_turns, timeout=args.timeout, only=args.only, mock=args.mock
+        scenario,
+        model=args.model,
+        effort=effort,
+        max_turns=max_turns,
+        timeout=args.timeout,
+        only=args.only,
+        mock=args.mock,
+        on_line=narrate,
     )
     if args.json:
         emit(record)
     else:
         render(record)
-    return 1 if record['failure'] else 0
+    if not record['failure']:
+        return 0
+    return EXIT_INTERRUPTED if record['failure']['key'] == 'interrupted' else 1
 
 
 def list_runs(args: argparse.Namespace) -> int:
@@ -132,10 +148,10 @@ def render(record: dict[str, Any]) -> None:
     print(f'subject   {subject["repository"]} at {subject["commit"][:12]} ({subject["ref"]}), {subject["file_count"]} files')
     model = record.get('model') or record['requested_model']
     print(f'model     {model} at {record["effort"]}, Claude Code {record.get("claude_code_version") or "unknown"}')
-    requests = record.get('model_requests', 'unknown')
+    print(f'session   {record["session_id"] or "none"}')
     counted = f"{record.get('num_turns')} turns by claude's count"
-    print(f'requests  {requests} of {record["max_turns"]} allowed, {counted}, {record["duration_seconds"]}s')
-    print(f'tokens    {tokens_line(record["tokens"])}')
+    print(f'requests  {record["model_requests"]} of {record["max_turns"]} allowed, {counted}, {record["duration_seconds"]}s')
+    print(f'tokens    {tokens_line(record["tokens"])}, from the {record["tokens_from"]}')
     if record.get('failure'):
         print(f'failed    {record["failure"]["key"]}: {record["failure"]["cause"]}')
         return
@@ -185,7 +201,7 @@ def parser() -> argparse.ArgumentParser:
     running.add_argument(
         '--max-turns', type=int, help="cap on model requests, passed as claude's --max-turns (default: the persona's max_turns)"
     )
-    running.add_argument('--timeout', type=int, default=3600, help='seconds before the call is killed (default: 3600)')
+    running.add_argument('--timeout', type=int, default=7200, help='seconds before the call is killed (default: 7200)')
     running.add_argument('--only', action='append', default=[], metavar='PATH', help='export only this subject path; repeatable')
     running.add_argument('--mock', action='store_true', help="write the persona's canned report instead of calling a model")
     running.add_argument('--json', action='store_true')

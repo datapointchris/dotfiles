@@ -1,8 +1,9 @@
 """Running a scenario, and the record each run leaves under `$XDG_STATE_HOME`.
 
 A run exports the subject at one commit with `git archive`, so the review reads exactly what was
-submitted and can be repeated against it. The export, both prompts, argv, every frame and the run
-record stay in the run's directory. `run.json` follows `schemas/run-record.schema.json` and is what
+submitted and can be repeated against it. The export, both prompts, argv, claude's stderr, every
+frame and the run record stay in the run's directory. `frames.jsonl` grows as each frame arrives, so a
+run that dies keeps what it did. `run.json` follows `schemas/run-record.schema.json` and is what
 `runs` and `show` read back, without a call.
 """
 
@@ -15,6 +16,7 @@ import secrets
 import subprocess
 import tarfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +24,7 @@ from dotfiles import paths
 from dotfiles.persona_review import headless_call
 from dotfiles.persona_review import prompts
 from dotfiles.persona_review.matrix import Scenario
+from dotfiles.persona_review.progress import SessionProgress
 
 RECORD_SCHEMA = 'urn:dotfiles:persona-review:run-record:v1'
 
@@ -76,7 +79,17 @@ def now() -> str:
     return dt.datetime.now(dt.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def start(scenario: Scenario, *, model: str, effort: str, max_turns: int, timeout: int, only: list[str], mock: bool) -> dict[str, Any]:
+def start(
+    scenario: Scenario,
+    *,
+    model: str,
+    effort: str,
+    max_turns: int,
+    timeout: float,
+    only: list[str],
+    mock: bool,
+    on_line: Callable[[str], None],
+) -> dict[str, Any]:
     started_at = now()
     run_id = f'{started_at.replace("-", "").replace(":", "")}-{secrets.token_hex(2)}-{scenario.name}'
     run_dir = runs_dir() / run_id
@@ -86,8 +99,8 @@ def start(scenario: Scenario, *, model: str, effort: str, max_turns: int, timeou
 
     system_prompt_file = run_dir / 'system-prompt.md'
     system_prompt_file.write_text(prompts.system_prompt(scenario, subject_dir, max_turns))
-    task = prompts.task_prompt(scenario, subject_dir, subject['commit'])
-    (run_dir / 'task-prompt.md').write_text(task)
+    task_prompt_file = run_dir / 'task-prompt.md'
+    task_prompt_file.write_text(prompts.task_prompt(scenario, subject_dir, subject['commit']))
 
     tools = [str(tool) for tool in scenario.persona.fields.get('tools') or []]
     command = headless_call.argv(
@@ -102,11 +115,29 @@ def start(scenario: Scenario, *, model: str, effort: str, max_turns: int, timeou
     (run_dir / 'argv.json').write_text(json.dumps(command, indent=2) + '\n')
 
     session_dir().mkdir(parents=True, exist_ok=True)
-    if mock:
-        outcome = headless_call.read_frames(mock_frames(scenario), time.monotonic())
-    else:
-        outcome = headless_call.call(command, prompt=task, cwd=session_dir(), timeout=timeout)
-    (run_dir / 'frames.json').write_text(json.dumps(outcome.frames, indent=2) + '\n')
+    progress = SessionProgress(subject_dir, max_turns)
+    with (run_dir / 'frames.jsonl').open('w') as frames_file:
+
+        def on_frame(frame: dict[str, Any]) -> None:
+            frames_file.write(json.dumps(frame) + '\n')
+            frames_file.flush()
+            for line in progress.lines(frame):
+                on_line(line)
+
+        if mock:
+            frames = mock_frames(scenario)
+            for frame in frames:
+                on_frame(frame)
+            outcome = headless_call.read_frames(frames, time.monotonic())
+        else:
+            outcome = headless_call.call(
+                command,
+                prompt_file=task_prompt_file,
+                stderr_file=run_dir / 'stderr.txt',
+                cwd=session_dir(),
+                timeout=timeout,
+                on_frame=on_frame,
+            )
 
     record = {
         'schema': RECORD_SCHEMA,
@@ -116,6 +147,7 @@ def start(scenario: Scenario, *, model: str, effort: str, max_turns: int, timeou
         'subject': subject,
         'requested_model': 'mock' if mock else model,
         'effort': effort,
+        'session_id': outcome.session_id,
         'model': outcome.model,
         'models': outcome.models,
         'claude_code_version': outcome.claude_code_version,
@@ -127,6 +159,7 @@ def start(scenario: Scenario, *, model: str, effort: str, max_turns: int, timeou
         'duration_seconds': outcome.duration_seconds,
         'tokens': outcome.tokens,
         'tokens_by_model': outcome.tokens_by_model,
+        'tokens_from': outcome.tokens_from,
         'failure': {'key': outcome.failure_key, 'cause': outcome.cause} if outcome.failure_key else None,
         'report_schema': scenario.report_schema.name,
         'report': outcome.report,
