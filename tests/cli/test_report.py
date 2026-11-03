@@ -241,7 +241,7 @@ def test_the_json_list_says_ok_for_a_run_with_nothing_wrong(runs_dir: Path) -> N
 def test_a_check_that_found_something_only_a_person_can_fix_does_not_say_ok(runs_dir: Path) -> None:
     """The failure this listing exists to stop. A `check` attempts no writes, so
     an item only a person can repair is the only fault it can find — and this cell
-    is what `doit dashboard` reads to decide a box needs a look."""
+    is what a reader of the listing takes to decide a box needs a look."""
     recorded(runs_dir, Event('env', by_hand('FRESHRSS_URL')), verb='check')
 
     rows = json.loads(runner.invoke(app, ['report', 'list', '--json']).stdout)

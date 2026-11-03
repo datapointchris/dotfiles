@@ -410,31 +410,6 @@ def test_the_help_screens_example_carries_every_field_a_row_does() -> None:
     assert [list(help_example(shown.stdout))] * len(rows) == [list(row) for row in rows]
 
 
-# What doit's dashboard reads out of a row, in `prs_adapter`. Named here because
-# that adapter is in another repo and reaches every field through `.get()` with a
-# default, so a rename empties the PRS lane instead of failing it — every PR
-# renders as `0d` with a blank repo and no title, and the dashboard still draws.
-#
-# The test above cannot catch that. It measures the emitted row against the help
-# screen's example, and a rename made in both places agrees with itself.
-DOIT_DASHBOARD_READS = ('repo', 'title', 'age_days', 'draft')
-
-
-def test_the_fields_doits_prs_lane_reads_are_emitted_under_those_names(run) -> None:
-    """Renaming one of these is a change to another repo's dashboard, so it fails
-    here rather than going quiet there."""
-    result = run(
-        registry('github', ('dotfiles', '~/dotfiles')),
-        gh=github_stub(graphql_node('dotfiles', 1, 'split-plan-check-verbs')),
-    )
-    assert result.returncode == 0, result.stderr
-    (pr,) = json.loads(result.stdout)
-
-    assert set(DOIT_DASHBOARD_READS) <= set(pr)
-    assert isinstance(pr['age_days'], int)
-    assert isinstance(pr['draft'], bool)
-
-
 def test_it_runs_with_the_network_down() -> None:
     """The pytermstyle dependency is pinned to a commit rather than to a tag, and
     a tag would take this offline without failing any other test here.

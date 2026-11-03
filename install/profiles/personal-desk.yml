@@ -21,6 +21,7 @@ github_releases:
 
 # The personal data CLIs, each logged in by hand.
 auth:
+  - doit
   - homelab
   - icb
   - learning

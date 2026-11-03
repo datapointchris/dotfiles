@@ -17,9 +17,7 @@
     pull-requests [--registry FILE]
 
 The one implementation, and it prints JSON and nothing else. `prs` renders it as
-a picker and doit's dashboard adapter renders it as a lane — two consumers that
-want the same answer and disagree completely about how it should look, which is
-why neither shape lives here.
+a picker, so no shape lives here.
 
 Lives in dotfiles rather than in fleet because fleet is not installed on every
 machine and this has to be. The registry is: repos.json says which repos exist

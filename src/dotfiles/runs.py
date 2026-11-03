@@ -325,8 +325,8 @@ class RunRecord:
         verb must not start answering this one instead.
 
         **Graded over the walk rather than the lens, because a fold across the
-        directory cannot choose which verb ran last.** `doit dashboard` takes the
-        newest record per box whatever wrote it, so a lens-scoped grade would
+        directory cannot choose which verb ran last.** A reader of the directory takes
+        the newest record per box whatever wrote it, so a lens-scoped grade would
         report a box clean whenever its last run happened to be a `plan`, which is
         the failure this property exists to close arriving through another verb.
 

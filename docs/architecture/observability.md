@@ -67,8 +67,8 @@ verdict says whether anything is *wrong* and never `drift`, and its per-resource
 for an apply reads `converged` there and `drift` in the record of the same walk.
 
 **The verdict travels through `dotfiles report`, never by reading the state file.**
-An aggregator is a different tool on the same box — `doit dashboard` is the one —
-and the thing it reads has to be a door rather than a file, or the naming
+An aggregator is a different tool on the same box, and the thing it reads has to
+be a door rather than a file, or the naming
 convention and the box-selection key become its problem to get right. `report
 list --json` carries the verdict, and both buckets of addresses behind it, for
 every run in the shared directory — which is the whole fleet from any machine in

@@ -225,8 +225,8 @@ class TestVerdict:
 
     def test_an_item_only_a_person_can_repair_is_an_issue(self) -> None:
         """The case the whole fold exists for. A value only a person can set is
-        wrong with nothing scheduled to fix it, and `doit dashboard` reads this
-        grade rather than `status-<box>.json`."""
+        wrong with nothing scheduled to fix it, and a reader of the listing takes
+        this grade rather than `status-<box>.json`."""
         written = sinks.record([Event('env', by_hand('FRESHRSS_URL'))], identity('check'))
 
         assert written.outcomes[0].action == str(runs.Intention.DECLINED)
