@@ -85,7 +85,7 @@ def start(scenario: Scenario, *, model: str, effort: str, max_turns: int, timeou
     subject = export_subject(repository, str(scenario.subject.fields.get('ref') or 'HEAD'), subject_dir, only)
 
     system_prompt_file = run_dir / 'system-prompt.md'
-    system_prompt_file.write_text(prompts.system_prompt(scenario, subject_dir))
+    system_prompt_file.write_text(prompts.system_prompt(scenario, subject_dir, max_turns))
     task = prompts.task_prompt(scenario, subject_dir, subject['commit'])
     (run_dir / 'task-prompt.md').write_text(task)
 

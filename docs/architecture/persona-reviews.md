@@ -56,6 +56,13 @@ overrides it for one run, and the record stamps the value the call was given. Me
 because it is Anthropic's starting point for agent work on Opus. A second run at a higher effort on
 the same commit measures what the extra effort buys.
 
+## The reviewer knows its request cap, because its report comes last
+
+The report arrives only in the session's final reply. A session that reaches `--max-turns` delivers
+nothing but its token counts, however much it had read. So the system prompt names the cap, tells the
+reviewer to group its tool calls, and asks for the report by four fifths of the cap. Whatever it did
+not reach goes in `limitations`, which is worth more than no report.
+
 ## Severity is CVSS v4.0's five bands, classified by CWE and ATT&CK
 
 The rubric uses the qualitative bands FIRST publishes for CVSS v4.0: critical, high, medium, low,
