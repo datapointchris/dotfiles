@@ -1,0 +1,17 @@
+# slate's machine config: the registry `--repo` is checked against.
+#
+# Scoped by trust because the registry's location differs by trust domain. No
+# nonfleet manifest installs slate, so configs/trust/nonfleet/ carries no
+# counterpart.
+#
+# A literal rather than SLATE_REPOS_REGISTRY in ~/.env: ~/.env is a shell file, so
+# a process that sources no profile would accept any repo name.
+#
+# The clone rather than a symlink that resolves into it: the symlink sits in a
+# directory replicated between machines, so it is a second hop a rebuilt machine
+# has not restored yet.
+#
+# The config.toml beside this file is `slate auth login <url>`'s own, and no
+# template renders it. Its three keys all follow from the URL and the hostname. A
+# template here would also select the server boxes, which hold no slate client.
+repos_registry: ~/.local/share/terminal-library-fleet/repos.json

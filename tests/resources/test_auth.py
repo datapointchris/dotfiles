@@ -28,7 +28,7 @@ from dotfiles.resources import Verdict
 from dotfiles.resources import auth
 from dotfiles.session import Session
 
-KEYCHAIN_CLIS = ('doit', 'homelab', 'icb', 'learning', 'meso', 'nomad', 'ypl')
+KEYCHAIN_CLIS = ('doit', 'homelab', 'icb', 'learning', 'meso', 'nomad', 'slate', 'ypl')
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
@@ -116,7 +116,7 @@ LOCAL_PROBES = {f'{tool} auth status' for tool in KEYCHAIN_CLIS} | {'bbkt config
 spelling inverts between binaries: `auth status` is the 4ms keychain read for the
 personal data CLIs and the 333ms networked validation for `gh`. Whitelisting the
 arguments alone therefore permits `gh auth status` — the one alternative this
-module's own docstring rejects by name — because it is spelled like the four that
+module's own docstring rejects by name — because it is spelled like the ones that
 are allowed. Measured: a probe swapped to `gh auth status` passed this test.
 
 A whitelist rather than a list of forbidden spellings, because the forbidden ones

@@ -510,7 +510,7 @@ def zk(tag: str, target: Target) -> ReleaseArtifact:
 
 
 def go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
-    """The four private data CLIs, which are goreleaser builds in monorepos.
+    """The data CLIs, which are goreleaser builds in monorepos.
 
     Their tag carries a `cli/` prefix because the same repo releases an API and a
     web app, so the version in the asset name is the tag with that prefix and the
@@ -548,6 +548,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'nomad': go_release_cli('nomad'),
     'ntfy': ntfy,
     'shellcheck': shellcheck,
+    'slate': go_release_cli('slate'),
     'syncthing': syncthing,
     'taplo': taplo,
     'tenv': tenv,
