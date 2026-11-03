@@ -117,10 +117,15 @@ the session and still stores the record, under the key `interrupted`, and exits 
 The rubric uses the qualitative bands FIRST publishes for CVSS v4.0: critical, high, medium, low,
 and informational for a score of zero. NVD reports in the same bands. A CVSS vector is optional.
 CVSS scores a vulnerability in a product, and many intake findings, such as an unpinned download,
-are a missing control rather than a vulnerability. Every finding names a CWE, and
+are a missing control rather than a vulnerability. A finding names a CWE, and
 names the MITRE ATT&CK technique its behavior matches. An EDR detects by technique, so the
 technique predicts what the company's controls would alert on. Linking a shell startup file is
 T1546.004 whether or not anything malicious is in it.
+
+An informational finding may leave the CWE out. It records a fact a reviewer should know, such as a
+config declaring what a tool may do, and often no weakness fits. A required field gets filled
+anyway, so requiring it there produced CWE-1188 as filler. Every other severity asserts a
+weakness, so the schema still requires the CWE for those.
 
 *Rejected:* SARIF as the report format. SARIF describes a static analyzer's results against
 rules, and has no place for a verdict, an inventory of what the install brings, or conditions of

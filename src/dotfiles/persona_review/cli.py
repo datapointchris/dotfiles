@@ -169,7 +169,7 @@ def render(record: dict[str, Any]) -> None:
     for finding in ranked:
         places = ', '.join(f'{loc["path"]}:{loc["line_start"]}-{loc["line_end"]}' for loc in finding['locations'])
         print()
-        print(f'{finding["id"]}  {finding["severity"]:<13} {finding["cwe"]:<9} {finding["title"]}')
+        print(f'{finding["id"]}  {finding["severity"]:<13} {finding.get("cwe", ""):<9} {finding["title"]}')
         print(f'         {places}')
         print(f'         fix ({finding["remediation_kind"]}): {finding["remediation"]}')
     for heading, lines in (('conditions', report['conditions']), ('limitations', report['limitations'])):

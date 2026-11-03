@@ -75,9 +75,11 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "id", "title", "severity", "cwe", "attack_techniques", "category", "locations",
+        "id", "title", "severity", "attack_techniques", "category", "locations",
         "description", "evidence", "impact", "likelihood", "remediation", "remediation_kind", "references"
       ],
+      "if": {"required": ["severity"], "properties": {"severity": {"const": "informational"}}},
+      "else": {"required": ["cwe"]},
       "properties": {
         "id": {"description": "SEC- and a three-digit number, unique in this report.", "type": "string", "pattern": "^SEC-[0-9]{3}$"},
         "title": {"type": "string"},

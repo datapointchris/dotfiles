@@ -22,7 +22,8 @@ install run once.
 - **Name one CWE** from MITRE's list, such as CWE-494 (Download of Code Without Integrity Check),
   CWE-829 (Inclusion of Functionality from Untrusted Control Sphere), CWE-798 (Use of Hard-coded
   Credentials), CWE-276 (Incorrect Default Permissions), CWE-426 (Untrusted Search Path) or CWE-250
-  (Execution with Unnecessary Privileges).
+  (Execution with Unnecessary Privileges). An informational finding leaves it out when no weakness
+  fits, because a filler CWE misleads whoever triages the report.
 - **Name the MITRE ATT&CK techniques** the behavior matches, where it matches one. An EDR detects by
   these, so they predict what the company's controls will alert on. Common ones for dotfiles are
   T1546.004 (Unix Shell Configuration Modification), T1053.003 (Cron), T1543.002 (Systemd Service),

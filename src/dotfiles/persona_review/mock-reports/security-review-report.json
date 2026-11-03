@@ -42,7 +42,6 @@
       "id": "SEC-002",
       "title": "Mock: shell startup files are replaced by symlinks",
       "severity": "informational",
-      "cwe": "CWE-15",
       "attack_techniques": ["T1546.004"],
       "category": "persistence",
       "locations": [{"path": "shell/", "line_start": 1, "line_end": 1}],
