@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # prepare-commit-msg hook, run from git config rather than .git/hooks. A commit
 # made inside a Claude Code session gets Agent-Name, Agent-Session and, under a
-# scheduled run, Agent-Run. A commit with no session in its environment is left
-# alone.
+# scheduled run, Agent-Run. A session in a slate worklog also names it in Worklog.
+# A commit with no session in its environment is left alone, and starts no slate.
 #
 # It never refuses a commit. A message it cannot stamp is committed without the
 # trailers, with a line on stderr saying so.
@@ -12,10 +12,15 @@ message_file=${1:?git passes the commit message file first}
 session=${CLAUDE_CODE_SESSION_ID:-}
 [[ -n $session ]] || exit 0
 
-if [[ -n ${ICB_ACTOR:-} ]]; then
+# A rebase rewrites commits rather than making them, so each keeps the trailers it has.
+for rewriting in rebase-merge rebase-apply; do
+  [[ ! -d $(git rev-parse --git-path "$rewriting") ]] || exit 0
+done
+
+if [[ -n ${SLATE_ACTOR:-} ]]; then
   # The scheduler sets <job>@<machine>. The machine stays out, because a project
   # repo's history names no machine, and Agent-Run leads back to it.
-  agent="claude-code-unattended/${ICB_ACTOR%@*}"
+  agent="claude-code-unattended/${SLATE_ACTOR%@*}"
 elif [[ ${CLAUDE_CODE_SESSION_ATTENDED:-} == 0 ]]; then
   agent=claude-code-unattended
 else
@@ -28,6 +33,25 @@ fi
 
 trailers=(--trailer "Agent-Name: $agent" --trailer "Agent-Session: $session")
 [[ -z ${FLEET_RUN_ID:-} ]] || trailers+=(--trailer "Agent-Run: $FLEET_RUN_ID")
+
+# An origin with a host marks real work, so a test's fixture repo asks slate nothing.
+# An amend keeps the worklog its message names. The bound keeps a slate that cannot
+# answer from holding the commit up.
+origin=$(git remote get-url origin 2>/dev/null) || origin=
+if [[ $origin == *:* && $origin != file:* ]] && ! git interpret-trailers --parse "$message_file" | grep -q '^Worklog: '; then
+  bound_seconds=3
+  failure=$(mktemp)
+  worklog=$(timeout "$bound_seconds" slate worklogs current 2>"$failure")
+  status=$?
+  if ((status == 0)); then
+    [[ -z $worklog ]] || trailers+=(--trailer "Worklog: $worklog")
+  else
+    reason=$(head -n 1 "$failure")
+    ((status != 124)) || reason="slate did not answer within $bound_seconds seconds"
+    echo "agent-commit-trailers: ${reason:-slate exited $status}, so this commit carries no Worklog trailer" >&2
+  fi
+  rm -f "$failure"
+fi
 
 # doNothing keeps the trailers already there, so an amend never doubles them.
 if ! git interpret-trailers --in-place --if-exists doNothing "${trailers[@]}" "$message_file"; then

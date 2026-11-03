@@ -414,6 +414,7 @@ cache_completion icb icb completion zsh
 cache_completion learning learning completion zsh
 cache_completion meso meso completion zsh
 cache_completion nomad nomad completion zsh
+cache_completion slate slate completion zsh
 # ifiles and ypl complete names by calling their servers — remote paths, and
 # playlists — so each Tab there is a request rather than a lookup. The generated
 # script is static; the network call happens inside `<tool> __complete`.

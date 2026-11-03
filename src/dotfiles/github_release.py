@@ -461,7 +461,7 @@ def published_digest(published: dict[str, Asset], asset_name: str) -> str:
 def latest_version(repo: str, tag_prefix: str = '', ceiling: str = '') -> str | None:
     """The newest release tag, or the newest one under `tag_prefix`, at or below `ceiling`.
 
-    A prefix is not a nicety: four of the declared releases are CLIs living in a
+    A prefix is not a nicety: several of the declared releases are CLIs living in a
     monorepo that also releases an API and a web app, so `releases/latest` there
     answers with whichever component shipped most recently. Asking it for `icb`
     would report the CLI outdated every time the API released, and current every
@@ -486,7 +486,7 @@ def latest_version(repo: str, tag_prefix: str = '', ceiling: str = '') -> str | 
     **A 404 is None on the unprefixed endpoint and `Unreadable` on the other**,
     for the reason `NOT_FOUND` states. `version_url` routes a prefix or a ceiling
     to the listing endpoint, which answers `200 []` for a repo publishing nothing —
-    so a 404 there is a repo that cannot be read, and five declared entries take
+    so a 404 there is a repo that cannot be read, and every prefixed entry takes
     that path.
     """
     said = f'could not read the releases of {repo}, so its published versions are unknown'

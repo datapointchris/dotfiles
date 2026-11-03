@@ -22,7 +22,7 @@ from dotfiles.symlinks import template
 def login_config_templates() -> list[str]:
     register = yaml.safe_load((paths.REPO_ROOT / 'install' / 'flags.yml').read_text())
     (entry,) = (e for e in register['required'] if e['name'] == 'OAUTH_CLIENT_SUFFIX')
-    return entry['consumers']
+    return [consumer for consumer in entry['consumers'] if consumer.endswith(template.SUFFIX)]
 
 
 @pytest.mark.parametrize('consumer', login_config_templates())

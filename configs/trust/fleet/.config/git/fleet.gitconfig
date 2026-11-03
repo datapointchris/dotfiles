@@ -12,3 +12,9 @@ path = ~/.config/git/personal.gitconfig
 [hook "agent-trailers"]
 event = prepare-commit-msg
 command = [ ! -x ~/.local/bin/agent-commit-trailers ] || exec ~/.local/bin/agent-commit-trailers
+
+# Records a session's commit on the slate worklog its Worklog trailer names. The
+# test skips it until the script is deployed, as above.
+[hook "slate-worklog-link"]
+event = post-commit
+command = [ ! -x ~/.local/bin/link-commit-to-slate-worklog ] || exec ~/.local/bin/link-commit-to-slate-worklog

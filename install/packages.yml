@@ -1134,6 +1134,12 @@ github_releases:
     description: Organize YouTube playlists of long DJ mixes, over the ypl server
     tags: [cli, personal]
 
+  - name: slate
+    repo: datapointchris/slate
+    release_tag_prefix: "cli/"
+    description: Work tracker built for coding agents
+    tags: [cli, personal]
+
 # ================================================================
 # CUSTOM INSTALLERS
 # ================================================================

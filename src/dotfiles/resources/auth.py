@@ -275,7 +275,7 @@ def github(session: Session) -> Credential:
     return Credential(Verdict.MISSING, 'no GITHUB_TOKEN, and `gh auth token` has nothing', advice=GITHUB_AUTH_ADVICE)
 
 
-def keychain_cli(tool: str) -> Probe:
+def keychain_cli(tool: str, login: str = '') -> Probe:
     """A personal data CLI holding an Authelia token in the OS keychain.
 
     `auth status` rather than `auth token`, which inverts what `gh` wants and was
@@ -288,7 +288,11 @@ def keychain_cli(tool: str) -> Probe:
     One closure for all of them rather than near-identical functions per tool:
     they share a command set and an issuer, and a difference between them would be
     a difference worth seeing here rather than buried in a copy.
+
+    `login` is the command to advise where a bare `auth login` cannot work, because
+    no rendered config file names the API.
     """
+    login_command = login or f'{tool} auth login'
 
     def probe(session: Session) -> Credential:
         if not shutil.which(tool):
@@ -298,7 +302,7 @@ def keychain_cli(tool: str) -> Probe:
             return Credential(Verdict.MATCHED, answer.stdout.strip().splitlines()[0] if answer.stdout.strip() else 'logged in')
         if (unanswered := unanswered_credential(tool, answer)) is not None:
             return unanswered
-        return Credential(Verdict.MISSING, 'the OS keychain holds no token', advice=f'log in with `{tool} auth login`')
+        return Credential(Verdict.MISSING, 'the OS keychain holds no token', advice=f'log in with `{login_command}`')
 
     return probe
 
@@ -505,6 +509,7 @@ PROBES: dict[str, Probe] = {
     'learning': keychain_cli('learning'),
     'meso': keychain_cli('meso'),
     'nomad': keychain_cli('nomad'),
+    'slate': keychain_cli('slate', login='slate auth login "https://slate.$HOMELAB_DOMAIN" --client-id "slate-$OAUTH_CLIENT_SUFFIX"'),
     'ypl': keychain_cli('ypl'),
     'atuin': atuin,
     'claude': claude,

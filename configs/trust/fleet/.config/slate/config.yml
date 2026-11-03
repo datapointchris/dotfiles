@@ -1,0 +1,14 @@
+# slate's machine config: the registry `--repo` is checked against.
+#
+# Scoped by trust because the registry's location differs by trust domain.
+#
+# A literal rather than SLATE_REPOS_REGISTRY in ~/.env: ~/.env is a shell file, and
+# a process that sources no profile never reads it.
+#
+# The same path as repos_registry in configs/trust/fleet/.config/dotfiles/config.toml,
+# which says why it names the clone.
+#
+# No template renders the config.toml beside this file, so `slate auth login <url>`
+# writes it and an apply never overwrites it. A template here would select every box
+# of this trust, whether or not it logs in.
+repos_registry: ~/.local/share/terminal-library-fleet/repos.json
