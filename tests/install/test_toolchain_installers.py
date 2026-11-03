@@ -13,12 +13,15 @@ password.
 
 from __future__ import annotations
 
+import hashlib
 import io
+import json
 import os
 import tarfile
 from itertools import chain
 from pathlib import Path
 
+import httpx2
 import pytest
 
 from dotfiles import effects
@@ -165,8 +168,11 @@ def go_tarball(*, contains_go: bool = True) -> bytes:
     return buffer.getvalue()
 
 
-def answers(monkeypatch, release: str | None) -> None:
+def answers(monkeypatch, release: str | None, published: bytes | None = None) -> None:
+    """go.dev naming `release`, and publishing the SHA-256 of `published` for its tarball."""
+    sha256 = hashlib.sha256(published).hexdigest() if published is not None else None
     monkeypatch.setattr(toolchain, 'latest_release', lambda url=toolchain.GO_VERSION_URL: release)
+    monkeypatch.setattr(toolchain, 'published_sha256', lambda name, url=toolchain.GO_RELEASES_URL: sha256)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -193,11 +199,20 @@ def test_an_unreachable_go_dev_answers_none_rather_than_raising(monkeypatch) -> 
     three, which is why every failure here is a value."""
 
     def refuse(url, accept=None):
-        raise OSError('no route to host')
+        raise httpx2.ConnectError('no route to host')
 
     monkeypatch.setattr(github_release, 'request', refuse)
 
     assert toolchain.latest_release() is None
+    assert toolchain.published_sha256('go1.26.5.linux-amd64.tar.gz') is None
+
+
+def test_the_sha256_is_the_one_go_dev_lists_for_that_file(monkeypatch) -> None:
+    listed = [{'version': 'go1.26.5', 'files': [{'filename': 'go1.26.5.linux-amd64.tar.gz', 'sha256': 'abc'}]}]
+    monkeypatch.setattr(github_release, 'request', lambda url, accept=None: json.dumps(listed).encode())
+
+    assert toolchain.published_sha256('go1.26.5.linux-amd64.tar.gz') == 'abc'
+    assert toolchain.published_sha256('go1.26.5.darwin-arm64.tar.gz') is None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -242,8 +257,9 @@ def test_go_is_unpacked_as_this_user_and_moved_in_as_root(home, bundle, effected
     paths, `..` traversal and device nodes. Handing the tar to `sudo tar` instead
     would apply no filter to an archive off the internet."""
     url = f'{toolchain.GO_DOWNLOAD_URL}/{RELEASE}.linux-amd64.tar.gz'
-    runs, fetches = effected(fetches=Fetches({url: go_tarball()}))
-    answers(monkeypatch, RELEASE)
+    served = go_tarball()
+    runs, fetches = effected(fetches=Fetches({url: served}))
+    answers(monkeypatch, RELEASE, served)
     root = Root()
 
     result = toolchain.install_go(LINUX, root, offline=False)
@@ -252,6 +268,7 @@ def test_go_is_unpacked_as_this_user_and_moved_in_as_root(home, bundle, effected
     assert result.kind is Kind.APPLIED
     assert fetches.urls == [url]
     assert root.ran('rm') and root.ran(str(toolchain.GO_ROOT))
+    assert root.ran('chown')
     assert runs.ran(str(toolchain.GO_ROOT / 'bin' / 'go'), 'version')
 
 
@@ -259,8 +276,9 @@ def test_go_sets_gonosumdb_for_the_namespace_that_stalls_without_it(home, bundle
     """A cold sum.golang.org lookup for a just-published version holds for ~60s
     and then answers 500, so an own-namespace tool tagged minutes ago stalls."""
     url = f'{toolchain.GO_DOWNLOAD_URL}/{RELEASE}.linux-amd64.tar.gz'
-    runs, _ = effected(fetches=Fetches({url: go_tarball()}))
-    answers(monkeypatch, RELEASE)
+    served = go_tarball()
+    runs, _ = effected(fetches=Fetches({url: served}))
+    answers(monkeypatch, RELEASE, served)
 
     # Nothing to resolve, so only a caller that passes the binary it just unpacked
     # writes anything. Both halves are the guard: asserting the arguments alone
@@ -278,8 +296,9 @@ def test_go_without_root_reports_the_refusal_and_writes_nothing(home, bundle, ef
     """Declined or unavailable privilege is not fatal, which is what lets the
     Docker and LXC harnesses converge without a passwordless-sudo carve-out."""
     url = f'{toolchain.GO_DOWNLOAD_URL}/{RELEASE}.linux-amd64.tar.gz'
-    runs, _ = effected(fetches=Fetches({url: go_tarball()}))
-    answers(monkeypatch, RELEASE)
+    served = go_tarball()
+    runs, _ = effected(fetches=Fetches({url: served}))
+    answers(monkeypatch, RELEASE, served)
     root = Root(granted=False)
 
     result = toolchain.install_go(LINUX, root, offline=False)
@@ -293,8 +312,9 @@ def test_a_tarball_carrying_no_go_binary_is_refused_before_root_is_asked(home, b
     """The whole tree is replaced, so a bad archive would take the working Go with
     it. Checked while it is still in a temporary directory nobody has escalated for."""
     url = f'{toolchain.GO_DOWNLOAD_URL}/{RELEASE}.linux-amd64.tar.gz'
-    effected(fetches=Fetches({url: go_tarball(contains_go=False)}))
-    answers(monkeypatch, RELEASE)
+    served = go_tarball(contains_go=False)
+    effected(fetches=Fetches({url: served}))
+    answers(monkeypatch, RELEASE, served)
     root = Root()
 
     result = toolchain.install_go(LINUX, root, offline=False)
@@ -308,15 +328,40 @@ def test_a_tarball_left_in_home_is_used_when_go_dev_will_not_serve_it(home, bund
     """The work firewall's escape hatch: fetch it by hand somewhere that can reach
     go.dev, drop it in `$HOME`, re-run."""
     name = f'{RELEASE}.linux-amd64.tar.gz'
-    (home / name).write_bytes(go_tarball())
+    left = go_tarball()
+    (home / name).write_bytes(left)
     effected(fetches=Fetches(refuse=('go.dev',)))
-    answers(monkeypatch, RELEASE)
+    answers(monkeypatch, RELEASE, left)
     root = Root()
 
     result = toolchain.install_go(LINUX, root, offline=False)
 
     assert result.ok, result.detail
     assert root.ran(str(toolchain.GO_ROOT))
+
+
+def test_a_tarball_left_in_home_that_misses_the_sha256_is_refused_before_root_is_asked(home, bundle, effected, monkeypatch) -> None:
+    (home / f'{RELEASE}.linux-amd64.tar.gz').write_bytes(go_tarball())
+    effected(fetches=Fetches(refuse=('go.dev',)))
+    answers(monkeypatch, RELEASE, b'the bytes go.dev published')
+    root = Root()
+
+    result = toolchain.install_go(LINUX, root, offline=False)
+
+    assert not result.ok
+    assert result.kind is Kind.UNVERIFIED
+    assert root.calls == []
+
+
+def test_go_with_no_readable_sha256_is_not_downloaded(home, bundle, effected, monkeypatch) -> None:
+    runs, fetches = effected()
+    answers(monkeypatch, RELEASE)
+
+    result = toolchain.install_go(LINUX, Root(), offline=False)
+
+    assert not result.ok
+    assert result.kind is Kind.UNVERIFIED
+    assert fetches.urls == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────

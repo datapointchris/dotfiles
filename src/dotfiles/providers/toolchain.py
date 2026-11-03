@@ -25,12 +25,14 @@ run doing the installing.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
 import tempfile
 from pathlib import Path
 
+import httpx2
 import yaml
 
 from dotfiles import effects
@@ -313,6 +315,7 @@ def install_rust(*, offline: bool) -> Result:
 
 GO_VERSION_URL = 'https://go.dev/VERSION?m=text'
 GO_DOWNLOAD_URL = 'https://go.dev/dl'
+GO_RELEASES_URL = 'https://go.dev/dl/?mode=json'
 GO_ROOT = Path('/usr/local/go')
 
 GO_ENV_SECONDS = 10.0
@@ -376,6 +379,11 @@ def install_go(target: Target, privilege: Escalates, *, offline: bool) -> Result
     the whole tree. `/usr/local/go` because that is where go.dev puts it on macOS
     and Linux alike, so there is no platform branch to write.
 
+    The tarball must match the SHA-256 go.dev publishes, whichever source it came
+    from, and a value that cannot be read refuses the install. go.dev answers that
+    itself, where the tarball redirects to dl.google.com, so the value is readable
+    wherever the version is and holds a copy left in `$HOME` to the same check.
+
     Moving it is a change to `GO_ROOT` and to `.zshenv`, and to nothing else:
     `TOOL_PATH_DIRS`, `go_command` and the registry's `installed_at` all read it
     from there. `.zshenv` is the one copy that cannot, and `tests/cli/test_apply.py`
@@ -394,6 +402,10 @@ def install_go(target: Target, privilege: Escalates, *, offline: bool) -> Result
         return Result(False, f'could not read the current Go release from {GO_VERSION_URL}', kind=Kind.VERSION_UNRESOLVED)
 
     archive_name = f'{release}.{go_platform(target)}.tar.gz'
+    published = published_sha256(archive_name)
+    if published is None:
+        return Result(False, f'could not read the SHA-256 of {archive_name} from {GO_RELEASES_URL}', kind=Kind.UNVERIFIED)
+
     with tempfile.TemporaryDirectory(prefix='dotfiles-go-') as scratch:
         staging = Path(scratch)
         archive = tarball(archive_name, staging)
@@ -403,6 +415,8 @@ def install_go(target: Target, privilege: Escalates, *, offline: bool) -> Result
                 f'could not download {GO_DOWNLOAD_URL}/{archive_name}, and no copy of it is in {Path.home()}',
                 kind=Kind.DOWNLOAD_FAILED,
             )
+        if not github_release.digests_match(published, github_release.sha256_of(archive)):
+            return Result(False, f'{archive_name} does not match the SHA-256 {GO_RELEASES_URL} publishes', kind=Kind.UNVERIFIED)
 
         unpacked = staging / 'unpacked'
         if not effects.unpack(archive, unpacked):
@@ -427,10 +441,23 @@ def latest_release(url: str = GO_VERSION_URL) -> str | None:
     """What go.dev calls current, as a release name: `go1.26.5`."""
     try:
         answered = github_release.request(url).decode()
-    except OSError:
+    except httpx2.HTTPError:
         return None
     first = answered.strip().splitlines()
     return first[0].strip() if first else None
+
+
+def published_sha256(archive_name: str, url: str = GO_RELEASES_URL) -> str | None:
+    """The SHA-256 go.dev lists for one tarball, or None where it lists none or cannot be read."""
+    try:
+        releases = json.loads(github_release.request(url))
+    except (httpx2.HTTPError, ValueError):
+        return None
+    for release in releases:
+        for file in release['files']:
+            if file['filename'] == archive_name:
+                return str(file['sha256'])
+    return None
 
 
 def go_platform(target: Target) -> str:
@@ -468,12 +495,18 @@ def replace_goroot(unpacked: Path, privilege: Escalates) -> Result:
     tar to `sudo tar -C /usr/local`: `effects.unpack` extracts under
     `filter='data'`, which refuses absolute paths, `..` traversal and device
     nodes. This is an archive off the internet, unpacked as root.
+
+    `cp -a` keeps the unpacking user as owner, so `chown` hands the tree to root:
+    every Go tool is built with this compiler, and a process running as this user
+    has no business rewriting it.
     """
     try:
         removed = privilege.run(['rm', '-rf', str(GO_ROOT)], reason=f'replace the Go toolchain in {GO_ROOT}')
         if not removed.ok:
             return Result(False, f'could not remove {GO_ROOT}: {removed.transcript.strip()}', kind=Kind.WRITE_FAILED)
         placed = privilege.run(['cp', '-a', str(unpacked), str(GO_ROOT)], reason=f'install the Go toolchain into {GO_ROOT}')
+        if placed.ok:
+            placed = privilege.run(['chown', '-R', '0:0', str(GO_ROOT)], reason=f'make root the owner of {GO_ROOT}')
     except PrivilegeUnavailable:
         return Result(False, refusal(privilege.state), kind=Kind.PRIVILEGE_UNAVAILABLE)
 
