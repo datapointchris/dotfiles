@@ -30,8 +30,9 @@ serve_bundles: true
 # report the login missing until it is done, which on a box nobody watches is the
 # difference between a sweep that grades nothing and one that says why. icb, ypl,
 # homelab and claude-code-metrics authenticate as this box's service clients from
-# service.env, so none is named. slate's binary arrives with fleet-member and has
-# no login here, because nothing on this box reads it.
+# service.env, so none is named. slate's binary arrives with fleet-member and no
+# row here names its login, so a session's commit on this box prints the hook's
+# failure line and carries no Worklog trailer.
 #
 # Not atuin. This resource declares a login, and what zsh init needs is the
 # binary — `atuin init zsh` runs and the shell starts clean with no session at

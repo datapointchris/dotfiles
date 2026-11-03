@@ -212,9 +212,9 @@ required:
   # it, ifiles' names its file server, and this public repo must not carry the
   # domain itself.
   #
-  # Each consumer holds the keys its CLI's login writes, in its order, and no
-  # comment: goclilogin's three, or the url and source `ifiles auth login`
-  # writes. A file a CLI wrote at login before this machine set these
+  # Each template among the consumers holds the keys its CLI's login writes, in
+  # its order, and no comment: goclilogin's three, or the url and source `ifiles
+  # auth login` writes. A file a CLI wrote at login before this machine set these
   # values is then a rendering, so the next apply overwrites it rather than
   # refusing it as somebody else's. Change a value here in ~/.env, since apply
   # overwrites an edit made in the rendered file.
@@ -234,6 +234,7 @@ required:
       - configs/trust/fleet/.config/meso/config.toml.tmpl
       - configs/trust/fleet/.config/nomad/config.toml.tmpl
       - configs/trust/fleet/.config/ypl/config.toml.tmpl
+      - src/dotfiles/resources/auth.py
 
   # What follows the product name in every OAuth client id this machine logs in
   # as: `cli-<machine>` for a person's device login, `svc-<machine>` for a
@@ -251,6 +252,7 @@ required:
       - configs/trust/fleet/.config/meso/config.toml.tmpl
       - configs/trust/fleet/.config/nomad/config.toml.tmpl
       - configs/trust/fleet/.config/ypl/config.toml.tmpl
+      - src/dotfiles/resources/auth.py
 
 # Machine-local shell code the repo declares but deliberately never contains.
 # Same principle as `required:` above — the repo knows a machine needs it and

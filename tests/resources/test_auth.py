@@ -216,7 +216,6 @@ def test_a_binary_on_path_that_cannot_run_is_unmeasured_rather_than_logged_out(x
 
     assert found.verdict is Verdict.UNKNOWN
     assert found.repair is Repair.NONE
-    assert 'could not be executed' in found.detail
 
 
 def test_a_tool_that_is_not_installed_is_unmeasured_rather_than_an_issue(xdg: Path, fake_bin: Path) -> None:

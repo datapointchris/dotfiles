@@ -1138,7 +1138,7 @@ github_releases:
   - name: slate
     repo: datapointchris/slate
     release_tag_prefix: "cli/"
-    description: Development tracker — ideas, initiatives, issues, claims and worklogs
+    description: Work tracker built for coding agents
     tags: [cli, personal]
 
 # ================================================================
