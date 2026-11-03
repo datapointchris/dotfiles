@@ -67,26 +67,25 @@ PROFILES_DIR = INSTALL_DIR / 'profiles'
 FLAGS_FILE = INSTALL_DIR / 'flags.yml'
 
 # State rather than cache or data: it survives runs, nobody authored it, and
-# deleting it changes what the tool can answer rather than costing a recompute. Its own
-# synced folder, so the fleet shares run history and a machine outside that sync
-# keeps its own by construction rather than by a rule.
+# deleting it changes what the tool can answer rather than costing a recompute. Each
+# machine keeps its own.
 #
-# Run records already carry the machine in the filename. The two below do not on
-# their own, and sharing the directory without a suffix would have every machine
-# overwriting the others' "what happened last".
+# Every name carries the machine, because `report download` puts another machine's
+# records here and a directory can be copied whole. Without it the second machine's
+# "what happened last" overwrites the first's.
 STATE_HOME = xdg_home('XDG_STATE_HOME', '.local/state') / 'dotfiles'
 RUNS_DIR = STATE_HOME / 'runs'
 
 
 def machine_id() -> str:
-    """Which *box* wrote a file, for the ones the fleet shares a directory for.
+    """Which *box* wrote a file, for the ones named after the box that wrote them.
 
     The bare lowercased hostname, which is what machine identity is everywhere
     in this tool.
 
     **Never `$MACHINE`, which names the *manifest*.** Two machines legitimately
-    share one, so keying on it puts their status files at a single path in a synced
-    directory and the second to run overwrites the first.
+    share one, so keying on it gives their status files one name, and wherever the
+    two meet the second overwrites the first.
     """
     return socket.gethostname().split('.')[0].lower()
 
@@ -146,9 +145,9 @@ def staging_dir() -> Path:
     merging: `providers.locate` reads across them newest-first, and an entry the
     sparse bundle omits falls through to the older full bundle carrying it.
 
-    **Cache rather than state, whatever the recovery cost.** `STATE_HOME` is
-    replicated, so a gigabyte of archives there lands on every machine in the
-    fleet.
+    **Cache rather than state, whatever the recovery cost.** `STATE_HOME` holds what
+    only this box can answer about its own past, and a bundle can be fetched or
+    built again.
 
     A function rather than a constant, so `$DOTFILES_BUNDLE` is read on every call
     and a test cannot miss rebinding it.

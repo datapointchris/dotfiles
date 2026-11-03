@@ -451,7 +451,7 @@ def no_writing_into_this_machines_own_directories(request, monkeypatch):
     `paths.STATE_HOME` itself at `src/dotfiles/status.py:71`, so `self == owned` is
     the only one that reaches it; every writer under `runs/` reaches the other.
 
-    A directory sweep cannot do this job. Replication delivers a peer's record
+    A directory sweep cannot do this job. `report download` can put a peer's record
     into `runs/` while the suite is running, and a person or a second session can
     run a real verb on this box at the same time — so a new file there is not
     evidence of a leak, and the narrow filter that tried to tell them apart was

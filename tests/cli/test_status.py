@@ -39,7 +39,7 @@ def state_at(monkeypatch: pytest.MonkeyPatch, xdg_state: Path) -> Path:
     The host is answered as `Box.local` and the file comes out `status-box.json`,
     which is what pins the two things `machine_id` does to it. Answered bare and
     lowercase, dropping either would leave every assertion below green and put
-    `status-Box.local.json` beside `status-box.json` in that shared directory.
+    `status-Box.local.json` beside `status-box.json`.
     """
     monkeypatch.setenv('XDG_STATE_HOME', str(xdg_state))
     derivations.rerun(monkeypatch, hostname='Box.local')

@@ -187,8 +187,8 @@ def listed(path: Path) -> dict[str, object]:
     stream needs the second one.** Two machines legitimately share one manifest —
     both declare `macos-personal-workstation` — so a count grouped on `machine`
     reports one box where two wrote runs, and either one's history stands in for
-    the other's. A reader of a shared directory selects by the key
-    that made the writes unique: the filenames were keyed on the host precisely so
+    the other's. A reader of a directory holding more than one box's files selects
+    by the key that made the writes unique: the filenames were keyed on the host precisely so
     the two could be told apart, and a discriminator that reaches only the filename
     is half a mechanism.
 
@@ -397,8 +397,8 @@ def list_runs(
     if not found:
         return
     # Names alone made this a directory listing with a filter: finding which run
-    # failed meant opening each record in turn, and the fleet shares `runs/`, so
-    # "which one went wrong" is the question the list is reached for.
+    # failed meant opening each record in turn, and "which one went wrong" is the
+    # question the list is reached for.
     table = Table(box=None, pad_edge=False)
     table.add_column('run')
     table.add_column('outcome')
@@ -442,9 +442,9 @@ def upload(
     scope, the second its cause. Sending one is the shape that makes somebody ask
     for the other.
 
-    Only this box's own records. `$XDG_STATE_HOME` is replicated across the
-    fleet, so the runs directory holds every machine's, and a bare "upload
-    everything" would put a peer's records on this machine's shelf.
+    Only this box's own records. The runs directory also holds what `report
+    download` fetched, so a bare "upload everything" would put a peer's records on
+    this machine's shelf.
     """
     verbosity(verbose, quiet)
     directory, sent = send(identifier)
@@ -456,7 +456,7 @@ def upload(
 
 @app.command('download')
 def download(
-    machine: str = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)'),
+    machine: str = typer.Option(None, '--machine', help="Whose shelf to read, by its manifest's name (default: this machine's)"),
     limit: int = LimitOption,
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
@@ -464,8 +464,8 @@ def download(
     """Fetch a machine's run records off the remote, so they can be read here.
 
     The counterpart to `upload`. A record says what an `apply` decided and what it
-    ran, and for a box that shares no files with this one the remote holds the only
-    copy — which makes this the route to "what did that apply actually install".
+    ran, and the remote holds the only copy another box can reach — which makes this
+    the route to "what did that apply actually install".
 
     A reconcile in the same shape as `upload`: only what the local runs directory
     does not already hold, so running it twice fetches nothing the second time.
@@ -714,7 +714,7 @@ def never_converged(records: list[runs.RunRecord]) -> list[Unconverged]:
     `brew list` reports `pkgconf` because the formula was renamed, and the
     evidence check looks for the declared name and finds nothing. The install
     reports success, the run reports converged, and the item is reinstalled
-    forever. Nothing sees the repetition until the fleet shares its run history.
+    forever. Nothing sees the repetition until something reads runs side by side.
 
     A registry package does not reach here at all. `transact` re-observes what it
     installed and records `absent` rather than `done`, so the streak this counts

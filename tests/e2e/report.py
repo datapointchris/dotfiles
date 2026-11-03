@@ -85,8 +85,8 @@ def stats(machine: str = '') -> None:
     slow from one that was slow once because the box was busy, and the second is
     not a reason to go looking at the rung.
 
-    `--machine` narrows it, because the history is fleet-shared: a median taken
-    across an old laptop and a fast desktop describes neither of them.
+    `--machine` narrows it, because the history can hold more than one machine's: a
+    median taken across an old laptop and a fast desktop describes neither of them.
     """
     seen: dict[str, list[float]] = {}
     failures: dict[str, int] = {}
@@ -136,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
     group.add_argument('--list', action='store_true', help='every matrix run, newest first')
     group.add_argument('--stats', action='store_true', help='per cell, across every run')
     group.add_argument('--tail', metavar='CELL', help='follow a running cell, e.g. full-wsl')
-    parser.add_argument('--machine', default='', help='narrow --stats to one machine in the shared history')
+    parser.add_argument('--machine', default='', help='narrow --stats to one machine in the history')
     parsed = parser.parse_args(argv)
 
     if parsed.tail:

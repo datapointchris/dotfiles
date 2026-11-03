@@ -8,9 +8,8 @@ running a check of its own.
 `document` below is composed for one run because a caller asked for it, and that
 caller keeps it — so it carries every item behind every count, which is what makes
 it worth handing to a machine that can reach the network. This file is written by
-every check, wanted by nobody in particular, and lands in `$XDG_STATE_HOME`, which
-the fleet replicates between machines. Written as the document it was 127 KB
-against 2.8 KB for the same walk, several times a day, on every box.
+every check and wanted by nobody in particular. Written as the document it was
+127 KB against 2.8 KB for the same walk, several times a day, on every box.
 
 Written by every `check`, not only the scheduled one, so an interactive check
 refreshes what a later reader sees.
@@ -146,9 +145,9 @@ def on_remote(where: transport.Remote, machine: str) -> tuple[str, ...]:
 def record(results: Sequence[ResourceResult], machine: str, when: dt.datetime) -> bool:
     """Write the state file, and say when the state directory would not take it.
 
-    On the fleet the state directory is replicated between machines, and on a
-    fresh machine it is absent. Neither is a reason for `dotfiles check` to exit
-    non-zero — it answered the question it was asked. Degrading is right here;
+    On a fresh machine the state directory is absent, and a read-only one refuses
+    the write. Neither is a reason for `dotfiles check` to exit non-zero — it
+    answered the question it was asked. Degrading is right here;
     degrading silently is not. An unwritable directory is indistinguishable from a
     successful write to everything downstream, so a reader asking where this
     machine stands would get an answer from whenever the last write landed and
@@ -183,7 +182,7 @@ needs. A reader folding the fleet's files by machine needs 2: under 1 the only
 identity in the document is `machine`, and two boxes both write
 `macos-personal-workstation` into it, so they are one row and whichever
 was read last wins. Recovering the box from the filename instead is a half
-mechanism: a reader of a shared directory selects by the key that made the writes
+mechanism: a reader of a directory holding more than one box's files selects by the key that made the writes
 unique, and a discriminator reaching only the name is not that key.
 
 `runs.SCHEMA` is the same arrangement for the run record: one artifact, one
@@ -252,9 +251,8 @@ def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) ->
 
     `as_counts` in place of `as_dict` is the whole difference from `document`.
     Both cross machines and both are versioned; what they are not is one artifact,
-    and writing the document here made every scheduled check push 127 KB into a
-    replicated directory to answer a question — is this machine converged — that
-    2.8 KB answers.
+    and writing the document here made every scheduled check write 127 KB to answer
+    a question — is this machine converged — that 2.8 KB answers.
 
     A caller wanting the items asks for them: `dotfiles check --json > wherever`
     is the composed-on-request half, and it is the same walk through a door that
@@ -271,8 +269,8 @@ def state(results: Sequence[ResourceResult], machine: str, when: dt.datetime) ->
     tell one twin's file from the other's — and both of them write it. A reader
     folding the directory has to match on the thing that made the writes unique, and a
     discriminator reaching only the name gives it nothing to match. Plainly rather
-    than as `publishing.discriminator`'s digest: this file stays inside the
-    fleet's own synced folder, where the hostname is published on purpose.
+    than as `publishing.discriminator`'s hash: this file stays on the box that
+    wrote it, which already knows its own hostname.
     """
     return {
         'version': STATE_VERSION,

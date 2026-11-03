@@ -12,9 +12,9 @@ mid-follow. `runs.list_event_logs`, `runs.latest_event_log` and `newer_than` are
 the real ones: *which* file a follower moves to is the property under test, and a
 stub for any of them would answer it in the test's own words.
 
-`runs/` is replicated between machines, so a peer's stream, a stream from a box
-whose name starts with this one's, and a conflict copy of a local run all land
-in the same directory. The `shared` fixture builds that directory, and every
+`report download` and a sync tool leave more than this box's files in `runs/`, so
+a peer's stream, a stream from a box whose name starts with this one's, and a
+conflict copy of a local run all land in the same directory. The `shared` fixture builds that directory, and every
 selector in this module is one that has to keep telling them apart.
 """
 

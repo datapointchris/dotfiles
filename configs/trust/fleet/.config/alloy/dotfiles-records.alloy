@@ -1,7 +1,7 @@
-// The record files dotfiles writes on this machine, each record once. A synced
-// directory also holds other machines' files, so each glob names this machine's
-// own by its lowercased short hostname, and the box that wrote a record is the
-// one that ships it.
+// The record files dotfiles writes on this machine, each record once.
+// `dotfiles report download` puts other machines' files in the same directory, so
+// each glob names this machine's own by its lowercased short hostname, and the box
+// that wrote a record is the one that ships it.
 //
 // A JSON record carrying a W3C traceparent lands under the trace that wrote it.
 // One without the field passes through unparsed.
@@ -37,12 +37,15 @@ otelcol.receiver.filelog "dotfiles_runs" {
   }
 }
 
-// Each command a dotfiles run made, one JSON object a line.
+// Each command a dotfiles run made, one JSON object a line. A log can open with a
+// tool's long usage text, the same across runs, so its first KiB does not tell it
+// from another run's and the receiver would take it for a file already read.
 otelcol.receiver.filelog "dotfiles_effects" {
-  include       = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.jsonl", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
-  start_at      = "beginning"
-  storage       = otelcol.storage.file.offsets.handler
-  poll_interval = "30s"
+  include          = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.jsonl", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  poll_interval    = "30s"
+  fingerprint_size = "8KiB"
 
   operators = [
     {

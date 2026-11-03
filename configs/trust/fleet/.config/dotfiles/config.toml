@@ -49,15 +49,17 @@ blocked = []
 #
 # The flags are stated rather than left to the defaults they match, for the reason
 # [schedule] is: a machine that reaches a server unasked should say so in its own
-# config. Every one is off, so a bundle or a run record moves when somebody types
-# the verb and never as a side effect of converging. A fleet machine reaches every
-# source itself, so it never needs to request a bundle. request_hook_url goes
-# unread until a box here asks for one and holds the hook's secret.
+# config. publish_reports_after_apply is on, because a machine's shelf is how
+# another reads its runs with `dotfiles report download`, and nothing else fills it.
+# The rest are off, so a bundle moves when somebody types the verb and never as a
+# side effect of converging. A fleet machine reaches every source itself, so it
+# never needs to request a bundle. request_hook_url goes unread until a box here
+# asks for one and holds the hook's secret.
 [remote]
 root = "/dotfiles"
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
-publish_reports_after_apply = false
+publish_reports_after_apply = true
 request_bundle_when_blocked_items_are_behind = false
 request_hook_url = "https://hooks.ichrisbirch.com/hooks/dotfiles-bundle-request"
 

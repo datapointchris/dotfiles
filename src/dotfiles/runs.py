@@ -16,14 +16,14 @@ carries its step breakdown and `record_outcome` will not accept one without it.
 The split matters because "the install was slow" and "the *downloads* were slow"
 are different findings, and only a per-step number tells them apart.
 
-Reading a record needs no special tooling — it is JSON, and the fleet shares one
-directory between machines.
+Reading a record needs no special tooling — it is JSON. One machine reads another's
+by fetching it with `dotfiles report download`.
 
 **Records are kept indefinitely.** There is no retention bound and no prune verb,
 because the value of the history is that it goes back: "is this getting slower"
 cannot be answered by a window that drops the comparison. A record is a few
-kilobytes of JSON and its event log a few tens, and the directory is replicated
-between machines — so the fleet manages what accumulates there, not this module.
+kilobytes of JSON and its event log a few tens, so what accumulates there is the
+machine's to manage, not this module's.
 """
 
 from __future__ import annotations
@@ -440,10 +440,9 @@ class Unreadable(Refusal):
     nothing else to say. Neither can decide that from a `JSONDecodeError` without
     knowing which parser `read` happens to use.
 
-    Reached by an ordinary accident rather than by corruption: `runs/` is
-    replicated between machines, a record is written with a plain `write_text`,
-    and an interrupted process or a full disk leaves a truncated file behind
-    that outlives the run that wrote it.
+    Reached by an ordinary accident rather than by corruption: a record is written
+    with a plain `write_text`, and an interrupted process or a full disk leaves a
+    truncated file behind that outlives the run that wrote it.
     """
 
 
@@ -472,7 +471,7 @@ def list_runs(
 
     `machine` matches whatever the stem carries, which is the host from schema 3
     on and the manifest before it. Deliberately not reconciled by reading the
-    records: that would cost a parse of every file in a shared directory to
+    records: that would cost a parse of every file in the directory to
     answer a question the filename already answers, and the old names stay
     findable under the only identity they ever had.
 
@@ -502,10 +501,9 @@ def names_a_run(stem: str) -> bool:
     """Whether a filename is one `Identity.stem` produced.
 
     **A predicate over the shape this module writes, never a list of the shapes to
-    skip.** `runs/` is replicated between machines, so what lands beside a record
-    is not this repo's to enumerate — a losing write is set aside whole as
-    `<name>.sync-conflict-<date>-<device>.json`, and an editor, a backup or a
-    person can leave anything else. Each arrives as a plausible row: it globs, it
+    skip.** What lands beside a record is not this repo's to enumerate — a sync tool
+    sets a losing write aside whole as `<name>.sync-conflict-<date>-<device>.json`,
+    and an editor, a backup or a person can leave anything else. Each arrives as a plausible row: it globs, it
     sorts, and `machine_of` reads a machine name out of it.
 
     Both ends are checked because both are load-bearing. `list_runs` sorts on the
@@ -553,9 +551,9 @@ def list_event_logs(runs_dir: Path | None = None, *, machine: str | None = None,
     this could not find.
 
     `machine` filters on the stem exactly as `list_runs` does, and every caller
-    here passes this box: `runs/` is replicated between machines, so a peer's
-    check arriving mid-run is otherwise the newest log in the directory and a
-    follow pane would switch to narrating a different computer.
+    here passes this box: `report download` puts a peer's logs in `runs/`, so one
+    fetched mid-run is otherwise the newest log in the directory and a follow pane
+    would switch to narrating a different computer.
     """
     directory = runs_dir or paths.RUNS_DIR
     if not directory.exists():
@@ -581,16 +579,15 @@ def latest_event_log(runs_dir: Path | None = None, *, machine: str | None = None
 def latest(runs_dir: Path | None = None) -> Path | None:
     """The newest run on this box, followed from the link every run rewrites.
 
-    The fleet shares `runs/`, so the newest record in the directory is whichever
-    machine ran most recently — `report latest` after an apply here would show a
-    check that happened on a Mac.
+    `runs/` can hold other machines' records, so the newest record in the directory
+    may be a peer's — `report latest` after an apply here would show a check that
+    happened on a Mac.
 
     The link stays the answer now that the record carries a host and narrowing
-    could work: it is O(1) where narrowing is a listing plus a parse per name,
-    and it is deliberately not synced, which is what makes it a statement about
-    this box rather than about a name this box happens to share. Everything else
-    stays fleet-wide, which is the point of sharing the directory — `report list`
-    and `report stats` see all four.
+    could work: it is O(1) where narrowing is a listing plus a parse per name, and
+    only this box writes it, which is what makes it a statement about this box
+    rather than about a name this box happens to share. Everything else reads the
+    whole directory — `report list` and `report stats` see every machine it holds.
 
     Falls back to the newest record where the link is missing: a machine that has
     never run under this scheme still has records, and answering nothing there

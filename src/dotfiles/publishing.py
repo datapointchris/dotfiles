@@ -130,7 +130,7 @@ def discriminator(trust: axes.NetworkTrust) -> str:
 
     Two machines legitimately share one, so a filename keyed on the manifest alone
     has one overwrite the other. Every machine writing its own file is what makes
-    that collision unreachable, because the replication has no merge step.
+    that collision unreachable, because a shelf has no merge step.
 
     **The trust coordinate decides which answer**, because the constraint does. On
     the fleet the hostname is not a secret and is what a reader wants. Anything

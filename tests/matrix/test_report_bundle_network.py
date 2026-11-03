@@ -94,8 +94,8 @@ BOX_CHECK = '20260103T000000Z-box-check'
 def unlink_the_latest_link(sandbox: Sandbox) -> None:
     """Drop the pointer `runs.write` maintains, so `latest` falls back to the newest.
 
-    A real state: the link is deliberately not synced, so a machine reading a
-    fleet-shared `runs/` it has never written to has records and no link.
+    A real state: only the box that writes a record writes the link, so a machine
+    that has only downloaded records has records and no link.
     """
     link = sandbox.runs.parent / paths.LATEST_RUN.name
     link.unlink(missing_ok=True)
@@ -347,7 +347,7 @@ def test_latest_follows_this_box_link_rather_than_the_newest_record(sandbox: San
     """`runs/` is shared by the whole fleet, so the newest record in it is whichever
     machine ran most recently. The link is what makes `latest` a statement about
     this box — asserted by writing the older record last, which is what a Mac's
-    record arriving by replication looks like from here."""
+    record arriving by `report download` looks like from here."""
     record(sandbox, identifier='newerbyname1', verb='plan', when='20260202T000000Z')
     record(sandbox, identifier='writtenlast1', verb='check', when='20260101T000000Z')
 
@@ -359,9 +359,9 @@ def test_latest_follows_this_box_link_rather_than_the_newest_record(sandbox: San
 
 
 def test_latest_falls_back_to_the_newest_record_when_the_link_is_gone(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
-    """The link is not synced, so a machine reading a shared directory it has never
-    written to has records and no pointer. Answering approximately beats answering
-    nothing."""
+    """Only the box that writes a record writes the link, so a machine that has only
+    downloaded records has records and no pointer. Answering approximately beats
+    answering nothing."""
     record(sandbox, identifier='newerbyname1', verb='plan', when='20260202T000000Z')
     record(sandbox, identifier='writtenlast1', verb='check', when='20260101T000000Z')
     unlink_the_latest_link(sandbox)
@@ -554,7 +554,7 @@ def corrupt_store(sandbox: Sandbox) -> None:
     Zero bytes is what an interrupted or out-of-space `write_text` leaves, and
     `sinks.keep` catches the OSError so the run itself reports nothing. The link is
     removed so the corrupt record is the one `latest` selects, which is the state a
-    machine reading a fleet-shared directory is already in.
+    machine that has only downloaded records is already in.
 
     The readable record carries an outcome so that it has something to contribute
     to every verb below. Without one it contributes no duration, and `stats` then
@@ -624,8 +624,8 @@ def test_a_verb_that_only_names_a_record_survives_an_unreadable_one(
 def test_the_listing_reports_the_runs_it_can_read(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """One unreadable record costs the listing that row and nothing else.
 
-    `runs/` is replicated across the whole fleet, and a record is written with a
-    plain `write_text` — so an interrupted process or a full disk leaves a
+    A record is written with a
+    plain `write_text`, so an interrupted process or a full disk leaves a
     truncated file every reading verb has to survive. The companion event log is
     tolerated exactly this way: `slow_commands` catches its own parse errors
     line by line and says so, on the grounds that a run must not refuse to

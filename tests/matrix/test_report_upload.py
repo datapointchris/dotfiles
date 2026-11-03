@@ -95,8 +95,8 @@ def a_record(sandbox: Sandbox, host: str, stamp: str = '20260817T120000Z', verb:
 def test_a_peer_s_record_stays_on_the_machine_that_wrote_it(
     sandbox: Sandbox, server: Path, named: str, cli: Callable[..., Invocation]
 ) -> None:
-    """`$XDG_STATE_HOME` is replicated across the fleet, so the runs directory
-    holds every box's records and this shelf is one box's. Both of this box's
+    """`report download` leaves a peer's records in the runs directory, and this
+    shelf is one box's. Both of this box's
     files go and neither of the peer's does — the record carries a failure's
     scope and the log carries its cause, so sending one is the shape that makes
     somebody ask for the other."""

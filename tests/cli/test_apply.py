@@ -82,7 +82,7 @@ def no_event_log(monkeypatch: pytest.MonkeyPatch) -> None:
 
     `open_log` opens the log under the real `$XDG_STATE_HOME`, and it swallows
     its own errors by design, so nothing here ever failed. Every suite run left
-    four empty logs in the fleet's replicated state directory: 1372 of them
+    four empty logs in the real state directory: 1372 of them
     against 143 real runs by the time anything counted. Stubbing `keep` is what
     kept them recordless as well as empty, which is what made them read as a
     crashed apply rather than as test residue.

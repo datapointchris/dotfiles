@@ -302,9 +302,8 @@ class TestListing:
         assert runs.latest(runs_dir) == written
 
 
-class TestForeignFilesInTheSharedDirectory:
-    """`runs/` is replicated between machines, so what lands beside a record is not
-    this repo's to enumerate. Every listing answers about the names this module
+class TestForeignFilesInTheRunsDirectory:
+    """What lands beside a record is not this repo's to enumerate. Every listing answers about the names this module
     writes, not about everything that globs.
     """
 
