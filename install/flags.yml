@@ -165,9 +165,9 @@ required:
       - configs/common/.config/newsboat/config
 
   # Beside the URL because newsboat sends them together and neither is useful
-  # alone. An account name rather than a credential: the password is
-  # FRESHRSS_PASSWORD, which no register declares because `freshrss-passwordeval`
-  # already fails loudly and a secret belongs in the vault rather than here.
+  # alone. An account name rather than a credential: the password sits in each
+  # desk's keyring under service `freshrss`, where `freshrss-passwordeval` reads it
+  # and fails loudly when it is missing.
   - name: FRESHRSS_LOGIN
     description: Account name this machine authenticates to FreshRSS with
     network_trust: fleet

@@ -11,8 +11,15 @@
 # unset. Bare leaves the line with too few parameters and newsboat refuses to
 # start. Quoted, it prints `You must set freshrss-url to use FreshRSS` and starts
 # anyway, so a machine with no FreshRSS to reach still gets a reader.
+#
+# `FRESHRSS_URL` is the web app's address, which the rss launcher opens. Newsboat
+# logs in at its Google Reader API endpoint, a path under that address.
+#
+# The password sits in the desk's keyring under service `freshrss`, so it is in no
+# file and no process's environment. `secret-tool` answers on Linux and `security`
+# on macOS, whose keychain refuses a session with no window server, such as ssh.
 urls-source "freshrss"
-freshrss-url "`echo $FRESHRSS_URL`"
+freshrss-url "`echo ${FRESHRSS_URL:+$FRESHRSS_URL/api/greader.php}`"
 freshrss-login "`echo $FRESHRSS_LOGIN`"
-freshrss-passwordeval "echo $FRESHRSS_PASSWORD"
+freshrss-passwordeval "secret-tool lookup service freshrss 2>/dev/null || security find-generic-password -s freshrss -w"
 refresh-on-startup yes
