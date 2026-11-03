@@ -62,12 +62,17 @@ blocked = [
 # box's status, asks the builder for a bundle carrying those items, waits for it,
 # and installs it. The rest stay off: a bundle or a run record moves on its own
 # only inside that exchange.
+#
+# A request's one signed push goes to request_hook_url, so the builder starts at
+# once. A box with no secret for it still leaves the request, and the builder's
+# daily pass answers it.
 [remote]
 root = "/dotfiles"
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
 publish_reports_after_apply = false
 request_bundle_when_blocked_items_are_behind = true
+request_hook_url = "https://hooks.ichrisbirch.com/hooks/dotfiles-bundle-request"
 
 [remote.transport]
 program  = "ifiles"

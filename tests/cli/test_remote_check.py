@@ -46,12 +46,16 @@ this whole effort is about.
 from __future__ import annotations
 
 import dataclasses as dc
+import hashlib
+import hmac
 import json
 import os
+import stat
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import httpx2
 import pytest
 from relay import declare
 from relay import deny_listing
@@ -61,7 +65,10 @@ from relay import recorded
 from typer.testing import CliRunner
 from typer.testing import Result
 
+from dotfiles import bundle_requests
+from dotfiles import paths
 from dotfiles import remote as transport
+from dotfiles import request_hook
 from dotfiles.main import app
 from dotfiles.vocabulary import ExitCode
 
@@ -573,3 +580,90 @@ def test_a_refused_root_carries_the_transports_own_words(bench: Bench) -> None:
     root = rows(check('--json'))['root']
 
     assert '403 token expired' in root['detail']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The request hook
+# ─────────────────────────────────────────────────────────────────────────────
+
+HOOK_SECRET = 'the-hook-secret'
+
+
+@pytest.fixture
+def received(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[dict[str, str]]:
+    """Each body a stand-in receiver read. It answers as the webhook server's published responses do."""
+    bodies: list[dict[str, str]] = []
+
+    def receiver(url: str, *, content: bytes, headers: dict[str, str], timeout: int) -> httpx2.Response:
+        bodies.append(json.loads(content))
+        good = headers['X-Hub-Signature-256'] == f'sha256={hmac.new(HOOK_SECRET.encode(), content, hashlib.sha256).hexdigest()}'
+        return (
+            httpx2.Response(200, text='nothing starts')
+            if good
+            else httpx2.Response(500, text='Error occurred while evaluating hook rules.')
+        )
+
+    monkeypatch.setattr(httpx2, 'post', receiver)
+    monkeypatch.setattr(paths, 'STATE_HOME', tmp_path / 'state')
+    return bodies
+
+
+def a_remote_with_a_hook(bench: Bench) -> None:
+    install_relay(bench.bin, bench.server)
+    declare(bench.config, extra='request_hook_url = "https://hooks.example/hooks/request"')
+
+
+def test_a_good_secret_sends_one_signed_no_op_that_names_no_request(bench: Bench, received: list[dict[str, str]]) -> None:
+    a_remote_with_a_hook(bench)
+    request_hook.store_secret(HOOK_SECRET)
+
+    ran = check('--json')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert rows(ran)['request hook']['facts']['state'] == 'took'
+    assert received == [{'request': ''}]
+
+
+def test_a_wrong_secret_is_named_with_the_verb_that_replaces_it(bench: Bench, received: list[dict[str, str]]) -> None:
+    a_remote_with_a_hook(bench)
+    request_hook.store_secret('some-other-secret')
+
+    ran = check('--json')
+    row = rows(ran)['request hook']
+
+    assert ran.exit_code == ExitCode.ISSUE
+    assert row['facts']['state'] == 'wrong-secret'
+    assert 'hook-secret set' in row['advice']
+
+
+def test_a_box_holding_no_secret_reports_a_fact_and_sends_nothing(bench: Bench, received: list[dict[str, str]]) -> None:
+    a_remote_with_a_hook(bench)
+
+    ran = check('--json')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert rows(ran)['request hook']['facts']['state'] == 'no-secret'
+    assert received == []
+
+
+def test_the_secret_arrives_by_pipe_and_only_its_owner_can_read_it(received: list[dict[str, str]]) -> None:
+    stored = CliRunner().invoke(app, ['remote', 'hook-secret', 'set'], input=f'{HOOK_SECRET}\n')
+
+    assert stored.exit_code == ExitCode.CONVERGED
+    assert request_hook.held_secret() == HOOK_SECRET
+    assert stat.S_IMODE(request_hook.secret_path().stat().st_mode) == 0o600
+    assert HOOK_SECRET not in stored.output
+
+    assert CliRunner().invoke(app, ['remote', 'hook-secret', 'set'], input='\n').exit_code == ExitCode.USAGE
+    assert request_hook.held_secret() == HOOK_SECRET
+
+
+def test_a_refused_push_ends_the_wait_and_still_sent_the_requests_id(bench: Bench, received: list[dict[str, str]]) -> None:
+    a_remote_with_a_hook(bench)
+    request_hook.store_secret('some-other-secret')
+    where = transport.read().remote
+    assert where is not None
+    request = bundle_requests.Request('20261103T010203Z-box', 'box', 'x86_64', 'status.json', '2026-11-03', 'abc')
+
+    assert not bundle_requests.pushed_to_builder(where, request)
+    assert received == [{'request': request.id}]

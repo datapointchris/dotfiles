@@ -240,6 +240,7 @@ def requirement_dict(entry: machines.Requirement) -> dict[str, object]:
         'description': entry.description,
         'restore': entry.restore or (env.RESTORE if entry.is_file else 'set it below the OVERRIDES marker in ~/.env'),
         'tags': list(entry.tags),
+        'backed_up': entry.backed_up,
         'consumers': list(entry.consumers),
         'narrowing': dict(entry.narrowing),
         'requires_values': list(entry.requires_values),
@@ -308,6 +309,8 @@ def safekeep_block(machine: machines.Machine) -> str:
     ]
 
     for entry in machine.required_files:
+        if not entry.backed_up:
+            continue
         tags = ', '.join(f'"{tag}"' for tag in (SAFEKEEP_TAG, *entry.tags))
         # The declaration verbatim, variable and all. This block is generated *for* a
         # named machine and pasted *on* it, so expanding here would bake the generating

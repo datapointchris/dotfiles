@@ -145,9 +145,35 @@ tarball the downloaded file is not what the bundle carries.
 
 ## A restricted box requests its own bundle, and a builder answers on the same server
 
-The file server has no push, so both ends poll it. A request and its two answers
-live in `<root>/requests/<manifest>/`, and `src/dotfiles/bundle_requests.py`
-owns their shapes.
+A request and its two answers live in `<root>/requests/<manifest>/`, and
+`src/dotfiles/bundle_requests.py` owns their shapes.
+
+**A signed push starts the builder, and a scheduled pass answers what a push
+missed.** FileBrowser Quantum offers no upload hook, so uploading a request wakes
+nothing. The box follows the upload with one POST to `[remote].request_hook_url`.
+The body is `{"request": "<id>"}`, signed as GitHub signs a webhook: HMAC-SHA256 in
+`X-Hub-Signature-256`. Whatever answers at that URL starts one pass of `bundle serve
+--once`, so no process waits between requests. A scheduled pass of the same command
+answers a request whose push was lost. `src/dotfiles/request_hook.py` owns the push.
+
+A box behind a monitored egress pushes once per real request, because a repeating
+call reads as a beacon. So nothing retries a push, and `dotfiles check` never sends
+one. `dotfiles remote check` sends one no-op, `{"request": ""}`, when a person asks.
+It starts nothing and names a wrong secret.
+
+The secret sits in a 0600 file under the tool's state directory. `dotfiles remote
+hook-secret set` writes it from a pipe or a prompt that does not echo, and it takes
+no value as an argument. The required-files register lists it for restricted boxes
+and keeps it out of the safekeep block, because the hook's own secret store is the
+source and a backup would be a second place to rotate it.
+
+A missing or refused secret never fails an apply. The request is already on the
+server, so the run says the push did not start a builder and stops waiting at once.
+The apply installs the rest, and `bundle download` collects the bundle once the
+scheduled pass has answered.
+
+*Rejected:* a watcher polling the shelf from a long-lived process. It was one more
+thing to keep alive on one box, and it kept failing unnoticed once its server moved.
 
 An apply runs the restricted box's half itself, between its measure pass and its
 walk. It asks for the entries `packages.bundle_need` names: blocked items missing

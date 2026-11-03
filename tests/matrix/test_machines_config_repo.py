@@ -1054,11 +1054,23 @@ def test_a_json_leaf_puts_one_parseable_document_on_stdout_and_nothing_beside_it
 
 PLAN_KEYS = {'machine', 'platform', 'coordinates', 'features', 'profiles', 'flags', 'auth', 'check_schedule', 'items'}
 ITEM_KEYS = {'section', 'provider', 'resource', 'stage', 'name', 'executable', 'evidence_path', 'precondition', 'selector'}
-REGISTER_KEYS = {'name', 'kind', 'path', 'description', 'restore', 'tags', 'consumers', 'narrowing', 'requires_values', 'file_must_exist'}
+REGISTER_KEYS = {
+    'name',
+    'kind',
+    'path',
+    'description',
+    'restore',
+    'tags',
+    'backed_up',
+    'consumers',
+    'narrowing',
+    'requires_values',
+    'file_must_exist',
+}
 FINDING_KEYS = {'section', 'severity', 'message'}
 SETTINGS_KEYS = {'config_file', 'exists', 'problem', 'settings', 'remote', 'network', 'schedule'}
 SETTING_KEYS = {'name', 'value', 'source', 'exists', 'advice'}
-REMOTE_KEYS = {'declared', 'problem', 'root', 'program', 'operations', 'keep_bundles', 'from_table', *transport.FLAGS}
+REMOTE_KEYS = {'declared', 'problem', 'root', 'program', 'operations', 'keep_bundles', 'from_table', transport.HOOK_KEY, *transport.FLAGS}
 """The shape of the `remote` block, with the flags read from where they are named.
 
 Spelling them again here would assert that `config show --json` emits the set this

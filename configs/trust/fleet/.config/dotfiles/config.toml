@@ -51,13 +51,15 @@ blocked = []
 # [schedule] is: a machine that reaches a server unasked should say so in its own
 # config. Every one is off, so a bundle or a run record moves when somebody types
 # the verb and never as a side effect of converging. A fleet machine reaches every
-# source itself, so it never needs to request a bundle.
+# source itself, so it never needs to request a bundle. request_hook_url goes
+# unread until a box here asks for one and holds the hook's secret.
 [remote]
 root = "/dotfiles"
 fetch_bundle_when_none_is_staged = false
 publish_status_after_offline_apply = false
 publish_reports_after_apply = false
 request_bundle_when_blocked_items_are_behind = false
+request_hook_url = "https://hooks.ichrisbirch.com/hooks/dotfiles-bundle-request"
 
 [remote.transport]
 program  = "ifiles"

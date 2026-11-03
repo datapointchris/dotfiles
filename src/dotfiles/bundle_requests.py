@@ -40,6 +40,7 @@ from dotfiles import output
 from dotfiles import paths
 from dotfiles import publishing
 from dotfiles import remote as transport
+from dotfiles import request_hook
 from dotfiles import runs
 from dotfiles import sinks
 from dotfiles import status as status_document
@@ -288,6 +289,8 @@ def requested_and_staged(machine: str | None, entries: tuple[str, ...]) -> Path 
     put(where, directory, request.filename, request.as_dict())
     wanted = ', '.join(entries) if entries else 'every bundled entry this status shows behind'
     said(f'sent request {request.id} for {wanted} to {directory}')
+    if where.request_hook_url and not pushed_to_builder(where, request):
+        return None
 
     record = waited_for(where, request, already_listed)
     if record is None:
@@ -303,6 +306,24 @@ def requested_and_staged(machine: str | None, entries: tuple[str, ...]) -> Path 
     staged = offline_bundle.stage(archive, named, box)
     said(f'staged at {paths.under_home(staged)}')
     return archive
+
+
+def pushed_to_builder(where: transport.Remote, request: Request) -> bool:
+    """Tell the hook once that `request` is waiting. False once the output has said why no wait would end soon.
+
+    The request stays on the remote whatever the hook answers, so the builder's next
+    scheduled pass answers it. Waiting here would hold the apply for that pass.
+    """
+    pushed = request_hook.push(where.request_hook_url, request.id)
+    if pushed.answer is request_hook.Answer.TOOK:
+        said(f'the hook took it: {pushed.detail}')
+        return True
+    said(f'no push started a builder for request {request.id}: {pushed.detail}', warning=True)
+    said("the request stays on the remote, so the builder's next scheduled pass answers it")
+    if pushed.advice:
+        pointed(pushed.advice)
+    pointed('collect it later: dotfiles bundle list, then dotfiles bundle download')
+    return False
 
 
 def waited_for(where: transport.Remote, request: Request, already_listed: set[str]) -> offline_bundle.Record | None:

@@ -278,6 +278,13 @@ class Requirement:
     also belongs to, and only earns its place where that is not obvious.
     """
 
+    backed_up: bool = True
+    """Whether the safekeep block `machines requirements` emits carries this file.
+
+    False where the machine holds a copy of a secret another store is the source of,
+    so a backup would be a second place to rotate it.
+    """
+
     file_must_exist: bool = False
     """This value names a file, and the file has to be there.
 
@@ -918,6 +925,7 @@ def requirements(flag_data: Mapping[str, Any], machine_name: str, coordinates: a
                     narrowing=narrowing,
                     restore=str(entry.get('restore', '')),
                     tags=tuple(str(tag) for tag in entry.get('tags') or ()),
+                    backed_up=bool(entry.get('backed_up', True)),
                     requires_values=tuple(str(value) for value in entry.get('requires_values') or ()),
                     file_must_exist=bool(entry.get('file_must_exist', False)),
                 )

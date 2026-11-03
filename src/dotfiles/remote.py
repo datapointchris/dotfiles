@@ -32,6 +32,7 @@ from typing import Any
 
 from dotfiles import effects
 from dotfiles import logging
+from dotfiles import request_hook
 from dotfiles import settings
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
@@ -108,7 +109,9 @@ own copy shows every flag but the newest, and a setting that is on reads as a
 machine that does not have it.
 """
 
-KEYS = frozenset({'root', 'keep_bundles', 'transport', *FLAGS})
+HOOK_KEY = 'request_hook_url'
+
+KEYS = frozenset({'root', 'keep_bundles', 'transport', HOOK_KEY, *FLAGS})
 """Every key the `[remote]` table may hold, so anything else can be named."""
 
 
@@ -191,6 +194,12 @@ class Remote:
 
     `bundle_requests.obtain_bundle` is the exchange. Off by default for the reason
     every flag here is: the box this serves reaches the server only when told to.
+    """
+
+    request_hook_url: str = ''
+    """Where a request's signed push goes. Empty leaves a request for whichever pass comes next.
+
+    `request_hook` holds the push.
     """
 
     def directory(self, *parts: str) -> str:
@@ -414,6 +423,10 @@ def read(config: settings.Config | None = None) -> Configured:
     requesting, problem = flag(table, 'request_bundle_when_blocked_items_are_behind')
     problems.extend([problem] if problem else [])
 
+    hook_url = table.get(HOOK_KEY, '')
+    if not isinstance(hook_url, str) or (hook_url and not hook_url.startswith(('https://', 'http://'))):
+        problems.append(f'{TABLE}.{HOOK_KEY} must be an http or https URL')
+
     transport, faults = declared_transport(table.get('transport'))
     problems.extend(faults)
 
@@ -429,6 +442,7 @@ def read(config: settings.Config | None = None) -> Configured:
             publish_status_after_offline_apply=publish,
             publish_reports_after_apply=reports,
             request_bundle_when_blocked_items_are_behind=requesting,
+            request_hook_url=str(hook_url),
         )
     )
 
@@ -813,7 +827,27 @@ def measure(found: Configured) -> tuple[Reach, ...]:
     measured.append(root(remote))
     measured.append(declares(remote, Operation.MKDIR, 'a new directory is created by hand'))
     measured.append(declares(remote, Operation.DELETE, 'retention is reported and never performed'))
+    if remote.request_hook_url:
+        measured.append(hook(remote))
     return tuple(measured)
+
+
+def hook(remote: Remote) -> Reach:
+    """Whether a signed no-op reaches the request hook, which starts no work.
+
+    A box holding no secret is a fact rather than a fault, because every trust
+    variant declares the same URL and most boxes never ask for a bundle. The
+    required-files register reports the secret missing on a box that needs it.
+    """
+    pushed = request_hook.push(remote.request_hook_url, request_hook.NO_REQUEST)
+    return Reach(
+        'request hook',
+        pushed.answer is request_hook.Answer.TOOK,
+        pushed.detail,
+        required=pushed.answer is not request_hook.Answer.NO_SECRET,
+        facts={'state': str(pushed.answer), 'status': pushed.status},
+        advice=pushed.advice,
+    )
 
 
 class RootState(StrEnum):

@@ -75,7 +75,9 @@ def test_the_safekeep_block_is_parseable_toml_carrying_every_file(work: machines
     breaks the backup rather than this command."""
     block = tomllib.loads(run('wsl-work-workstation', '--safekeep'))
 
-    assert [path['path'] for path in block['back_up_paths']] == [entry.path for entry in work.required_files]
+    assert [path['path'] for path in block['back_up_paths']] == [entry.path for entry in work.required_files if entry.backed_up]
+    assert '~/.local/state/dotfiles/remote-hook-secret' in [entry.path for entry in work.required_files]
+    assert '~/.local/state/dotfiles/remote-hook-secret' not in [path['path'] for path in block['back_up_paths']]
 
 
 def test_every_backed_up_path_carries_the_tag_that_selects_this_register() -> None:

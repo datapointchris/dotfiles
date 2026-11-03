@@ -67,6 +67,7 @@ EXCEPTION_VERBS: dict[str, str] = {
     'stats': 'report: an aggregate across runs, which `show` on one run cannot be',
     'update': 'self-update, as everywhere in the fleet — here the checkout is the installation',
     'run': 'timers: runs one declared command now and records its outcome, which measures nothing about the machine',
+    'set': 'remote hook-secret: stores a value a person carries in, from a pipe or a prompt, which no reconcile verb can produce',
 }
 """Each exception carries the reason it is not one of the five, so the next reader
 does not have to reconstruct it — and so a new one has to be argued for in writing."""
@@ -92,6 +93,7 @@ NOUNS = frozenset(
         'network',
         'bundle',
         'remote',
+        'hook-secret',
         'status',
         'repo',
         'timers',

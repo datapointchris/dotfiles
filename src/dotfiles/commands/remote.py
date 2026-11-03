@@ -1,8 +1,9 @@
 """Whether this machine can exchange an artifact with the one on the other side.
 
-One verb, for the same reason `network check` has one: the question has a single
-answer and `check` is already the word for "report what is wrong". It writes
-nothing anywhere — not to the machine and not to the remote.
+`check` is one verb, for the same reason `network check` has one: the question has
+a single answer and `check` is already the word for "report what is wrong". It
+writes nothing anywhere — not to the machine and not to the remote. Where a request
+hook is declared it sends that hook one signed no-op, which starts nothing.
 
 **Presence of the transport is not readiness, so both are measured.** A box with
 `ifiles` installed and no credential for it answers `command -v` perfectly and
@@ -12,9 +13,14 @@ only that the thing exists, so the listing is attempted rather than inferred.
 
 from __future__ import annotations
 
+import getpass
+import sys
+
 import typer
 
+from dotfiles import paths
 from dotfiles import remote as transport
+from dotfiles import request_hook
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
 from dotfiles.commands import verbosity
@@ -28,13 +34,32 @@ from dotfiles.output import hint
 from dotfiles.output import render_row
 from dotfiles.output import render_verdict
 from dotfiles.output import section_line
+from dotfiles.output import success
+from dotfiles.refusal import Refusal
 from dotfiles.results import ResourceVerdict
 from dotfiles.session import machine_or_this_machine
 from dotfiles.vocabulary import ExitCode
 
 app = typer.Typer(no_args_is_help=True, help='Whether this machine can exchange an artifact with the remote')
+hook_secret_app = typer.Typer(no_args_is_help=True, help="The secret that signs this box's push to the request hook")
+app.add_typer(hook_secret_app, name='hook-secret')
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
+
+
+@hook_secret_app.command('set')
+def set_hook_secret(verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
+    """Store the request hook's secret from piped input, or from a prompt that does not echo.
+
+    It takes no value as an argument, because an argument lands in shell history
+    and in the process list.
+    """
+    verbosity(verbose, quiet)
+    value = (getpass.getpass('hook secret: ') if sys.stdin.isatty() else sys.stdin.read()).strip()
+    if not value:
+        raise Refusal('no secret arrived, so nothing was written', code=ExitCode.USAGE)
+    success(f'stored at {paths.under_home(request_hook.store_secret(value))}, readable only by you')
+    hint('test it: dotfiles remote check')
 
 
 @app.command('check')
@@ -50,6 +75,9 @@ def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool 
     An undeclared `mkdir` or `delete` is a fact rather than a finding. Both are
     optional, and reporting them as faults would exit non-zero on every working
     remote that never needed one.
+
+    A declared request hook gets one signed no-op, which starts nothing and names a
+    wrong secret. A box holding no secret reports that as a fact.
 
     A root that will not list is a fault where the directory holding it says the
     root is there, and where nothing could establish either way. It is a fact where

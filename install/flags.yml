@@ -272,7 +272,8 @@ required:
 # `dotfiles machines requirements` lists this register, and `--safekeep` emits it
 # as the `[[back_up_paths]]` blocks safekeep's own config wants — which is what
 # closes the loop, since every entry here is by definition a file no rebuild can
-# regenerate. The optional `tags:` key names a *further* restore scenario; the
+# regenerate. `backed_up: false` keeps an entry out of that block. The optional
+# `tags:` key names a *further* restore scenario; the
 # emitter tags everything `dotfiles` already, so a tag is only worth declaring
 # where the entry belongs to a second one.
 required_files:
@@ -317,6 +318,20 @@ required_files:
     network_trust: nonfleet
     consumers:
       - configs/trust/nonfleet/.config/git/nonfleet.gitconfig
+
+  # Signs a restricted box's push to the bundle request hook. An apply reports it
+  # missing and carries on, because the builder's scheduled pass answers a request
+  # whose push never arrived. `backed_up: false` keeps it out of the safekeep block,
+  # because the hook's own secret store is the source and a backup would be a second
+  # place to rotate it.
+  - name: remote-hook-secret
+    path: ~/.local/state/dotfiles/remote-hook-secret
+    description: The secret that signs this box's push to the bundle request hook
+    restore: "carried from the store that holds the hook's secret, never from a backup; pipe it to: dotfiles remote hook-secret set"
+    backed_up: false
+    network_trust: nonfleet
+    consumers:
+      - src/dotfiles/request_hook.py
 
   # The ntfy subscriber's token, which is why client.yml can be a repo variant at
   # all — the unit passes it as $NTFY_TOKEN and ntfy binds that to --token, so the

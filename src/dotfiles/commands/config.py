@@ -89,6 +89,7 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
                     'operations': sorted(str(name) for name in remote.remote.transport.commands) if remote.remote else [],
                     'keep_bundles': remote.remote.keep_bundles if remote.remote else 0,
                     'from_table': sorted(remote.remote.from_table) if remote.remote else [],
+                    transport.HOOK_KEY: remote.remote.request_hook_url if remote.remote else '',
                     **{name: bool(remote.remote and getattr(remote.remote, name)) for name in transport.FLAGS},
                 },
                 'network': {'blocked': sorted(routes.blocked), 'source': routes.source, 'dropped': list(routes.dropped)},
@@ -122,6 +123,8 @@ def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readab
         # least as worth seeing as a retention count.
         for name in transport.FLAGS:
             console.print(f'  {"":<{width}}  {name} {"on" if getattr(remote.remote, name) else "off"} ({layer(remote.remote, name)})')
+        hook_url = remote.remote.request_hook_url or 'unset'
+        console.print(f'  {"":<{width}}  {transport.HOOK_KEY} {hook_url} ({layer(remote.remote, transport.HOOK_KEY)})')
 
     console.print()
     console.print(f'  {"NETWORK":<{width}}  {"blocks " + ", ".join(sorted(routes.blocked)) if routes.blocked else "blocks no host"}')
