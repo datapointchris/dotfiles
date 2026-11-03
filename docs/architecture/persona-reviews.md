@@ -63,6 +63,12 @@ nothing but its token counts, however much it had read. So the system prompt nam
 reviewer to group its tool calls, and asks for the report by four fifths of the cap. Whatever it did
 not reach goes in `limitations`, which is worth more than no report.
 
+The first report the schema accepts ends the session, and the model cannot tell that from the tool.
+A haiku run had a real report refused three times, because its `summary` swallowed the `inventory`
+that followed it. It then sent a one-item report reading `Test` to isolate the fault, and that report
+was accepted and stored as the session's success. So the prompt says the first accepted report is
+final, and the record counts `rejected_reports` so a run like that one is visible.
+
 ## A run streams its frames, so a person can watch it and a dead run keeps its work
 
 `--output-format json` prints one array when the session ends. A long review would sit silent for

@@ -69,6 +69,11 @@ Reply through the structured output tool. Each field's description in its schema
 Cite every location relative to {subject_dir}, with the line numbers you read. Quote evidence
 verbatim from the subject. List everything the install brings onto this machine in the inventory,
 including what carries no finding.
+
+The first report the schema accepts ends the session and is final, so never send a test, a placeholder
+or a partial report. If the schema rejects a report, fix what the error names and send the whole
+report again. An error naming a missing property usually means that field ran into the one before
+it, so keep every field separate.
 """
 
 

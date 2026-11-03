@@ -160,6 +160,7 @@ def start(
         'tokens': outcome.tokens,
         'tokens_by_model': outcome.tokens_by_model,
         'tokens_from': outcome.tokens_from,
+        'rejected_reports': outcome.rejected_reports,
         'failure': {'key': outcome.failure_key, 'cause': outcome.cause} if outcome.failure_key else None,
         'report_schema': scenario.report_schema.name,
         'report': outcome.report,

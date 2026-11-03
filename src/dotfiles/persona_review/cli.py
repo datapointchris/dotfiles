@@ -152,6 +152,8 @@ def render(record: dict[str, Any]) -> None:
     counted = f"{record.get('num_turns')} turns by claude's count"
     print(f'requests  {record["model_requests"]} of {record["max_turns"]} allowed, {counted}, {record["duration_seconds"]}s')
     print(f'tokens    {tokens_line(record["tokens"])}, from the {record["tokens_from"]}')
+    if record['rejected_reports']:
+        print(f'rejected  the schema refused {record["rejected_reports"]} reports before this result, so read it with care')
     if record.get('failure'):
         print(f'failed    {record["failure"]["key"]}: {record["failure"]["cause"]}')
         return

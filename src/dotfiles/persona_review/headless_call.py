@@ -44,6 +44,9 @@ SPAWNER_MARKERS = ('CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT')
 READ_TOOLS = frozenset({'Read', 'Glob', 'Grep'})
 """Never pre-approved, so they stay inside the start directory and the `--add-dir`."""
 
+REPORT_TOOL = 'StructuredOutput'
+"""The tool `--json-schema` adds. A call to it the schema accepts ends the session."""
+
 STREAM_CHARS = 600
 EXIT_GRACE_SECONDS = 10
 
@@ -70,6 +73,7 @@ class Outcome:
     tokens: dict[str, int]
     tokens_by_model: dict[str, dict[str, int]]
     tokens_from: str
+    rejected_reports: int
     duration_seconds: float
 
 
@@ -196,8 +200,27 @@ def read_frames(frames: list[dict[str, Any]], started: float) -> Outcome:
         tokens=tokens,
         tokens_by_model=by_model,
         tokens_from=tokens_from,
+        rejected_reports=rejected_reports(frames),
         duration_seconds=round(time.monotonic() - started, 1),
     )
+
+
+def blocks(frames: list[dict[str, Any]], frame_type: str) -> list[dict[str, Any]]:
+    """Every content block in the frames of one type."""
+    found: list[dict[str, Any]] = []
+    for frame in frames:
+        content = (frame.get('message') or {}).get('content') if frame.get('type') == frame_type else None
+        if isinstance(content, list):
+            found.extend(block for block in content if isinstance(block, dict))
+    return found
+
+
+def rejected_reports(frames: list[dict[str, Any]]) -> int:
+    """How many reports the schema refused before the one kept."""
+    report_calls = {
+        block.get('id') for block in blocks(frames, 'assistant') if block.get('type') == 'tool_use' and block.get('name') == REPORT_TOOL
+    }
+    return sum(1 for block in blocks(frames, 'user') if block.get('is_error') and block.get('tool_use_id') in report_calls)
 
 
 def json_object(line: str) -> dict[str, Any] | None:

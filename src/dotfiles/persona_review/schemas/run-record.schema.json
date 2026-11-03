@@ -8,7 +8,7 @@
   "required": [
     "schema", "run_id", "mode", "scenario", "subject", "requested_model", "effort", "session_id", "model", "models",
     "claude_code_version", "max_turns", "model_requests", "num_turns", "started_at", "finished_at", "duration_seconds",
-    "tokens", "tokens_by_model", "tokens_from", "failure", "report_schema", "report"
+    "tokens", "tokens_by_model", "tokens_from", "rejected_reports", "failure", "report_schema", "report"
   ],
   "properties": {
     "schema": {"const": "urn:dotfiles:persona-review:run-record:v1"},
@@ -59,6 +59,7 @@
       "description": "Where the counts came from. A transcript omits what a side call such as WebSearch spent. Unmeasured counts are zero.",
       "enum": ["result", "transcript", "unmeasured"]
     },
+    "rejected_reports": {"description": "Reports the schema refused before the one kept. Above zero, the kept report may be the model working around the refusal rather than its review.", "type": "integer"},
     "failure": {
       "oneOf": [
         {"type": "null"},
