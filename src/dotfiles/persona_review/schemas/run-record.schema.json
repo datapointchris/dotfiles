@@ -6,9 +6,9 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema", "run_id", "mode", "scenario", "subject", "requested_model", "effort", "session_id", "model", "models",
+    "schema", "run_id", "mode", "scenario", "subject", "requested_model", "effort", "session_id", "account", "host", "model", "models",
     "claude_code_version", "max_turns", "model_requests", "num_turns", "started_at", "finished_at", "duration_seconds",
-    "tokens", "tokens_by_model", "tokens_from", "rejected_reports", "failure", "report_schema", "report"
+    "tokens", "tokens_by_model", "tokens_from", "thinking_tokens", "tool_calls", "rejected_reports", "failure", "report_schema", "report"
   ],
   "properties": {
     "schema": {"const": "urn:dotfiles:persona-review:run-record:v1"},
@@ -44,6 +44,8 @@
     "requested_model": {"type": "string"},
     "effort": {"description": "The --effort level the call was given. No frame echoes it, so this is the only record of it.", "enum": ["low", "medium", "high", "xhigh", "max"]},
     "session_id": {"description": "The init frame's session id, which names the transcript under the Claude config's projects directory, or empty.", "type": "string"},
+    "account": {"description": "The email of the login the call drew on, or empty for a mock or a login it could not read.", "type": "string"},
+    "host": {"description": "The hostname the run ran on.", "type": "string"},
     "model": {"description": "The model the init frame names, or empty.", "type": "string"},
     "models": {"description": "Every model the result frame's modelUsage names.", "type": "array", "items": {"type": "string"}},
     "claude_code_version": {"type": "string"},
@@ -59,6 +61,8 @@
       "description": "Where the counts came from. A transcript omits what a side call such as WebSearch spent. Unmeasured counts are zero.",
       "enum": ["result", "transcript", "unmeasured"]
     },
+    "thinking_tokens": {"description": "How much of output_tokens the result frame says went to thinking, or zero without a result frame.", "type": "integer"},
+    "tool_calls": {"description": "Each tool the session called, with how many times.", "type": "object", "additionalProperties": {"type": "integer"}},
     "rejected_reports": {"description": "Reports the schema refused before the one kept. Above zero, the kept report may be the model working around the refusal rather than its review.", "type": "integer"},
     "failure": {
       "oneOf": [

@@ -13,6 +13,7 @@ import datetime as dt
 import io
 import json
 import secrets
+import socket
 import subprocess
 import tarfile
 import time
@@ -115,6 +116,7 @@ def start(
     (run_dir / 'argv.json').write_text(json.dumps(command, indent=2) + '\n')
 
     session_dir().mkdir(parents=True, exist_ok=True)
+    account = '' if mock else headless_call.logged_in_account()
     progress = SessionProgress(subject_dir, max_turns)
     with (run_dir / 'frames.jsonl').open('w') as frames_file:
 
@@ -148,6 +150,8 @@ def start(
         'requested_model': 'mock' if mock else model,
         'effort': effort,
         'session_id': outcome.session_id,
+        'account': account,
+        'host': socket.gethostname(),
         'model': outcome.model,
         'models': outcome.models,
         'claude_code_version': outcome.claude_code_version,
@@ -160,6 +164,8 @@ def start(
         'tokens': outcome.tokens,
         'tokens_by_model': outcome.tokens_by_model,
         'tokens_from': outcome.tokens_from,
+        'thinking_tokens': outcome.thinking_tokens,
+        'tool_calls': outcome.tool_calls,
         'rejected_reports': outcome.rejected_reports,
         'failure': {'key': outcome.failure_key, 'cause': outcome.cause} if outcome.failure_key else None,
         'report_schema': scenario.report_schema.name,

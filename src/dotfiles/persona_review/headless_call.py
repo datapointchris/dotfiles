@@ -34,6 +34,7 @@ import signal
 import subprocess
 import threading
 import time
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -73,6 +74,8 @@ class Outcome:
     tokens: dict[str, int]
     tokens_by_model: dict[str, dict[str, int]]
     tokens_from: str
+    thinking_tokens: int
+    tool_calls: dict[str, int]
     rejected_reports: int
     duration_seconds: float
 
@@ -95,6 +98,18 @@ def argv(
         '--max-turns', str(max_turns),
         '--add-dir', str(subject_dir),
     ]  # fmt: skip
+
+
+def logged_in_account() -> str:
+    """The email of the login a call draws on, or empty. A desk can be logged in as either of two accounts."""
+    env = {key: value for key, value in os.environ.items() if key not in SPAWNER_MARKERS}
+    try:
+        done = subprocess.run(
+            ['claude', 'auth', 'status', '--json'], stdin=subprocess.DEVNULL, capture_output=True, text=True, env=env, timeout=30
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ''
+    return str((json_object(done.stdout) or {}).get('email') or '')
 
 
 def call(
@@ -200,6 +215,10 @@ def read_frames(frames: list[dict[str, Any]], started: float) -> Outcome:
         tokens=tokens,
         tokens_by_model=by_model,
         tokens_from=tokens_from,
+        thinking_tokens=sum(int(counts.get('thinkingTokens') or 0) for counts in (result.get('modelUsage') or {}).values()),
+        tool_calls=dict(
+            Counter(block.get('name') or '' for block in blocks(frames, 'assistant') if block.get('type') == 'tool_use').most_common()
+        ),
         rejected_reports=rejected_reports(frames),
         duration_seconds=round(time.monotonic() - started, 1),
     )

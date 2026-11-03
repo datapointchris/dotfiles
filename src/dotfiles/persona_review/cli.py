@@ -148,12 +148,13 @@ def render(record: dict[str, Any]) -> None:
     print(f'subject   {subject["repository"]} at {subject["commit"][:12]} ({subject["ref"]}), {subject["file_count"]} files')
     model = record.get('model') or record['requested_model']
     print(f'model     {model} at {record["effort"]}, Claude Code {record.get("claude_code_version") or "unknown"}')
-    print(f'session   {record["session_id"] or "none"}')
+    print(f'session   {record["session_id"] or "none"}, {record["account"] or "no account"} on {record["host"]}')
     counted = f"{record.get('num_turns')} turns by claude's count"
     print(f'requests  {record["model_requests"]} of {record["max_turns"]} allowed, {counted}, {record["duration_seconds"]}s')
     print(f'tokens    {tokens_line(record["tokens"])}, from the {record["tokens_from"]}')
+    print(f'tools     {" · ".join(f"{name} {count}" for name, count in record["tool_calls"].items()) or "none"}')
     if record['rejected_reports']:
-        print(f'rejected  the schema refused {record["rejected_reports"]} reports before this result, so read it with care')
+        print(f'rejected  {record["rejected_reports"]} refused by the schema before this report, so read it with care')
     if record.get('failure'):
         print(f'failed    {record["failure"]["key"]}: {record["failure"]["cause"]}')
         return

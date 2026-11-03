@@ -14,6 +14,7 @@ from dotfiles.persona_review import matrix
 from dotfiles.persona_review import runs
 
 STUB_CLAUDE = r"""#!/bin/sh
+[ "$1" = auth ] && { echo '{"email":"someone@example.com"}'; exit 0; }
 cat >/dev/null
 echo '{"type":"system","subtype":"init","session_id":"stub-session","model":"stub-model","claude_code_version":"9.9"}'
 echo '{"type":"assistant","message":{"id":"m1","usage":{"output_tokens":1},"content":[{"type":"tool_use","name":"Read","input":{}}]}}'
@@ -99,6 +100,8 @@ def test_a_timed_out_run_keeps_its_frames_and_reads_its_tokens_from_the_transcri
 
     assert record['failure']['key'] == 'timed-out'
     assert record['session_id'] == 'stub-session'
+    assert record['account'] == 'someone@example.com'
+    assert record['tool_calls'] == {'Read': 1}
     assert record['tokens_from'] == 'transcript'
     assert record['tokens']['output_tokens'] == 40
     assert len((runs.runs_dir() / record['run_id'] / 'frames.jsonl').read_text().splitlines()) == 2
