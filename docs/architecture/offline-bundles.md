@@ -185,11 +185,13 @@ no apply around it.
 
 ```text
   RESTRICTED BOX          REMOTE <root>/            BUILDER
-  bundle request          (m = manifest)            bundle serve
+  bundle request          (m = manifest)            bundle serve --once
 
   probe
   status upload ────────→ status/m/<file>
-  write request ────────→ requests/m/<id>.json ◀─── poll, newest
+  write request ────────→ requests/m/<id>.json
+  signed push of <id> ──────────────────────────→  one pass starts
+                          requests/m/<id>.json ◀─── read, newest
                                                     per box, older
                                                     deleted
                           <id>.building.json ◀───── acknowledge
@@ -220,18 +222,19 @@ manifest apart, which `--against latest` refuses to guess. The bundle's
 `bundle.json` carries `request`, and that field is how the waiting box knows the
 bundle is its own.
 
-**Timings.** Both ends poll, on the intervals `src/dotfiles/bundle_requests.py`
-declares. With no acknowledgement by `ACKNOWLEDGE_DEADLINE_SECONDS` no builder is
-running, so the requester stops waiting there. It names the
-`dotfiles-bundle-serve` unit and the manifest that enables it, through
-`serve_bundles`. An acknowledged build gets until `REQUEST_TIMEOUT_SECONDS`.
-Either way the request stays in place, so a late builder still answers it and
-`bundle download` collects the result.
+**Timings.** The box polls on the interval `src/dotfiles/bundle_requests.py`
+declares. A pass started in a fresh container acknowledges about 20 seconds after
+its push, a cold `uv` cache included, well inside `ACKNOWLEDGE_DEADLINE_SECONDS`.
+With no acknowledgement by then no builder started, so the requester stops waiting
+there. An acknowledged build gets until `REQUEST_TIMEOUT_SECONDS`. Either way the
+request stays in place, so the scheduled pass still answers it and `bundle download`
+collects the result.
 
 **What goes wrong, and what each end says.**
 
-- *No builder running.* No acknowledgement arrives. The requester names the unit
-  and stops at the acknowledgement deadline, and the apply installs the rest.
+- *No builder starts.* The push is lost or refused, or what it started never
+  acknowledges. The requester says so and stops, and the apply installs the rest.
+  The scheduled pass answers the request.
 - *One entry cannot be staged.* An asset upstream renamed, a checksum that does
   not match, a release that will not resolve: the builder leaves that entry out
   and builds the rest. `bundle.json` records it under `unstaged` with the reason.
@@ -243,7 +246,7 @@ Either way the request stays in place, so a late builder still answers it and
   stops. The failed request is not retried. The box's next request supersedes it.
 - *The bundle uploads and the cleanup does not.* A bundle naming the request
   answers before any marker does, so the requester takes it. The builder logs the
-  request it could not remove and does not build it again.
+  request it could not remove, and a later pass builds it once more.
 - *An entry the builder's checkout does not declare.* `bundle create --entry`
   refuses the name, which arrives as a failed marker. The usual cause is a builder
   checkout behind the requester's, and both commits are in the builder's log.
@@ -253,9 +256,9 @@ Either way the request stays in place, so a late builder still answers it and
 - *A file on the shelf does not parse.* A request that is not JSON, or whose id
   or status is a path rather than a filename, becomes a failed marker. A marker
   or acknowledgement the requester cannot parse is read again on the next poll.
-- *The remote stops answering mid-wait.* Each end logs the poll that failed and
-  keeps polling. The builder never exits on it, and its unit restarts it if it
-  does.
+- *The remote stops answering mid-wait.* The box logs the poll that failed and
+  keeps polling. The builder's pass exits non-zero, so whatever started it sees the
+  failure.
 
 `--entry` scopes a build to the named entries plus uv and the wheelhouse. The
 rest of the plan is recorded as `left_out` rather than in `current`, because
@@ -264,8 +267,9 @@ scoped bundle is sparse, so it never becomes the base a stack reads through.
 
 Each build writes a run record under the verb `build`, and its event log holds
 the build's whole debug stream. A build leaves `latest` on the builder's own last
-run. `dotfiles report list` on the builder shows
-them, and its journal carries the console lines.
+run. Both live on whatever ran the pass, so a pass in a throwaway container leaves
+only its console lines, in that container's output. A pass deletes each archive
+once it is uploaded, because a builder's cache outlives the pass.
 
 ## The automatic legs are off by default
 

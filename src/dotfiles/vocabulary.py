@@ -61,7 +61,7 @@ EXCEPTION_VERBS: dict[str, str] = {
     'upload': 'bundle, status: sends an artifact to the remote. A direction, not a synonym for download',
     'download': 'bundle, status: fetches one from the remote. The pair ifiles already spells, and both ends spell it the same',
     'request': 'bundle: asks a builder for a bundle and waits for it, which is an exchange with another machine, not a write here',
-    'serve': 'bundle: answers requests from other machines until stopped, so it runs as a unit rather than finishing',
+    'serve': 'bundle: answers the requests other machines left on the remote, which is an exchange with them, not a write here',
     'latest': 'report: the common read, worth one word rather than `show $(… list)`',
     'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles upload "$(dotfiles report path)"`',
     'stats': 'report: an aggregate across runs, which `show` on one run cannot be',

@@ -421,18 +421,23 @@ def request(
 
 @bundle_app.command('serve')
 def serve(
-    once: bool = typer.Option(False, '--once', help='Answer what is waiting, then exit'),
+    once: bool = typer.Option(False, '--once', help='Answer what is waiting, then exit. Required, since nothing waits between requests'),
     verbose: int = VerboseOption,
     quiet: bool = QuietOption,
 ) -> None:
-    """Build the bundles restricted machines request, until stopped.
+    """Build the bundles restricted machines request, in one pass.
 
-    Polls the remote's requests and answers each box's newest one: acknowledge,
+    Reads the remote's requests and answers each box's newest one: acknowledge,
     build against the status it names, upload, then delete the request. A failed build leaves a failed marker with its log tail. Each
     build writes a run record that `dotfiles report list` shows.
     """
     verbosity(verbose, quiet)
-    raise typer.Exit(ExitCode.CONVERGED if bundle_requests.serve(once) else ExitCode.ISSUE)
+    if not once:
+        raise Refusal(
+            'bundle serve answers one pass and exits, and nothing waits between requests; run: dotfiles bundle serve --once',
+            code=ExitCode.USAGE,
+        )
+    raise typer.Exit(ExitCode.CONVERGED if bundle_requests.serve() else ExitCode.ISSUE)
 
 
 @bundle_app.command('list')

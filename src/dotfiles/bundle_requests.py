@@ -1,7 +1,8 @@
 """The request a restricted box leaves for a builder, and the builder's two answers.
 
-The file server has no push, so both ends poll one directory per manifest,
-`<root>/requests/<manifest>/`:
+Both ends read one directory per manifest, `<root>/requests/<manifest>/`. The box
+polls it while it waits, and a builder reads it in one pass, started by the box's
+signed push or by a schedule:
 
 - `<id>.json` is the request. The restricted box writes it after publishing its
   status, and the builder deletes it once the bundle is uploaded.
@@ -56,15 +57,10 @@ BUILDING_SUFFIX = '.building.json'
 FAILED_SUFFIX = '.failed.json'
 
 REQUEST_POLL_SECONDS = 15
-SERVE_POLL_SECONDS = 20
 ACKNOWLEDGE_DEADLINE_SECONDS = 120
 REQUEST_TIMEOUT_SECONDS = 15 * 60
 STILL_WAITING_EVERY_SECONDS = 60
 LOG_TAIL_LINES = 40
-
-SERVE_UNIT = 'dotfiles-bundle-serve.service'
-SERVE_FEATURE = 'serve_bundles'
-"""The manifest boolean that installs `SERVE_UNIT`, so the advice can name the builder's manifest."""
 
 BUILD_VERB = 'build'
 """The verb a build's run record is filed under, one of `vocabulary.RECORDED_VERBS`, so `dotfiles report list` shows each build."""
@@ -331,8 +327,8 @@ def waited_for(where: transport.Remote, request: Request, already_listed: set[st
 
     A bundle on the shelf answers before a failed marker does: a builder that
     uploaded and then could not tidy up still built it. With no acknowledgement by
-    `ACKNOWLEDGE_DEADLINE_SECONDS` no builder is running, so the wait stops there
-    rather than holding the apply for `REQUEST_TIMEOUT_SECONDS`.
+    `ACKNOWLEDGE_DEADLINE_SECONDS` no builder started, so the wait stops there rather
+    than holding the apply for `REQUEST_TIMEOUT_SECONDS`.
     """
     directory = transport.requests_for(where, request.machine)
     began = time.monotonic()
@@ -378,9 +374,8 @@ def waited_for(where: transport.Remote, request: Request, already_listed: set[st
         if acknowledged is None and waited >= ACKNOWLEDGE_DEADLINE_SECONDS:
             minutes = ACKNOWLEDGE_DEADLINE_SECONDS // 60
             said(f'no builder acknowledged request {request.id} within {minutes} minutes, so this run stops waiting', warning=True)
-            said(f'the builder is the {SERVE_UNIT} user unit on the machine running the {builder_manifests()} manifest')
-            said('the request stays on the remote, so a builder that starts later still answers it')
-            pointed(f'check it there: systemctl --user status {SERVE_UNIT}; journalctl --user -u {SERVE_UNIT}')
+            said("the request stays on the remote, so the builder's next scheduled pass answers it")
+            pointed('collect it later: dotfiles bundle list, then dotfiles bundle download')
             return None
         if waited - said_waiting >= STILL_WAITING_EVERY_SECONDS:
             said(f'still {"building" if acknowledged else "waiting for a builder"}, {int(waited) // 60}m{int(waited) % 60:02d}s in')
@@ -390,18 +385,6 @@ def waited_for(where: transport.Remote, request: Request, already_listed: set[st
     said('the request stays on the remote, so the builder can still answer it')
     pointed('collect it later: dotfiles bundle list, then dotfiles bundle download; or ask again: dotfiles bundle request')
     return None
-
-
-def builder_manifests() -> str:
-    """Every manifest that turns `SERVE_FEATURE` on, as one phrase."""
-    named = []
-    for name in machines.names():
-        try:
-            if machines.load(name).wants(SERVE_FEATURE):
-                named.append(name)
-        except machines.MachineError:
-            continue
-    return ' or '.join(named) or f'(none: no manifest sets {SERVE_FEATURE})'
 
 
 def answering(where: transport.Remote, machine: str, request_id: str, already_listed: set[str]) -> offline_bundle.Record | None:
@@ -440,55 +423,33 @@ class LogTail(stdlib_logging.Handler):
         self.lines.append(f'{record.name}: {message}')
 
 
-def serve(once: bool) -> bool:
-    """Answer requests every `SERVE_POLL_SECONDS`, or in one pass under `once`. False when a build failed.
-
-    The loop returns True once the checkout's HEAD moves. Its unit restarts on any
-    exit, so the next build runs on the code an update pulled rather than the
-    modules this process imported.
-    """
+def serve() -> bool:
+    """Answer what is waiting on the remote in one pass. False when a build failed or the remote did not answer."""
     where = transport.require()
     if not where.transport.declares(transport.Operation.DELETE):
         raise transport.RemoteError(
             'bundle serve deletes each request it answers, and no remote.transport.delete is declared',
             advice='declare delete in the [remote.transport] table of config.toml',
         )
-    started_on = dotfiles_commit()
     log.info(
-        f'serving bundle requests under {where.directory(transport.REQUESTS)} as {paths.machine_id()}, '
-        f'every {SERVE_POLL_SECONDS}s, on dotfiles commit {started_on or "(unknown)"}'
+        f'answering bundle requests under {where.directory(transport.REQUESTS)} as {paths.machine_id()}, '
+        f'on dotfiles commit {dotfiles_commit() or "(unknown)"}'
     )
-    finished_here: set[str] = set()
-    while True:
-        if not once and (moved_to := dotfiles_commit()) != started_on:
-            log.info(f'the checkout moved from {started_on} to {moved_to}, so this process exits for its unit to restart it')
-            return True
-        try:
-            clean = serve_pass(where, finished_here)
-        except transport.RemoteError as unanswered:
-            log.warning(f'the remote did not answer this pass: {unanswered}')
-            clean = False
-        if once:
-            return clean
-        time.sleep(SERVE_POLL_SECONDS)
+    try:
+        return serve_pass(where)
+    except transport.RemoteError as unanswered:
+        log.warning(f'the remote did not answer this pass: {unanswered}')
+        return False
 
 
-def serve_pass(where: transport.Remote, finished_here: set[str]) -> bool:
-    """Build each box's newest request on every manifest's shelf, deleting the ones it supersedes.
-
-    `finished_here` holds the requests this process built or failed. A request the
-    remote would not let it remove, or whose failed marker it refused, then stays
-    on the shelf without being built again on every pass. It also holds each
-    directory refused for naming no manifest, so the refusal is logged once.
-    """
+def serve_pass(where: transport.Remote) -> bool:
+    """Build each box's newest request on every manifest's shelf, deleting the ones it supersedes."""
     manifests = transport.listed(where, where.directory(transport.REQUESTS)) or ()
     declared = set(machines.names())
     clean = True
     for machine in sorted(name.rstrip('/') for name in manifests):
         if machine not in declared:
-            if machine not in finished_here:
-                log.warning(f'{transport.REQUESTS}/{machine} names no manifest this checkout declares, so its requests are left alone')
-                finished_here.add(machine)
+            log.warning(f'{transport.REQUESTS}/{machine} names no manifest this checkout declares, so its requests are left alone')
             continue
         directory = transport.requests_for(where, machine)
         found = shelf_of(transport.listed(where, directory) or ())
@@ -501,10 +462,8 @@ def serve_pass(where: transport.Remote, finished_here: set[str]) -> bool:
                 if present:
                     transport.remove(where, f'{directory}/{old}{suffix}')
         for request_id in sorted(newest.values()):
-            if request_id in found.failed or request_id in finished_here:
-                continue
-            clean = answer(where, machine, request_id) and clean
-            finished_here.add(request_id)
+            if request_id not in found.failed:
+                clean = answer(where, machine, request_id) and clean
     return clean
 
 
@@ -547,6 +506,8 @@ def answer(where: transport.Remote, machine: str, request_id: str) -> bool:
             )
             offline_bundle.publish(where, archive)
         log.info(f'uploaded {archive.name} and its record to {transport.bundles_for(where, machine)}')
+        # The remote holds it now, and a builder's cache outlives the pass.
+        archive.unlink(missing_ok=True)
 
         try:
             transport.remove(where, f'{directory}/{request.filename}')

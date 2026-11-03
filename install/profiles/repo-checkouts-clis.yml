@@ -2,7 +2,7 @@
 # composes this file, so a CLI added here also reaches a box that takes every one.
 
 go_tools:
-  - ifiles  # the transport `dotfiles bundle serve` and a bundle request use
+  - ifiles  # the transport a bundle request and `bundle upload` use
 
 uv_tools:
   - doit

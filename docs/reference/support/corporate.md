@@ -157,10 +157,11 @@ decision rather than several.
 This box's config turns on `request_bundle_when_blocked_items_are_behind`. When
 the apply finds blocked items missing or behind and no staged bundle carrying
 them, it publishes this box's status and leaves a request on the remote naming
-those items. Then it waits for a builder running `dotfiles bundle serve`. Each
-step is a log line: sent, acknowledged by the builder, still waiting, bundle
-listed, downloading, verified, staged. The apply measures those items
-again against the new bundle and installs them in the same run.
+those items. It sends one signed push naming the request, which starts a builder,
+and waits for the bundle. Each step is a log line: sent, the hook took it,
+acknowledged by the builder, still waiting, bundle listed, downloading, verified,
+staged. The apply measures those items again against the new bundle and installs
+them in the same run.
 
 `dotfiles apply --request-bundle` asks on a box whose config leaves the key off,
 and asks under `--offline` too. `dotfiles bundle request` asks without applying:
@@ -170,12 +171,18 @@ dotfiles bundle request              # everything the status shows behind
 dotfiles bundle request --entry glow # or only what is named
 ```
 
-When no builder acknowledges the request in time, the apply names the
-`dotfiles-bundle-serve` unit to check on the builder, stops waiting and installs
-the rest. A build that started gets a longer deadline. Either way the request
-stays in place, so `dotfiles bundle download` collects the bundle once the
-builder answers. A failed build prints the builder's error and the end of its
-log.
+The push needs a secret in `~/.local/state/dotfiles/remote-hook-secret`, at mode
+0600, which never enters git or `~/.env`. `dotfiles remote hook-secret set` writes it
+from a pipe, or from a prompt that does not echo. `dotfiles remote check` sends one
+signed no-op, which starts nothing and names a wrong secret.
+
+When the push is refused, or no builder acknowledges the request in time, the
+apply says so, stops waiting and installs the rest. A missing secret never fails an
+apply. A build that started gets a longer deadline. Either way the request stays in
+place, and a builder's daily pass answers it, so `dotfiles bundle download` collects
+the bundle later. A failed build prints the builder's error and the end of its log.
+This box pushes once per real request, because its egress is monitored and a
+repeating call reads as a beacon.
 `docs/architecture/offline-bundles.md` holds the protocol.
 
 **Nothing but packages and versions leaves that machine.**
