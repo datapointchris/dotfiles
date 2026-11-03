@@ -87,7 +87,7 @@ rather than repaired, and what happens to a line that only runs at import time.
 
 Each invocation writes a run to
 `$XDG_STATE_HOME/dotfiles/mutation-runs/`, under a name carrying the machine —
-that directory is replicated between machines, and `score.recorded` reads only
+that directory can hold other machines' files, and `score.recorded` reads only
 this box's own history back.
 
 `targets.py` commits a **threshold** and never a score, and `targets.THRESHOLD`

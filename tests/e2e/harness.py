@@ -642,9 +642,9 @@ def shadow_calls(machine: Machine) -> tuple[ShadowCall, ...]:
 LATEST_RECORD = '${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/latest-$(echo "$HOSTNAME" | cut -d. -f1 | tr "[:upper:]" "[:lower:]")'
 """`paths.LATEST_RUN`, spelled for a shell because it is read inside the container.
 
-The suffix is *derived*, never globbed. `paths.LATEST_RUN` gained a
-`-{machine_id}` suffix when the state directory became fleet-shared, and naming
-the old path made the `cp` match nothing — so a `latest-*` glob replaced it, and
+The suffix is *derived*, never globbed. `paths.LATEST_RUN` carries a
+`-{machine_id}` suffix, and naming a path without it makes the `cp` match nothing.
+A `latest-*` glob replaced it once, and
 that is worse in a way the first fault was not. A glob is silent when it matches
 nothing and *fatal* when it matches twice: `cp a b file` fails with "target is
 not a directory", and every test taking the `machine` fixture then errors after

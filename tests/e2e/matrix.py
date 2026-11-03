@@ -161,8 +161,8 @@ def run_level(level: Level, environments: list[str], extra: list[str], into: Pat
 def report(cells: list[Cell], into: Path, wall: float) -> Path:
     """One record per run, saying whose run it was.
 
-    `machine` and `checkout` are here because the history is fleet-shared: the
-    Mac's numbers and this box's land in one directory, and a median across both
+    `machine` and `checkout` are here because the history can hold more than one
+    machine's: a Mac's numbers and this box's in one directory, and a median across both
     would describe no machine at all. `checkout` is the worktree when there is
     one, so a branch's slow cell is not read as main's.
     """

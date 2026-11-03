@@ -37,7 +37,7 @@ def rerun(monkeypatch: pytest.MonkeyPatch, *, hostname: str | None = None) -> No
     `machine_id` reads. The hostname rather than `MACHINE_ID`, so the domain strip
     and the lowercase actually happen — and a name is needed at all because
     `LATEST_RUN` and `STATUS_FILE` carry it, which makes "the newest record" in a
-    directory the fleet shares depend on which box ran last.
+    directory holding another box's files depend on which box ran last.
 
     The module dict is put back before anything is patched, so `monkeypatch`
     records the original as its undo target and the reload leaves nothing behind.

@@ -3,7 +3,7 @@
 A tool's update gate swallows a failed check by design, so the failure exists only
 in `last_error` in the tool's state file. Each selfupdate library writes this file
 in one schema, and pyselfupdate names where, so this reads it with no per-tool
-knowledge. Another machine's file in a synced directory is left out.
+knowledge. Another machine's file in the same directory is left out.
 """
 
 from __future__ import annotations

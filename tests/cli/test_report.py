@@ -200,8 +200,8 @@ def test_a_short_streak_is_not_yet_a_fault(runs_dir: Path) -> None:
 
 
 def test_streaks_are_counted_per_machine(runs_dir: Path) -> None:
-    """One box churning is not evidence about another, and the fleet shares this
-    directory now — an unsplit count would blame every machine for one."""
+    """One box churning is not evidence about another, and this directory can hold
+    both — an unsplit count would blame every machine for one."""
     for day in ('01', '02', '03'):
         runs.write(churn_record(MACHINE, f'2026-08-{day}T00:00:00Z', 'zk'), runs_dir)
         runs.write(churn_record('linux-lxc-server', f'2026-08-{day}T00:00:00Z', 'other'), runs_dir)

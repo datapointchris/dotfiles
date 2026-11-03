@@ -388,8 +388,8 @@ def list_runs(
         #
         # Every record gets a row, including one that will not parse — which is why
         # this reads each path itself rather than through `readable`, whose whole
-        # job is to drop those. A listing is the answer to "what is here", and a
-        # fleet-shared `runs/` is where a truncated file is least surprising and
+        # job is to drop those. A listing is the answer to "what is here", and
+        # `runs/` is where a truncated file is least surprising and
         # least acceptable to silently omit. The unreadable row carries the run and
         # says so, and the fields it cannot know are empty rather than guessed.
         emit_json([listed(path) for path in found])

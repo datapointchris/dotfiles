@@ -3,9 +3,9 @@
 `runs.write` takes its directory from `runs_dir or paths.RUNS_DIR`. A
 `control-flow` mutant turning that `or` into an `and` sends a test that handed it
 a `tmp_path` to the real `$XDG_STATE_HOME/dotfiles/runs`, and `runs.py:419` then
-unlinks `latest-<host>` and re-points it at what it just wrote. `runs/` is the one
-directory there that replicates, so a fixture record written that way reaches
-every machine in the fleet and `runs.latest()` answers with it.
+unlinks `latest-<host>` and re-points it at what it just wrote. An agent ships
+`runs/` off the machine, so a fixture record written that way reaches the telemetry
+store and `runs.latest()` answers with it.
 
 `no_writing_into_this_machines_own_directories` and
 `no_stopping_this_machines_daemons` in `tests/conftest.py` refuse that write and
@@ -114,7 +114,7 @@ def test_the_default_run_record_destination_is_inside_a_directory_the_guard_refu
     is the other half, that the place it resolves to is one the guard owns.
 
     Asserted rather than walked. Calling `runs.write` here would prove the same
-    thing by writing a run record into the replicated directory whenever the guard
+    thing by writing a run record into the real directory whenever the guard
     is narrowed, and that record would carry a manifest name and a sub-millisecond
     duration — the two signatures that are not discriminators.
     """

@@ -318,8 +318,8 @@ def test_install_leaves_nothing_behind_when_it_fails(tmp_path: Path) -> None:
 
 
 class TestNoCredentialReachesTheRunLog:
-    """The run log replicates between machines, so a secret written into it does
-    not stay on the box that minted it.
+    """The run log leaves the machine, so a secret written into it does not stay on
+    the box that minted it.
 
     `gh auth token` sits on the default `check` path, so an unredacted transcript
     puts a live token into a file that reaches every other machine. The length cut

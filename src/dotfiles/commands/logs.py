@@ -69,7 +69,7 @@ The timing three are here for that reason and not because they are structural:
 the `key=value` fallback and once in the trailer that formats it.
 
 `host` and `machine` are both here, and only one of them is written. Streams are
-kept indefinitely in a directory the fleet shares, so the ones already on disk
+kept indefinitely, so the ones already on disk
 carry the box under the other word and would start rendering as detail."""
 
 
@@ -206,8 +206,8 @@ def show(
     """Print one run's debug stream.
 
     With no argument this is the newest run on *this* machine, which is not the
-    newest file in the directory: `runs/` is replicated between machines, so
-    another box's check arriving mid-run would otherwise be the answer.
+    newest file in the directory: `report download` puts other machines' logs in
+    `runs/`, so another box's check fetched mid-run would otherwise be the answer.
 
     `--follow` keeps the pane live across runs. Start it once beside the terminal
     you are working in, and it moves to each new run's stream as that run opens
@@ -306,8 +306,8 @@ def newer_than(current: Path) -> Path | None:
     Compared by name rather than by mtime: `Identity.stem` leads with a
     basic-format UTC timestamp precisely so the directory sorts chronologically
     as text, and an mtime comparison would instead follow whichever file was
-    written last. On a replicated directory that is not the name order, because
-    a copy arriving from another machine is written when it arrives.
+    written last. That is not the name order, because a copy arriving from
+    another machine is written when it arrives.
     """
     newest = runs.latest_event_log()
     return newest if newest is not None and newest.name > current.name else None

@@ -112,9 +112,9 @@ def keep(events: Iterable[Event], identity: runs.Identity, flags: dict | None = 
     The path is returned so a failed apply can name the file rather than a command
     to go and find it with.
 
-    **Failing here must not fail the run**: on the fleet `$XDG_STATE_HOME` is
-    replicated between machines, and on a fresh machine it is absent. Neither is
-    a reason to exit non-zero on a verb that answered its question.
+    **Failing here must not fail the run**: on a fresh machine `$XDG_STATE_HOME` is
+    absent, and a read-only one refuses the write. Neither is a reason to exit
+    non-zero on a verb that answered its question.
     """
     try:
         return runs.write(record(events, identity, flags))

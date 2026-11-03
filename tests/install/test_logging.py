@@ -54,7 +54,7 @@ def test_the_run_is_stamped_on_every_event(tmp_path):
     """`host`, not `machine`. The record and `status-<box>.json` both key `machine`
     on the manifest, and two boxes share one — so a stream keyed on the box under
     that word puts one box's stream and its record in different groups of any fold
-    across the directory the fleet shares."""
+    across more than one box's files."""
     event_log = tmp_path / 'run.jsonl'
     dotfiles_logging.configure(event_log=event_log)
     dotfiles_logging.bind_run('abc123', 'box-a')

@@ -249,8 +249,8 @@ class TestListing:
         assert [runs.read(path).verb for path in runs.list_runs(runs_dir, verb='check')] == ['check']
 
     def test_latest_points_at_the_newest_record(self, runs_dir, monkeypatch):
-        """Both halves are per-machine now that the fleet shares runs/: the link
-        carries the name in it, and the lookup narrows to the machine asking."""
+        """Both halves are per-machine, because `runs/` can hold a peer's records: the
+        link carries the name in it, and the lookup narrows to the machine asking."""
         derivations.rerun(monkeypatch, hostname='macos-personal-workstation')
         older = a_run()
         older.started_at = '2026-08-01T00:00:00Z'
