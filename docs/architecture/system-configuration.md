@@ -94,6 +94,10 @@ A row narrowed by `feature: primary_workstation` runs only where a manifest sets
 that feature. What it builds, such as a search index, syncs to the other
 machines, so running it on each would repeat the work.
 
+A unit row narrowed by `feature: desk_runner` works the same way. The service runs
+what that desk's own sessions queued, so a manifest turns it on for one desk at a
+time, and only once that desk holds the service's client and secret.
+
 ## A browser's extensions are configuration where the browser has a policy
 
 Vivaldi is the browser on every machine for now. Zen and LibreWolf were both

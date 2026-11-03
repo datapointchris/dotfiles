@@ -11,3 +11,6 @@ cargo_packages: [webviewrs]
 
 # Runs the user_timers that build what the other machines read.
 primary_workstation: true
+
+# Runs what this desk's own sessions queued, through a user unit.
+desk_runner: true

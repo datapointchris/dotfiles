@@ -1,0 +1,16 @@
+[Unit]
+Description=Run what this desk's sessions queued
+After=network-online.target
+
+[Service]
+# Its own client and secret, which no other unit loads. The leading dash tolerates
+# the file being absent: the runner then signs in with the person's login.
+EnvironmentFile=-%h/.config/fleet/desk-runner.env
+ExecStart=%h/go/bin/fleet desk-runner run
+# It exits when a new install replaces its binary, and this loads the new one. The
+# runs it started are units of their own, and go on without it.
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

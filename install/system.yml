@@ -83,6 +83,17 @@ systemd_units:
     enabled: true
     active: true
 
+  # The unit file deploys from configs/trust/fleet/ to every machine on that trust,
+  # and only a manifest setting `desk_runner` enables it. It loads its own client
+  # and secret, kept apart from every other unit's environment.
+  - name: fleet-desk-runner.service
+    description: Run what this desk's sessions queued
+    feature: desk_runner
+    scope: user
+    needs_root: false
+    enabled: true
+    active: true
+
   # systemd ships this user timer disabled, so no user-tmpfiles.d rule is ever
   # cleaned until something enables it. `display_stack: wayland` matches the
   # directory deploying claude-sessions.conf, the one rule that needs it.

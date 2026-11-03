@@ -127,11 +127,12 @@ The two names differ where the key gates something wider than one section:
 this table is a section no machine can ever subscribe to, so the load asserts
 coverage rather than defaulting."""
 
-FEATURES = ('nvim_plugins', 'configure_zsh', 'deploy_by_copy', 'primary_workstation')
+FEATURES = ('nvim_plugins', 'configure_zsh', 'deploy_by_copy', 'primary_workstation', 'desk_runner')
 """Manifest booleans that gate work with no catalog section behind it — lazy.nvim
 bootstrapping itself, making zsh the login shell, deploying the three trees as
-copies on a machine whose admin policy refuses to create a symlink, and the
-timers only the primary workstation runs, such as building indexes other boxes read.
+copies on a machine whose admin policy refuses to create a symlink, the timers only
+the primary workstation runs, such as building indexes other boxes read, and the
+service that runs what this desk's own sessions queued.
 
 `deploy_by_copy` swaps a mechanism rather than adding work, which is the one that
 does not read like the others. It is here because the question it answers has the
@@ -161,6 +162,7 @@ MACHINE_ONLY = frozenset(
         'flatpak',
         'deploy_by_copy',
         'primary_workstation',
+        'desk_runner',
         'check_schedule',
     }
 )
