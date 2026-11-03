@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # post-commit hook, run from git config rather than .git/hooks. A session's commit
 # carrying a Worklog trailer is recorded on that slate worklog, under its full sha
-# and the repo its origin names. A commit with no session or no trailer starts no
-# slate.
+# and the repo its origin names. A commit with no session, no trailer or no origin
+# with a host starts no slate.
 #
-# It reads the trailer rather than asking slate which worklog the session is in. A
-# rebase keeps each commit's trailer and fires this hook per pick, so the new sha
-# links to the worklog that wrote the commit, whichever session ran the rebase.
+# It reads the commit rather than asking slate which worklog the session is in. A
+# rebase keeps each commit's trailers and fires this hook per pick, so the new sha
+# links to the worklog and session that wrote the commit, whichever session rebased.
 #
 # It never fails a commit. A link it cannot make is left out, with a line on stderr
 # saying so.
@@ -14,19 +14,27 @@ set -uo pipefail
 
 [[ -n ${CLAUDE_CODE_SESSION_ID:-} ]] || exit 0
 
+# An origin with a host marks real work, so a test's fixture repo links nothing.
+origin=$(git remote get-url origin 2>/dev/null) || exit 0
+[[ $origin == *:* && $origin != file:* ]] || exit 0
+
 worklog=$(git log -1 --format='%(trailers:key=Worklog,valueonly)' HEAD | head -n 1)
 [[ -n $worklog ]] || exit 0
 
 commit=$(git rev-parse HEAD)
-link=(slate worklogs link "$worklog" --commit "$commit")
-repo=$(basename "$(git remote get-url origin 2>/dev/null)" .git)
-[[ -z $repo ]] || link+=(--repo "$repo")
+link=(slate worklogs link "$worklog" --commit "$commit" --repo "$(basename "$origin" .git)")
+wrote_it=$(git log -1 --format='%(trailers:key=Agent-Session,valueonly)' HEAD | head -n 1)
+[[ -z $wrote_it ]] || link+=(--session "$wrote_it")
 
 # The bound keeps a slate that cannot answer from holding the commit up.
+bound_seconds=3
 failure=$(mktemp)
-if ! timeout 3 "${link[@]}" >/dev/null 2>"$failure"; then
+timeout "$bound_seconds" "${link[@]}" >/dev/null 2>"$failure"
+status=$?
+if ((status != 0)); then
   reason=$(head -n 1 "$failure")
-  echo "link-commit-to-slate-worklog: ${reason:-slate did not answer within 3 seconds}, so worklog $worklog does not link $commit" >&2
+  ((status != 124)) || reason="slate did not answer within $bound_seconds seconds"
+  echo "link-commit-to-slate-worklog: ${reason:-slate exited $status}, so worklog $worklog does not link $commit" >&2
 fi
 rm -f "$failure"
 exit 0

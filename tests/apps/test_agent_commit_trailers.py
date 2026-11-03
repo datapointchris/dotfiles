@@ -20,7 +20,7 @@ current)
   ;;
 link)
   [ -z "${LINK_FAILS:-}" ] || { echo "error: no such worklog" >&2; exit 1; }
-  echo "$3 $5 $7" >>"$LINKS"
+  echo "$*" >>"$LINKS"
   ;;
 esac
 """
@@ -33,12 +33,12 @@ def repo(tmp_path: Path) -> Path:
     (bin_dir / 'slate').write_text(STAND_IN_SLATE)
     (bin_dir / 'slate').chmod(0o755)
     checkout = tmp_path / 'checkout'
-    subprocess.run(['git', 'init', '-q', str(checkout)], check=True)
+    subprocess.run(['git', 'init', '-q', '-b', 'main', str(checkout)], check=True)
     subprocess.run(['git', 'remote', 'add', 'origin', 'git@example.com:someone/some-repo.git'], cwd=checkout, check=True)
     return checkout
 
 
-def commit(repo: Path, *args: str, **variables: str) -> subprocess.CompletedProcess[str]:
+def git(repo: Path, *args: str, **variables: str) -> subprocess.CompletedProcess[str]:
     env = {name: value for name, value in os.environ.items() if name not in SESSION_VARIABLES}
     env |= {
         'GIT_CONFIG_GLOBAL': os.devnull,
@@ -50,10 +50,13 @@ def commit(repo: Path, *args: str, **variables: str) -> subprocess.CompletedProc
     return subprocess.run(
         ['git', '-c', 'user.name=t', '-c', 'user.email=t@example.com',
          '-c', 'hook.trailers.event=prepare-commit-msg', '-c', f'hook.trailers.command={TRAILER_HOOK}',
-         '-c', 'hook.link.event=post-commit', '-c', f'hook.link.command={LINK_HOOK}',
-         'commit', '-q', '--allow-empty', *args],
+         '-c', 'hook.link.event=post-commit', '-c', f'hook.link.command={LINK_HOOK}', *args],
         cwd=repo, env=env, check=True, capture_output=True, text=True,
     )  # fmt: skip
+
+
+def commit(repo: Path, *args: str, **variables: str) -> subprocess.CompletedProcess[str]:
+    return git(repo, 'commit', '-q', '--allow-empty', *args, **variables)
 
 
 def trailers(repo: Path) -> list[str]:
@@ -62,8 +65,13 @@ def trailers(repo: Path) -> list[str]:
     )[:-1]
 
 
+def links(repo: Path) -> list[str]:
+    recorded = repo.parent / 'links'
+    return recorded.read_text().splitlines() if recorded.exists() else []
+
+
 def head(repo: Path) -> str:
-    return subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
+    return git(repo, 'rev-parse', 'HEAD').stdout.strip()
 
 
 def test_a_session_commit_is_stamped_once_and_a_persons_commit_never(repo: Path) -> None:
@@ -76,31 +84,50 @@ def test_a_session_commit_is_stamped_once_and_a_persons_commit_never(repo: Path)
     amended, typed = trailers(repo)
     assert amended.strip().splitlines() == ['Agent-Name: claude-code-unattended/inbox-fix', 'Agent-Session: s-1', 'Agent-Run: run-8']
     assert typed.strip() == ''
-    assert not (repo.parent / 'links').exists()
+    assert links(repo) == []
 
 
-def test_a_rewritten_commit_links_to_the_worklog_that_wrote_it(repo: Path) -> None:
+def test_a_second_session_rebasing_leaves_each_commit_with_the_worklog_and_session_that_wrote_it(repo: Path) -> None:
+    commit(repo, '-m', 'chore: base')
+    git(repo, 'switch', '-q', '-c', 'work')
+    commit(repo, '-m', 'chore: typed by a person')
     commit(repo, '-m', 'feat: first go', CLAUDE_CODE_SESSION_ID='s-1', WORKLOG='2083.1')
-    written = head(repo)
-    commit(repo, '--amend', '--no-edit', CLAUDE_CODE_SESSION_ID='s-2', WORKLOG='2099.4')
-    rewritten = head(repo)
+    git(repo, 'switch', '-q', 'main')
+    commit(repo, '-m', 'chore: main moves')
 
-    (only,) = trailers(repo)
-    assert only.strip().splitlines()[-1] == 'Worklog: 2083.1'
-    assert only.count('Worklog:') == 1
-    assert (repo.parent / 'links').read_text().splitlines() == [f'2083.1 {written} some-repo', f'2083.1 {rewritten} some-repo']
+    git(repo, 'rebase', '-q', 'main', 'work', CLAUDE_CODE_SESSION_ID='s-2', WORKLOG='2099.4')
+
+    written, typed, *_ = trailers(repo)
+    assert written.strip().splitlines()[-2:] == ['Agent-Session: s-1', 'Worklog: 2083.1']
+    assert typed.strip() == ''
+    assert len(links(repo)) == 2
+    assert links(repo)[-1] == f'worklogs link 2083.1 --commit {head(repo)} --repo some-repo --session s-1'
+
+
+@pytest.mark.parametrize('fixture_origin', [None, '/elsewhere/fixture.git', 'file:///elsewhere/fixture.git'])
+def test_a_session_committing_in_a_tests_fixture_repo_reaches_no_worklog(repo: Path, fixture_origin: str | None) -> None:
+    git(repo, 'remote', 'remove', 'origin')
+    if fixture_origin:
+        git(repo, 'remote', 'add', 'origin', fixture_origin)
+
+    commit(repo, '-m', 'test: a fixture', CLAUDE_CODE_SESSION_ID='s-1', WORKLOG='2083.1')
+
+    assert 'Worklog' not in trailers(repo)[0]
+    assert links(repo) == []
 
 
 @pytest.mark.parametrize(
-    ('failing', 'said'),
+    ('failing', 'reason', 'stamped'),
     [
-        ({'CURRENT_FAILS': '1'}, 'error: not logged in, so this commit carries no Worklog trailer'),
-        ({'LINK_FAILS': '1'}, 'error: no such worklog, so worklog 2083.1 does not link'),
+        ({'CURRENT_FAILS': '1'}, 'error: not logged in', False),
+        ({'LINK_FAILS': '1'}, 'error: no such worklog', True),
     ],
 )
-def test_a_slate_that_fails_leaves_the_commit_and_says_so_once(repo: Path, failing: dict[str, str], said: str) -> None:
+def test_a_slate_that_fails_leaves_the_commit_and_says_so_once(repo: Path, failing: dict[str, str], reason: str, stamped: bool) -> None:
     done = commit(repo, '-m', 'fix: still lands', CLAUDE_CODE_SESSION_ID='s-1', WORKLOG='2083.1', **failing)
 
     assert len(done.stderr.splitlines()) == 1
-    assert said in done.stderr
+    assert reason in done.stderr
     assert 'Agent-Session: s-1' in trailers(repo)[0]
+    assert ('Worklog: 2083.1' in trailers(repo)[0]) is stamped
+    assert links(repo) == []
