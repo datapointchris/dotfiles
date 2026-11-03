@@ -88,7 +88,10 @@ def run(args: argparse.Namespace) -> int:
         print(f'persona-review: {exc}', file=sys.stderr)
         return 2
     max_turns = args.max_turns or int(scenario.persona.fields.get('max_turns') or 50)
-    record = runs.start(scenario, model=args.model, max_turns=max_turns, timeout=args.timeout, only=args.only, mock=args.mock)
+    effort = args.effort or scenario.effort
+    record = runs.start(
+        scenario, model=args.model, effort=effort, max_turns=max_turns, timeout=args.timeout, only=args.only, mock=args.mock
+    )
     if args.json:
         emit(record)
     else:
@@ -104,7 +107,8 @@ def list_runs(args: argparse.Namespace) -> int:
     for record in found:
         report = record.get('report')
         state = f'failed {record["failure"]["key"]}' if record.get('failure') else (report or {}).get('verdict', '')
-        print(f'{record["run_id"]:<52} {record.get("model") or record["requested_model"]:<28} {state:<24} {severity_counts(report)}')
+        model = record.get('model') or record['requested_model']
+        print(f'{record["run_id"]:<52} {model:<20} {record["effort"]:<7} {state:<24} {severity_counts(report)}')
     return 0
 
 
@@ -126,7 +130,8 @@ def render(record: dict[str, Any]) -> None:
     print(f'scenario  {scenario["name"]}')
     print(f'          {scenario["persona"]} × {scenario["machine"]} × {scenario["operating_system"]} × {scenario["subject"]}')
     print(f'subject   {subject["repository"]} at {subject["commit"][:12]} ({subject["ref"]}), {subject["file_count"]} files')
-    print(f'model     {record.get("model") or record["requested_model"]}, Claude Code {record.get("claude_code_version") or "unknown"}')
+    model = record.get('model') or record['requested_model']
+    print(f'model     {model} at {record["effort"]}, Claude Code {record.get("claude_code_version") or "unknown"}')
     requests = record.get('model_requests', 'unknown')
     counted = f"{record.get('num_turns')} turns by claude's count"
     print(f'requests  {requests} of {record["max_turns"]} allowed, {counted}, {record["duration_seconds"]}s')
@@ -174,6 +179,9 @@ def parser() -> argparse.ArgumentParser:
     running.add_argument('--subject')
     running.add_argument('--submission', help="the submitter's words, for a run named by its axes")
     running.add_argument('--model', default='opus', help='the model claude is given (default: opus)')
+    running.add_argument(
+        '--effort', choices=matrix.EFFORTS, help=f"the effort claude is given (default: the persona's effort, else {matrix.DEFAULT_EFFORT})"
+    )
     running.add_argument(
         '--max-turns', type=int, help="cap on model requests, passed as claude's --max-turns (default: the persona's max_turns)"
     )

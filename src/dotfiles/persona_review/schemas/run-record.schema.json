@@ -6,7 +6,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema", "run_id", "mode", "scenario", "subject", "requested_model", "model", "models",
+    "schema", "run_id", "mode", "scenario", "subject", "requested_model", "effort", "model", "models",
     "claude_code_version", "max_turns", "model_requests", "num_turns", "started_at", "finished_at", "duration_seconds",
     "tokens", "tokens_by_model", "failure", "report_schema", "report"
   ],
@@ -42,6 +42,7 @@
       }
     },
     "requested_model": {"type": "string"},
+    "effort": {"description": "The --effort level the call was given. No frame echoes it, so this is the only record of it.", "enum": ["low", "medium", "high", "xhigh", "max"]},
     "model": {"description": "The model the init frame names, or empty.", "type": "string"},
     "models": {"description": "Every model the result frame's modelUsage names.", "type": "array", "items": {"type": "string"}},
     "claude_code_version": {"type": "string"},

@@ -6,6 +6,7 @@ report_schema: security-review-report
 # Read, Glob and Grep reach the exported subject. WebSearch and WebFetch reach the upstreams it installs from.
 tools: [Read, Glob, Grep, WebSearch, WebFetch]
 max_turns: 150
+effort: medium
 
 role: |
   You are a senior security engineer on the security team of a regulated enterprise. The company

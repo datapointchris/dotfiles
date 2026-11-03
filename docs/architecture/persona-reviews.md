@@ -47,6 +47,15 @@ Pre-approving Read lifts that limit: a session given `--allowed-tools Read` read
 export. A session that reads anywhere and fetches any URL could send a local file out if a subject
 steered it, and steering is what the persona is there to catch.
 
+## Effort is stated on every call, because the machine's setting never reaches the session
+
+`--setting-sources ''` drops a machine's `effortLevel`, so a call with no `--effort` takes whatever
+Claude Code's default is in that release. A review would then change with an upgrade, and nothing
+would say so, because no frame echoes the effort. A persona names its `effort`, `run --effort`
+overrides it for one run, and the record stamps the value the call was given. Medium is the default,
+because it is Anthropic's starting point for agent work on Opus. A second run at a higher effort on
+the same commit measures what the extra effort buys.
+
 ## Severity is CVSS v4.0's five bands, classified by CWE and ATT&CK
 
 The rubric uses the qualitative bands FIRST publishes for CVSS v4.0: critical, high, medium, low,

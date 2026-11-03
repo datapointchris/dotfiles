@@ -25,6 +25,12 @@ AXES = {
 }
 """Each axis, beside the directory holding its values."""
 
+EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
+"""What `claude --effort` takes. It ignores any other value and runs at its default, so the catalog refuses one."""
+
+DEFAULT_EFFORT = 'medium'
+"""For a persona that names none."""
+
 
 class CatalogError(Exception):
     """A name no file declares, or a file whose fields do not agree with its neighbors."""
@@ -59,6 +65,10 @@ class Scenario:
             'subject': self.subject.name,
             'submission': self.submission,
         }
+
+    @property
+    def effort(self) -> str:
+        return self.persona.text('effort') or DEFAULT_EFFORT
 
     @property
     def rubric(self) -> Path:
@@ -105,6 +115,8 @@ class Catalog:
         runs = chosen.machine.fields.get('operating_systems') or []
         if operating_system not in runs:
             raise CatalogError(f'machine {machine} runs {", ".join(runs)}, not {operating_system}')
+        if chosen.effort not in EFFORTS:
+            raise CatalogError(f'persona {persona} names effort {chosen.effort!r}; known: {", ".join(EFFORTS)}')
         return chosen
 
     def scenario(self, name: str) -> Scenario:

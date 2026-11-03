@@ -63,10 +63,13 @@ class Outcome:
     duration_seconds: float
 
 
-def argv(*, model: str, schema: str, system_prompt_file: Path, tools: list[str], subject_dir: Path, max_turns: int) -> list[str]:
+def argv(
+    *, model: str, effort: str, schema: str, system_prompt_file: Path, tools: list[str], subject_dir: Path, max_turns: int
+) -> list[str]:
     return [
         'claude', '-p',
         '--model', model,
+        '--effort', effort,
         '--output-format', 'json', '--verbose',
         '--json-schema', schema,
         '--system-prompt-file', str(system_prompt_file),

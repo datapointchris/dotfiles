@@ -76,7 +76,7 @@ def now() -> str:
     return dt.datetime.now(dt.UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def start(scenario: Scenario, *, model: str, max_turns: int, timeout: int, only: list[str], mock: bool) -> dict[str, Any]:
+def start(scenario: Scenario, *, model: str, effort: str, max_turns: int, timeout: int, only: list[str], mock: bool) -> dict[str, Any]:
     started_at = now()
     run_id = f'{started_at.replace("-", "").replace(":", "")}-{secrets.token_hex(2)}-{scenario.name}'
     run_dir = runs_dir() / run_id
@@ -92,6 +92,7 @@ def start(scenario: Scenario, *, model: str, max_turns: int, timeout: int, only:
     tools = [str(tool) for tool in scenario.persona.fields.get('tools') or []]
     command = headless_call.argv(
         model=model,
+        effort=effort,
         schema=json.dumps(json.loads(scenario.report_schema.read_text())),
         system_prompt_file=system_prompt_file,
         tools=tools,
@@ -114,6 +115,7 @@ def start(scenario: Scenario, *, model: str, max_turns: int, timeout: int, only:
         'scenario': scenario.names(),
         'subject': subject,
         'requested_model': 'mock' if mock else model,
+        'effort': effort,
         'model': outcome.model,
         'models': outcome.models,
         'claude_code_version': outcome.claude_code_version,
