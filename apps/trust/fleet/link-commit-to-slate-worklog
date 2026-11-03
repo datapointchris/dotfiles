@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# post-commit hook, run from git config rather than .git/hooks. A session's commit
+# carrying a Worklog trailer is recorded on that slate worklog, under its full sha
+# and the repo its origin names. A commit with no session or no trailer starts no
+# slate.
+#
+# It reads the trailer rather than asking slate which worklog the session is in. A
+# rebase keeps each commit's trailer and fires this hook per pick, so the new sha
+# links to the worklog that wrote the commit, whichever session ran the rebase.
+#
+# It never fails a commit. A link it cannot make is left out, with a line on stderr
+# saying so.
+set -uo pipefail
+
+[[ -n ${CLAUDE_CODE_SESSION_ID:-} ]] || exit 0
+
+worklog=$(git log -1 --format='%(trailers:key=Worklog,valueonly)' HEAD | head -n 1)
+[[ -n $worklog ]] || exit 0
+
+commit=$(git rev-parse HEAD)
+link=(slate worklogs link "$worklog" --commit "$commit")
+repo=$(basename "$(git remote get-url origin 2>/dev/null)" .git)
+[[ -z $repo ]] || link+=(--repo "$repo")
+
+# The bound keeps a slate that cannot answer from holding the commit up.
+failure=$(mktemp)
+if ! timeout 3 "${link[@]}" >/dev/null 2>"$failure"; then
+  reason=$(head -n 1 "$failure")
+  echo "link-commit-to-slate-worklog: ${reason:-slate did not answer within 3 seconds}, so worklog $worklog does not link $commit" >&2
+fi
+rm -f "$failure"
+exit 0
