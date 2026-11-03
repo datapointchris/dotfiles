@@ -23,6 +23,9 @@
 # There is no fallback to a known location. A default would be the hardcoded path
 # one indirection later, and it fails by reading the wrong file rather than by
 # saying nothing named one.
+#
+# `path <name>` reads one repo's checkout out of that file, so a caller needs
+# neither the file's shape nor its own expansion of the leading ~.
 
 set -euo pipefail
 
@@ -33,21 +36,40 @@ die() {
   exit 1
 }
 
+usage_error() {
+  echo "repos-registry: $1" >&2
+  exit 2
+}
+
+REPO_NAME=""
 case "${1:-}" in
   --help | -h)
     cat <<EOF
 Usage: repos-registry
+       repos-registry path <name>
 
 Prints the path to this machine's repo registry, or explains why there is none.
+With path <name>, prints that repo's checkout as an absolute path instead.
+
+  repos-registry path dotfiles
 
 Resolved from \$DOTFILES_REPOS_REGISTRY, then repos_registry in
-$DOTFILES_CONFIG. Exits non-zero when nothing names one or the
-named file is absent, so \$(repos-registry) never yields a path that is not there.
+$DOTFILES_CONFIG. Exits 1 when nothing names one, the named file is
+absent, or the registry lists no repo of that name, so \$(repos-registry) never
+yields a path that is not there. Exits 2 on a wrong argument.
+
+The registry is JSON: an object whose .repos is an array of rows with .name and .path.
 EOF
     exit 0
     ;;
   '') ;;
-  *) die "unknown argument: $1" ;;
+  path)
+    REPO_NAME="${2:-}"
+    if [ "$#" -ne 2 ] || [ -z "$REPO_NAME" ]; then
+      usage_error "path takes one repo name: repos-registry path <name>"
+    fi
+    ;;
+  *) usage_error "unknown argument: $1" ;;
 esac
 
 command -v yq >/dev/null 2>&1 || die "yq is required, to read repos_registry from $DOTFILES_CONFIG"
@@ -63,4 +85,11 @@ REGISTRY="${REGISTRY/#\~/$HOME}"
 [ -n "$REGISTRY" ] || die "nothing names a registry: set repos_registry in $DOTFILES_CONFIG"
 [ -f "$REGISTRY" ] || die "no registry at $REGISTRY"
 
-echo "$REGISTRY"
+if [ -z "$REPO_NAME" ]; then
+  echo "$REGISTRY"
+  exit 0
+fi
+
+CHECKOUT="$(REPO_NAME="$REPO_NAME" yq -p json -oy -r '.repos[] | select(.name == strenv(REPO_NAME)) | .path // ""' "$REGISTRY")"
+[ -n "$CHECKOUT" ] || die "no repo named $REPO_NAME in $REGISTRY"
+echo "${CHECKOUT/#\~/$HOME}"
