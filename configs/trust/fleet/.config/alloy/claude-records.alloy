@@ -24,24 +24,3 @@ otelcol.receiver.filelog "budget_readings" {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }
 }
-
-// The review lead's coverage records: one JSON object per file, named for the
-// machine that wrote it and then, on some, an arm or a repo and pull request.
-// ClickHouse parses each into pr_review_lead_estimates as it lands.
-otelcol.receiver.filelog "review_lead_estimates" {
-  include  = [string.format("%s/fleet/reviews/runs/*-%s*.json", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))), string.to_lower(string.split(constants.hostname, ".")[0]))]
-  start_at = "beginning"
-  storage  = otelcol.storage.file.offsets.handler
-
-  operators = [
-    {type = "add", field = "attributes[\"fleet.kind\"]", value = "review.lead_estimate"},
-  ]
-
-  multiline {
-    line_start_pattern = "^\\{"
-  }
-
-  output {
-    logs = [otelcol.exporter.otlphttp.collector.input]
-  }
-}
