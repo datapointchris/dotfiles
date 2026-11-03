@@ -21,10 +21,6 @@ custom_installers:
   # too old to run.
   - git
 
-# Runs `dotfiles bundle serve` as a user unit, the builder restricted machines
-# request bundles from. It reads the token from the service environment.
-serve_bundles: true
-
 # `gh` comes from repo-checkouts, for the private repos the sweep clones, and
 # `claude` is for the graders it spawns. Naming a tool is what makes this machine
 # report the login missing until it is done, which on a box nobody watches is the
