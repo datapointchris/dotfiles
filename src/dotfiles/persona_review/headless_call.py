@@ -1,10 +1,13 @@
 """One confined `claude -p` review session, and what its frames say about how it ended.
 
-argv states the whole confinement. `--tools` names every tool the persona may use, `--allowed-tools`
-pre-approves the same list so `--permission-prompts none` refuses nothing it needs, and
+argv states the whole confinement. `--tools` names every tool the persona may use, and
 `--setting-sources ''` with `--safe-mode` keeps the machine's settings, CLAUDE.md, hooks and MCP
 servers out. The subject arrives through `--add-dir`, and the session starts in a fixed empty
 directory so every transcript files under one `~/.claude/projects` folder.
+
+`--allowed-tools` pre-approves only what `READ_TOOLS` leaves out. Claude Code answers a read tool on
+its own inside the start directory and each `--add-dir`, and `--permission-prompts none` refuses it
+everywhere else. Pre-approving a read tool lifts that limit.
 
 A call that gives no report ends under one key: `claude-not-installed`, `timed-out`, `exited`,
 `signal`, `usage-limit` or `no-structured-reply`. Its cause is read from stdout as well as stderr,
@@ -29,6 +32,9 @@ from typing import Any
 
 SPAWNER_MARKERS = ('CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT')
 """Set by the session that spawns the run. Left set, the nested run reports itself as that session."""
+
+READ_TOOLS = frozenset({'Read', 'Glob', 'Grep'})
+"""Never pre-approved, so they stay inside the start directory and the `--add-dir`."""
 
 STREAM_CHARS = 600
 
@@ -58,15 +64,14 @@ class Outcome:
 
 
 def argv(*, model: str, schema: str, system_prompt_file: Path, tools: list[str], subject_dir: Path, max_turns: int) -> list[str]:
-    listed = ','.join(tools)
     return [
         'claude', '-p',
         '--model', model,
         '--output-format', 'json', '--verbose',
         '--json-schema', schema,
         '--system-prompt-file', str(system_prompt_file),
-        '--tools', listed,
-        '--allowed-tools', listed,
+        '--tools', ','.join(tools),
+        '--allowed-tools', ','.join(tool for tool in tools if tool not in READ_TOOLS),
         '--permission-prompts', 'none',
         '--setting-sources', '',
         '--safe-mode',

@@ -38,8 +38,14 @@ steering the review as a finding. `--setting-sources ''` and `--safe-mode` keep 
 settings, memory, hooks and MCP servers out, so the same scenario reviews the same way on any
 box. `headless_call.py` holds the argv.
 
-The persona's `tools` list is the confinement. The security persona reads with Read, Glob and
-Grep, and reaches upstream projects with WebSearch and WebFetch. It gets no Bash and no Write.
+The persona's `tools` list says what exists. The security persona reads with Read, Glob and Grep,
+and reaches upstream projects with WebSearch and WebFetch. It gets no Bash and no Write.
+
+Only the web tools are pre-approved. Claude Code answers Read, Glob and Grep on its own inside the
+start directory and the `--add-dir`, and `--permission-prompts none` refuses them everywhere else.
+Pre-approving Read lifts that limit: a session given `--allowed-tools Read` read a file outside the
+export. A session that reads anywhere and fetches any URL could send a local file out if a subject
+steered it, and steering is what the persona is there to catch.
 
 ## Severity is CVSS v4.0's five bands, classified by CWE and ATT&CK
 

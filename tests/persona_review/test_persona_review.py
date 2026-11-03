@@ -15,15 +15,20 @@ from dotfiles.persona_review import runs
 
 def test_argv_confines_the_session_to_the_personas_tools_and_no_settings(tmp_path: Path) -> None:
     command = headless_call.argv(
-        model='haiku', schema='{}', system_prompt_file=tmp_path / 'sp.md', tools=['Read', 'Grep'], subject_dir=tmp_path, max_turns=3
+        model='haiku',
+        schema='{}',
+        system_prompt_file=tmp_path / 'sp.md',
+        tools=['Read', 'Grep', 'WebFetch'],
+        subject_dir=tmp_path,
+        max_turns=3,
     )
 
     def value(flag: str) -> str:
         return command[command.index(flag) + 1]
 
     assert command[:2] == ['claude', '-p']
-    assert value('--tools') == 'Read,Grep'
-    assert value('--allowed-tools') == 'Read,Grep'
+    assert value('--tools') == 'Read,Grep,WebFetch'
+    assert value('--allowed-tools') == 'WebFetch'
     assert value('--permission-prompts') == 'none'
     assert value('--setting-sources') == ''
     assert '--safe-mode' in command
