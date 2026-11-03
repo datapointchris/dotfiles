@@ -1187,6 +1187,9 @@ EVERY = re.compile(r'([1-9][0-9]*)([mhdw])')
 
 EVERY_SECONDS = {'m': 60, 'h': 60 * 60, 'd': 24 * 60 * 60, 'w': 7 * 24 * 60 * 60}
 
+AT = re.compile(r'([01][0-9]|2[0-3]):[0-5][0-9]')
+"""A daily timer's local time of day, on a 24-hour clock."""
+
 
 def repeats_on_a_calendar(seconds: int) -> bool:
     """Whether a wall-clock calendar fires every `seconds`: an interval dividing an
@@ -1209,6 +1212,7 @@ class UserTimer(SystemConfig):
     needs_root: bool = False
     argv: tuple[str, ...]
     every: str
+    at: str = ''
 
     @property
     def seconds(self) -> int:
@@ -1224,6 +1228,11 @@ class UserTimer(SystemConfig):
             wrong.append(f'declares every {self.every!r}; write a whole number and one of m, h, d or w, as 10m or 1d')
         elif not repeats_on_a_calendar(self.seconds):
             wrong.append(f'declares every {self.every!r}; a timer fires on the wall clock, so use one dividing an hour or a day, or 1w')
+        if self.at:
+            if self.every != '1d':
+                wrong.append(f'declares at {self.at!r} with every {self.every!r}; a time of day needs every 1d')
+            if not AT.fullmatch(self.at):
+                wrong.append(f'declares at {self.at!r}; write a quoted 24-hour HH:MM, as "07:00"')
         if self.needs_root:
             wrong.append('declares needs_root; a user timer runs as this account')
         return (*wrong, *SystemConfig.problems(self))

@@ -1033,6 +1033,7 @@ user_timers:
     description: Re-index indy's search store
     argv: [indy, index]
     every: 1d
+    at: "07:00"
     network_trust: fleet
     feature: primary_workstation
     excludes_os_family: windows

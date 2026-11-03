@@ -36,6 +36,7 @@ def job(entry: catalogs.UserTimer) -> periodic_job.Job:
         args=('timers', 'run', entry.name),
         seconds=entry.seconds,
         run_seconds=timer_reports.run_seconds(entry) + 60,
+        at=entry.at,
     )
 
 

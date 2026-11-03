@@ -47,6 +47,8 @@ class Job:
     """How often it fires: one of the intervals `calendar` expresses."""
     run_seconds: int
     """How long one run may take before systemd stops it."""
+    at: str = ''
+    """The `HH:MM` local time a daily job fires, with no randomized delay."""
 
 
 def calendar(seconds: int) -> str:
@@ -170,9 +172,11 @@ def service_content(job: Job) -> str:
 
 
 def timer_content(job: Job) -> str:
+    on_calendar = f'*-*-* {job.at}:00' if job.at else calendar(job.seconds)
+    delay = 0 if job.at else spread(job.seconds)
     return (
         f'[Unit]\nDescription=Run {job.unit} on its schedule\n\n'
-        f'[Timer]\nOnCalendar={calendar(job.seconds)}\nPersistent=true\nRandomizedDelaySec={spread(job.seconds)}\n\n'
+        f'[Timer]\nOnCalendar={on_calendar}\nPersistent=true\nRandomizedDelaySec={delay}\n\n'
         '[Install]\nWantedBy=timers.target\n'
     )
 
@@ -189,6 +193,13 @@ def systemd_files(job: Job) -> dict[Path, str]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def agent_schedule(job: Job) -> dict[str, int | dict[str, int]]:
+    if job.at:
+        hour, minute = job.at.split(':')
+        return {'StartCalendarInterval': {'Hour': int(hour), 'Minute': int(minute)}}
+    return {'StartInterval': job.seconds}
+
+
 def agent_content(job: Job) -> bytes:
     return launchd.serialize(
         {
@@ -203,7 +214,7 @@ def agent_content(job: Job) -> bytes:
             # refresh spends the 60-per-hour anonymous quota that every host
             # behind this egress IP shares.
             'EnvironmentVariables': {'PATH': unit_path()},
-            'StartInterval': job.seconds,
+            **agent_schedule(job),
             'RunAtLoad': True,
             # Each run records its own outcome, so nothing reads these streams.
             'StandardOutPath': '/dev/null',
