@@ -150,7 +150,7 @@ no reason to be installed and unwanted. A gate earns a flag only when *installed
 but off* is a state worth having.
 
 The shell plugins qualify, because they carry both a preference and a real
-startup cost. The manifests use that: `linux-lxc-server` and `scheduler` turn
+startup cost. The manifests use that: `linux-lxc-server` turns
 off the whole interactive plugin set, because a box that exists to be SSHed into
 for diagnosis wants a fast shell rather than a personal one. The plugins are
 still *installed* there, so turning one back on mid-debugging is a `~/.env` edit
@@ -325,8 +325,7 @@ is the roster of logins a machine has to be able to make, so a permanent no
 belongs there rather than in a row explaining itself on every run. The nonfleet
 box is that machine: its copy of the config is the `trust/nonfleet` one, sync is off
 because a git-only node behind a corporate firewall is the wrong place to send
-shell history from, and `scheduler.yml` leaves atuin out for the same reason in
-its own words.
+shell history from.
 
 ## What lives in `apps/` and what leaves it
 

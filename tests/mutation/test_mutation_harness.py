@@ -688,12 +688,11 @@ def test_the_comparison_reads_this_boxs_own_history_and_not_a_peers(tmp_path: Pa
 
 
 def test_a_box_named_by_the_tail_of_another_does_not_claim_its_runs(tmp_path: Path) -> None:
-    """`scheduler-lxc` is a real hostname here, and a suffix match handed every
-    one of its runs to a box called `lxc`."""
-    theirs = score.record(a_run(score_of=1.0), tmp_path, 'scheduler-lxc')
+    """A suffix match handed every run of `build-lxc` to a box called `lxc`."""
+    theirs = score.record(a_run(score_of=1.0), tmp_path, 'build-lxc')
 
     assert score.recorded(tmp_path, 'lxc') == []
-    assert score.recorded(tmp_path, 'scheduler-lxc') == [theirs]
+    assert score.recorded(tmp_path, 'build-lxc') == [theirs]
 
 
 def test_a_stamp_carries_no_hyphen_because_the_filename_splits_on_the_first_one() -> None:

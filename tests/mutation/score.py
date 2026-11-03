@@ -171,8 +171,8 @@ def recorded(directory: Path, machine_id: str | None = None) -> list[Path]:
 
     The machine is the whole second half of the stem, never a suffix of it. A
     stem is `<timestamp>-<machine>` and the timestamp carries no hyphen, so the
-    split is exact — where `endswith` let `lxc` claim every run `scheduler-lxc`
-    wrote, which is a real hostname on this fleet.
+    split is exact — where `endswith` let `lxc` claim every run `build-lxc`
+    wrote.
     """
     if not directory.exists():
         return []

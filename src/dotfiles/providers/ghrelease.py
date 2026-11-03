@@ -427,7 +427,7 @@ def exec_at(unit: str, binary: Path) -> str:
     A published unit names the path its distro package uses — syncthing ships
     `ExecStart=/usr/bin/syncthing` — and a release install puts the binary under
     ~/.local/bin, so the unit as written fails with 203, exec-not-found. Measured
-    on scheduler-lxc 2026-08-16.
+    on a Debian server 2026-08-16.
 
     Only the path moves. The arguments stay upstream's, so a release that changes
     them is followed rather than overridden, and an Exec line calling some other

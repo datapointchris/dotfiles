@@ -99,9 +99,9 @@ workstation tooling through it.
 
 The boundaries come from measuring, not from naming categories first. A profile
 is a set of entries the same machines all carry, so a boundary falls wherever
-grouping entries by the machines that want them splits a set. `scheduler` and
-`wsl-work-workstation` are where the splits fall today. That is why
-`fleet-member` and `repo-checkouts` are separate profiles: `scheduler` takes both,
+grouping entries by the machines that want them splits a set.
+`wsl-work-workstation` is where the split falls today. That is why
+`fleet-member` and `repo-checkouts` are separate profiles: a fleet desk takes both,
 and the nonfleet workstation takes only the second.
 
 Each profile that carries CLIs Chris publishes keeps them in a `<profile>-clis`

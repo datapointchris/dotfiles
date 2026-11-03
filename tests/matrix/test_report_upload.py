@@ -35,7 +35,7 @@ HOSTNAMES = [
     pytest.param('workstation', id='plain-hostname'),
     # `publishing.discriminator` sends a hyphenated name down its digest branch,
     # which is the name no record was ever filed under.
-    pytest.param('scheduler-lxc', id='hyphenated-hostname'),
+    pytest.param('build-lxc', id='hyphenated-hostname'),
 ]
 
 

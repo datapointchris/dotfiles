@@ -100,19 +100,6 @@ system_packages:
     pacman: openssl
     description: SSL development libraries
 
-  # The headers custom_installers' `git` compiles against, beside build-essential
-  # and libssl-dev above. Core because the machine building it is a server. apt
-  # alone: pacman's curl and zlib ship their headers.
-  - name: libcurl-dev
-    tier: core
-    apt: libcurl4-openssl-dev
-    description: curl development headers, for git's https transport
-
-  - name: zlib-dev
-    tier: core
-    apt: zlib1g-dev
-    description: zlib development headers
-
   # Core Development Tools
   - name: git
     tier: core
@@ -1013,7 +1000,7 @@ github_releases:
   # and reachable by nothing else: the tier is the only thing a manifest can say
   # about system packages, so a headless box at `core` had no way to ask for it
   # and an apt platform had no key to install from. Naming it here is what lets
-  # the scheduler declare it without widening what `core` means for every
+  # a headless box declare it without widening what `core` means for every
   # minimal server in the fleet.
   #
   # `supersedes` names the same word under pacman and Homebrew, which is what makes
@@ -1197,17 +1184,6 @@ custom_installers:
     support_repo: bats-core/bats-support
     assert_repo: bats-core/bats-assert
     description: Bash Automated Testing System (cloned from GitHub, builds from source)
-
-  # For a machine whose OS packages a git older than 2.54, the first that runs a
-  # hook declared in git config. git publishes tags and source and no binaries,
-  # so this builds the newest release tag into ~/.local, which PATH searches
-  # before /usr/bin. `version_source: tags` for awscli's reason. The system
-  # package `git` stays installed beside it, because it is the git that clones
-  # this repo and the source before anything can be built.
-  - name: git
-    repo: git/git
-    version_source: tags
-    description: git built from its newest release tag, for an OS whose package is too old
 
   # `url` is where the install script downloads from. Its `latest` file names
   # the release the script installs, and currency reads that same file.

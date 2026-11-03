@@ -743,7 +743,7 @@ cache_eval direnv direnv hook zsh
 # reporting an absence through log_error puts a line on every start of every
 # shell that a reader can do nothing about — and teaches them to stop reading
 # stderr, which is where the real faults go. Measured 2026-08-16 on
-# scheduler-lxc, whose manifest declares neither yazi nor broot.
+# a box whose manifest declared neither yazi nor broot.
 #
 # The flag-gated plugin blocks further down are a different case and stay as
 # they are: a plugin whose flag is on and whose file is missing is a machine

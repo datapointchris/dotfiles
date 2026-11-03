@@ -146,7 +146,7 @@ def test_a_login_shell_on_the_finished_machine_reports_nothing(converged_machine
     config that reports something only a real install can produce is caught here
     and nowhere else.
 
-    Measured 2026-08-16 on scheduler-lxc: every shell wrote `broot not found`,
+    Measured 2026-08-16 on a Debian server: every shell wrote `broot not found`,
     because the manifest omits a tool `.zshrc` assumed. Nothing in this matrix ran
     that manifest, and nothing at any level started a shell and read stderr.
     """

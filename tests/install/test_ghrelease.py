@@ -187,7 +187,7 @@ class TestPlacement:
         syncthing ships `ExecStart=/usr/bin/syncthing serve --no-browser
         --no-restart`, and a release install puts the binary in ~/.local/bin — so
         the unit as published fails with status 203, exec-not-found. Measured on
-        scheduler-lxc 2026-08-16.
+        a Debian server 2026-08-16.
 
         Only the path is rewritten. The arguments stay upstream's, so a release
         that changes them is followed rather than overridden.

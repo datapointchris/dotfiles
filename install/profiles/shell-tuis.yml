@@ -1,5 +1,5 @@
 # The full-screen terminal apps for a box Chris works at, on a desk or over SSH into
-# a server he diagnoses. A box nobody types at, like the scheduler, leaves them out.
+# a server he diagnoses. A box nobody types at leaves them out.
 
 github_releases:
   - lazygit  # git TUI

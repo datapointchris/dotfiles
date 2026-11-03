@@ -57,8 +57,8 @@ def needing(machine: Machine, section: str, tool: str) -> None:
     """Skip where this environment's manifest never asked for that tool.
 
     Every test here runs against whichever environment the matrix selected, and
-    the manifests differ on purpose — `scheduler` declares one custom installer
-    where a workstation declares several. A test naming a specific tool is asking
+    the manifests differ on purpose — a server declares fewer custom installers
+    than a workstation. A test naming a specific tool is asking
     about the *installer*, and on a machine that never planned it the section
     applies correctly and the assertion fails anyway.
 

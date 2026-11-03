@@ -1,12 +1,11 @@
 """What a shell says on a machine that does not carry every optional tool.
 
 `.zshrc` wires an integration for a handful of tools it does not require —
-`yazi`, `broot` — and a machine is free not to declare them. `scheduler.yml`
-declares neither, because a headless grading box has no use for a TUI file
-browser. A shell there must still start clean.
+`yazi`, `broot` — and a machine is free not to declare them. A headless box has
+no use for a TUI file browser. A shell there must still start clean.
 
-Measured 2026-08-16 on scheduler-lxc, the first machine converged against a
-manifest that omits them: every shell wrote `❌ Setup  : broot not found` to
+Measured 2026-08-16 on the first machine converged against a manifest that
+omits them: every shell wrote `❌ Setup  : broot not found` to
 stderr. `log()` is gated behind `ZSHRC_DEBUG` and `log_error()` is not, so the
 absence was reported on every start while the presence was silent — the two
 halves of one branch answering to different rules.

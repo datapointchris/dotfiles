@@ -1,8 +1,8 @@
 """Whether a machine level that cannot start reports a skip or a failure.
 
-Measured 2026-08-16, adding the `scheduler` environment. `debian:12` was not on
+Measured 2026-08-16, adding the `debian:12` environment. That image was not on
 the box, nothing declared how to build it, so every case skipped — and the cell
-exited 0, so `matrix.py` printed `pass  fresh-install/scheduler  3.2s` and
+exited 0, so `matrix.py` printed `pass  fresh-install/server  3.2s` and
 `1/1 cells passed`. A rung documented at 20-30 minutes reported green in three
 seconds having asserted nothing.
 

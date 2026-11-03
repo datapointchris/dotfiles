@@ -182,10 +182,6 @@ required:
   #
   # The name is atuin's own environment variable. The template's comment on
   # `sync_address` says why the file carries the value instead.
-  #
-  # Scoped by trust alone, because the scheduler and linux-lxc-server share every
-  # coordinate. The scheduler declines atuin sync and still has to set this value
-  # before its check is green.
   - name: ATUIN_SYNC_ADDRESS
     description: URL of the atuin server this machine syncs shell history to
     network_trust: fleet
@@ -218,10 +214,6 @@ required:
   # values is then a rendering, so the next apply overwrites it rather than
   # refusing it as somebody else's. Change a value here in ~/.env, since apply
   # overwrites an edit made in the rendered file.
-  #
-  # Scoped by trust alone, for the reason ATUIN_SYNC_ADDRESS gives: the scheduler
-  # runs some of these CLIs as services and shares every coordinate with
-  # linux-lxc-server.
   - name: HOMELAB_DOMAIN
     description: Domain the homelab serves its APIs and identity provider under, as a bare host name such as example.com
     network_trust: fleet

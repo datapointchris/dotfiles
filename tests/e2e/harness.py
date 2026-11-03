@@ -432,12 +432,12 @@ RESTRICTED = Environment(
     build_image=('bash', str(DOCKER_DIR / 'build-base.sh')),
 )
 
-SCHEDULER = Environment(
-    name='scheduler',
+SERVER = Environment(
+    name='server',
     image='debian:12',
-    user='scheduleruser',
-    home='/home/scheduleruser',
-    manifest='scheduler',
+    user='serveruser',
+    home='/home/serveruser',
+    manifest='linux-lxc-server',
     # The only environment here whose manifest is not a workstation, and the only
     # one on apt at `system_packages: core`. Every cargo and github_release entry
     # the profile names has to resolve there, and nothing else in this matrix asks
@@ -453,12 +453,12 @@ SCHEDULER = Environment(
     # this the environment that says what a bootstrap actually needs.
     prepare=(
         'apt-get update && apt-get install -y --no-install-recommends sudo git curl ca-certificates',
-        'useradd -m -s /bin/bash scheduleruser',
-        "printf '%s\\n' 'scheduleruser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers",
+        'useradd -m -s /bin/bash serveruser',
+        "printf '%s\\n' 'serveruser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers",
     ),
 )
 
-ENVIRONMENTS = (ARCHLINUX, WSL, OFFLINE, RESTRICTED, SCHEDULER)
+ENVIRONMENTS = (ARCHLINUX, WSL, OFFLINE, RESTRICTED, SERVER)
 
 
 @dataclass(frozen=True, slots=True)
@@ -480,7 +480,7 @@ def machine_verdict(*, docker_running: bool, image_present: bool, buildable: boo
 
     Measured 2026-08-16: without the refusal, `debian:12` being absent skipped all
     97 cases, pytest exited 0, and `matrix.py` reported
-    `pass  fresh-install/scheduler  3.2s` for a rung documented at 20-30 minutes.
+    `pass  fresh-install/server  3.2s` for a rung documented at 20-30 minutes.
     Every environment is exposed — `archlinux:latest` declares no builder either
     and works only because it is already pulled here.
 

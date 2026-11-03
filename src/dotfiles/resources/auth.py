@@ -385,44 +385,6 @@ def atuin(session: Session) -> Credential:
     return Credential(Verdict.MISSING, 'no stored session, so nothing reaches the configured server', advice='log in with `atuin login`')
 
 
-def claude(session: Session) -> Credential:
-    """Either credential variable, or the OAuth block in Claude Code's own credential file.
-
-    `CLAUDE_CODE_OAUTH_TOKEN` is what `claude setup-token` mints for a box nobody
-    logs in to. A check sees it only under a fleet unit that loads `service.env`,
-    never in an SSH shell, because that file is fleet's and is never read here.
-
-    `claude` exposes no auth verb to ask, so the file is the only local answer.
-    It carries `mcpOAuth` beside the Claude login and a machine can hold one with
-    no other, which is why the block is what is looked for rather than the file.
-
-    Searched as bytes rather than parsed. A refresh rewrites this file, and a read
-    landing mid-write raises `JSONDecodeError` — a `ValueError`, which travels
-    straight through the `OSError` guard in `asked` and costs every other tool
-    its measurement, for a file that is whole again a second later. This is
-    `holds_something`'s reasoning applied to a file that happens to be JSON.
-    """
-    if not shutil.which('claude'):
-        return uninstalled('claude')
-    if os.environ.get('ANTHROPIC_API_KEY'):
-        return Credential(Verdict.MATCHED, 'ANTHROPIC_API_KEY is set')
-    if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN'):
-        return Credential(Verdict.MATCHED, 'CLAUDE_CODE_OAUTH_TOKEN is set')
-    try:
-        if b'claudeAiOauth' in (session.home / '.claude' / '.credentials.json').read_bytes():
-            return Credential(Verdict.MATCHED, 'an OAuth session is stored')
-    except OSError:
-        pass
-    return Credential(
-        Verdict.MISSING,
-        'no OAuth session, no CLAUDE_CODE_OAUTH_TOKEN and no ANTHROPIC_API_KEY',
-        advice=(
-            'run `claude` and complete the browser login, set CLAUDE_CODE_OAUTH_TOKEN to what '
-            '`claude setup-token` prints, or set ANTHROPIC_API_KEY'
-        ),
-    )
-
-
 def aws(session: Session) -> Credential:
     """Three places a credential can be, answered by stats rather than a round trip.
 
@@ -512,7 +474,6 @@ PROBES: dict[str, Probe] = {
     'slate': keychain_cli('slate', login='slate auth login "https://slate.$HOMELAB_DOMAIN" --client-id "slate-$OAUTH_CLIENT_SUFFIX"'),
     'ypl': keychain_cli('ypl'),
     'atuin': atuin,
-    'claude': claude,
     'aws': aws,
     'bbkt': bbkt,
     'jira': jira,
