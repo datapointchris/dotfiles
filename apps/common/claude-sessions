@@ -19,7 +19,7 @@ REGISTRY_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/sessions"
 
 # A live session's registry file can carry no `status`. It reads as `unknown`
 # rather than a null each reader would render its own way.
-readonly ROW_OBJECT='{name, sessionId, status: (.status // "unknown"), waiting: .waitingFor, cwd, tmux, pid}'
+readonly ROW_OBJECT='{name, sessionId, status: (.status // "unknown"), waiting: .waitingFor, cwd, tmux, pid, agent, kind, entrypoint, startedAt}'
 readonly ROW_TSV='[.name, (.status // "unknown"), (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv'
 
 # formatting.sh is sourced here rather than at the top because the hot path
