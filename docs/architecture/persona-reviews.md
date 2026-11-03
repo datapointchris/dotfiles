@@ -63,11 +63,36 @@ nothing but its token counts, however much it had read. So the system prompt nam
 reviewer to group its tool calls, and asks for the report by four fifths of the cap. Whatever it did
 not reach goes in `limitations`, which is worth more than no report.
 
+## The report schema refuses a stub, because the first accepted report ends the session
+
 The first report the schema accepts ends the session, and the model cannot tell that from the tool.
-A haiku run had a real report refused three times, because its `summary` swallowed the `inventory`
-that followed it. It then sent a one-item report reading `Test` to isolate the fault, and that report
-was accepted and stored as the session's success. So the prompt says the first accepted report is
-final, and the record counts `rejected_reports` so a run like that one is visible.
+A haiku run had a real report refused three times, then sent a stub to isolate the fault: a `summary`
+reading `Test`, one inventory item, no findings. That stub was accepted and stored as the session's
+success. The prompt now says the first accepted report is final, and the record counts
+`rejected_reports`, but a prompt only asks.
+
+So the schema is the admission gate. `summary` and each `limitations` and `conditions` item carry a
+minimum length, set well below what real reports send. The verdict requires what the rubric ties to
+it: `approve-with-conditions` needs a finding and a condition, `reject` needs a finding, and conditions
+exist only under `approve-with-conditions`. A session that never clears the gate ends
+`no-structured-reply`, a failure the record shows rather than a stub stored as a success. The API
+accepts `if`, `then` and `else` at the top of a tool's schema. Each conditional keyword sits beside a
+`type`, because Ajv's strict mode otherwise warns on stderr.
+
+## `summary` is sent last, so a slip in it has nothing to swallow
+
+The model sends a report as tool parameters, writing each array as JSON and each string as bare text.
+Now and then it closes a long string with the parameter's own name, `</summary>`, where `</parameter>`
+belongs. The next parameter then lands inside the string, and the schema answers `must have required
+property 'inventory'`. This hit two or three of ten real-condition haiku reports, and each cost a full
+resend. Across stored transcripts every such slip was on a string parameter, on Haiku and on Opus.
+
+Schema order alone does not move the field. With `summary` last in `properties` and `required`, 5 of 6
+haiku reports still sent it second. Its description saying to send it last moved 6 of 6. What a slip in
+the last position does has not been observed, since no parameter follows it to lose.
+
+*Rejected:* `summary` as an array of sentences, which removes the long string altogether. 6 of 12 haiku
+reports wrote the array as bare prose, which the tool refuses as `could not be parsed as JSON`.
 
 ## A run streams its frames, so a person can watch it and a dead run keeps its work
 
