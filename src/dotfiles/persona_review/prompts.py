@@ -77,8 +77,12 @@ it, so keep every field separate.
 """
 
 
-def task_prompt(scenario: Scenario, subject_dir: Path, commit: str) -> str:
+def task_prompt(scenario: Scenario, subject_dir: Path, commit: str, exclude: list[str]) -> str:
     subject = scenario.subject
+    left_out = ''
+    if exclude:
+        listed = '\n'.join(f'- {path}' for path in exclude)
+        left_out = f'\nThese paths are left out of the export, so name them in your limitations:\n\n{listed}\n'
     return f"""Review this intake request.
 
 # The request
@@ -87,7 +91,7 @@ def task_prompt(scenario: Scenario, subject_dir: Path, commit: str) -> str:
 
 # The subject
 
-{spec(subject, leave_out=('repository', 'ref'))}
+{spec(subject, leave_out=('repository', 'ref', 'exclude'))}
 
 It is exported at commit {commit} into {subject_dir}. Begin with the layout of that directory.
-"""
+{left_out}"""

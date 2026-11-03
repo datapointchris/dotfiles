@@ -47,10 +47,11 @@ def git(repository: Path, *args: str) -> str:
     return subprocess.run(['git', '-C', str(repository), *args], check=True, capture_output=True, text=True).stdout.strip()
 
 
-def export_subject(repository: Path, ref: str, into: Path, only: list[str]) -> dict[str, Any]:
+def export_subject(repository: Path, ref: str, into: Path, only: list[str], exclude: list[str]) -> dict[str, Any]:
     commit = git(repository, 'rev-parse', '--verify', f'{ref}^{{commit}}')
+    pathspecs = [*only, *(f':(exclude){path}' for path in exclude)]
     archive = subprocess.run(
-        ['git', '-C', str(repository), 'archive', '--format=tar', commit, '--', *only], check=True, capture_output=True
+        ['git', '-C', str(repository), 'archive', '--format=tar', commit, '--', *pathspecs], check=True, capture_output=True
     )
     into.mkdir(parents=True)
     with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tar:
@@ -62,6 +63,7 @@ def export_subject(repository: Path, ref: str, into: Path, only: list[str]) -> d
         'commit': commit,
         'committed_at': git(repository, 'show', '-s', '--format=%cI', commit),
         'paths': only or ['.'],
+        'excluded': exclude,
         'file_count': file_count,
         'export': str(into),
     }
@@ -96,12 +98,13 @@ def start(
     run_dir = runs_dir() / run_id
     subject_dir = run_dir / 'subject'
     repository = Path(str(scenario.subject.fields['repository'])).expanduser()
-    subject = export_subject(repository, str(scenario.subject.fields.get('ref') or 'HEAD'), subject_dir, only)
+    exclude = [str(path) for path in scenario.subject.fields.get('exclude') or []]
+    subject = export_subject(repository, str(scenario.subject.fields.get('ref') or 'HEAD'), subject_dir, only, exclude)
 
     system_prompt_file = run_dir / 'system-prompt.md'
     system_prompt_file.write_text(prompts.system_prompt(scenario, subject_dir, max_turns))
     task_prompt_file = run_dir / 'task-prompt.md'
-    task_prompt_file.write_text(prompts.task_prompt(scenario, subject_dir, subject['commit']))
+    task_prompt_file.write_text(prompts.task_prompt(scenario, subject_dir, subject['commit'], exclude))
 
     tools = [str(tool) for tool in scenario.persona.fields.get('tools') or []]
     command = headless_call.argv(

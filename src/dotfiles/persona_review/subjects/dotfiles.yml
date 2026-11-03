@@ -2,6 +2,10 @@ name: dotfiles
 title: A personal dotfiles repository with a Python installer CLI
 repository: ~/dotfiles
 ref: main
+exclude:
+  - src/dotfiles/persona_review
+  - tests/persona_review
+  - docs/architecture/persona-reviews.md
 
 description: |
   Shell, editor and terminal configuration, package declarations for each machine, and a Python CLI

@@ -37,6 +37,7 @@
         "commit": {"type": "string"},
         "committed_at": {"type": "string"},
         "paths": {"description": "The paths exported, or [\".\"] for the whole tree.", "type": "array", "items": {"type": "string"}},
+        "excluded": {"description": "The paths the subject leaves out of the export. A run with none omits it or holds an empty list.", "type": "array", "items": {"type": "string"}},
         "file_count": {"type": "integer"},
         "export": {"description": "Where the session read the subject from.", "type": "string"}
       }

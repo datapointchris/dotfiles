@@ -146,6 +146,8 @@ def render(record: dict[str, Any]) -> None:
     print(f'scenario  {scenario["name"]}')
     print(f'          {scenario["persona"]} × {scenario["machine"]} × {scenario["operating_system"]} × {scenario["subject"]}')
     print(f'subject   {subject["repository"]} at {subject["commit"][:12]} ({subject["ref"]}), {subject["file_count"]} files')
+    if subject.get('excluded'):
+        print(f'excluded  {", ".join(subject["excluded"])}')
     model = record.get('model') or record['requested_model']
     print(f'model     {model} at {record["effort"]}, Claude Code {record.get("claude_code_version") or "unknown"}')
     print(f'session   {record["session_id"] or "none"}, {record["account"] or "no account"} on {record["host"]}')

@@ -29,6 +29,12 @@ reviewer cannot be steered by history the submitter never sent.
 `--only PATH` narrows the export. A narrow export is the cheap run that checks a prompt or schema
 change, and the persona says what it could not review in the report's `limitations`.
 
+A subject's `exclude` list removes paths from every export of it, as `git archive` exclude
+pathspecs. The dotfiles subject carries the review tool itself, whose catalog of personas, rubrics
+and prompts would otherwise be read as evidence by the session those same files instruct. The
+excluded paths are stamped on the run's record and named to the reviewer, who lists them in
+`limitations`.
+
 ## The session sees the subject as evidence and nothing of this machine
 
 The session starts in a fixed empty directory and reaches the subject through `--add-dir`. The
