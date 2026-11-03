@@ -704,7 +704,7 @@ class Inventories:
 VERSION_PROBES = ('--version', 'version')
 """How to ask a binary what it is, in the order worth trying.
 
-Two rather than one because `terrascan` takes the subcommand and rejects the
+Two rather than one because `helm` takes the subcommand and rejects the
 flag, and two rather than a per-tool field because a field carrying one
 exception for 23 tools is a field nobody maintains. Both spellings are reads on
 every CLI that has either.

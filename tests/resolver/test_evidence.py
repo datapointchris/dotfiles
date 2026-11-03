@@ -213,10 +213,10 @@ def test_a_loader_refusal_is_the_answer_and_ends_the_probe(monkeypatch, printed:
 
 def test_a_failed_probe_the_loader_did_not_write_carries_no_refusal(monkeypatch) -> None:
     """A tool rejecting `--version` prints usage, which names nothing about loading."""
-    monkeypatch.setattr(evidence.shutil, 'which', lambda name: '/usr/bin/terrascan')
+    monkeypatch.setattr(evidence.shutil, 'which', lambda name: '/usr/bin/helm')
     probed(monkeypatch, (1, 'Error: unknown flag: --version\nlibrary not found in config'), (1, ''))
 
-    assert evidence.probe_version('terrascan') == evidence.Reported(None)
+    assert evidence.probe_version('helm') == evidence.Reported(None)
 
 
 def test_a_missing_binary_is_none_before_anything_is_asked(monkeypatch) -> None:

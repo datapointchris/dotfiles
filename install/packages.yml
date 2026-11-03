@@ -930,19 +930,18 @@ github_releases:
     checksum: unpublished
     description: Generate Terraform from existing infrastructure
 
-  - name: terrascan
-    repo: tenable/terrascan
-    description: Terraform security scanner
-
   # Development Tools
   - name: zk
     repo: zk-org/zk
     checksum: unpublished
     description: Plain text note-taking assistant
 
+  # `supersedes` deletes the Terrascan binary. Upstream archived it, and
+  # `trivy config` scans Terraform.
   - name: trivy
     repo: aquasecurity/trivy
     description: Container/IaC vulnerability scanner
+    supersedes: ['release:terrascan']
 
   - name: shellcheck
     repo: koalaman/shellcheck

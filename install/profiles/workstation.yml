@@ -17,7 +17,6 @@ go_tools:
 github_releases:
   - tflint
   - terraformer
-  - terrascan
   - trivy
   - zk
   - hadolint

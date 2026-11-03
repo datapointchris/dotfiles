@@ -440,12 +440,6 @@ def terraformer(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'terraformer-all-{suffix}', Archive.RAW)
 
 
-def terrascan(tag: str, target: Target) -> ReleaseArtifact:
-    arch = ('arm64' if target.is_arm else 'x86_64') if target.is_darwin else 'x86_64'
-    platform_name = 'Darwin' if target.is_darwin else 'Linux'
-    return ReleaseArtifact(f'terrascan_{bare(tag)}_{platform_name}_{arch}.tar.gz', Archive.TARBALL, path='terrascan')
-
-
 def tflint(tag: str, target: Target) -> ReleaseArtifact:
     """The asset carries no version at all, so the tag appears only in the path."""
     suffix = ('darwin_arm64' if target.is_arm else 'darwin_amd64') if target.is_darwin else 'linux_amd64'
@@ -553,7 +547,6 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'tenv': tenv,
     'ypl': go_release_cli('ypl'),
     'terraformer': terraformer,
-    'terrascan': terrascan,
     'tflint': tflint,
     'tree-sitter': tree_sitter,
     'trivy': trivy,

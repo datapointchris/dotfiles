@@ -746,7 +746,7 @@ def test_no_cache_at_all_reports_unknown(tmp_path: Path, fake_bin: Path, release
 
 
 def test_a_tool_taking_the_version_subcommand_is_still_measured(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """terrascan rejects the flag and takes the subcommand. Probing only the flag
+    """helm rejects the flag and takes the subcommand. Probing only the flag
     reported an installed, current tool as unmeasurable."""
     released_script('lazygit', '#!/bin/sh\n[ "$1" = version ] || exit 1\nprintf "version: v0.45.0\\n"\n')
     cached(release_cache, {'jesseduffield/lazygit': 'v0.45.0'})
