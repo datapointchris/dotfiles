@@ -207,7 +207,7 @@ class SystemResource:
             # side of a subtraction. Taking one would put the narrowed plan back in
             # reach of the next edit.
             undeclared=undeclared_packages(session),
-            stray_timers=timers.strays(declared_timers(session)),
+            stray_timers=undeclared_timers(session),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -438,10 +438,16 @@ def config_items(plan: Plan) -> list[DesiredItem]:
     return [item for item in plan.for_resource(NAME) if item.stage is Stage.SYSTEM_CONFIG]
 
 
-def declared_timers(session: Session) -> set[str]:
-    """The `user_timers` rows this machine declares, read from `session.plan` for
-    the reason `undeclared_packages` reads it: a narrowed walk must not shrink it."""
-    return {item.entry.name for item in session.plan.for_resource(NAME) if isinstance(item.entry, catalog.UserTimer)}
+def undeclared_timers(session: Session) -> dict[str, str]:
+    """Each installed timer no `user_timers` row explains, and the command that removes it.
+
+    Read from `session.plan` and on a whole-machine run only, both for the reasons
+    `undeclared_packages` gives. Under `--entry`, every other timer would read as
+    undeclared, and the advice would disable it.
+    """
+    if session.entries:
+        return {}
+    return timers.strays({item.entry.name for item in session.plan.for_resource(NAME) if isinstance(item.entry, catalog.UserTimer)})
 
 
 def observe_config(items: list[DesiredItem], session: Session) -> dict[str, sysconfig.State]:

@@ -1200,8 +1200,10 @@ def test_a_manager_that_cannot_be_asked_is_not_a_manager_that_chose_nothing(tmp_
 def test_a_narrowed_run_reports_nothing_undeclared(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """`--entry` narrows the declaration to one entry, so everything else the
     machine holds falls outside the declared set. Asking the question against a
-    plan that is deliberately partial answers it wrong."""
+    plan that is deliberately partial answers it wrong, and for a timer the
+    answer is a command that removes one this machine declares."""
     chose(monkeypatch, 'bat', CONTROL)
+    monkeypatch.setattr(timers, 'strays', lambda declared: {'declared-elsewhere': 'systemctl --user disable --now'})
     live = session(tmp_path, DECLARES_BAT, MAC, entries=frozenset({'bat'}))
 
     assert undeclared(live) == []
