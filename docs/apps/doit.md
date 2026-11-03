@@ -34,10 +34,9 @@ only the machines whose manifest, or a profile it composes, declares it.
 
 ## `register.yml` is config, and config stays out of the repo
 
-`doit`'s config and state live under its own XDG paths, and both directories are replicated between
-machines. `register.yml` is the entry worth explaining. It is hand-edited, the tool only ever reads
-it, and it is personal — while both `doit` repos are public. So it belongs in a synced config
-directory rather than under version control.
+`doit` reads and writes through its service, which holds the register, the pursuits, the sources and
+the journal. A desk keeps only its login and its config file under `~/.config/doit`, so a new box
+needs `doit auth login` once and nothing replicated.
 
 ## See Also
 
