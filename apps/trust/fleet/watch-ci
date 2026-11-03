@@ -6,6 +6,7 @@
 """Watch the GitHub Actions runs on every repo in the registry, redrawn in place.
 
     watch-ci [-n SECONDS] [-k RUNS] [--repo NAME]... [--once]
+    watch-ci --commit REF --wait [--repo NAME] [-n SECONDS] [--start-within SECONDS] [--timeout SECONDS] [--json]
 
 A repo's run list is read every interval while the repo is live: a run of it is
 unfinished, or one finished in the last HOT_FOR seconds. Every other repo is read
@@ -93,6 +94,40 @@ lock, and the next instance to try takes over.
 The screen fits the terminal's height. Running and queued runs are placed first,
 then standing failures, then the other finished runs newest first, so a long
 FAILED list never pushes a live run off the top.
+
+`--commit REF --wait` draws no board. It blocks on one commit's runs and says what
+became of them, and a session starts it in the background:
+
+    watch-ci --commit HEAD --wait --json
+
+The repo is `--repo`, or else the one this directory's origin remote names. The ref
+is resolved by git where this directory's origin is that repo, so HEAD and a short
+sha mean what the session means. GitHub resolves what git cannot. The commit's run
+list is read every COMMIT_INTERVAL seconds, because the board's one second would
+spend the account's shared REST pool. It ends once every run seen has completed and
+a read at least one interval after the last of them finished finds no new run,
+because a push can start a second workflow a little later. A commit whose runs
+finished longer ago than that has had its interval already, so it ends on the first
+read.
+
+Exit 0 means every run concluded success, skipped or neutral, and 1 means one
+concluded anything else. Exit 2 is a usage error or a ref naming no commit. Exit 3 is
+no verdict: no run within --start-within, or runs still going at --timeout. Exit 4 is
+no answer from the API: never reached, timed out, or a 429 or 5xx, on all
+READ_ATTEMPTS attempts. A refusal also exits 1, and its line on stderr says so.
+A commit lookup or a first read takes that exit 4 at once. Once a read has answered,
+the run list keeps being read for NO_ANSWER_MOST seconds, so a blip does not cost the
+wait. Exit 4 then names the runs still going and does not call them failed. A rate
+limit holds the reads until its hold ends. A wait cut off while no read answers exits
+4, never 3, because no read has said the runs are absent or unfinished.
+
+stdout is one line per run: conclusion, workflow, run id, url. Under a failed run sits
+each failed job's name and the log lines naming its failure. `--json` prints one
+object instead: {repo, ref, sha, conclusion, reason, waited_seconds, runs: [{id,
+workflow, status, conclusion, url, event, head_branch, run_attempt, created_at,
+run_started_at, updated_at, failed_jobs: [{id, name, url, failed_step, excerpt}]}]}.
+The top conclusion is success, failure, no_run_started, timed_out, no_answer or
+refused. stderr says when a run changes state, and why no verdict came.
 """
 
 from __future__ import annotations
@@ -107,6 +142,7 @@ import hashlib
 import json
 import math
 import os
+import random
 import re
 import shutil
 import signal
@@ -121,6 +157,7 @@ from dataclasses import dataclass
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx2
 
@@ -148,10 +185,26 @@ EXCERPT_LINES = 3
 TYPICAL_OF = 5
 PRUNE_AFTER = 24 * 3600
 PRUNE_EVERY = 600
+COMMIT_READS = 'commit-wait-reads'
+COMMIT_INTERVAL = 20.0
+COMMIT_INTERVAL_LEAST = 5.0
+START_WITHIN = 120.0
+WAIT_TIMEOUT = 3600.0
+READ_ATTEMPTS = 3
+RETRY_WAIT_MOST = 20.0
+NO_ANSWER_MOST = 300.0
+RUNS_OF_COMMIT_MOST = 100
+EXIT_PASSED = 0
+EXIT_FAILED = 1
+EXIT_USAGE = 2
+EXIT_NO_VERDICT = 3
+EXIT_NO_ANSWER = 4
+EXIT_INTERRUPTED = 130
 
 GROUPS = ('RUNNING', 'QUEUED', 'FAILED', 'CANCELED', 'SUCCEEDED')
 LIVE = ('RUNNING', 'QUEUED')
 FAILED_CONCLUSIONS = frozenset({'failure', 'timed_out', 'startup_failure'})
+PASSED_CONCLUSIONS = frozenset({'success', 'skipped', 'neutral'})
 COLUMN_LABELS = ('AGE', 'REPO', 'TITLE / STEP', 'TOOK', 'RUN / JOB', 'TRIGGER / RUNNER')
 RUN_MOST = 32
 TRIGGER_LEAST = 24
@@ -178,6 +231,7 @@ FAILURE_SIGNAL = re.compile(
 )
 GO_TEST_LOCATION = re.compile(r'^\s+\S+:\d+: ')
 SIMILAR = re.compile(r'\S*[/\\]\S*|\d+')
+REMOTE_URL = re.compile(r'(?:[a-z+]+://)?(?:[^@/]+@)?(?P<host>[^/:]+)[:/](?P<owner>[^/]+)/(?P<name>[^/]+?)(?:\.git)?/?')
 
 # One connection per suite and one per running job, so the query costs a point until LIVE_NODES_MOST of them.
 LIVE_QUERY = """
@@ -295,6 +349,7 @@ class GitHub:
         self.holds: dict[str, tuple[float, str]] = {}
         self.refusals = 0
         self.slots = asyncio.Semaphore(IN_FLIGHT_MOST)
+        self.last_answer: Any = None
 
     async def send(self, method: str, path: str, **options: Any) -> Any:
         """A REST request, once one of IN_FLIGHT_MOST slots is free."""
@@ -378,7 +433,7 @@ class GitHub:
             self.errors.append(f'rate limit: no GraphQL figure in the answer ({error})')
 
     async def refresh(self, path: str, body: Path, label: str) -> bool:
-        """GET path into body, sending the last ETag. True when the body changed."""
+        """GET path into body, sending the last ETag. True when the body changed. `last_answer` is the response, or None where none came."""
         etag = body.with_name(body.name + '.etag')
         headers = {}
         if body.exists() and etag.exists() and (last := etag.read_text().strip()):
@@ -386,8 +441,10 @@ class GitHub:
         try:
             response = await self.send('GET', path, headers=headers)
         except httpx2.HTTPError as error:
+            self.last_answer = None
             self.errors.append(f'{label}: {type(error).__name__} {error}')
             return False
+        self.last_answer = response
         self.note_rate(response.headers)
         self.note_refusal(response)
         if response.status_code == 304:
@@ -397,7 +454,7 @@ class GitHub:
             self.errors.append(f'{label}: HTTP {response.status_code}')
             return False
         body.parent.mkdir(parents=True, exist_ok=True)
-        staged = body.with_name(body.name + '.new')
+        staged = body.with_name(f'{body.name}.{os.getpid()}.new')
         staged.write_bytes(response.content)
         staged.replace(body)
         etag.write_text(response.headers.get('etag', ''))
@@ -610,9 +667,11 @@ class ActionsPoller:
             elif now - confirmed < JOBS_EVERY:
                 continue
             repo = run['repository']['name']
-            path = f'/repos/{self.owner}/{repo}/actions/runs/{run["id"]}/jobs?filter=all&per_page=100'
-            reads.append(self.github.refresh(path, body, f'{repo} jobs {run["id"]}'))
+            reads.append(self.github.refresh(self.jobs_path(repo, run['id']), body, f'{repo} jobs {run["id"]}'))
         await asyncio.gather(*reads)
+
+    def jobs_path(self, repo: str, run_id: int) -> str:
+        return f'/repos/{self.owner}/{repo}/actions/runs/{run_id}/jobs?filter=all&per_page=100'
 
     async def read_excerpts(self, jobs: list[tuple[str, Json]]) -> None:
         now = time.time()
@@ -635,16 +694,17 @@ class ActionsPoller:
         await asyncio.gather(*(read(repo, job) for repo, job in due))
 
     def prune(self, now: float) -> None:
-        """Drop jobs and excerpts nothing has confirmed for a day."""
+        """Drop jobs, excerpts and commit reads nothing has confirmed for a day. A peer may prune too, so a file can go mid-walk."""
         if now - self.pruned < PRUNE_EVERY:
             return
         self.pruned = now
-        for kind in ('jobs-every-attempt', 'failure-excerpts'):
+        for kind in ('jobs-every-attempt', 'failure-excerpts', COMMIT_READS):
             directory = self.github.cache / kind
             for path in directory.glob('*') if directory.is_dir() else ():
-                if now - path.stat().st_mtime > PRUNE_AFTER:
-                    path.unlink(missing_ok=True)
-                    self.github.forget(path)
+                with contextlib.suppress(FileNotFoundError):
+                    if now - path.stat().st_mtime > PRUNE_AFTER:
+                        path.unlink(missing_ok=True)
+                        self.github.forget(path)
 
 
 @dataclass
@@ -1405,12 +1465,20 @@ def on_screen() -> bool:
     return attached != '0' and window_active == '1' and (zoomed == '0' or pane_active == '1')
 
 
-async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bool) -> None:
-    cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'watch-ci'
+def cache_directory() -> Path:
+    return Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'watch-ci'
+
+
+def api_client() -> httpx2.AsyncClient:
     headers = {'Authorization': f'Bearer {token()}', 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
+    return httpx2.AsyncClient(base_url=API, headers=headers, timeout=20)
+
+
+async def watch(args: argparse.Namespace, owner: str, repos: list[str], live: bool) -> None:
+    cache = cache_directory()
     renderer = AnsiRenderer(sys.stdout.isatty() and 'NO_COLOR' not in os.environ)
     shared = SharedPoll(cache, owner, repos)
-    async with httpx2.AsyncClient(base_url=API, headers=headers, timeout=20) as client:
+    async with api_client() as client:
         github = GitHub(client, cache)
         watcher = Watcher(args, ActionsPoller(github, owner, repos), github, shared, renderer, live)
         try:
@@ -1531,6 +1599,327 @@ class Watcher:
         screen.draw(render(board, summary, self.args.keep, size.columns, size.lines if self.live else None, self.renderer))
 
 
+class NoAnswer(Exception):
+    """A read that no attempt got an answer to: never reached, timed out, or a 429 or 5xx."""
+
+
+class Refused(Exception):
+    """A read GitHub answered and said no to."""
+
+    def __init__(self, status: int, label: str) -> None:
+        super().__init__(f'{API} refused {label}: HTTP {status}')
+        self.status = status
+
+
+class UnknownRef(Exception):
+    """A ref that names no commit in the repo."""
+
+
+@dataclass(frozen=True)
+class Ending:
+    """How a wait on a commit ended: the top conclusion, the exit code, and why where no verdict came."""
+
+    conclusion: str
+    code: int
+    reason: str = ''
+
+
+def state_of(run: Json) -> str:
+    return clean(run['conclusion'] or run['status'])
+
+
+def workflow_of(run: Json) -> str:
+    return clean(run.get('name') or run.get('path'))
+
+
+def retry_wait(answer: Any, attempt: int) -> float:
+    """The server's Retry-After, or else a random fraction of 2^(attempt-1) seconds, never more than RETRY_WAIT_MOST."""
+    said = answer.headers.get('retry-after', '') if answer is not None else ''
+    return min(float(said) if said.isdigit() else random.uniform(0, 2 ** (attempt - 1)), RETRY_WAIT_MOST)
+
+
+class CommitWait:
+    """One `--commit REF --wait`: the commit's runs read every interval until they settle, then what became of them."""
+
+    def __init__(self, args: argparse.Namespace, github: GitHub, poller: ActionsPoller, owner: str, repo: str, sha: str | None) -> None:
+        self.args = args
+        self.github = github
+        self.poller = poller
+        self.owner = owner
+        self.repo = repo
+        self.sha = sha
+        self.started = time.time()
+        self.seen: dict[int, Json] = {}
+        self.no_answer = 'no read finished in time'
+        self.last_answered: float | None = None
+        self.runs_read = False
+
+    def body_of_read(self, path: str) -> Path:
+        return self.poller.body(COMMIT_READS, hashlib.sha256(path.encode()).hexdigest()[:16])
+
+    async def out_of_hold(self) -> None:
+        """Sleep through a rate-limit hold rather than send into it. The whole wait's --timeout still cuts this short."""
+        until = self.github.holds.get('core', (0.0, ''))[0]
+        now = time.time()
+        if until > now:
+            await asyncio.sleep(until - now)
+
+    async def read(self, path: str, body: Path, label: str) -> None:
+        """`GitHub.refresh` until it answers or READ_ATTEMPTS have not, raising NoAnswer or Refused."""
+        github = self.github
+        for attempt in range(1, READ_ATTEMPTS + 1):
+            await self.out_of_hold()
+            github.errors.clear()
+            await github.refresh(path, body, label)
+            if not github.errors:
+                self.no_answer, self.last_answered = '', time.time()
+                return
+            answer = github.last_answer
+            held = github.held('core', time.time())
+            if answer is not None and answer.status_code != 429 and answer.status_code < 500 and not held:
+                raise Refused(answer.status_code, label)
+            self.no_answer = f'{github.errors[-1]}: {github.holds["core"][1]}' if held else github.errors[-1]
+            if attempt < READ_ATTEMPTS and not held:
+                await asyncio.sleep(retry_wait(answer, attempt))
+        raise NoAnswer(f'{self.no_answer}, {READ_ATTEMPTS} attempts')
+
+    async def commit_on_github(self) -> str:
+        path = f'/repos/{self.owner}/{self.repo}/commits/{quote(self.args.commit, safe="/")}'
+        body = self.body_of_read(path)
+        unknown = UnknownRef(f'no commit named {self.args.commit!r} in {self.owner}/{self.repo}')
+        try:
+            await self.read(path, body, f'{self.repo} commit {self.args.commit}')
+        except Refused as refused:
+            if refused.status in (404, 422):
+                raise unknown from refused
+            raise
+        found = self.github.load(body)
+        if not isinstance(found, dict) or not found.get('sha'):
+            raise unknown
+        return found['sha']
+
+    async def read_runs(self, sha: str) -> None:
+        path = f'/repos/{self.owner}/{self.repo}/actions/runs?head_sha={sha}&per_page={RUNS_OF_COMMIT_MOST}'
+        body = self.body_of_read(path)
+        await self.read(path, body, f'{self.repo} runs of {sha[:7]}')
+        for run in (self.github.load(body) or {}).get('workflow_runs', []):
+            before = self.seen.get(run['id'])
+            if (state_of(before) if before else None) != state_of(run) and (self.runs_read or run['status'] != 'completed'):
+                print(f'{time.strftime("%H:%M:%S")} {workflow_of(run)} {run["id"]} {state_of(run)}', file=sys.stderr, flush=True)
+            self.seen[run['id']] = run
+        self.runs_read = True
+
+    async def follow(self, sha: str) -> Ending:
+        """Read until every run seen has completed and a read at least an interval after the last of them finished finds no new run."""
+        interval = self.args.interval
+        settling: set[int] = set()
+        while True:
+            try:
+                await self.read_runs(sha)
+            except NoAnswer:
+                if self.last_answered is None or time.time() - self.last_answered >= NO_ANSWER_MOST:
+                    raise
+                await asyncio.sleep(interval)
+                continue
+            now = time.time()
+            if not self.seen:
+                left = self.started + self.args.start_within - now
+                if left <= 0:
+                    return Ending('no_run_started', EXIT_NO_VERDICT, f'no run of {sha} started within {self.args.start_within:g}s')
+                await asyncio.sleep(min(interval, left))
+                continue
+            if all(run['status'] == 'completed' for run in self.seen.values()):
+                finished = max(epoch(run['updated_at']) for run in self.seen.values())
+                if set(self.seen) == settling or now - finished >= interval:
+                    return self.verdict()
+                settling = set(self.seen)
+            else:
+                settling = set()
+            await asyncio.sleep(interval)
+
+    def verdict(self) -> Ending:
+        if all(run['conclusion'] in PASSED_CONCLUSIONS for run in self.seen.values()):
+            return Ending('success', EXIT_PASSED)
+        return Ending('failure', EXIT_FAILED)
+
+    def still_going(self) -> str:
+        return ', '.join(f'{workflow_of(run)} {run["id"]} {state_of(run)}' for run in self.seen.values() if run['status'] != 'completed')
+
+    def without_answer(self, why: str) -> Ending:
+        going = self.still_going()
+        return Ending(
+            'no_answer', EXIT_NO_ANSWER, f'no answer from {API}: {why}' + (f'; still going at the last answer: {going}' if going else '')
+        )
+
+    def at_timeout(self) -> Ending:
+        timeout = f'--timeout {self.args.timeout:g}s'
+        if self.no_answer:
+            return self.without_answer(f'{self.no_answer}, until {timeout} passed')
+        if not self.seen:
+            return Ending('no_run_started', EXIT_NO_VERDICT, f'no run of {self.sha} started before {timeout} passed')
+        going = self.still_going()
+        return Ending('timed_out', EXIT_NO_VERDICT, f'{timeout} passed with runs still going: {going}') if going else self.verdict()
+
+    async def failed_jobs(self, run: Json) -> list[Json]:
+        """The failed jobs of the run's latest attempt, each with the log lines naming its failure, from the cache the board shares."""
+        try:
+            path = self.poller.jobs_path(self.repo, run['id'])
+            await self.read(path, self.poller.body('jobs-every-attempt', run['id']), f'{self.repo} jobs {run["id"]}')
+        except (NoAnswer, Refused) as error:
+            print(f'watch-ci: could not read the jobs of run {run["id"]}: {error}', file=sys.stderr)
+        jobs = [job for job in self.poller.rest_jobs(run['id']) if job['run_attempt'] == run['run_attempt'] and failed(job)]
+        for start in range(0, len(jobs), EXCERPTS_PER_POLL):
+            await self.poller.read_excerpts([(self.repo, job) for job in jobs[start : start + EXCERPTS_PER_POLL]])
+        return [
+            {
+                'id': job['id'],
+                'name': clean(job['name']),
+                'url': job.get('html_url'),
+                'failed_step': next((clean(step['name']) for step in job.get('steps') or [] if failed(step)), None),
+                'excerpt': [clean(line) for line in self.poller.excerpt(job['id'])],
+            }
+            for job in jobs
+        ]
+
+    async def record_of(self, run: Json, read_jobs: bool) -> Json:
+        unpassed = run['status'] == 'completed' and run['conclusion'] not in PASSED_CONCLUSIONS
+        return {
+            'id': run['id'],
+            'workflow': workflow_of(run),
+            'status': run['status'],
+            'conclusion': run['conclusion'],
+            'url': run['html_url'],
+            'event': run.get('event'),
+            'head_branch': run.get('head_branch'),
+            'run_attempt': run.get('run_attempt'),
+            'created_at': run.get('created_at'),
+            'run_started_at': run.get('run_started_at'),
+            'updated_at': run.get('updated_at'),
+            'failed_jobs': await self.failed_jobs(run) if read_jobs and unpassed else [],
+        }
+
+    async def report(self, ending: Ending) -> int:
+        """The runs on stdout, as lines or one JSON object, and why no verdict came on stderr."""
+        read_jobs = ending.conclusion not in ('no_answer', 'refused')
+        runs = [await self.record_of(run, read_jobs) for run in sorted(self.seen.values(), key=lambda run: run['id'])]
+        if self.args.json:
+            record = {
+                'repo': f'{self.owner}/{self.repo}',
+                'ref': self.args.commit,
+                'sha': self.sha,
+                'conclusion': ending.conclusion,
+                'reason': ending.reason,
+                'waited_seconds': round(time.time() - self.started, 1),
+                'runs': runs,
+            }
+            print(json.dumps(record, indent=2))
+        else:
+            for line in commit_run_lines(runs):
+                print(line)
+        if ending.reason:
+            print(f'watch-ci: {ending.reason}', file=sys.stderr)
+        return ending.code
+
+    async def run(self) -> int:
+        self.poller.prune(self.started)
+        try:
+            async with asyncio.timeout(self.args.timeout):
+                self.sha = self.sha or await self.commit_on_github()
+                ending = await self.follow(self.sha)
+        except TimeoutError:
+            ending = self.at_timeout()
+        except NoAnswer as error:
+            ending = self.without_answer(str(error))
+        except Refused as error:
+            ending = Ending('refused', EXIT_FAILED, str(error))
+        return await self.report(ending)
+
+
+def commit_run_lines(runs: list[Json]) -> list[str]:
+    """One aligned line per run, and under each failed job its name and the log lines naming its failure."""
+    states = [run['conclusion'] or run['status'] for run in runs]
+    state_width = max(map(len, states), default=0)
+    workflow_width = max((len(run['workflow']) for run in runs), default=0)
+    lines = []
+    for run, state in zip(runs, states, strict=True):
+        lines.append(f'{state:<{state_width}}  {run["workflow"]:<{workflow_width}}  {run["id"]}  {run["url"]}')
+        for job in run['failed_jobs']:
+            lines.append(f'  {job["name"]}')
+            lines.extend(f'    {excerpt}' for excerpt in job['excerpt'])
+    return lines
+
+
+def origin_repo() -> tuple[str, str] | None:
+    """The owner and name this directory's origin remote points at on GitHub, or None where it has no such remote."""
+    try:
+        url = subprocess.run(['git', 'remote', 'get-url', 'origin'], capture_output=True, text=True).stdout.strip()
+    except OSError:
+        return None
+    match = REMOTE_URL.fullmatch(url)
+    return (match['owner'], match['name']) if match and 'github' in match['host'].lower() else None
+
+
+def commit_in_checkout(ref: str) -> str | None:
+    """The full sha the ref names in this directory's repo, or None where it names no commit here."""
+    try:
+        found = subprocess.run(
+            ['git', 'rev-parse', '--verify', '--quiet', '--end-of-options', f'{ref}^{{commit}}'], capture_output=True, text=True
+        )
+    except OSError:
+        return None
+    return found.stdout.strip() if found.returncode == 0 else None
+
+
+async def wait_on_commit(args: argparse.Namespace, owner: str, repo: str, sha: str | None) -> int:
+    if task := asyncio.current_task():
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, task.cancel)
+    async with api_client() as client:
+        github = GitHub(client, cache_directory())
+        return await CommitWait(args, github, ActionsPoller(github, owner, [repo]), owner, repo, sha).run()
+
+
+def refuse_commit_wait_flags(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Every usage error of this mode, decided before anything is read."""
+    if args.commit is None or not args.wait:
+        parser.error('--commit and --wait come together: --commit REF --wait')
+    if not args.commit:
+        parser.error('--commit needs a ref, such as HEAD')
+    if args.keep is not None or args.once:
+        parser.error('-k and --once belong to the board, which --commit --wait does not draw')
+    if len(args.repo) > 1:
+        parser.error('--commit --wait reads one repo, so --repo comes once')
+    if args.interval is not None and args.interval < COMMIT_INTERVAL_LEAST:
+        parser.error(f'-n under {COMMIT_INTERVAL_LEAST:g} with --commit --wait would spend the shared REST pool: got {args.interval:g}')
+    if args.start_within is not None and args.start_within < 0:
+        parser.error(f'--start-within cannot be negative: got {args.start_within:g}')
+    if args.timeout is not None and args.timeout <= 0:
+        parser.error(f'--timeout has to be positive: got {args.timeout:g}')
+
+
+def commit_wait_command(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    refuse_commit_wait_flags(parser, args)
+    args.interval = args.interval if args.interval is not None else COMMIT_INTERVAL
+    args.start_within = args.start_within if args.start_within is not None else START_WITHIN
+    args.timeout = args.timeout if args.timeout is not None else WAIT_TIMEOUT
+    origin = origin_repo()
+    if args.repo:
+        owner, [repo] = registry(args.repo)
+    elif origin:
+        owner, repo = origin
+    else:
+        parser.error('--commit needs --repo NAME here, since this directory has no GitHub origin remote to take the repo from')
+    here = origin is not None and (origin[0].lower(), origin[1].lower()) == (owner.lower(), repo.lower())
+    sha = commit_in_checkout(args.commit) if here else None
+    try:
+        return asyncio.run(wait_on_commit(args, owner, repo, sha))
+    except UnknownRef as error:
+        print(f'watch-ci: {error}', file=sys.stderr)
+        return EXIT_USAGE
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        print('watch-ci: interrupted before a verdict', file=sys.stderr)
+        return EXIT_INTERRUPTED
+
+
 def interrupt(*_: object) -> None:
     raise KeyboardInterrupt
 
@@ -1542,14 +1931,46 @@ def main() -> int:
         'state and redrawn in place.\n\n'
         'Each run names what it ran for: the pull request it tested or merged, the tag on\n'
         'its commit, the commit itself and its title. Standing failures show the log\n'
-        'lines that name the failure.',
+        'lines that name the failure.\n\n'
+        "With --commit REF --wait it draws no board. It blocks on that commit's runs and\n"
+        'prints one line per run, with each failed job and the log lines naming its failure:\n\n'
+        '  watch-ci --commit HEAD --wait --json',
+        epilog='exit codes with --commit --wait:\n'
+        '  0  every run concluded success, skipped or neutral\n'
+        '  1  a run concluded anything else, or GitHub refused a read\n'
+        '  2  usage error, or a ref naming no commit\n'
+        '  3  no verdict: no run within --start-within, or runs still going at --timeout\n'
+        '  4  no answer from the API',
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument('-n', '--interval', type=float, default=1, metavar='SECONDS', help='seconds between polls (default 1)')
-    parser.add_argument('-k', '--keep', type=int, default=10, metavar='RUNS', help='most finished runs listed per group (default 10)')
-    parser.add_argument('--repo', action='append', default=[], metavar='NAME', help='watch only this repo; repeat for more')
+    parser.add_argument(
+        '-n', '--interval', type=float, metavar='SECONDS', help='seconds between polls (default 1; with --commit default 20, least 5)'
+    )
+    parser.add_argument('-k', '--keep', type=int, metavar='RUNS', help='most finished runs listed per group (default 10)')
+    parser.add_argument(
+        '--repo',
+        action='append',
+        default=[],
+        metavar='NAME',
+        help="watch only this repo; repeat for more. With --commit, the commit's repo, once",
+    )
     parser.add_argument('--once', action='store_true', help='print one screen and exit')
+    parser.add_argument('--commit', metavar='REF', help='wait on this commit instead of drawing the board; comes with --wait')
+    parser.add_argument('--wait', action='store_true', help='block until the commit has a verdict; comes with --commit')
+    parser.add_argument(
+        '--start-within', type=float, metavar='SECONDS', help='with --commit: exit 3 where no run has started by then (default 120)'
+    )
+    parser.add_argument(
+        '--timeout', type=float, metavar='SECONDS', help='with --commit: exit 3 where runs are still going by then (default 3600)'
+    )
+    parser.add_argument('--json', action='store_true', help='with --commit: print one JSON object instead of lines')
     args = parser.parse_args()
+    if args.commit is not None or args.wait:
+        return commit_wait_command(parser, args)
+    if args.start_within is not None or args.timeout is not None or args.json:
+        parser.error('--start-within, --timeout and --json belong to --commit --wait')
+    args.interval = args.interval if args.interval is not None else 1
+    args.keep = args.keep if args.keep is not None else 10
     owner, repos = registry(args.repo)
     signal.signal(signal.SIGTERM, interrupt)
     with contextlib.suppress(KeyboardInterrupt):
