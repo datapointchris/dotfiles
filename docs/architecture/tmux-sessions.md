@@ -297,6 +297,30 @@ layout string encodes pane ids and the old geometry; only the per-pane fraction 
 where the group stays together. It sees content, never intent: it can tell that two conversations
 cite the same item, not that you want them apart.
 
+## A View That Outlives Its Popup
+
+A popup ends when it closes, so anything drawn in one redraws from nothing on the next open. A view
+that keeps state has to run somewhere else, with the popup as only a client of it. Where
+`configs/trust/fleet/` deploys, `prefix V` then `i`, `m`, `j` or `c` opens one view that way, through
+`fleet-view-popup`.
+
+**The views live on a second server, `tmux -L fleet-views`.** tmux has no hidden session. The status
+line's `#{S:}` draws every session, and `tmux-sessions`, sesh and tmux-resurrect would each see one
+too. A second server has none of those problems. A client attaching to it from inside a popup draws
+no nesting refusal, because `new-session -A` on another socket is a new client rather than a nested
+one.
+
+**An Esc in that client stalls unless the server's `clear` is overridden.** A tmux client asks its
+terminal for colors with OSC 10 and OSC 11, and holds a lone Escape for 500 ms until the answer comes.
+A popup answers the device-attribute queries and never those two. So Escape took 507 ms in the nested
+client against 15 ms in the popup alone, and merged with the next key into alt+key. tmux sends the
+queries only to a terminal whose `clear` opens with `\E[`. `fleet-views.conf` opens it with a
+save-cursor instead, which brought Escape to 17 ms. Features are learned by the same queries, so that
+file names them with `terminal-features`.
+
+**A key pressed in the popup reaches the inner server.** So the inner server binds the same chords,
+with the same prefix. The chord for the view on screen hides it, and another chord moves the popup.
+
 ## Files
 
 | File | Role |
@@ -304,5 +328,8 @@ cite the same item, not that you want them apart.
 | `apps/common/tmux-sessions` | Switching, creation, promotion, reordering, status relocation |
 | `apps/common/tmux-rearrange` | Bulk regroup: scan, propose, render a script |
 | `apps/common/tmux-monitor-layout` | Lays a window out as the monitor, for sesh and `prefix W` |
+| `apps/trust/fleet/fleet-view-popup` | Attaches a popup to a view on the second server |
 | `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call |
+| `configs/trust/fleet/.config/tmux/machine-keys.conf` | The view keys, sourced where the layer adds it |
+| `configs/trust/fleet/.config/tmux/fleet-views.conf` | The second server's own config |
 | `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colors |

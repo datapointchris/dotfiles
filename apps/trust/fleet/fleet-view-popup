@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Show one fleet view from a tmux popup, returning to the same running view each time.
+#
+# A popup ends when it closes, so the view runs in a session on a tmux server of its
+# own, and the popup is only a client of that session. A second server rather than a
+# hidden session on the first: tmux has no hidden session, so one there would join the
+# status line's session list, the session keys, sesh and tmux-resurrect's snapshot.
+#
+# Run from a popup's key, this attaches. Run from a key inside that server, it hides
+# the view it names, or moves the popup to another.
+
+set -euo pipefail
+
+usage() {
+  echo "Usage: fleet-view-popup <in-flight|machinery|journey|conversation>" >&2
+  exit 2
+}
+
+[[ $# -eq 1 ]] || usage
+view=$1
+case "$view" in
+  in-flight | machinery | journey | conversation) ;;
+  *) usage ;;
+esac
+
+socket=fleet-views
+
+if [[ ${TMUX:-} == */"$socket",* ]]; then
+  if [[ $(tmux display-message -p '#{session_name}') == "$view" ]]; then
+    exec tmux detach-client
+  fi
+  tmux has-session -t "=$view" 2>/dev/null || tmux new-session -d -s "$view" "fleet views $view"
+  exec tmux switch-client -t "=$view"
+fi
+
+exec tmux -L "$socket" -f "$HOME/.config/tmux/fleet-views.conf" new-session -A -s "$view" "fleet views $view"
