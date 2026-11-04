@@ -16,6 +16,33 @@ otelcol.receiver.otlp "local" {
   }
 
   output {
+    logs    = [otelcol.processor.transform.local_host.input]
+    metrics = [otelcol.processor.transform.local_host.input]
+    traces  = [otelcol.processor.transform.local_host.input]
+  }
+}
+
+// A local program names its service and rarely its box, so the agent stamps the
+// box here by its lowercased short hostname, as every record file does.
+otelcol.processor.transform "local_host" {
+  error_mode = "ignore"
+
+  log_statements {
+    context    = "resource"
+    statements = [string.format("set(attributes[\"host.name\"], %q)", string.to_lower(string.split(constants.hostname, ".")[0]))]
+  }
+
+  metric_statements {
+    context    = "resource"
+    statements = [string.format("set(attributes[\"host.name\"], %q)", string.to_lower(string.split(constants.hostname, ".")[0]))]
+  }
+
+  trace_statements {
+    context    = "resource"
+    statements = [string.format("set(attributes[\"host.name\"], %q)", string.to_lower(string.split(constants.hostname, ".")[0]))]
+  }
+
+  output {
     logs    = [otelcol.exporter.otlphttp.collector.input]
     metrics = [otelcol.exporter.otlphttp.collector.input]
     traces  = [otelcol.exporter.otlphttp.collector.input]
