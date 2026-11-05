@@ -110,7 +110,14 @@ because a push can start a second workflow a little later. A commit whose runs
 finished longer ago than that has had its interval already, so it ends on the first
 read.
 
-Exit 0 means every run concluded success, skipped or neutral, and 1 means one
+A newer push replaces a commit's waiting run, so that run ends cancelled without
+saying anything about the code. Where cancelled push runs are all that stands against
+a commit and their branch has moved past it, the wait follows the branch's head and
+takes its verdict from there, again if that commit's run is replaced too. The head's
+run validates the whole tree, so its verdict covers the commit. A run replaced this
+way counts for nothing and names the commit that replaced it.
+
+Exit 0 means every run counted concluded success, skipped or neutral, and 1 means one
 concluded anything else. Exit 2 is a usage error or a ref naming no commit. Exit 3 is
 no verdict: no run within --start-within, or runs still going at --timeout. Exit 4 is
 no answer from the API: never reached, timed out, or a 429 or 5xx, on all
@@ -1648,8 +1655,10 @@ class CommitWait:
         self.owner = owner
         self.repo = repo
         self.sha = sha
+        self.following = sha
         self.started = time.time()
         self.seen: dict[int, Json] = {}
+        self.replaced_by: dict[int, str] = {}
         self.no_answer = 'no read finished in time'
         self.last_answered: float | None = None
         self.runs_read = False
@@ -1683,12 +1692,12 @@ class CommitWait:
                 await asyncio.sleep(retry_wait(answer, attempt))
         raise NoAnswer(f'{self.no_answer}, {READ_ATTEMPTS} attempts')
 
-    async def commit_on_github(self) -> str:
-        path = f'/repos/{self.owner}/{self.repo}/commits/{quote(self.args.commit, safe="/")}'
+    async def commit_on_github(self, ref: str) -> str:
+        path = f'/repos/{self.owner}/{self.repo}/commits/{quote(ref, safe="/")}'
         body = self.body_of_read(path)
-        unknown = UnknownRef(f'no commit named {self.args.commit!r} in {self.owner}/{self.repo}')
+        unknown = UnknownRef(f'no commit named {ref!r} in {self.owner}/{self.repo}')
         try:
-            await self.read(path, body, f'{self.repo} commit {self.args.commit}')
+            await self.read(path, body, f'{self.repo} commit {ref}')
         except Refused as refused:
             if refused.status in (404, 422):
                 raise unknown from refused
@@ -1712,6 +1721,7 @@ class CommitWait:
     async def follow(self, sha: str) -> Ending:
         """Read until every run seen has completed and a read at least an interval after the last of them finished finds no new run."""
         interval = self.args.interval
+        started = time.time()
         settling: set[int] = set()
         while True:
             try:
@@ -1722,23 +1732,57 @@ class CommitWait:
                 await asyncio.sleep(interval)
                 continue
             now = time.time()
-            if not self.seen:
-                left = self.started + self.args.start_within - now
+            runs = [run for run in self.seen.values() if run['head_sha'] == sha]
+            if not runs:
+                left = started + self.args.start_within - now
                 if left <= 0:
                     return Ending('no_run_started', EXIT_NO_VERDICT, f'no run of {sha} started within {self.args.start_within:g}s')
                 await asyncio.sleep(min(interval, left))
                 continue
-            if all(run['status'] == 'completed' for run in self.seen.values()):
-                finished = max(epoch(run['updated_at']) for run in self.seen.values())
-                if set(self.seen) == settling or now - finished >= interval:
+            if all(run['status'] == 'completed' for run in runs):
+                finished = max(epoch(run['updated_at']) for run in runs)
+                ids = {run['id'] for run in runs}
+                if ids == settling or now - finished >= interval:
                     return self.verdict()
-                settling = set(self.seen)
+                settling = ids
             else:
                 settling = set()
             await asyncio.sleep(interval)
 
+    async def commit_replacing(self, sha: str) -> str | None:
+        """The head of the branch a cancelled push run ran on, where it has moved past this commit and nothing else stands unpassed."""
+        unpassed = [run for run in self.counted() if run['conclusion'] not in PASSED_CONCLUSIONS]
+        if not unpassed or any(run['conclusion'] != 'cancelled' or run.get('event') != 'push' for run in unpassed):
+            return None
+        try:
+            head = await self.commit_on_github(unpassed[0]['head_branch'])
+        except UnknownRef:
+            return None
+        return None if head == sha else head
+
+    async def follow_replacements(self, sha: str) -> Ending:
+        """The commit's verdict, or that of the newest commit whose push replaced its cancelled runs."""
+        while True:
+            ending = await self.follow(sha)
+            newer = await self.commit_replacing(sha)
+            if newer is None:
+                return ending
+            for run in self.counted():
+                if run['conclusion'] not in PASSED_CONCLUSIONS:
+                    self.replaced_by[run['id']] = newer
+                    branch = clean(run['head_branch'])
+                    print(
+                        f'{time.strftime("%H:%M:%S")} {workflow_of(run)} {run["id"]} replaced by {newer[:7]} on {branch}',
+                        file=sys.stderr,
+                        flush=True,
+                    )
+            self.following = sha = newer
+
+    def counted(self) -> list[Json]:
+        return [run for run in self.seen.values() if run['id'] not in self.replaced_by]
+
     def verdict(self) -> Ending:
-        if all(run['conclusion'] in PASSED_CONCLUSIONS for run in self.seen.values()):
+        if all(run['conclusion'] in PASSED_CONCLUSIONS for run in self.counted()):
             return Ending('success', EXIT_PASSED)
         return Ending('failure', EXIT_FAILED)
 
@@ -1755,8 +1799,8 @@ class CommitWait:
         timeout = f'--timeout {self.args.timeout:g}s'
         if self.no_answer:
             return self.without_answer(f'{self.no_answer}, until {timeout} passed')
-        if not self.seen:
-            return Ending('no_run_started', EXIT_NO_VERDICT, f'no run of {self.sha} started before {timeout} passed')
+        if not self.counted():
+            return Ending('no_run_started', EXIT_NO_VERDICT, f'no run of {self.following} started before {timeout} passed')
         going = self.still_going()
         return Ending('timed_out', EXIT_NO_VERDICT, f'{timeout} passed with runs still going: {going}') if going else self.verdict()
 
@@ -1782,9 +1826,12 @@ class CommitWait:
         ]
 
     async def record_of(self, run: Json, read_jobs: bool) -> Json:
-        unpassed = run['status'] == 'completed' and run['conclusion'] not in PASSED_CONCLUSIONS
+        replaced_by = self.replaced_by.get(run['id'])
+        unpassed = run['status'] == 'completed' and run['conclusion'] not in PASSED_CONCLUSIONS and replaced_by is None
         return {
             'id': run['id'],
+            'head_sha': run.get('head_sha'),
+            'replaced_by': replaced_by,
             'workflow': workflow_of(run),
             'status': run['status'],
             'conclusion': run['conclusion'],
@@ -1807,6 +1854,7 @@ class CommitWait:
                 'repo': f'{self.owner}/{self.repo}',
                 'ref': self.args.commit,
                 'sha': self.sha,
+                'verdict_sha': self.following,
                 'conclusion': ending.conclusion,
                 'reason': ending.reason,
                 'waited_seconds': round(time.time() - self.started, 1),
@@ -1824,8 +1872,8 @@ class CommitWait:
         self.poller.prune(self.started)
         try:
             async with asyncio.timeout(self.args.timeout):
-                self.sha = self.sha or await self.commit_on_github()
-                ending = await self.follow(self.sha)
+                self.following = self.sha = self.sha or await self.commit_on_github(self.args.commit)
+                ending = await self.follow_replacements(self.sha)
         except TimeoutError:
             ending = self.at_timeout()
         except NoAnswer as error:
@@ -1842,7 +1890,8 @@ def commit_run_lines(runs: list[Json]) -> list[str]:
     workflow_width = max((len(run['workflow']) for run in runs), default=0)
     lines = []
     for run, state in zip(runs, states, strict=True):
-        lines.append(f'{state:<{state_width}}  {run["workflow"]:<{workflow_width}}  {run["id"]}  {run["url"]}')
+        replaced = f'  replaced by {run["replaced_by"][:7]}' if run['replaced_by'] else ''
+        lines.append(f'{state:<{state_width}}  {run["workflow"]:<{workflow_width}}  {run["id"]}  {run["url"]}{replaced}')
         for job in run['failed_jobs']:
             lines.append(f'  {job["name"]}')
             lines.extend(f'    {excerpt}' for excerpt in job['excerpt'])
@@ -1936,8 +1985,9 @@ def main() -> int:
         'prints one line per run, with each failed job and the log lines naming its failure:\n\n'
         '  watch-ci --commit HEAD --wait --json',
         epilog='exit codes with --commit --wait:\n'
-        '  0  every run concluded success, skipped or neutral\n'
-        '  1  a run concluded anything else, or GitHub refused a read\n'
+        '  0  every run counted concluded success, skipped or neutral\n'
+        '     (a push run a newer push cancelled is not counted: the head of its branch is followed instead)\n'
+        '  1  a run counted concluded anything else, or GitHub refused a read\n'
         '  2  usage error, or a ref naming no commit\n'
         '  3  no verdict: no run within --start-within, or runs still going at --timeout\n'
         '  4  no answer from the API',
