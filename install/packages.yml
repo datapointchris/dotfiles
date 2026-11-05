@@ -787,6 +787,13 @@ system_packages:
     description: GStreamer FFmpeg plugin (broad format support)
     tags: [multimedia, webview]
 
+  # Without it WebKitGTK decodes video on the CPU, which costs a YouTube window about
+  # half a core on its own.
+  - name: gst-plugin-va
+    pacman: gst-plugin-va
+    description: GStreamer VA-API plugin (hardware video decoding)
+    tags: [multimedia, webview]
+
   # Local AI
   # The pacman name pulls 12 GiB of ROCm — rocm-llvm alone is 6.9 GiB — and every
   # byte of it is inert without an AMD device. `requires_amd_gpu` is checked live

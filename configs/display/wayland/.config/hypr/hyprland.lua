@@ -17,6 +17,14 @@ hl.env('QT_AUTO_SCREEN_SCALE_FACTOR', '1')
 -- GTK
 hl.env('GDK_BACKEND', 'wayland,x11,*')
 
+-- GStreamer's unnamed VA decoders sit on the first render node, the discrete GPU,
+-- and the display runs on the integrated one at renderD129. Decoding beside the
+-- display leaves the discrete GPU asleep and hands frames over as DMABufs.
+hl.env(
+  'GST_PLUGIN_FEATURE_RANK',
+  'vavp9dec:NONE,vaav1dec:NONE,vah264dec:NONE,vah265dec:NONE,varenderD129vp9dec:MAX,varenderD129av1dec:MAX,varenderD129h264dec:MAX,varenderD129h265dec:MAX'
+)
+
 -- Cursor
 hl.env('XCURSOR_SIZE', '24')
 
