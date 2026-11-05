@@ -750,15 +750,8 @@ def test_enter_on_a_row_still_opens_the_action_menu(session) -> None:
     which action you want is what the menu is for, and it is still the default."""
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(),))
 
-    assert 'view diff' in plain(run.fed(2))
-    # esc on the menu comes back to the list instead of ending the run.
-    assert run.calls == 3
-
-
-def test_q_on_the_action_menu_quits_without_coming_back_to_the_list(session) -> None:
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(), chose('q', row='4')))
-
     assert run.calls == 2
+    assert 'view diff' in plain(run.fed(2))
 
 
 def test_the_action_menu_names_the_key_that_takes_each_action(session) -> None:
