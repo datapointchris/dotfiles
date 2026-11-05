@@ -311,20 +311,6 @@ def gh_dash(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'gh-dash_{tag}_{suffix}', Archive.RAW)
 
 
-def glow(tag: str, target: Target) -> ReleaseArtifact:
-    """Nested under a directory named after the archive, on both platforms.
-
-    It was flat until v2, and the entry read `path='glow'` until the tarball
-    stopped having a `glow` at its root — verified against 2.1.2 on Linux and
-    Darwin, both `glow_<version>_<suffix>/glow`. This is the drift
-    `tests/install/test_release_urls.py` exists to catch and cannot: it checks that
-    the release publishes the asset, not what is inside it.
-    """
-    suffix = ('Darwin_arm64' if target.is_arm else 'Darwin_x86_64') if target.is_darwin else 'Linux_x86_64'
-    stem = f'glow_{bare(tag)}_{suffix}'
-    return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/glow')
-
-
 def hadolint(tag: str, target: Target) -> ReleaseArtifact:
     """Ships the binary itself, and is the one tool naming arm on Linux."""
     if target.is_darwin:
@@ -530,7 +516,6 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'fzf': fzf,
     'gh': gh,
     'gh-dash': gh_dash,
-    'glow': glow,
     'hadolint': hadolint,
     'icb': go_release_cli('icb'),
     'just': just,

@@ -168,7 +168,7 @@ and asks under `--offline` too. `dotfiles bundle request` asks without applying:
 
 ```bash
 dotfiles bundle request              # everything the status shows behind
-dotfiles bundle request --entry glow # or only what is named
+dotfiles bundle request --entry duf  # or only what is named
 ```
 
 The push needs a secret in `~/.local/state/dotfiles/remote-hook-secret`, at mode

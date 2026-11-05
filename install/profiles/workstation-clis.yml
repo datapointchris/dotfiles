@@ -4,6 +4,7 @@
 go_tools:
   - todoui
   - tmux-tree-editor
+  - read-markdown
 
 custom_installers:
   - theme

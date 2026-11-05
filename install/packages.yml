@@ -481,7 +481,6 @@ system_packages:
     brew: duti
     description: File association manager (macOS only)
 
-  # Note: glow and duf moved to github_releases for universal installation
 
   - name: git-secrets
     brew: git-secrets
@@ -872,11 +871,6 @@ github_releases:
     min_version: "0.71"
     description: Fuzzy finder
     tags: [cli, search]
-
-  - name: glow
-    repo: charmbracelet/glow
-    description: Markdown renderer for terminal
-    tags: [cli]
 
   # `supersedes` removes Homebrew's gh, which a macOS login shell puts ahead of
   # this on PATH. Prefixed, because a bare row would hold the release back until
@@ -1352,7 +1346,7 @@ cargo_packages:
   # Livediff snapshots files itself rather than asking git, so it renders the
   # last save instead of the change against the branch point, and critique
   # wants a Bun runtime nothing else here needs. `watchexec -- <any command>`
-  # composes with the git and glow invocations already known.
+  # composes with the git invocations already known.
   # watchexec-cli, not watchexec: the bare crate name is the library, which
   # binstall rejects with "no binaries specified nor inferred".
   - name: watchexec-cli
@@ -1843,6 +1837,12 @@ go_tools:
     github_repo: datapointchris/todoui
     binary_pattern: "todoui_{version_num}_{os}_{go_arch}.tar.gz"
     description: Project organization and task management with local-first SQLite
+
+  # `supersedes` deletes the glow binary this took over from.
+  - name: read-markdown
+    package: github.com/datapointchris/gotermboard/cmd/read-markdown
+    description: Markdown on a full-screen reader with search and heading jumps
+    supersedes: ['release:glow']
 
   - name: forge
     package: github.com/datapointchris/forge

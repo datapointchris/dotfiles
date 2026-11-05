@@ -10,7 +10,6 @@ github_releases:
   - gh          # GitHub CLI
   - fzf         # fuzzy finder — backs the shell functions
   - neovim      # editor for on-box config/log edits
-  - glow       # render markdown/docs over SSH
   - duf         # disk-free at a glance
   - atuin       # shell history (zsh init expects it)
   - shellcheck  # debug shell scripts on the box

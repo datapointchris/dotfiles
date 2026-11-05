@@ -87,13 +87,13 @@ def test_a_section_installs_over_the_base(over_base: Machine, section: str) -> N
 
 
 def test_a_release_that_nests_its_binary_still_lands(over_base: Machine) -> None:
-    """glow shipped a flat tarball until v2 and nests it now, which no other test
-    can see: `test_release_urls.py` checks that a release publishes the asset a
+    """atuin nests its binary under a directory named for the archive, which no other
+    test can see: `test_release_urls.py` checks that a release publishes the asset a
     function names, never what is inside it."""
     code, output = apply_section(over_base, 'github_releases')
 
     assert code == 0, output[-2000:]
-    assert over_base.succeeds('glow --version')
+    assert over_base.succeeds('atuin --version')
 
 
 def test_a_zip_distributed_tool_comes_out_executable(over_base: Machine) -> None:

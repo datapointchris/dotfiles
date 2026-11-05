@@ -273,7 +273,7 @@ def test_a_second_apply_over_a_converged_machine_changes_nothing(converged_machi
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize('tool', ['nvim', 'lazygit', 'fzf', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'glow', 'duf'])
+@pytest.mark.parametrize('tool', ['nvim', 'lazygit', 'fzf', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'duf'])
 def test_the_bundle_installed_the_tools_the_network_could_not(machine: Machine, tool: str) -> None:
     """Every one of these comes from a release asset, which is the thing the work
     firewall blocks — so each is a tool that exists on the machine only because
@@ -382,9 +382,9 @@ def test_one_apply_asks_a_builder_for_the_blocked_tool_no_bundle_carries_and_ins
 ) -> None:
     """The restricted box's whole loop in one plain `apply`, both ends unattended.
 
-    glow's release asset is blocked and nothing staged or on disk carries it, so
+    duf's release asset is blocked and nothing staged or on disk carries it, so
     the apply publishes a status, leaves a request, waits while `bundle serve`
-    builds against that status, then stages the answer and installs glow.
+    builds against that status, then stages the answer and installs duf.
     """
     machine, builder = exchanging
     home = machine.environment.home
@@ -395,7 +395,7 @@ def test_one_apply_asks_a_builder_for_the_blocked_tool_no_bundle_carries_and_ins
         f'mkdir -p {aside} && mv {home}/.cache/dotfiles/staged {home}/.cache/dotfiles/bundles {home}/dotfiles-offline-*.tar.gz {aside}/',
         check=True,
     )
-    machine.exec('rm -f "$(command -v glow)"', check=True)
+    machine.exec('rm -f "$(command -v duf)"', check=True)
 
     def listed() -> set[str]:
         return set(builder.read(f'{exchange.TRANSPORT} list {requests} 2>/dev/null').split())
@@ -403,7 +403,7 @@ def test_one_apply_asks_a_builder_for_the_blocked_tool_no_bundle_carries_and_ins
     try:
         before = listed()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            applying = pool.submit(machine.exec, 'dotfiles apply --entry glow')
+            applying = pool.submit(machine.exec, 'dotfiles apply --entry duf')
             deadline = time.monotonic() + 300
             while not listed() - before:
                 assert not applying.done(), applying.result().stderr[-4000:]
@@ -418,4 +418,4 @@ def test_one_apply_asks_a_builder_for_the_blocked_tool_no_bundle_carries_and_ins
 
     assert served.returncode == 0, served.stderr[-4000:]
     assert applied.returncode == 0, applied.stderr[-4000:]
-    assert machine.succeeds('command -v glow'), applied.stderr[-4000:]
+    assert machine.succeeds('command -v duf'), applied.stderr[-4000:]
