@@ -147,6 +147,21 @@ managed_files:
       [Service]
       LogFilterPatterns=~^(slot |srv  update_slots|\[GIN\] .*\| 200 \|)
 
+  # The RX 6600M reports gfx1032, and ROCm's libraries ship no kernels for it. Ollama
+  # loads on the card anyway, and its runner aborts in hip::StatCO::getStatFunc on the
+  # first model. gfx1030 kernels run on the same silicon, and embeddings from them match
+  # a CPU run at cosine 0.9999. ollama-rocm installs only on an AMD device, and this
+  # desk is the only pacman machine that has one. A different AMD card would need this
+  # row narrowed, because the override applies to whatever card ROCm finds.
+  - name: ollama-rocm-gfx1030-kernels
+    description: ROCm runs gfx1030 kernels on the RX 6600M, which has none of its own
+    package_manager: pacman
+    requires_package: ollama
+    path: /etc/systemd/system/ollama.service.d/rocm-gfx1030-kernels.conf
+    content: |
+      [Service]
+      Environment=HSA_OVERRIDE_GFX_VERSION=10.3.0
+
   # Docker deletes nothing on its own, and BuildKit sizes its default cache cap
   # as most of the disk, so on a workstation root it never trims. 60 GB holds an
   # active build loop without evicting it. The keys bind case-insensitively to
