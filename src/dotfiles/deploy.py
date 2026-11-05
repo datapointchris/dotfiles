@@ -26,6 +26,9 @@ from dotfiles.symlinks import core
 GIT_CONFIG_ENTRY = Path.home() / '.config' / 'git' / 'config'
 HOME_GITCONFIG = Path.home() / '.gitconfig'
 
+ALLOY_RELOAD_URL = 'http://127.0.0.1:12345/-/reload'
+ALLOY_RELOAD_SECONDS = 10
+
 PERSONAL_IDENTITY = Path.home() / '.config' / 'git' / 'personal.gitconfig'
 """The identity the repo ships, included unconditionally on a fleet machine."""
 
@@ -121,11 +124,11 @@ def retire_home_gitconfig(coordinates: axes.Coordinates) -> Path | None:
 
 
 def epilogue(session: Session) -> None:
-    """The two jobs that follow a deployment, and belong with it rather than at
-    the end of a run.
+    """The jobs that follow a deployment, and belong with it rather than at the end
+    of a run.
 
-    git needs somewhere to write that is not this repo, and Hyprland has to reload
-    the files the pass just deployed.
+    git needs somewhere to write that is not this repo, and Hyprland and Alloy each
+    have to reload the files the pass just deployed.
 
     The deploying itself belongs to the engine. What is left here is genuinely not
     the walk — carrying it would mean a second observe/diff/perform loop beside the
@@ -133,6 +136,7 @@ def epilogue(session: Session) -> None:
     """
     ensure_git_config_entry(session.machine.coordinates)
     reload_compositor(session.machine.coordinates)
+    reload_telemetry_agent()
 
 
 def unlink(session: Session) -> bool:
@@ -216,3 +220,15 @@ def reload_compositor(coordinates: axes.Coordinates) -> None:
     """
     if coordinates.display_stack is axes.DisplayStack.WAYLAND and run(['hyprctl', 'reload'], output=Output.QUIET).ok:
         err_console.print('Hyprland configuration reloaded')
+
+
+def reload_telemetry_agent() -> None:
+    """Alloy reads its config directory only when told to, and the pass above may have
+    deployed a file into it, under systemd and launchd alike.
+
+    A box not running Alloy refuses the connection, which is the answer rather than
+    a fault. A reload leaves every component whose config did not change running.
+    """
+    reloaded = run(['curl', '--silent', '--fail', '--request', 'POST', ALLOY_RELOAD_URL], output=Output.QUIET, timeout=ALLOY_RELOAD_SECONDS)
+    if reloaded.ok:
+        err_console.print('Alloy configuration reloaded')
