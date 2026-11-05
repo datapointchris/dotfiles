@@ -86,3 +86,6 @@ General technical notes that name nothing in this repo live on the hub at
 - [A /bin/sh Stub Is Bash Here and Dash on CI](a-sh-stub-is-bash-here-and-dash-on-ci.md) — a test
   passes locally and fails on CI with `FileNotFoundError` for a file its stub writes, because dash
   printed `Bad substitution` into a tmux pane
+- [Reloading a Running fzf From Outside](fzf-reload-from-outside.md) — a `change-header` chained
+  after `reload-sync` over `--listen` answers 200 and does nothing, and a reload must not blank the
+  list when a provider is unreachable

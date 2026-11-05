@@ -869,7 +869,7 @@ github_releases:
 
   - name: fzf
     repo: junegunn/fzf
-    min_version: "0.50"
+    min_version: "0.71"
     description: Fuzzy finder
     tags: [cli, search]
 

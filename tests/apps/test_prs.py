@@ -337,9 +337,9 @@ def session(tmp_path: Path, bin_dir: Path):
     return _session
 
 
-def chose(index: int, key: str = '') -> str:
+def chose(key: str = '', row: str = 'datapointchris/dotfiles#7') -> str:
     """An fzf reply: the key pressed on its own line, then the row it was on."""
-    return f'{key}\n{index}\tthe rendered row\n'
+    return f'{key}\n{row}\tthe rendered row\n'
 
 
 def plain(line: str) -> str:
@@ -552,9 +552,9 @@ def test_the_listing_is_plain_when_it_is_not_a_terminal(listing) -> None:
 def test_the_picker_feeds_one_record_per_pr(picker) -> None:
     """Records are NUL-separated so a two-line PR is one item. Newline-separated
     input would make every second line a selectable row with no PR behind it."""
-    fed = picker(pr('dotfiles', 1, 'a-branch'), pr('doit', 2, 'b-branch'))
+    fed = picker(pr('dotfiles', 1, 'a-branch'), pr('typos', 2, 'b-branch'))
 
-    assert [record.split('\t', 1)[0] for record in fed.split('\0')] == ['0', '1']
+    assert [record.split('\t', 1)[0] for record in fed.split('\0')] == ['datapointchris/dotfiles#1', 'datapointchris/typos#2']
     assert all(len(record.split('\t', 1)[1].splitlines()) == 2 for record in fed.split('\0'))
 
 
@@ -591,7 +591,7 @@ def test_an_empty_backlog_says_so_rather_than_printing_a_bare_header(listing) ->
 def test_a_letter_on_the_list_takes_its_action_without_opening_the_menu(session) -> None:
     """The menu is one screen and the merge confirm is another, and pressing `m`
     on a row is a decision already made about which of the five it is."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),))
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose('m'),))
 
     assert run.calls == 1
     assert 'gh pr merge 7' in run.stdout
@@ -602,7 +602,7 @@ def test_a_merge_tells_gh_the_method_so_its_own_wizard_never_runs(session) -> No
     to submit. All three are settled — a merge commit, and GitHub deletes the
     remote branch — so every prompt is a keypress that could only be answered one
     way."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),))
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose('m'),))
 
     assert '--merge' in run.stdout
     assert '--repo datapointchris/dotfiles' in run.stdout
@@ -611,7 +611,7 @@ def test_a_merge_tells_gh_the_method_so_its_own_wizard_never_runs(session) -> No
 def test_enter_answers_the_merge_confirm(session) -> None:
     """The prompt is there to show which PR is about to land, not to make landing
     one cost a keystroke it never varies."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),), answer='\n')
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose('m'),), answer='\n')
 
     assert '[Y/n]' in run.stdout
     assert 'gh pr merge 7' in run.stdout
@@ -620,7 +620,7 @@ def test_enter_answers_the_merge_confirm(session) -> None:
 def test_an_answer_that_is_not_yes_leaves_the_pr_alone(session) -> None:
     """Enter being yes only works if a stray key is still no. Treating anything
     unrecognized as agreement would make a mistimed keypress a merge."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'm'),), answer='x\n\n')
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose('m'),), answer='x\n\n')
 
     assert 'left alone' in run.stdout
     assert 'gh pr merge' not in run.stdout
@@ -633,7 +633,7 @@ def test_enter_does_not_close_a_pull_request(session) -> None:
     branch nobody read."""
     # Two newlines: the first answers the confirm, the second dismisses the pause
     # that holds `left open` on screen long enough to be read.
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'x'),), answer='\n\n')
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose('x'),), answer='\n\n')
 
     assert 'left open' in run.stdout
     assert 'press enter to close' in run.stdout
@@ -645,7 +645,7 @@ def test_a_guarded_action_refuses_when_there_is_no_terminal_to_ask_on(session, k
     """`interactive` is `sys.stdin.isatty()`, and a false there is not permission.
     It says the confirm cannot be asked, and no flag supplies the answer instead,
     so refusing is the only move left that is not acting unasked."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, key),), attended=False, exits=1)
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(key),), attended=False, exits=1)
 
     assert f'{verb} needs a terminal' in run.stderr
     assert f'gh pr {verb}' not in run.stdout
@@ -659,7 +659,7 @@ def test_the_review_action_refuses_when_claude_is_not_installed(session, tmp_pat
     `claude-code` uninstalled, which makes this a real machine."""
     checkout = tmp_path / 'a-checkout'
     checkout.mkdir()
-    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, 'r'),), without=('claude',), exits=1)
+    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose('r'),), without=('claude',), exits=1)
 
     assert 'claude is not installed' in run.stderr
     assert 'tmux new-window' not in run.stdout
@@ -667,7 +667,7 @@ def test_the_review_action_refuses_when_claude_is_not_installed(session, tmp_pat
 
 def test_close_takes_an_explicit_yes(session) -> None:
     """Defaulting to no is only useful if yes still reaches the action."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'x'),), answer='y\n')
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose('x'),), answer='y\n')
 
     assert 'gh pr close 7 --repo datapointchris/dotfiles' in run.stdout
 
@@ -676,7 +676,7 @@ def test_the_page_action_asks_gh_for_a_rendering_and_for_the_comments(session) -
     """Two things the menu's own preview cannot do. gh prints a `key: value` dump
     unless it believes it is writing to a terminal, and the comment threads are on
     GitHub rather than in the listing this renders from."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0, 'p'),))
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose('p'),))
 
     assert 'GH_FORCE_TTY' in run.stdout
     assert 'gh pr view 7 --repo datapointchris/dotfiles --comments' in run.stdout
@@ -695,7 +695,7 @@ def test_a_claude_action_opens_a_claude_window_on_that_pr(session, tmp_path, key
     """
     checkout = tmp_path / 'a-checkout'
     checkout.mkdir()
-    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, key),))
+    run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(key),))
 
     assert prompt in run.stdout
     assert f'-c {checkout}' in run.stdout
@@ -705,7 +705,7 @@ def test_a_review_needs_the_code_and_says_so_when_it_is_absent(session) -> None:
     """A repo the registry names and this machine has not cloned. Launching Claude
     in a directory that is not the repo would produce a review of whatever it
     found there."""
-    run = session(pr('dotfiles', 7, 'a-branch', path=''), replies=(chose(0, 'r'),), exits=1)
+    run = session(pr('dotfiles', 7, 'a-branch', path=''), replies=(chose('r'),), exits=1)
 
     assert 'not checked out here' in run.stderr
     assert 'review-pr' not in run.stdout
@@ -716,7 +716,7 @@ def test_the_description_is_rendered_rather_than_printed_as_its_source(session) 
     typed, which is the characters they were trying to get away from."""
     run = session(
         pr('dotfiles', 7, 'a-branch', body='## What to look at\n\nthe `guard` in one place.'),
-        replies=(chose(0),),
+        replies=(chose(),),
     )
     shown = plain(run.preview(2))
 
@@ -727,7 +727,7 @@ def test_the_description_is_rendered_rather_than_printed_as_its_source(session) 
 def test_the_action_menu_names_the_keys_that_scroll_the_description(session) -> None:
     """A description longer than the pane reads as a truncated one until something
     on screen says it moves, so the footer is what makes the pane usable at all."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(),))
     footer = next(arg for arg in run.argv(2) if arg.startswith('--footer='))
 
     assert 'shift-↑' in plain(footer)
@@ -738,7 +738,7 @@ def test_the_half_page_keys_are_bound_because_fzf_does_not_bind_them(session) ->
     """fzf ships `preview-up` and `preview-down` on the shift arrows and leaves the
     half-page pair unbound. Naming ctrl-d in the footer without binding it here
     would advertise a key that aborts the picker."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(),))
     bound = next(arg for arg in run.argv(2) if arg.startswith('--bind='))
 
     assert 'ctrl-d:preview-half-page-down' in bound
@@ -748,7 +748,7 @@ def test_the_half_page_keys_are_bound_because_fzf_does_not_bind_them(session) ->
 def test_enter_on_a_row_still_opens_the_action_menu(session) -> None:
     """The letters are an accelerator, not a replacement. Arriving with no idea
     which action you want is what the menu is for, and it is still the default."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(),))
 
     assert run.calls == 2
     assert 'view diff' in plain(run.fed(2))
@@ -757,7 +757,7 @@ def test_enter_on_a_row_still_opens_the_action_menu(session) -> None:
 def test_the_action_menu_names_the_key_that_takes_each_action(session) -> None:
     """A shortcut nothing shows is a shortcut nobody presses. The menu is where
     the letters are learned, so each row carries its own."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0),))
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(),))
     rows = [plain(row.split('\t', 1)[1]) for row in run.fed(2).splitlines()]
 
     assert [row.split()[0] for row in rows] == bound_keys()
@@ -780,7 +780,7 @@ def test_only_the_merge_key_merges(session, tmp_path) -> None:
     for key in bound_keys():
         # Enough newlines for whichever prompt this key reaches: a confirm, and
         # the pause behind a decline. Extra input is read by nobody.
-        run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(0, key),), answer='\n\n', exits=None)
+        run = session(pr('dotfiles', 7, 'a-branch', path=str(checkout)), replies=(chose(key),), answer='\n\n', exits=None)
         if 'gh pr merge' in run.stdout:
             merged.append(key)
 
@@ -790,7 +790,7 @@ def test_only_the_merge_key_merges(session, tmp_path) -> None:
 def test_a_letter_in_the_action_menu_takes_that_action(session) -> None:
     """The same letter has to mean the same thing one screen deeper, or arriving
     by enter would punish having learned it."""
-    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(0), chose(4, 'm')))
+    run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(), chose('m', row='4')))
 
     assert run.calls == 2
     assert 'gh pr merge 7' in run.stdout

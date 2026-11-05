@@ -18,6 +18,9 @@ Enter on a row opens the action menu. A letter takes that action there and then,
 without the menu, and the footer names them — `m` is merge, which is the one
 worth pressing from the list, since the confirm it prints is the whole flow.
 
+The list reads `pull-requests` again every minute while it is open. The cursor
+stays on its PR, and the footer says when the rows were read and why a read failed.
+
 The menu shows the PR's description rendered as markdown, and its own footer names
 the keys that scroll it. `p` fetches GitHub's own rendering instead, with the
 comment threads the listing does not carry. `r` opens a Claude window running
@@ -49,9 +52,12 @@ import argparse
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -131,6 +137,12 @@ SIDE_PAD = 12
 # SIDE_PAD each side leaves 124, and 120 keeps a margin. Spreading to less than the window is what left the list huddled
 # against the left edge with the rest of the popup empty.
 TABLE_WIDTH = 120
+
+REFRESH_SECONDS = 60
+# A slow read waits this many times its own length: bbkt costs one call per checkout.
+REFRESH_READ_MULTIPLE = 20
+# fzf reads a `--listen` address as a Unix socket only with this suffix.
+FZF_SOCKET = 'fzf.sock'
 
 
 def spread(rows: list[list[Text]], width: int, right: frozenset[int] = frozenset()) -> list[Text]:
@@ -229,10 +241,10 @@ class PullRequest:
         )
 
 
-def fetch() -> list[PullRequest]:
-    """Every open PR the registry knows about. Raises if `pull-requests` fails."""
-    result = subprocess.run(['pull-requests'], capture_output=True, text=True, check=True)
-    return [PullRequest.from_json(row) for row in json.loads(result.stdout)]
+def fetch() -> tuple[list[PullRequest], str]:
+    """Every open PR the registry knows about, and what `pull-requests` warned. Raises if it fails."""
+    result = subprocess.run(['pull-requests'], stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True)
+    return [PullRequest.from_json(row) for row in json.loads(result.stdout)], result.stderr.strip()
 
 
 def stack_parents(prs: list[PullRequest]) -> dict[tuple[str, str], int]:
@@ -595,14 +607,99 @@ def scroll_legend() -> Text:
     return line
 
 
-def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
+def row_key(pr: PullRequest) -> str:
+    """What names a PR across refreshes, when its position and every cell can change."""
+    return f'{pr.slug}#{pr.number}'
+
+
+def list_records(prs: list[PullRequest]) -> tuple[str, str]:
+    """The header line, and the NUL-separated records fzf reads."""
+    header, items = compose(prs, width=TABLE_WIDTH)
+    records = '\0'.join(f'{row_key(pr)}\t' + '\n'.join(to_lines(item, color=True)) for pr, item in zip(prs, items, strict=True))
+    return to_lines([header], color=True)[0], records
+
+
+def list_footer(updated: str, warning: str) -> str:
+    """The key legend, then when the rows were read and what went wrong reading them."""
+    state = Text(f'updated {updated}', style='dim')
+    if warning:
+        state.append(f'   {warning.splitlines()[0]}', style='red')
+    return '\n'.join(to_lines([shortcut_legend(), state], color=True))
+
+
+def tell_fzf(workspace: Path, actions: str) -> None:
+    """POST actions to the `--listen` socket of the list running in `workspace`."""
+    body = actions.encode()
+    with socket.socket(socket.AF_UNIX) as client:
+        client.settimeout(5)
+        client.connect(str(workspace / FZF_SOCKET))
+        client.sendall(b'POST / HTTP/1.1\r\nHost: fzf\r\nContent-Length: %d\r\n\r\n' % len(body) + body)
+        client.recv(1024)
+
+
+def refresh(known: dict[str, PullRequest], workspace: Path, updated: str) -> str:
+    """Redraw the list from a new read, and return when its rows were read."""
+    try:
+        prs, warning = fetch()
+    except (subprocess.CalledProcessError, OSError, ValueError) as error:
+        prs, warning = [], getattr(error, 'stderr', None) or str(error)
+
+    # `pull-requests` answers `[]` and a warning when a provider is unreachable.
+    if warning and not prs:
+        tell_fzf(workspace, f'change-footer:{list_footer(updated, warning)}')
+        return updated
+
+    known.update({row_key(pr): pr for pr in prs})
+    updated = time.strftime('%H:%M')
+    header, records = list_records(prs)
+    rows = workspace / 'rows'
+    rows.write_text(records, encoding='utf-8')
+    # fzf drops what follows `reload-sync`, and the footer's colon form must end a chain.
+    tell_fzf(workspace, f'change-footer:{list_footer(updated, warning)}')
+    tell_fzf(workspace, f'change-header({header})+reload-sync(cat {rows})')
+    return updated
+
+
+def keep_refreshing(known: dict[str, PullRequest], workspace: Path, updated: str, stop: threading.Event) -> None:
+    """Redraw the list on a timer until `stop` is set."""
+    wait: float = REFRESH_SECONDS
+    while not stop.wait(wait):
+        started = time.monotonic()
+        try:
+            updated = refresh(known, workspace, updated)
+        except OSError:
+            # fzf exited during the read and took its socket with it.
+            continue
+        wait = max(REFRESH_SECONDS, (time.monotonic() - started) * REFRESH_READ_MULTIPLE)
+
+
+def pick(prs: list[PullRequest], warning: str) -> tuple[PullRequest, Action | None] | None:
     """Run fzf over the rendered rows, and return the PR with any key pressed on it.
 
     An action key returns that action and skips the menu entirely: `m` on a row
     goes straight to the merge confirm. Enter returns no action, which is what
     opens the menu.
 
-    The index leads in a hidden field, so the choice survives a title containing
+    `known` holds every PR seen this run, so a row fzf has yet to replace still resolves.
+    """
+    known = {row_key(pr): pr for pr in prs}
+    updated = time.strftime('%H:%M')
+    stop = threading.Event()
+    with tempfile.TemporaryDirectory(prefix='prs-', ignore_cleanup_errors=True) as directory:
+        workspace = Path(directory)
+        threading.Thread(target=keep_refreshing, args=(known, workspace, updated, stop), daemon=True).start()
+        stdout = run_list_picker(prs, workspace, list_footer(updated, warning))
+        stop.set()
+    action, chosen = expected(stdout)
+    if not chosen:
+        return None
+    return known[chosen.split('\t')[0]], action
+
+
+def run_list_picker(prs: list[PullRequest], workspace: Path, footer: str) -> str:
+    """Run fzf over the rendered rows until a choice is made, and return its stdout.
+
+    The PR's key leads in a hidden field, so the choice survives a title containing
     a tab or a leading number, and nothing has to be matched back by name.
 
     No `--height`: this fills whatever it is given, which is the tmux popup when
@@ -629,8 +726,7 @@ def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
     With newline-separated input its title would be a second, selectable row with
     no PR behind it, which is the same fault as faking the gaps.
     """
-    header, items = compose(prs, width=TABLE_WIDTH)
-    stdin = '\0'.join(f'{index}\t' + '\n'.join(to_lines(item, color=True)) for index, item in enumerate(items))
+    header, records = list_records(prs)
     result = subprocess.run(
         [
             'fzf',
@@ -643,6 +739,10 @@ def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
             '--color=bg:-1,gutter:-1,preview-bg:-1',
             '--delimiter=\t',
             '--with-nth=2',
+            # A refresh finds the cursor's row again by the key in its first field.
+            '--track',
+            '--id-nth=1',
+            f'--listen={workspace / FZF_SOCKET}',
             '--no-sort',
             '--reverse',
             '--gap=2',
@@ -662,8 +762,8 @@ def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
             '--no-input',
             f'--expect={EXPECT}',
             f'--padding=1,{SIDE_PAD}',
-            f'--header={to_lines([header], color=True)[0]}',
-            f'--footer={to_lines([shortcut_legend()], color=True)[0]}',
+            f'--header={header}',
+            f'--footer={footer}',
             # Both blanked. fzf reserves a column at the left for the pointer
             # and, once items are multi-line, draws `╻┃╹` down the side of each
             # one — a white rule against the rows that reads as a border the
@@ -677,15 +777,12 @@ def pick(prs: list[PullRequest]) -> tuple[PullRequest, Action | None] | None:
             '--marker=',
             '--marker-multi-line=',
         ],
-        input=stdin,
+        input=records,
         capture_output=True,
         text=True,
         check=False,
     )
-    action, chosen = expected(result.stdout)
-    if not chosen:
-        return None
-    return prs[int(chosen.split('\t')[0])], action
+    return result.stdout
 
 
 def describe(pr: PullRequest) -> Text:
@@ -1171,6 +1268,7 @@ def help_screen() -> None:
     """
     help_header('prs')
     help_text('Pick an open PR and open its diff in a tmux window.')
+    help_text(f'The list reads every open PR again every {REFRESH_SECONDS} seconds while it is open.')
     help_usage('prs', 'prs list')
 
     help_section('Examples')
@@ -1217,9 +1315,11 @@ def main() -> int:
         return fail('pull-requests is required')
 
     try:
-        prs = fetch()
+        prs, warning = fetch()
     except subprocess.CalledProcessError as error:
         return fail(f'pull-requests failed: {error.stderr.strip() or error}')
+    if warning:
+        print(warning, file=sys.stderr)
 
     if arguments.command == 'list':
         if not prs:
@@ -1239,7 +1339,7 @@ def main() -> int:
         if not shutil.which(tool):
             return fail(f'{tool} is required')
 
-    picked = pick(prs)
+    picked = pick(prs, warning)
     if picked is None:
         return 0
     chosen, action = picked
