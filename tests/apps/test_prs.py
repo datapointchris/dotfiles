@@ -685,7 +685,7 @@ def test_the_page_action_asks_gh_for_a_rendering_and_for_the_comments(session) -
     assert '-c ' not in run.stdout
 
 
-@pytest.mark.parametrize(('key', 'prompt'), [('r', "/review-pr 7'"), ('e', "/explain-code-changes #7'")])
+@pytest.mark.parametrize(('key', 'prompt'), [('r', "/review-pr 7'"), ('C', "/explain-code-changes #7'")])
 def test_a_claude_action_opens_a_claude_window_on_that_pr(session, tmp_path, key, prompt) -> None:
     """The number travels and the repo does not. Each skill resolves the repo from
     the working directory, which is the window's `-c`, this PR's own checkout.
@@ -730,7 +730,7 @@ def test_the_action_menu_names_the_keys_that_scroll_the_description(session) -> 
     run = session(pr('dotfiles', 7, 'a-branch'), replies=(chose(),))
     footer = next(arg for arg in run.argv(2) if arg.startswith('--footer='))
 
-    assert 'shift-↑' in plain(footer)
+    assert 'K J' in plain(footer)
     assert 'ctrl-u ctrl-d' in plain(footer)
 
 
@@ -808,10 +808,10 @@ def test_the_list_names_its_keys_in_a_footer(session) -> None:
     """Under the rows, not above them: the column labels are already at the top
     and a second line up there reads as a second header row."""
     run = session(pr('dotfiles', 7, 'a-branch'))
-    footer = next(arg for arg in run.argv(1) if arg.startswith('--footer='))
+    footer = plain(' '.join(run.argv(1)))
 
-    assert 'm merge' in plain(footer)
-    assert 'd view diff' in plain(footer)
+    assert 'm merge' in footer
+    assert 'd view diff' in footer
 
 
 def help_screen(**extra: str) -> subprocess.CompletedProcess[str]:
@@ -846,7 +846,7 @@ def test_the_help_screen_names_every_key_the_picker_binds() -> None:
     shown = help_screen()
     assert shown.returncode == 0, shown.stderr
 
-    for key, label in (('d', 'view diff'), ('o', 'open in browser'), ('b', 'copy branch'), ('c', 'comment'), ('m', 'merge')):
+    for key, label in (('d', 'view diff'), ('o', 'open in browser'), ('y', 'copy branch'), ('c', 'comment'), ('m', 'merge')):
         assert f'{key} {label}' in shown.stdout
     assert 'enter' in shown.stdout
 

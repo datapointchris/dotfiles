@@ -24,7 +24,8 @@ stays on its PR, and the footer says when the rows were read and why a read fail
 The menu shows the PR's description rendered as markdown, and its own footer names
 the keys that scroll it. `p` fetches GitHub's own rendering instead, with the
 comment threads the listing does not carry. `r` opens a Claude window running
-`/review-pr` on it, and `e` one running `/explain-code-changes` to read it with.
+`/review-pr` on it, and `C` one running `/explain-code-changes` to read it with.
+`?` on the list shows every key.
 
 Lives in dotfiles rather than in fleet because every machine has this and only
 some have fleet. The data comes from `pull-requests`, the one place that knows how to
@@ -558,43 +559,58 @@ def expected(stdout: str) -> tuple[Action | None, str]:
     return next((action for action in ACTIONS if action.key == key.strip()), None), rest.strip()
 
 
-def shortcut_legend() -> Text:
-    """The keys, as a footer line under the list.
+def shortcut_legend() -> list[Text]:
+    """The keys, as footer lines under the list, wrapped to the table's width.
 
     Every action is named, including the ones a provider cannot do. Which of them is
     live depends on the row under the cursor, and a legend that changed as you
     moved would be read as flicker rather than as information.
     """
-    line = Text()
-    for index, action in enumerate(ACTIONS):
-        if index:
-            line.append('   ')
-        line.append(action.key, style='bold cyan')
-        line.append(f' {action.label}', style='dim')
-    return line
+    lines = [Text()]
+    for key, label in [*((action.key, action.label) for action in ACTIONS), ('?', 'keys')]:
+        entry = Text()
+        entry.append(key, style='bold cyan')
+        entry.append(f' {label}', style='dim')
+        if lines[-1].cell_len and lines[-1].cell_len + 3 + entry.cell_len > TABLE_WIDTH:
+            lines.append(Text())
+        if lines[-1].cell_len:
+            lines[-1].append('   ')
+        lines[-1].append_text(entry)
+    return lines
 
 
 # How the description moves, in one place: the key as fzf spells it, the key as a
 # reader sees it, and what it does. The footer and `--bind` are both derived from
 # this, so the legend cannot name a key nothing is bound to.
 #
-# fzf binds the shift arrows to `preview-up` and `preview-down` itself, and those
-# rows carry no action for that reason — an explicit bind would replace a default
-# with itself. It ships nothing on the half-page pair, which is what makes those
-# two rows load-bearing rather than decorative.
+# fzf ships the shift arrows on `preview-up` and `preview-down`, and nothing on either
+# pair below.
+LINE = {'K': 'preview-up', 'J': 'preview-down'}
 HALF_PAGE = {'ctrl-u': 'preview-half-page-up', 'ctrl-d': 'preview-half-page-down'}
 
 SCROLL_KEYS = (
-    ('shift-↑ shift-↓', 'scroll a line'),
+    (' '.join(LINE), 'scroll a line'),
     (' '.join(HALF_PAGE), 'scroll half a page'),
 )
 
-PREVIEW_BINDS = ','.join(f'{key}:{action}' for key, action in HALF_PAGE.items())
+PREVIEW_BINDS = ','.join(f'{key}:{action}' for key, action in {**LINE, **HALF_PAGE}.items())
 
 # Vi movement keys. Both pickers run `--no-input`, so a bare letter is free.
 # fzf's own ctrl-d is `delete-char/eof`, which exits a list that has no query.
 MOVE_BINDS = 'j:down,k:up,g:first,G:last,q:abort'
-LIST_BINDS = f'{MOVE_BINDS},ctrl-d:half-page-down,ctrl-u:half-page-up'
+LIST_BINDS = f'{MOVE_BINDS},ctrl-d:half-page-down,ctrl-u:half-page-up,?:toggle-preview'
+
+# What `?` shows on the list, below every action.
+LIST_KEYS = (
+    ('j k', 'move a row'),
+    ('g G', 'go to the top, the bottom'),
+    ('ctrl-d ctrl-u', 'move half a screen'),
+    ('enter', 'open the menu of actions'),
+    ('?', 'show or hide these keys'),
+    ('q esc', 'quit'),
+)
+
+KEYS_FILE = 'keys'
 
 
 def scroll_legend() -> Text:
@@ -624,12 +640,20 @@ def list_records(prs: list[PullRequest]) -> tuple[str, str]:
     return to_lines([header], color=True)[0], records
 
 
+def keys_page() -> str:
+    """Every key the list answers to, as `?` shows it."""
+    rows = [(action.key, f'{action.label}: {action.detail}') for action in ACTIONS]
+    rows += LIST_KEYS
+    width = max(len(keys) for keys, _ in rows)
+    return '\n'.join(f'{keys:<{width}}  {does}' for keys, does in rows)
+
+
 def list_footer(updated: str, warning: str) -> str:
     """The key legend, then when the rows were read and what went wrong reading them."""
     state = Text(f'updated {updated}', style='dim')
     if warning:
         state.append(f'   {warning.splitlines()[0]}', style='red')
-    return '\n'.join(to_lines([shortcut_legend(), state], color=True))
+    return '\n'.join(to_lines([*shortcut_legend(), state], color=True))
 
 
 def tell_fzf(workspace: Path, actions: str) -> None:
@@ -692,6 +716,7 @@ def pick(prs: list[PullRequest], warning: str) -> tuple[PullRequest, Action | No
     stop = threading.Event()
     with tempfile.TemporaryDirectory(prefix='prs-', ignore_cleanup_errors=True) as directory:
         workspace = Path(directory)
+        (workspace / KEYS_FILE).write_text(keys_page())
         threading.Thread(target=keep_refreshing, args=(known, workspace, updated, stop), daemon=True).start()
         stdout = run_list_picker(prs, workspace, list_footer(updated, warning))
         stop.set()
@@ -767,6 +792,8 @@ def run_list_picker(prs: list[PullRequest], workspace: Path, footer: str) -> str
             '--no-input',
             f'--expect={EXPECT}',
             f'--bind={LIST_BINDS}',
+            f'--preview=cat {workspace / KEYS_FILE}',
+            '--preview-window=hidden,down,60%,wrap,border-top',
             f'--padding=1,{SIDE_PAD}',
             f'--header={header}',
             f'--footer={footer}',
@@ -1200,11 +1227,11 @@ def run(argv: list[str], cwd: Path | None = None) -> int:
 # each prints is what guards it. Merge sits below close because a closed PR
 # reopens and a merged one does not.
 #
-# Letters are the first letter of the thing, not of the label — `b` is the
-# branch and `o` is open-in-browser, because two actions starting with `b` would
-# make one of them arbitrary. `x` for close is the one that names nothing: `c` is
-# already the comment, and `x` is what closes a thing everywhere else on a
-# keyboard, which beats a second arbitrary letter taken off `close`.
+# Letters are the ones the other terminal tools here use for the same thing: `o` opens
+# outside, `y` copies, `C` opens Claude and `m` merges. `d` only reads, because `D`
+# is what deletes. The rest are the first letter of the thing, except `x` for close:
+# `c` is already the comment, and `x` is what closes a thing everywhere else on a
+# keyboard.
 #
 # `providers` names GitHub for every action that reaches a GitHub-only tool. The
 # three without it are local: the diff is git, the branch name is a string, and
@@ -1216,7 +1243,7 @@ ACTIONS = (
     Action('review', 'r', REVIEW_ICON, 'claude review', 'a Claude window running /review-pr on it', claude_review, frozenset({'github'})),
     Action(
         'explain',
-        'e',
+        'C',
         EXPLAIN_ICON,
         'claude explain',
         'a Claude window running /explain-code-changes on it',
@@ -1224,7 +1251,7 @@ ACTIONS = (
         frozenset({'github'}),
     ),
     Action('browser', 'o', BROWSER_ICON, 'open in browser', 'the same page, handed to your browser', open_browser),
-    Action('branch', 'b', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard', copy_branch),
+    Action('branch', 'y', BRANCH_ICON, 'copy branch', 'the branch name, to the system clipboard', copy_branch),
     Action('comment', 'c', COMMENT_ICON, 'comment', 'write one in $EDITOR and post it', comment, frozenset({'github'})),
     Action('close', 'x', CLOSE_ICON, 'close', 'close it unmerged — asks once, and enter is no', close, frozenset({'github'})),
     Action('merge', 'm', MERGE_ICON, 'merge', 'merge it — asks once, and enter is yes', merge),
