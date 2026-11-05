@@ -1017,19 +1017,18 @@ def test_a_cargo_package_reports_the_version_of_the_binary_it_measured(
 
 
 def test_an_entry_that_reports_no_version_is_never_run(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """The probe is not a read for every binary. `webviewrs` opens its first
-    positional argument as a URL, so asking it for a version opened a window
-    titled `version` and blocked the plan on the webview's event loop — three
-    times, before a declaration could say so.
+    """The probe is not a read for every binary. A tool with no version flag can
+    treat `version` as work to do, such as opening it as a URL in a window that
+    blocks the plan until someone closes it.
 
     Asserted by making the probe leave a trace rather than by counting calls: a
     test that only checked the verdict would pass while still running the thing.
     """
     ran = tmp_path / 'ran'
-    executable(cargo.cargo_bin(), 'webviewrs', f'#!/bin/sh\ntouch "{ran}"\nprintf "1.0.0\\n"\n')
-    cached(release_cache, {'datapointchris/webviewrs': 'v2.0.0'})
-    declared = {'cargo_packages': [{'name': 'webviewrs', 'github_repo': 'datapointchris/webviewrs', 'reports_version': False}]}
-    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['webviewrs']})
+    executable(cargo.cargo_bin(), 'urlwindow', f'#!/bin/sh\ntouch "{ran}"\nprintf "1.0.0\\n"\n')
+    cached(release_cache, {'example/urlwindow': 'v2.0.0'})
+    declared = {'cargo_packages': [{'name': 'urlwindow', 'github_repo': 'example/urlwindow', 'reports_version': False}]}
+    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'cargo_packages': ['urlwindow']})
 
     assert changes(live) == ()
     assert not ran.exists()

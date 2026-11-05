@@ -538,9 +538,9 @@ def has_currency(item: DesiredItem, *, offline: bool) -> bool:
 
     Every clause has to hold, and an entry failing one is not a finding — it is a
     question nobody can answer, and an UNKNOWN row on every plan is noise. A Go
-    tool declared by module path alone names no repo to consult. A GUI names one
-    and still cannot be asked: probing `webviewrs` opened a window and blocked the
-    plan on its event loop, which is what `reports_version` exists to declare.
+    tool declared by module path alone names no repo to consult. A binary with no
+    version flag names one and still cannot be asked: `triangle version` runs a
+    triangulation, which is what `reports_version` exists to declare.
     Something that installs no binary is asked through its checkout instead, as
     `checkout` says.
 

@@ -5,7 +5,7 @@
 #
 # A published tool stays out of these leaves when a headless box cannot read its
 # help, and sits in its machine profile instead:
-#   webviewrs opens a window on any argument, `--help` included.
+#   webviewrs links WebKitGTK and GTK, which a headless box does not install.
 #   abtop opens the terminal before it parses an argument.
 #   asl-language-server is an editor's server, run on the node npm_globals brings.
 # bbkt is wsl-work-workstation's own and lives in that manifest.
