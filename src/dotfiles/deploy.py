@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from rich.markup import escape
+
 from dotfiles import coordinates as axes
 from dotfiles.effects import Output
 from dotfiles.effects import run
@@ -28,6 +30,7 @@ HOME_GITCONFIG = Path.home() / '.gitconfig'
 
 ALLOY_RELOAD_URL = 'http://127.0.0.1:12345/-/reload'
 ALLOY_RELOAD_SECONDS = 10
+CURL_HTTP_ERROR = 22
 
 PERSONAL_IDENTITY = Path.home() / '.config' / 'git' / 'personal.gitconfig'
 """The identity the repo ships, included unconditionally on a fleet machine."""
@@ -228,7 +231,13 @@ def reload_telemetry_agent() -> None:
 
     A box not running Alloy refuses the connection, which is the answer rather than
     a fault. A reload leaves every component whose config did not change running.
+    Alloy answers a config it cannot load with a 400 and keeps running the last one,
+    so nothing else would say the deployed file never took effect.
     """
-    reloaded = run(['curl', '--silent', '--fail', '--request', 'POST', ALLOY_RELOAD_URL], output=Output.QUIET, timeout=ALLOY_RELOAD_SECONDS)
+    reloaded = run(
+        ['curl', '--silent', '--fail-with-body', '--request', 'POST', ALLOY_RELOAD_URL], output=Output.QUIET, timeout=ALLOY_RELOAD_SECONDS
+    )
     if reloaded.ok:
         err_console.print('Alloy configuration reloaded')
+    elif reloaded.returncode == CURL_HTTP_ERROR:
+        err_console.print(f'  [red]✗[/] Alloy refused the deployed config and keeps the last one: {escape(reloaded.stdout.strip())}')
