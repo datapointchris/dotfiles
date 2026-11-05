@@ -75,13 +75,15 @@ systemd_units:
   # sits on that point, and it matches the directory deploying the unit file.
   # The full index has no timer here. A scheduled job runs it on that
   # machine and reports each run's outcome.
+  #
+  # Off until the search earns a watcher, which holds about a fifth of a core and
+  # embeds every save.
   - name: indy-watch.service
     description: Index every save into indy's live overlay
     display_stack: wayland
     scope: user
     needs_root: false
-    enabled: true
-    active: true
+    enabled: false
 
   # The unit file deploys from configs/trust/fleet/ to every machine on that trust,
   # and only a manifest setting `desk_runner` enables it. It loads its own client
@@ -120,17 +122,30 @@ managed_files:
       ExecStart=
       ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin {user} %I $TERM
 
-  # journald's own cap is a tenth of the filesystem, up to 4 G, which on a
-  # workstation's root is room a package cache also wants. A drop-in rather than
-  # an edit to journald.conf, so the packaged file stays the package's.
-  # journald reads the drop-in at its next restart.
+  # 4 G is journald's own ceiling, stated so a box's retention never depends on the
+  # size of its root. A drop-in rather than an edit to journald.conf, so the packaged
+  # file stays the package's. journald reads the drop-in at its next restart.
   - name: journal-size
-    description: The systemd journal capped at 500 M on disk
+    description: The systemd journal capped at 4 G on disk
     package_manager: pacman
     path: /etc/systemd/journald.conf.d/size.conf
     content: |
       [Journal]
-      SystemMaxUse=500M
+      SystemMaxUse=4G
+
+  # Ollama has no log level short of OLLAMA_DEBUG, and its runner writes about seven
+  # lines per embedding. A full index is hundreds of thousands of them, which filled
+  # the journal in two days. journald drops the per-request lines and keeps startup,
+  # warnings and any request that did not answer 200. It reads the patterns when the
+  # service starts, and only a system unit can carry them.
+  - name: ollama-routine-request-lines-dropped
+    description: journald drops Ollama's per-request slot and 200 lines
+    package_manager: pacman
+    requires_package: ollama
+    path: /etc/systemd/system/ollama.service.d/drop-routine-request-lines.conf
+    content: |
+      [Service]
+      LogFilterPatterns=~^(slot |srv  update_slots|\[GIN\] .*\| 200 \|)
 
   # Docker deletes nothing on its own, and BuildKit sizes its default cache cap
   # as most of the disk, so on a workstation root it never trims. 60 GB holds an

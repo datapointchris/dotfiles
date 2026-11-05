@@ -1,0 +1,87 @@
+// The problems in this machine's systemd journal, kept off the routine lines around
+// them. Each entry goes to the collector whole, as JSON with every journal field. The
+// local journal keeps everything.
+//
+// Alloy only reads a journal on Linux. On macOS this component starts and reads
+// nothing, and macos-crash-reports.alloy covers that machine.
+
+loki.relabel "journal_fields" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "priority"
+  }
+
+  rule {
+    source_labels = ["__journal_syslog_identifier"]
+    target_label  = "identifier"
+  }
+
+  rule {
+    source_labels = ["__journal__transport"]
+    target_label  = "transport"
+  }
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+
+  // A user unit's system unit is its user manager, so its own name is the useful one.
+  rule {
+    source_labels = ["__journal__systemd_user_unit"]
+    regex         = "(.+)"
+    target_label  = "unit"
+  }
+}
+
+loki.source.journal "system" {
+  max_age        = "12h"
+  format_as_json = true
+  relabel_rules  = loki.relabel.journal_fields.rules
+  forward_to     = [loki.process.journal_problems.receiver]
+}
+
+// Warnings and worse pass. So does a core dump's record and any line naming a crash,
+// an out-of-memory kill or a GPU reset, because the kernel logs a segfault and most
+// of an OOM kill at info.
+loki.process "journal_problems" {
+  forward_to = [otelcol.receiver.loki.journal.receiver]
+
+  stage.match {
+    selector            = `{priority=~"notice|info|debug", identifier!="systemd-coredump"} !~ "segfault at|general protection|Out of memory|oom-kill|Killed process|GPU reset|ring .* timeout|Kernel panic|Oops:"`
+    action              = "drop"
+    drop_counter_reason = "routine_journal_line"
+  }
+}
+
+otelcol.receiver.loki "journal" {
+  output {
+    logs = [otelcol.processor.transform.journal_record.input]
+  }
+}
+
+// Priority maps to the OTLP severity a reader filters on, and the writer becomes the
+// service, so a row reads like every other service's log.
+otelcol.processor.transform "journal_record" {
+  error_mode = "ignore"
+
+  log_statements {
+    context = "log"
+    statements = [
+      `set(attributes["fleet.kind"], "system.journal")`,
+      `set(resource.attributes["service.name"], attributes["identifier"]) where attributes["identifier"] != nil`,
+      `set(severity_text, attributes["priority"]) where attributes["priority"] != nil`,
+      `set(severity_number, SEVERITY_NUMBER_FATAL) where attributes["priority"] == "emerg" or attributes["priority"] == "alert" or attributes["priority"] == "crit"`,
+      `set(severity_number, SEVERITY_NUMBER_ERROR) where attributes["priority"] == "error"`,
+      `set(severity_number, SEVERITY_NUMBER_WARN) where attributes["priority"] == "warning"`,
+      `set(severity_number, SEVERITY_NUMBER_INFO) where attributes["priority"] == "notice" or attributes["priority"] == "info"`,
+      `set(severity_number, SEVERITY_NUMBER_DEBUG) where attributes["priority"] == "debug"`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.processor.transform.local_host.input]
+  }
+}

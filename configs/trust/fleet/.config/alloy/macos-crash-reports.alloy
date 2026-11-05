@@ -1,0 +1,29 @@
+// macOS's crash, panic and memory-kill reports.
+// The unified log is left out: errors and faults alone run past 40,000 lines an hour.
+//
+// A report's header and body are each a JSON object opening at the first column, so
+// each arrives as one record. On Linux neither directory exists and this reads nothing.
+otelcol.receiver.filelog "macos_crash_reports" {
+  include = [
+    string.format("%s/Library/Logs/DiagnosticReports/*.ips", sys.env("HOME")),
+    "/Library/Logs/DiagnosticReports/*.ips",
+    string.format("%s/Library/Logs/DiagnosticReports/*.panic", sys.env("HOME")),
+    "/Library/Logs/DiagnosticReports/*.panic",
+  ]
+  start_at      = "beginning"
+  storage       = otelcol.storage.file.offsets.handler
+  poll_interval = "30s"
+  max_log_size  = "8MiB"
+
+  operators = [
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "macos.crash.report"},
+  ]
+
+  multiline {
+    line_start_pattern = "^\\{"
+  }
+
+  output {
+    logs = [otelcol.processor.transform.local_host.input]
+  }
+}
