@@ -591,6 +591,11 @@ SCROLL_KEYS = (
 
 PREVIEW_BINDS = ','.join(f'{key}:{action}' for key, action in HALF_PAGE.items())
 
+# Vi movement keys. Both pickers run `--no-input`, so a bare letter is free.
+# fzf's own ctrl-d is `delete-char/eof`, which exits a list that has no query.
+MOVE_BINDS = 'j:down,k:up,g:first,G:last,q:abort'
+LIST_BINDS = f'{MOVE_BINDS},ctrl-d:half-page-down,ctrl-u:half-page-up'
+
 
 def scroll_legend() -> Text:
     """How to move the description, as a footer under the action menu.
@@ -761,6 +766,7 @@ def run_list_picker(prs: list[PullRequest], workspace: Path, footer: str) -> str
             # `m` is a binding rather than a query.
             '--no-input',
             f'--expect={EXPECT}',
+            f'--bind={LIST_BINDS}',
             f'--padding=1,{SIDE_PAD}',
             f'--header={header}',
             f'--footer={footer}',
@@ -916,7 +922,7 @@ def choose_action(pr: PullRequest) -> Action | None:
                 f'--padding=1,{SIDE_PAD}',
                 f'--footer={to_lines([scroll_legend()], color=True)[0]}',
                 '--footer-border=top',
-                f'--bind={PREVIEW_BINDS}',
+                f'--bind={MOVE_BINDS},{PREVIEW_BINDS}',
                 '--preview',
                 f'cat {preview}',
                 '--preview-window=down,65%,wrap,border-top',
