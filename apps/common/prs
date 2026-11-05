@@ -25,6 +25,7 @@ The menu shows the PR's description rendered as markdown, and its own footer nam
 the keys that scroll it. `p` fetches GitHub's own rendering instead, with the
 comment threads the listing does not carry. `r` opens a Claude window running
 `/review-pr` on it, and `C` one running `/explain-code-changes` to read it with.
+`esc` on the menu comes back to the list, with the cursor on the same row.
 `?` on the list shows every key.
 
 Lives in dotfiles rather than in fleet because every machine has this and only
@@ -62,6 +63,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from pytermstyle import help_end
 from pytermstyle import help_header
@@ -598,7 +600,8 @@ PREVIEW_BINDS = ','.join(f'{key}:{action}' for key, action in {**LINE, **HALF_PA
 # Vi movement keys. Both pickers run `--no-input`, so a bare letter is free.
 # fzf's own ctrl-d is `delete-char/eof`, which exits a list that has no query.
 MOVE_BINDS = 'j:down,k:up,g:first,G:last,q:abort'
-LIST_BINDS = f'{MOVE_BINDS},ctrl-d:half-page-down,ctrl-u:half-page-up,?:toggle-preview'
+# `esc` closes the keys, and with nothing open it does nothing.
+LIST_BINDS = f'{MOVE_BINDS},ctrl-d:half-page-down,ctrl-u:half-page-up,?:toggle-preview,esc:hide-preview'
 
 # What `?` shows on the list, below every action.
 LIST_KEYS = (
@@ -607,7 +610,8 @@ LIST_KEYS = (
     ('ctrl-d ctrl-u', 'move half a screen'),
     ('enter', 'open the menu of actions'),
     ('?', 'show or hide these keys'),
-    ('q esc', 'quit'),
+    ('esc', 'hide these keys'),
+    ('q', 'quit'),
 )
 
 KEYS_FILE = 'keys'
@@ -702,23 +706,24 @@ def keep_refreshing(known: dict[str, PullRequest], workspace: Path, updated: str
         wait = max(REFRESH_SECONDS, (time.monotonic() - started) * REFRESH_READ_MULTIPLE)
 
 
-def pick(prs: list[PullRequest], warning: str) -> tuple[PullRequest, Action | None] | None:
+def pick(prs: list[PullRequest], warning: str, on: PullRequest | None = None) -> tuple[PullRequest, Action | None] | None:
     """Run fzf over the rendered rows, and return the PR with any key pressed on it.
 
     An action key returns that action and skips the menu entirely: `m` on a row
     goes straight to the merge confirm. Enter returns no action, which is what
-    opens the menu.
+    opens the menu. `on` is the row the cursor starts on.
 
     `known` holds every PR seen this run, so a row fzf has yet to replace still resolves.
     """
     known = {row_key(pr): pr for pr in prs}
+    position = next((index for index, pr in enumerate(prs, start=1) if on and row_key(pr) == row_key(on)), 1)
     updated = time.strftime('%H:%M')
     stop = threading.Event()
     with tempfile.TemporaryDirectory(prefix='prs-', ignore_cleanup_errors=True) as directory:
         workspace = Path(directory)
         (workspace / KEYS_FILE).write_text(keys_page())
         threading.Thread(target=keep_refreshing, args=(known, workspace, updated, stop), daemon=True).start()
-        stdout = run_list_picker(prs, workspace, list_footer(updated, warning))
+        stdout = run_list_picker(prs, workspace, list_footer(updated, warning), position)
         stop.set()
     action, chosen = expected(stdout)
     if not chosen:
@@ -726,7 +731,7 @@ def pick(prs: list[PullRequest], warning: str) -> tuple[PullRequest, Action | No
     return known[chosen.split('\t')[0]], action
 
 
-def run_list_picker(prs: list[PullRequest], workspace: Path, footer: str) -> str:
+def run_list_picker(prs: list[PullRequest], workspace: Path, footer: str, position: int) -> str:
     """Run fzf over the rendered rows until a choice is made, and return its stdout.
 
     The PR's key leads in a hidden field, so the choice survives a title containing
@@ -792,6 +797,10 @@ def run_list_picker(prs: list[PullRequest], workspace: Path, footer: str) -> str
             '--no-input',
             f'--expect={EXPECT}',
             f'--bind={LIST_BINDS}',
+            # `load` fires again on every refresh, and would pull the cursor back.
+            # `start` fires once, and `--sync` holds it until the rows are in.
+            '--sync',
+            f'--bind=start:pos({position})',
             f'--preview=cat {workspace / KEYS_FILE}',
             '--preview-window=hidden,down,60%,wrap,border-top',
             f'--padding=1,{SIDE_PAD}',
@@ -907,11 +916,13 @@ def action_line(action: Action, pr: PullRequest) -> Text:
     return line
 
 
-def choose_action(pr: PullRequest) -> Action | None:
+def choose_action(pr: PullRequest) -> Action | Literal['back', 'quit']:
     """The action menu for one PR, with its description in the pane above.
 
     The same letters work here as on the list, so arriving by enter and then
-    pressing `m` does what pressing `m` a screen earlier would have done.
+    pressing `m` does what pressing `m` a screen earlier would have done. `esc`
+    answers `back` and `q` answers `quit`, which fzf can only tell apart when
+    one of them comes through `--expect`.
     """
     page = to_lines([describe(pr)], color=True)
     with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False) as handle:
@@ -942,7 +953,7 @@ def choose_action(pr: PullRequest) -> Action | None:
                 # arrow-key list, not something you filter, and a prompt invites
                 # typing that then does nothing useful.
                 '--no-input',
-                f'--expect={EXPECT}',
+                f'--expect={EXPECT},q',
                 '--color=bg:-1,gutter:-1,preview-bg:-1',
                 '--pointer=',
                 '--marker=',
@@ -962,11 +973,13 @@ def choose_action(pr: PullRequest) -> Action | None:
     finally:
         Path(preview).unlink(missing_ok=True)
 
+    if result.stdout.partition('\n')[0] == 'q':
+        return 'quit'
     pressed, chosen = expected(result.stdout)
     if pressed:
         return pressed
     if not chosen:
-        return None
+        return 'back'
     return ACTIONS[int(chosen.split('\t')[0])]
 
 
@@ -1372,15 +1385,17 @@ def main() -> int:
         if not shutil.which(tool):
             return fail(f'{tool} is required')
 
-    picked = pick(prs, warning)
-    if picked is None:
-        return 0
-    chosen, action = picked
-    if action is None:
-        action = choose_action(chosen)
-    if action is None:
-        return 0
-    return perform(action, chosen, interactive=sys.stdin.isatty())
+    chosen = None
+    while True:
+        picked = pick(prs, warning, on=chosen)
+        if picked is None:
+            return 0
+        chosen, pressed = picked
+        action = pressed or choose_action(chosen)
+        if action == 'quit':
+            return 0
+        if action != 'back':
+            return perform(action, chosen, interactive=sys.stdin.isatty())
 
 
 if __name__ == '__main__':
