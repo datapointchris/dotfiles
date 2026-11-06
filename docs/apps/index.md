@@ -19,7 +19,7 @@ searchable roster across the fleet.
   rather than at a theme, so switching one is not a commit
 - [Notes](notes.md) — a four-verb wrapper over `zk`; where the notebook lives, and why this repo
   configures it without carrying it
-- [doit](doit.md) — the menu suite that left this repo; where it lives now, and how a machine gets it
+- [doit](doit.md) — the menu suite that left this repo; where it lives now, and which machines get it
 - [Refcheck](refcheck.md) — the reference validator written against this repo; how it installs here,
   and the deliberately broken fixtures that keep it honest
 - [Backup](backup.md) — choosing between `packup`, which makes one archive that stands alone, and

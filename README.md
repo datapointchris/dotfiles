@@ -6,7 +6,7 @@ Cross-platform dotfiles that work across macOS, WSL Ubuntu, and Arch Linux. Beca
 
 A dotfiles setup that prioritizes shared configuration, with a per-coordinate directory only where a machine genuinely needs a different file. Includes a bunch of modern CLI tools, a theme system that actually works, and some custom tools to keep everything organized.
 
-Shared zsh/tmux/neovim configs, automated theme switching, and a discovery system (`doit`) so you can actually remember what you installed.
+Shared zsh/tmux/neovim configs, automated theme switching, and a discovery system (`howto`) so you can actually remember what you installed.
 
 ## Quick Start
 

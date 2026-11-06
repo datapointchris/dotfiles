@@ -5,5 +5,4 @@ go_tools:
   - ifiles  # the transport a bundle request and `bundle upload` use
 
 uv_tools:
-  - doit
   - syncer  # fast-forwards every checkout

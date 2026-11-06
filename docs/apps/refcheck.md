@@ -11,7 +11,3 @@ Reference validator for codebases — finds broken `source`/`bash` targets, stal
 - **Install** — `packages.yml` under `uv_tools`, installed by `src/dotfiles/providers/uvtool.py` from the package index its row names. The entry point lands in `~/.local/bin`. Update with `refcheck update`, or with every other tool through `dotfiles apply`.
 - **Why it exists here** — it was written against this repo. Dotfiles is thousands of shell files that `source` each other through `$DOTFILES_DIR` and `$SCRIPT_DIR`, where a moved file breaks a reference that no linter checks and only a full e2e run surfaces. `refcheck` resolves those variables and validates the target in seconds.
 - **Fixtures** — `tests/apps/fixtures/refcheck-variables/` and `refcheck-fragile-cwd/` hold deliberately broken scripts, kept as a live target to check the tool still catches what it claims. They are excluded from a normal run; reach them with `refcheck check --test-mode tests/apps/fixtures/`.
-
-## See Also
-
-- [Doit](doit.md) — tool discovery across the installed toolchain, and everything else it indexes

@@ -1678,7 +1678,7 @@ uv_tools:
 
     - name: doit
       index: datapointchris
-      description: What to do now, and everything that decides it — the draw, the dashboard, the cards and Labs
+      description: What a person attends to now, and everything that decides it — the draw, the dashboard, the journal and the review
 
     - name: howto
       index: datapointchris
