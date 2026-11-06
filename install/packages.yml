@@ -212,6 +212,12 @@ system_packages:
     pacman: inetutils
     description: hostname, which Arch ships in inetutils (macOS has it built-in)
 
+  - name: dig
+    tier: core
+    apt: bind9-dnsutils
+    pacman: bind
+    description: dig and nslookup, which Debian ships in bind9-dnsutils and Arch in bind (macOS has them built-in)
+
   - name: tree
     tier: core
     apt: tree
