@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Route a multiplexer command to the adapter for whichever one you are in.
 #
-#   muxctl coordinator claim billing   this pane, in a window of its own
+#   muxctl coordinator claim billing   name this pane's window for billing
 #   muxctl pane open worker --name phase-3 --cwd DIR -- claude '...'
 #   muxctl pane status phase-3
 #   muxctl --help                      the port's verbs, from the resolved adapter
@@ -18,8 +18,8 @@
 # `--window-name NAME` labels where the worker lands, once, at the open: a
 # window the adapter opens takes NAME, and a worker joining one appends
 # " · NAME". A reviewer leaves the label alone, and nothing renames it after.
-# `coordinator claim SUBJECT` gives the calling pane a window of its own named
-# SUBJECT-coordinator, with a monitor beside it.
+# `coordinator claim SUBJECT` names the calling pane's window SUBJECT-coordinator
+# and leaves the pane where it stands, with a monitor beside it where it is alone.
 #
 # It execs rather than running the adapter and relaying. The port's meaning is
 # carried by stdout, stderr and the exit code together, and replacing the

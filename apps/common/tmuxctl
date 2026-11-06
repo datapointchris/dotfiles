@@ -10,7 +10,7 @@
     tmuxctl pane plan reviewer --for %26  where its reviewer would go
     tmuxctl pane open worker -- <cmd>     make the pane and run <cmd> in it
     tmuxctl pane release                  drop the marks this tool wrote
-    tmuxctl coordinator claim billing     give this pane a window of its own, billing-coordinator
+    tmuxctl coordinator claim billing     name this pane's window billing-coordinator
 
 This is the tmux adapter for the port `muxctl` routes to. Callers name `muxctl`
 and speak the port's verbs; `muxctl` resolves the multiplexer from the
@@ -33,8 +33,8 @@ a worker has left takes no other, so it closes with its last pane instead of
 carrying a name for work that is gone.
 
 Nothing becomes a coordinator by placing a pane. `coordinator claim` is the one
-way: it gives the calling pane a window of its own named for its subject, with a
-monitor beside it.
+way: it names the calling pane's window for its subject and leaves the pane where
+it stands, with a monitor beside it where the pane is alone.
 
 The decision is pure computation. `place()` takes window dimensions, the panes
 already there, and what is being placed, and returns which pane to split, which
@@ -754,16 +754,15 @@ def column_in(window: Window, why: str) -> Placement:
 class Claim:
     """What making a pane the coordinator takes, decided before anything moves.
 
-    `breaks_out` is whether the pane has to leave a window it shares. `monitor` is
-    the command to start beside it, empty where its window already holds one or
-    where the coordinator would be left unreadable beside it -- `cramped` says
-    which. `width` is what the coordinator keeps once the claim lands.
+    `monitor` is the command to start beside it, empty where its window already
+    holds one, where another pane shares the window, or where the coordinator would
+    be left unreadable beside it, which `cramped` says. `width` is what the
+    coordinator keeps once the claim lands.
     """
 
     pane: str
     window: str
     window_name: str
-    breaks_out: bool
     monitor: str
     width: int
     readable: bool
@@ -774,7 +773,6 @@ class Claim:
             'pane': self.pane,
             'window': self.window,
             'window_name': self.window_name,
-            'breaks_out': self.breaks_out,
             'monitor': self.monitor or None,
             'width': self.width,
             'readable': self.readable,
@@ -788,13 +786,12 @@ def claim(windows: Sequence[Window], caller: str, subject: str, monitor: str = M
     The subject is required and never guessed. It is the repo for a chain in one
     repo and a short name for a fan-out, and it is what the window list shows.
 
-    Claiming again is harmless. A pane that already holds a claimed window keeps
-    it, whatever else has been opened there since -- a reading pane beside a
-    coordinator is somebody following its work, not company to leave. A monitor
-    already there is kept, and only the name follows the subject.
+    A claim never moves the pane, because a person coming back looks for it where
+    they left it. Claiming again is harmless: a monitor already there is kept, and
+    only the name follows the subject.
 
-    The monitor goes beside the coordinator only where both stay readable. On a
-    narrower client the coordinator gets the whole window and no monitor.
+    The monitor goes beside the coordinator only where the pane is alone and both
+    stay readable. A pane beside it is somebody's work, so it keeps its room.
     """
     if not usable_handle(subject):
         raise Usage(Refusal.BAD_SUBJECT, subject=subject)
@@ -802,25 +799,17 @@ def claim(windows: Sequence[Window], caller: str, subject: str, monitor: str = M
     if found is None:
         raise Usage(Refusal.UNKNOWN_CALLER, pane=caller)
     window, pane = found
-    held = window.dedicated and pane.role is Role.COORDINATOR
     company = [other for other in window.panes if other.pane_id != caller and other.role is not Role.MONITOR]
-    breaks_out = bool(company) and not held
-    watched = not breaks_out and any(other.role is Role.MONITOR for other in window.panes)
+    watched = any(other.role is Role.MONITOR for other in window.panes)
 
-    wanted = bool(monitor.strip()) and not watched
+    wanted = bool(monitor.strip()) and not watched and not company
     beside = window.width - MIN_COLUMNS - 1
     cramped = wanted and not readable(beside, window.height)
-    if watched:
-        width = pane.width
-    elif wanted and not cramped:
-        width = beside
-    else:
-        width = pane.width if held else window.width
+    width = beside if wanted and not cramped else pane.width
     return Claim(
         pane=caller,
         window=window.window_id,
         window_name=f'{subject}{COORDINATOR_SUFFIX}',
-        breaks_out=breaks_out,
         monitor=monitor if wanted and not cramped else '',
         width=width,
         readable=readable(width, window.height),
@@ -1208,30 +1197,19 @@ def placement_lock() -> Iterator[None]:
 
 
 def perform_claim(decided: Claim) -> tuple[str, str]:
-    """Give the coordinator its window, mark it, and start the monitor beside it.
+    """Name the coordinator's window, mark it, and start the monitor beside it.
 
     Returns the window and the monitor's pane, empty where none was started.
 
-    A pane sharing its window is broken out of it. The view follows it only when
-    its window was the one on screen in its session, because that is somebody
-    reading the coordinator, and leaving them looking at what it left behind loses
-    it. Anywhere else `-d` leaves the focus where it was. A pane alone in its
-    window keeps it, renamed.
-
-    Once the pane has its window, every later step is soft and reported. The
-    window is what the claim is for, and a failed mark or monitor after it is a
+    Once the window is named, every later step is soft and reported. The name is
+    what the claim is for, and a failed mark or monitor after it is a
     claim that half-landed, not one to retry from the start. The window is marked
     before the monitor starts, so a machine without the monitor binary still gets a
     window `pane list` calls the coordinator's. The monitor command is resolved by
     its first word, because `shutil.which` takes a binary name.
     """
-    if decided.breaks_out:
-        shown = (tmux_read('display-message', '-p', '-t', decided.pane, '#{window_active}') or '').strip() == '1'
-        stay = [] if shown else ['-d']
-        window = tmux('break-pane', *stay, '-P', '-F', '#{window_id}', '-s', decided.pane, '-n', decided.window_name).strip()
-    else:
-        window = decided.window
-        tmux('rename-window', '-t', window, decided.window_name)
+    window = decided.window
+    tmux('rename-window', '-t', window, decided.window_name)
 
     for target, scope, option in ((window, '-w', WINDOW_ROLE), (decided.pane, '-p', PANE_ROLE)):
         if problem := tmux_soft('set-option', scope, '-t', target, f'@{option}', str(Role.COORDINATOR)):
@@ -1444,8 +1422,7 @@ def request_from(args: argparse.Namespace) -> Request:
 
 
 def describe_claim(decided: Claim) -> str:
-    where = f'break {decided.pane} out of {decided.window} into' if decided.breaks_out else f'rename {decided.window} to'
-    lines = [f'claim: {where} a window named {decided.window_name}']
+    lines = [f'claim: rename {decided.window} to {decided.window_name}']
     lines.append(f'  and: {decided.monitor} beside it' if decided.monitor else '  and: no monitor started')
     lines.append(f'width: the coordinator keeps {decided.width} columns')
     if not decided.readable:
@@ -1721,7 +1698,7 @@ index and its window do not, which is why neither is ever an address here.
 A worker is an agent doing a piece of work. A reviewer reads one worker's output
 and is always placed in that worker's column, directly below it. A coordinator is
 the pane that dispatches them, and a pane becomes one only by `coordinator claim`:
-it moves to a window of its own named for its subject, with a monitor beside it.
+its window takes its subject's name, and it stays where it stands.
 
 A worker never opens beside the pane that asked for it. It opens a window of its
 own, or joins one the same pane opened for workers while that window has a seat
@@ -1852,12 +1829,12 @@ def add_coordinator_verbs(coordinator: argparse.ArgumentParser) -> None:
     sub = coordinator.add_subparsers(dest='coordinator_verb')
     claiming = sub.add_parser(
         'claim',
-        help='make this pane the coordinator, in a window of its own',
+        help='make this pane the coordinator, naming the window it stands in',
         description=(
-            'Make the calling pane the coordinator for SUBJECT. A pane sharing its window is broken out of it; one '
-            f'alone keeps its window. Either way the window is named SUBJECT{COORDINATOR_SUFFIX}, marked so no worker '
-            'is ever placed in it, and given a monitor beside the coordinator. Claiming again renames the window and '
-            'starts no second monitor. `pane release` clears what this marks.'
+            f'Make the calling pane the coordinator for SUBJECT. The pane stays where it stands. Its window is named '
+            f'SUBJECT{COORDINATOR_SUFFIX} and marked so no worker is ever placed in it, and a pane alone there gets a '
+            'monitor beside it. Claiming again renames the window and starts no second monitor. `pane release` clears '
+            'what this marks.'
         ),
         epilog=EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1889,7 +1866,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_coordinator_verbs(
         resources.add_parser(
             'coordinator',
-            help='make a pane the coordinator, in a window of its own',
+            help='make a pane the coordinator, naming the window it stands in',
             description='The pane that dispatches workers: the window it keeps, and the monitor beside it.',
             epilog=EXAMPLES,
             formatter_class=argparse.RawDescriptionHelpFormatter,

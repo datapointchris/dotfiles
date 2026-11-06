@@ -493,32 +493,17 @@ def test_a_window_too_small_for_one_readable_pane_reports_no_room(tmuxctl, build
 # --- a coordinator, made only by claiming ---
 
 
-def test_a_claim_breaks_a_shared_pane_out_and_keeps_a_lone_one_where_it_is(tmuxctl, build):
+def test_a_claim_names_the_window_it_stands_in_and_starts_a_monitor_only_where_alone(tmuxctl, build):
     shared = build('@1', [[('%1', 'unknown')], [('%8', 'unknown')]])
     alone = build('@1', [[('%1', 'unknown')]])
 
-    broken = tmuxctl.claim([shared], '%1', 'billing')
+    beside = tmuxctl.claim([shared], '%1', 'billing')
     kept = tmuxctl.claim([alone], '%1', 'billing')
 
-    assert broken.breaks_out
-    assert not kept.breaks_out
-    for decided in (broken, kept):
-        assert decided.window_name == 'billing-coordinator'
-        assert decided.monitor == tmuxctl.MONITOR_COMMAND
-
-
-def test_reclaiming_after_compaction_while_narrated_breaks_nothing_out_and_starts_no_monitor(tmuxctl, build):
-    # A narration pane opened with a raw split carries no mark, and the window is still the coordinator's own.
-    window = build(
-        '@1',
-        [[('%1', 'coordinator')], [('%9', 'monitor')], [('%7', 'unknown')]],
-        dedicated=True,
-        name='billing-coordinator',
-    )
-    decided = tmuxctl.claim([window], '%1', 'billing')
-
-    assert not decided.breaks_out
-    assert decided.monitor == ''
+    assert (beside.window, beside.window_name) == ('@1', 'billing-coordinator')
+    assert beside.monitor == ''
+    assert (kept.window, kept.window_name) == ('@1', 'billing-coordinator')
+    assert kept.monitor == tmuxctl.MONITOR_COMMAND
 
 
 def test_a_claim_from_a_half_screen_terminal_keeps_the_coordinator_whole_and_starts_no_monitor(tmuxctl, build):
@@ -810,14 +795,12 @@ def test_a_reviewer_is_never_spanned_across_the_window(tmuxctl, build, reviewer_
 
 
 def test_a_claim_dedicates_its_window_before_it_starts_the_monitor(tmuxctl, build, recorded):
-    tmuxctl.perform_claim(tmuxctl.claim([build('@1', [[('%1', 'unknown')], [('%8', 'unknown')]])], '%1', 'billing'))
+    tmuxctl.perform_claim(tmuxctl.claim([build('@1', [[('%1', 'unknown')]])], '%1', 'billing'))
     calls = recorded.calls
 
     verbs = [call[1] for call in calls]
-    assert verbs.index('break-pane') < verbs.index('split-window')
-    broken = next(call for call in calls if 'break-pane' in call)
-    assert broken[broken.index('-s') + 1] == '%1'
-    assert broken[broken.index('-n') + 1] == 'billing-coordinator'
+    assert 'break-pane' not in verbs
+    assert verbs.index('rename-window') < verbs.index('split-window')
 
     dedication = next(call for call in calls if 'set-option' in call and '-w' in call)
     assert dedication[-2:] == [f'@{tmuxctl.WINDOW_ROLE}', 'coordinator']
@@ -1271,17 +1254,16 @@ def test_a_real_window_that_lost_a_worker_takes_no_other_and_keeps_its_name(tmux
 
 
 @needs_tmux
-def test_a_real_claim_breaks_out_names_and_watches_and_a_second_claim_adds_nothing(tmuxctl, server, dispatch):
+def test_a_real_claim_stays_names_and_watches_and_a_second_claim_adds_nothing(tmuxctl, server, dispatch):
     caller = tmuxctl.caller_pane()
-    server.run('split-window', '-d', '-h', '-t', caller)
+    before = next(found for found in tmuxctl.read_workspace() if found.holds(caller)).window_id
 
     window, monitor = tmuxctl.perform_claim(tmuxctl.claim(tmuxctl.read_workspace(), caller, 'billing', 'sleep 300'))
     home = next(found for found in tmuxctl.read_workspace() if found.holds(caller))
-    assert home.window_id == window
+    assert home.window_id == window == before
     assert home.name == 'billing-coordinator'
     assert home.dedicated
     assert {pane.pane_id: pane.role for pane in home.panes} == {caller: tmuxctl.Role.COORDINATOR, monitor: tmuxctl.Role.MONITOR}
-    assert server.run('display-message', '-p', '-t', caller, '#{window_active}') == '1', 'the view followed the pane it was on'
 
     tmuxctl.perform_claim(tmuxctl.claim(tmuxctl.read_workspace(), caller, 'invoices', 'sleep 300'))
     again = next(found for found in tmuxctl.read_workspace() if found.holds(caller))
