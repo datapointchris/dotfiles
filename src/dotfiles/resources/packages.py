@@ -122,6 +122,9 @@ class Observed:
     case carries an empty dict and costs nothing to fold.
     """
 
+    undeclared_uv: dict[str, str] = dc.field(default_factory=dict)
+    """uv tool name → where its receipt says it came from, for an own tool this machine does not take."""
+
     undeclared: dict[str, str] = dc.field(default_factory=dict)
     """Binary name → the module it was built from, for an own tool nothing declares.
 
@@ -263,6 +266,7 @@ class PackagesResource:
             refused={address: answer.refusal for address, answer in probed.items() if answer.refusal},
             shadowed=shadowing(mine, evidence, plan, session.repo),
             undeclared=undeclared_own_tools(session, plan),
+            undeclared_uv=undeclared_own_uv_tools(session, plan),
             latest=latest,
             consulted_network=consulted,
             from_bundle=from_bundle,
@@ -343,7 +347,20 @@ class PackagesResource:
                     Verdict.UNDECLARED,
                     repair=Repair.BY_HAND,
                     detail=f'found: {where}, built from {module}',
-                    advice=f'undeclared: not in install/packages.yml -> rm {where}',
+                    advice=f"undeclared: this machine's profiles do not take it -> rm {where}",
+                )
+            )
+        for tool, source in sorted(observed.undeclared_uv.items()):
+            where = paths.under_home(paths.uv_tool_dir() / tool, observed.home)
+            changes.append(
+                Change(
+                    NAME,
+                    Stage.TOOLS,
+                    tool,
+                    Verdict.UNDECLARED,
+                    repair=Repair.BY_HAND,
+                    detail=f'found: {where}, installed from {source}',
+                    advice=f"undeclared: this machine's profiles do not take it -> uv tool uninstall {tool}",
                 )
             )
         return tuple(changes)
@@ -429,10 +446,9 @@ def undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
     with no entry in `packages.yml` at all, and no verb could have said so —
     every one of them was looking the other way.
 
-    Go only, deliberately. `go version -m` reads the module out of the binary
-    itself, so "this is one of ours" is measured rather than guessed from a name.
-    A uv tool does not record where it came from once installed, and matching on
-    the name alone would report every coincidence.
+    `go version -m` reads the module out of the binary itself, so "this is one of
+    ours" is measured rather than guessed from a name, which would report every
+    coincidence. `undeclared_own_uv_tools` measures the same from a uv tool's receipt.
 
     Scoped to owners the plan already names, because that is the whole of this
     repo's basis for calling a module ours. A machine declaring nothing of an
@@ -456,6 +472,23 @@ def undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
         for binary, module in gotool.installed_modules(session.home / 'go' / 'bin').items()
         if binary not in declared and catalog.owner_of(module) in owners
     }
+
+
+def undeclared_own_uv_tools(session: Session, plan: Plan) -> dict[str, str]:
+    """uv tools this plan does not take, whose receipt names an index or GitHub owner the plan installs from."""
+    if session.entries:
+        return {}
+    indexes = {item.entry.index_url for item in plan.items if isinstance(item.entry, catalog.UvTool) and item.entry.index_url}
+    owners = {owner for item in plan.items if item.entry and (owner := item.entry.owner)}
+    declared = {item.name for item in plan.items}
+    found = {}
+    for directory in sorted(paths.uv_tool_dir().glob('*/')):
+        source = ev.uv_tool_source(directory.name)
+        if directory.name in declared or source is None:
+            continue
+        if any(source.from_index(url) for url in indexes) or catalog.owner_of(source.direct) in owners:
+            found[directory.name] = source.named
+    return found
 
 
 def shadowing(

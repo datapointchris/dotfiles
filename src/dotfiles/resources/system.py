@@ -333,7 +333,7 @@ def undeclared_packages(session: Session) -> dict[str, Stray]:
     The direction nothing else in this resource looks. Every other measurement
     here reads down from the declaration and asks whether the machine matches it;
     this reads up from the machine and asks whether the declaration explains what
-    is there. `packages._undeclared_own_tools` is the same question asked of Go
+    is there. `packages.undeclared_own_tools` is the same question asked of Go
     binaries, and it exists because `fleet` sat installed on two workstations with
     no entry in `packages.yml` and no verb could say so. A system package can go
     missing the same way and had no equivalent: `stylua` is named by

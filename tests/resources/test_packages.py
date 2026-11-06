@@ -1876,6 +1876,34 @@ def test_an_undeclared_own_tool_is_not_something_apply_can_repair(tmp_path: Path
     assert change.advice
 
 
+@pytest.mark.parametrize(
+    ('requirement', 'options', 'reported'),
+    [
+        ('{ name = "left" }', '[tool.options]\nindex = [{ url = "https://index.example/simple/" }]\n', True),
+        ('{ name = "left", git = "https://github.com/go-task/left.git?rev=v1" }', '', True),
+        ('{ name = "left" }', '', False),
+        ('{ name = "left", git = "https://github.com/someone-else/left.git" }', '', False),
+    ],
+    ids=['the-index-the-plan-installs-from', 'an-owner-the-plan-installs-from', 'pypi', 'another-owner'],
+)
+def test_a_uv_tool_the_plan_does_not_take_is_reported_where_its_receipt_says_it_is_ours(
+    tmp_path: Path, uv_tools: Path, requirement: str, options: str, reported: bool
+) -> None:
+    receipt(uv_tools, 'left', requirement)
+    with (uv_tools / 'left' / 'uv-receipt.toml').open('a') as recorded:
+        recorded.write(options)
+    declared = {
+        **GO_TOOL,
+        'uv_indexes': {'own': 'https://index.example/simple/'},
+        'uv_tools': {'group': [{'name': 'kept', 'index': 'own'}]},
+    }
+    live = session(tmp_path, declared, {**DECLARES_TASK, 'uv_tools': ['kept']})
+
+    found = [change.advice for change in undeclared_own(live) if change.item == 'left']
+
+    assert found == (["undeclared: this machine's profiles do not take it -> uv tool uninstall left"] if reported else [])
+
+
 def test_a_run_narrowed_to_one_package_reports_none_of_the_others(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """`--entry` narrows the declaration, and this reads the machine against it.
     Answering from a one-entry plan calls every other tool of that owner

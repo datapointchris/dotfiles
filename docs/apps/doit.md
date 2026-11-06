@@ -38,6 +38,8 @@ only the machines whose manifest, or a profile it composes, declares it.
 `workstation` without `personal-desk` gets `howto` and no `doit`, and `wsl-work-workstation` is that
 box. `dotfiles apply` leaves alone a uv tool whose entry left a machine's profiles, so a box that
 already has `doit` keeps it until `uv tool uninstall doit` runs there.
+`dotfiles check` names such a tool with that command, because its receipt names an index or owner
+the box's other tools install from.
 
 ## `register.yml` is config, and config stays out of the repo
 

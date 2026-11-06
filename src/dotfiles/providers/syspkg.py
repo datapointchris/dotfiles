@@ -209,7 +209,7 @@ workstation — `pacman -Qqe` returns 123 names and 40 of them appear nowhere in
 `packages.yml`, `base`, `linux` and `linux-firmware` among them. Those 40 rows
 would advise `pacman -R` on the kernel. brew owns nothing it was not asked for, so
 every name it returns is one somebody typed. Same reasoning as
-`packages._undeclared_own_tools` scoping itself to Go.
+`packages.undeclared_own_tools` scoping itself to owners the plan names.
 
 **`--installed-on-request` rather than a bare `brew leaves`.** A dependency
 outliving whatever wanted it is a leaf nobody chose, and reporting it undeclared
