@@ -40,14 +40,33 @@ from dotfiles.results import ResourceVerdict
 from dotfiles.session import machine_or_this_machine
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help='Whether this machine can exchange an artifact with the remote')
-hook_secret_app = typer.Typer(no_args_is_help=True, help="The secret that signs this box's push to the request hook")
+app = typer.Typer(
+    no_args_is_help=True,
+    help='Whether this machine can exchange an artifact with the remote',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles remote check — can this box reach the remote, before an upload\n\n'
+        'dotfiles remote hook-secret set — store the request hook secret'
+    ),
+)
+hook_secret_app = typer.Typer(
+    no_args_is_help=True,
+    help="The secret that signs this box's push to the request hook",
+    epilog='Examples:\n\ndotfiles remote hook-secret set — paste it at a prompt that does not echo',
+)
 app.add_typer(hook_secret_app, name='hook-secret')
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
 
-@hook_secret_app.command('set')
+@hook_secret_app.command(
+    'set',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles remote hook-secret set — paste it at a prompt that does not echo\n\n'
+        'printenv HOOK_SECRET | dotfiles remote hook-secret set — piped, unprompted'
+    ),
+)
 def set_hook_secret(verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Store the request hook's secret from piped input, or from a prompt that does not echo.
 
@@ -62,7 +81,14 @@ def set_hook_secret(verbose: int = VerboseOption, quiet: bool = QuietOption) -> 
     hint('test it: dotfiles remote check')
 
 
-@app.command('check')
+@app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles remote check — whether an upload or download would go through\n\n'
+        'dotfiles remote check --json — the same, for a script'
+    ),
+)
 def check(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report whether the configured remote is declared, installed and answering.
 

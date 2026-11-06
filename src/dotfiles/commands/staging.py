@@ -56,7 +56,17 @@ from dotfiles.results import ResourceVerdict
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
-bundle_app = typer.Typer(no_args_is_help=True, help='Offline bundles for a machine with no network')
+bundle_app = typer.Typer(
+    no_args_is_help=True,
+    help='Offline bundles for a machine with no network',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle request — on the blocked box: ask, wait, then stage\n\n'
+        'dotfiles bundle download — on the blocked box: fetch the newest\n\n'
+        'dotfiles bundle create --machine NAME --arch x86_64 — build one by hand\n\n'
+        'dotfiles bundle check — what the staged bundle can and cannot install'
+    ),
+)
 
 
 class BundleTransferError(Refusal):
@@ -147,7 +157,16 @@ def pointed_at(
     return options[picked - 1]
 
 
-@bundle_app.command('create')
+@bundle_app.command(
+    'create',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle create — pick the machine and CPU from a list\n\n'
+        'dotfiles bundle create --machine NAME --arch x86_64 — everything it installs\n\n'
+        'dotfiles bundle create --machine NAME --arch x86_64 --against latest — sparse\n\n'
+        'dotfiles bundle create --machine NAME --arch arm64 --entry uv — one entry'
+    ),
+)
 def create(
     machine: str = typer.Option(None, '--machine', help='Machine manifest to build for'),
     # Typed as the enum rather than narrowed by a `click.Choice`, which is what it
@@ -291,7 +310,14 @@ def status_for(named: str | None, machine: str) -> Path | None:
     return destination
 
 
-@bundle_app.command('stage')
+@bundle_app.command(
+    'stage',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle stage — unpack the newest archive found for this machine\n\n'
+        'dotfiles bundle stage bundle.tar.gz — unpack one archive by path'
+    ),
+)
 def stage(
     archive: str = typer.Argument(None, help='Path to a bundle archive (default: the newest one found)'),
     verbose: int = VerboseOption,
@@ -327,7 +353,14 @@ def stage(
     success(f'staged {found.name} at {staged}')
 
 
-@bundle_app.command('upload')
+@bundle_app.command(
+    'upload',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle upload — send the newest archive built here\n\n'
+        'dotfiles bundle upload bundle.tar.gz — send one archive by path'
+    ),
+)
 def upload(
     archive: str = typer.Argument(None, help='Path to a bundle archive (default: the newest one found)'),
     verbose: int = VerboseOption,
@@ -396,7 +429,14 @@ def report_retention(where: transport.Remote, machine: str) -> None:
         hint('remove them with: dotfiles bundle prune --remote')
 
 
-@bundle_app.command('request')
+@bundle_app.command(
+    'request',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle request — a bundle for everything this box is behind on\n\n'
+        'dotfiles bundle request --entry uv — only the entry that is blocked'
+    ),
+)
 def request(
     machine: str = typer.Option(None, '--machine', help='Machine manifest to request for (default: this machine)'),
     entry: list[str] = RequestEntryOption,
@@ -419,7 +459,10 @@ def request(
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-@bundle_app.command('serve')
+@bundle_app.command(
+    'serve',
+    epilog='Examples:\n\ndotfiles bundle serve --once — answer every waiting request, then exit',
+)
 def serve(
     once: bool = typer.Option(False, '--once', help='Answer what is waiting, then exit. Required, since nothing waits between requests'),
     verbose: int = VerboseOption,
@@ -440,7 +483,14 @@ def serve(
     raise typer.Exit(ExitCode.CONVERGED if bundle_requests.serve() else ExitCode.ISSUE)
 
 
-@bundle_app.command('list')
+@bundle_app.command(
+    'list',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle list — what the remote holds for this machine\n\n'
+        'dotfiles bundle list --machine NAME -n 3 — the newest three for another'
+    ),
+)
 def list_bundles(
     machine: str = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)'),
     limit: int | None = limit_option('bundles'),
@@ -506,7 +556,15 @@ def elapsed(since: dt.timedelta) -> str:
     return f'{hours} hour(s)' if hours else f'{max(since.seconds // 60, 0)} minute(s)'
 
 
-@bundle_app.command('download')
+@bundle_app.command(
+    'download',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle download — fetch the newest, after confirming\n\n'
+        'dotfiles bundle download --yes — the same, without asking\n\n'
+        'dotfiles bundle download --bundle NAME — one bundle bundle list named'
+    ),
+)
 def download(
     machine: str = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)'),
     bundle_name: str = typer.Option(None, '--bundle', help='Fetch this one rather than the newest'),
@@ -603,7 +661,14 @@ def confirmed(question: str, would_have: str, *, yes: bool, no_input: bool, inte
     return typer.confirm(question, default=False, err=True)
 
 
-@bundle_app.command('check')
+@bundle_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle check — tools the staged bundle cannot install\n\n'
+        'dotfiles bundle check --json — covered and uncovered, for a script'
+    ),
+)
 def check(
     machine: str = typer.Option(None, '--machine', help='Machine manifest to resolve the plan from'),
     as_json: bool = JsonOption,
@@ -679,7 +744,10 @@ def check(
     raise typer.Exit(ExitCode.DRIFT if found.uncovered else ExitCode.CONVERGED)
 
 
-@bundle_app.command('show')
+@bundle_app.command(
+    'show',
+    epilog=('Examples:\n\ndotfiles bundle show — every file staged, by category\n\ndotfiles bundle show --json — the same, for a script'),
+)
 def show(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """List what a staged bundle contains, by category.
 
@@ -711,7 +779,15 @@ def show(as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool =
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-@bundle_app.command('prune')
+@bundle_app.command(
+    'prune',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles bundle prune — remove local bundles past the limit, after asking\n\n'
+        'dotfiles bundle prune --keep 2 --yes — keep two per machine, unasked\n\n'
+        "dotfiles bundle prune --remote — the remote's shelf as well"
+    ),
+)
 def prune(
     keep: int | None = KeepOption,
     remote_too: bool = typer.Option(False, '--remote', help="Also remove what is past the limit on the remote's shelf"),

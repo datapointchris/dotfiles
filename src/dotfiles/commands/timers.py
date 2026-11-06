@@ -13,13 +13,24 @@ from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help='Commands this account runs on an interval, and what each run reported')
+app = typer.Typer(
+    no_args_is_help=True,
+    help='Commands this account runs on an interval, and what each run reported',
+    epilog='Examples:\n\ndotfiles timers run update-check — run a timer now rather than wait for it',
+)
 
 NameArgument = typer.Argument(..., help='The user_timers row to run')
 JsonOption = typer.Option(False, '--json', help='Print the recorded line on stdout')
 
 
-@app.command('run')
+@app.command(
+    'run',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles timers run update-check — run it now, and record it as the timer would\n\n'
+        'dotfiles timers run update-check --json — and print the recorded line'
+    ),
+)
 def run(name: str = NameArgument, as_json: bool = JsonOption) -> None:
     """Run one timer's command now and append what it did to the timer-reports file.
 

@@ -45,13 +45,25 @@ from dotfiles.results import ResourceVerdict
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help='What this machine has installed, for the machine that builds its bundles')
+app = typer.Typer(
+    no_args_is_help=True,
+    help='What this machine has installed, for the machine that builds its bundles',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles status upload — publish it, so the next bundle is sparse\n\n'
+        'dotfiles status list --machine NAME — what a blocked box has published\n\n'
+        'dotfiles status download --machine NAME --print-path — fetch its newest'
+    ),
+)
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 MachineOption = typer.Option(None, '--machine', help='Whose shelf to read (default: this machine)')
 
 
-@app.command('show')
+@app.command(
+    'show',
+    epilog=('Examples:\n\ndotfiles status show — what this machine would publish\n\ndotfiles status show --json — the document itself'),
+)
 def show(
     machine: str = MachineOption,
     as_json: bool = JsonOption,
@@ -101,7 +113,10 @@ def show(
     raise typer.Exit(ExitCode.ISSUE if screen.problems else ExitCode.CONVERGED)
 
 
-@app.command('upload')
+@app.command(
+    'upload',
+    epilog="Examples:\n\ndotfiles status upload — publish this machine's status for the builder",
+)
 def upload(
     machine: str = MachineOption,
     verbose: int = VerboseOption,
@@ -161,7 +176,14 @@ def publish_after_apply(machine: str | None) -> None:
         warn(f'{withheld} was left out of {published.name}: its version string names this machine')
 
 
-@app.command('list')
+@app.command(
+    'list',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles status list — what the remote holds for this machine\n\n'
+        'dotfiles status list --machine NAME -n 5 — the newest five for another'
+    ),
+)
 def list_statuses(
     machine: str = MachineOption,
     limit: int | None = limit_option('statuses'),
@@ -190,7 +212,14 @@ def list_statuses(
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-@app.command('download')
+@app.command(
+    'download',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles status download --machine NAME — fetch its newest status\n\n'
+        'dotfiles status download --machine NAME --print-path — and print where'
+    ),
+)
 def download(
     machine: str = MachineOption,
     status_name: str = typer.Option(None, '--status', help='Fetch this one rather than the newest'),

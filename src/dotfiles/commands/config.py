@@ -26,10 +26,21 @@ from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.providers import schedule
 
-app = typer.Typer(no_args_is_help=True, help="This tool's own config file and what it resolves to")
+app = typer.Typer(
+    no_args_is_help=True,
+    help="This tool's own config file and what it resolves to",
+    epilog='Examples:\n\ndotfiles config show — which file set each value, and what it resolved to',
+)
 
 
-@app.command('show')
+@app.command(
+    'show',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles config show — which file set each value, and what it resolved to\n\n'
+        'dotfiles config show --json — the same, for a script'
+    ),
+)
 def show(as_json: bool = typer.Option(False, '--json', help='Emit machine-readable output on stdout')) -> None:
     """Show what each setting resolves to, and which rung answered.
 

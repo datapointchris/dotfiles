@@ -15,13 +15,24 @@ from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help="Self-updating tools' release checks, read from their state files")
+app = typer.Typer(
+    no_args_is_help=True,
+    help="Self-updating tools' release checks, read from their state files",
+    epilog="Examples:\n\ndotfiles updates check — which tools' last release check failed",
+)
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 StateOption = typer.Option(None, '--state', help='State root the tools are read beneath (overrides $XDG_STATE_HOME)')
 
 
-@app.command('check')
+@app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        "dotfiles updates check — which tools' last release check failed, and why\n\n"
+        'dotfiles updates check --json — the same, for a script'
+    ),
+)
 def check(
     as_json: bool = JsonOption,
     state: Path | None = StateOption,

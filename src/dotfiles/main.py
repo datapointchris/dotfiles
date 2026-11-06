@@ -64,7 +64,7 @@ app = typer.Typer(
     # The root screen carries the order a session runs in and the one pair of
     # verbs that gets confused, because a correct list of commands still leaves the
     # reader to deduce both. Kept to this screen: the leaves say what they do, not
-    # the sequence. Every quoted command is parsed by tests/cli/test_root_help.py.
+    # the sequence. Every quoted command is parsed by tests/cli/test_help_examples.py.
     help=(
         'Reconcile this machine with the dotfiles repo.\n\n'
         'Start with `dotfiles plan` to see what would change, then `dotfiles apply` to make it so. '
@@ -180,7 +180,17 @@ def skipped_addresses(addresses: list[str] | None) -> frozenset[str]:
         raise typer.BadParameter(str(wrong)) from wrong
 
 
-@app.command('plan', rich_help_panel='Reconcile')
+@app.command(
+    'plan',
+    rich_help_panel='Reconcile',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles plan — what apply would change on this machine\n\n'
+        'dotfiles plan --entry uv — rehearse one entry, asking upstream about it alone\n\n'
+        'dotfiles plan --skip system — everything but the sudo-gated part\n\n'
+        'dotfiles plan --cached — answer from cache, for a rate-limited box'
+    ),
+)
 def plan(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
@@ -263,7 +273,16 @@ def plan(
     raise typer.Exit(reconcile.exit_code(results))
 
 
-@app.command('check', rich_help_panel='Reconcile')
+@app.command(
+    'check',
+    rich_help_panel='Reconcile',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles check — what is wrong, not merely behind\n\n'
+        'dotfiles check --json — every finding with its items, for a script\n\n'
+        'dotfiles check --offline — what the staged bundle cannot speak for'
+    ),
+)
 def check(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
@@ -336,7 +355,17 @@ def check(
     raise typer.Exit(reconcile.exit_code(results))
 
 
-@app.command('apply', rich_help_panel='Reconcile')
+@app.command(
+    'apply',
+    rich_help_panel='Reconcile',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles apply — make this machine match what it declares\n\n'
+        'dotfiles apply --skip system — everything but the sudo-gated part\n\n'
+        'dotfiles apply --entry uv --reinstall — repair one tool\n\n'
+        'dotfiles apply --offline — install what the network blocks from the bundle'
+    ),
+)
 def apply_command(
     skip: list[str] = SkipOption,
     machine: str = MachineOption,
@@ -461,7 +490,15 @@ def converged(
 # Registered after check and apply so that Reconcile is the first panel the help
 # shows. Typer renders panels in registration order, and these two are the ones
 # a reader needs first.
-app.command('update', rich_help_panel='Manage')(manage.update)
+app.command(
+    'update',
+    rich_help_panel='Manage',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles update — pull the checkout and repair what the pull changed\n\n'
+        'dotfiles update --check — how far behind, pulling nothing'
+    ),
+)(manage.update)
 
 
 if __name__ == '__main__':

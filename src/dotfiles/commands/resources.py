@@ -372,7 +372,17 @@ def apply_resource(
     )
 
 
-packages_app = typer.Typer(no_args_is_help=True, help='Everything installed from a package manager or a release')
+packages_app = typer.Typer(
+    no_args_is_help=True,
+    help='Everything installed from a package manager or a release',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles packages plan — what apply would install or upgrade\n\n'
+        'dotfiles packages apply --package neovim — install or repair one tool\n\n'
+        'dotfiles packages check — declared packages that are missing\n\n'
+        'dotfiles packages show neovim — where one package comes from'
+    ),
+)
 
 
 @packages_app.command(
@@ -421,7 +431,15 @@ def packages_plan(
     )
 
 
-@packages_app.command('check')
+@packages_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles packages check — declared packages this machine lacks\n\n'
+        'dotfiles packages check --cached — answer without asking upstream\n\n'
+        'dotfiles packages check --offline — what the staged bundle can speak for'
+    ),
+)
 def packages_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
@@ -527,7 +545,15 @@ def packages_apply(
     )
 
 
-@packages_app.command('list')
+@packages_app.command(
+    'list',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles packages list — every declared package\n\n'
+        'dotfiles packages list --source github_releases — one section\n\n'
+        'dotfiles packages list --json — the same, for a script'
+    ),
+)
 def packages_list(source: str = SourceOption, as_json: bool = JsonOption) -> None:
     """List declared packages."""
     arguments = ['list', *(('--section', source) if source else ()), *(('--json',) if as_json else ())]
@@ -535,7 +561,14 @@ def packages_list(source: str = SourceOption, as_json: bool = JsonOption) -> Non
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-@packages_app.command('show')
+@packages_app.command(
+    'show',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles packages show neovim — how one package is declared\n\n'
+        'dotfiles packages show neovim --json — the same, for a script'
+    ),
+)
 def packages_show(name: str = typer.Argument(..., help='Package name'), as_json: bool = JsonOption) -> None:
     """Show one package's declaration.
 
@@ -547,14 +580,30 @@ def packages_show(name: str = typer.Argument(..., help='Package name'), as_json:
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-@packages_app.command('search')
+@packages_app.command(
+    'search',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles packages search lsp — is a language server declared already\n\n'
+        'dotfiles packages search git — every entry naming git, by any field'
+    ),
+)
 def packages_search(query: str = typer.Argument(..., help='Substring to match')) -> None:
     """Search declared packages by name, description or tag."""
     bridge.declaration('search', query)
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-toolchains_app = typer.Typer(no_args_is_help=True, help='Language runtimes and their version managers')
+toolchains_app = typer.Typer(
+    no_args_is_help=True,
+    help='Language runtimes and their version managers',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles toolchains plan — what apply would install or raise\n\n'
+        'dotfiles toolchains apply --entry uv — converge one runtime\n\n'
+        'dotfiles toolchains list — every declared runtime'
+    ),
+)
 
 
 @toolchains_app.command(
@@ -581,7 +630,14 @@ def toolchains_plan(
     survey('toolchains', machine, Lens.PLAN, as_json, entries=frozenset(entry or ()), refresh=False, offline=offline)
 
 
-@toolchains_app.command('check')
+@toolchains_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles toolchains check — runtimes missing or out of step\n\n'
+        'dotfiles toolchains check --json — the same, for a script'
+    ),
+)
 def toolchains_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
@@ -620,7 +676,10 @@ def toolchains_apply(
     apply_resource('toolchains', machine, offline, None, entries=frozenset(entry or ()), as_json=as_json)
 
 
-@toolchains_app.command('list')
+@toolchains_app.command(
+    'list',
+    epilog=('Examples:\n\ndotfiles toolchains list — every declared runtime\n\ndotfiles toolchains list --json — the same, for a script'),
+)
 def toolchains_list(as_json: bool = JsonOption) -> None:
     """List the declared toolchains."""
     arguments = ['list', *within('toolchains'), *(('--json',) if as_json else ())]
@@ -628,7 +687,10 @@ def toolchains_list(as_json: bool = JsonOption) -> None:
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-@toolchains_app.command('show')
+@toolchains_app.command(
+    'show',
+    epilog='Examples:\n\ndotfiles toolchains show uv — how one runtime is declared',
+)
 def toolchains_show(name: str = typer.Argument(..., help='Toolchain name')) -> None:
     """Show one toolchain's declaration.
 
@@ -640,10 +702,26 @@ def toolchains_show(name: str = typer.Argument(..., help='Toolchain name')) -> N
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-plugins_app = typer.Typer(no_args_is_help=True, help='Shell, tmux and Neovim plugins')
+plugins_app = typer.Typer(
+    no_args_is_help=True,
+    help='Shell, tmux and Neovim plugins',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles plugins plan — which plugins apply would clone or update\n\n'
+        'dotfiles plugins apply — clone the missing, fast-forward the behind\n\n'
+        'dotfiles plugins list — every declared plugin'
+    ),
+)
 
 
-@plugins_app.command('plan')
+@plugins_app.command(
+    'plan',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles plugins plan — clones apply would make or fast-forward\n\n'
+        'dotfiles plugins plan --cached — missing clones only, no fetch'
+    ),
+)
 def plugins_plan(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
@@ -663,7 +741,14 @@ def plugins_plan(
     survey('plugins', machine, Lens.PLAN, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
-@plugins_app.command('check')
+@plugins_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles plugins check — missing clones and clones behind\n\n'
+        'dotfiles plugins check --cached — missing clones only, no fetch'
+    ),
+)
 def plugins_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
@@ -677,7 +762,14 @@ def plugins_check(
     survey('plugins', machine, Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
-@plugins_app.command('apply')
+@plugins_app.command(
+    'apply',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles plugins apply — clone and fast-forward every plugin\n\n'
+        'dotfiles plugins apply --offline — install from the staged bundle'
+    ),
+)
 def plugins_apply(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
@@ -690,7 +782,12 @@ def plugins_apply(
     apply_resource('plugins', machine, offline, None, as_json=as_json)
 
 
-@plugins_app.command('list')
+@plugins_app.command(
+    'list',
+    epilog=(
+        'Examples:\n\ndotfiles plugins list — every declared plugin, by section\n\ndotfiles plugins list --json — the same, for a script'
+    ),
+)
 def plugins_list(as_json: bool = JsonOption) -> None:
     """List every declared plugin, in all of the sections this resource owns."""
     arguments = ['list', *within('plugins'), *(('--json',) if as_json else ())]
@@ -698,10 +795,24 @@ def plugins_list(as_json: bool = JsonOption) -> None:
     raise typer.Exit(ExitCode.CONVERGED)
 
 
-symlinks_app = typer.Typer(no_args_is_help=True, help='Deployed dotfiles: the repo linked into $HOME')
+symlinks_app = typer.Typer(
+    no_args_is_help=True,
+    help='Deployed dotfiles: the repo linked into $HOME',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles symlinks apply — deploy after adding or moving a config\n\n'
+        'dotfiles symlinks check — broken, missing or leftover links\n\n'
+        'dotfiles symlinks show — every declared link and where it stands'
+    ),
+)
 
 
-@symlinks_app.command('plan')
+@symlinks_app.command(
+    'plan',
+    epilog=(
+        'Examples:\n\ndotfiles symlinks plan — links apply would make or prune\n\ndotfiles symlinks plan --json — the same, for a script'
+    ),
+)
 def symlinks_plan(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
@@ -710,7 +821,14 @@ def symlinks_plan(
     survey('symlinks', machine, Lens.PLAN, as_json, refresh=False)
 
 
-@symlinks_app.command('check')
+@symlinks_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles symlinks check — why a config is not being picked up\n\n'
+        'dotfiles symlinks check --json — the same, for a script'
+    ),
+)
 def symlinks_check(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
@@ -719,7 +837,14 @@ def symlinks_check(
     survey('symlinks', machine, Lens.CHECK, as_json, refresh=False)
 
 
-@symlinks_app.command('apply')
+@symlinks_app.command(
+    'apply',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles symlinks apply — deploy after adding, moving or removing a file\n\n'
+        'dotfiles symlinks apply --force — adopt a machine with dotfiles of its own'
+    ),
+)
 def symlinks_apply(
     machine: str = MachineOption,
     force: bool = typer.Option(False, '--force', help='Replace targets this manager did not create'),
@@ -754,13 +879,19 @@ def symlinks_apply(
     apply_resource('symlinks', machine, False, None, force=force, as_json=as_json)
 
 
-@symlinks_app.command('show')
+@symlinks_app.command(
+    'show',
+    epilog='Examples:\n\ndotfiles symlinks show — every declared link and where it stands',
+)
 def symlinks_show(machine: str = MachineOption) -> None:
     """List every symlink this repo declares, and where each one stands."""
     deploy.show(Session.resolve(machine))
 
 
-@symlinks_app.command('unlink')
+@symlinks_app.command(
+    'unlink',
+    epilog='Examples:\n\ndotfiles symlinks unlink --force — take everything this repo deployed off the machine',
+)
 def symlinks_unlink(
     machine: str = MachineOption,
     force: bool = typer.Option(False, '--force', help='Required: this removes everything this repo deployed'),
@@ -780,40 +911,82 @@ def symlinks_unlink(
     raise typer.Exit(ExitCode.CONVERGED if deploy.unlink(Session.resolve(machine)) else ExitCode.ISSUE)
 
 
-env_app = typer.Typer(no_args_is_help=True, help='~/.env: the machine identity and its feature flags')
+env_app = typer.Typer(
+    no_args_is_help=True,
+    help='~/.env: the machine identity and its feature flags',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles env show — the section apply would write\n\n'
+        'dotfiles env apply — write it, keeping hand-edited overrides\n\n'
+        'dotfiles env check — flags this machine has that differ'
+    ),
+)
 
 
-@env_app.command('plan')
+@env_app.command(
+    'plan',
+    epilog=('Examples:\n\ndotfiles env plan — what apply would change in ~/.env\n\ndotfiles env plan --json — the same, for a script'),
+)
 def env_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Show what `apply` would write to ~/.env."""
     verbosity(verbose, quiet)
     survey('env', machine, Lens.PLAN, as_json, refresh=False)
 
 
-@env_app.command('check')
+@env_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles env check — flags in ~/.env that differ from the manifest\n\n'
+        'dotfiles env check --json — the same, for a script'
+    ),
+)
 def env_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report drift between the declared flags and this machine."""
     verbosity(verbose, quiet)
     survey('env', machine, Lens.CHECK, as_json, refresh=False)
 
 
-@env_app.command('apply')
+@env_app.command(
+    'apply',
+    epilog='Examples:\n\ndotfiles env apply — rewrite ~/.env after a manifest or flag changed',
+)
 def env_apply(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Write ~/.env from the manifest, preserving hand-edited overrides."""
     verbosity(verbose, quiet)
     apply_resource('env', machine, False, None, as_json=as_json)
 
 
-@env_app.command('show')
+@env_app.command(
+    'show',
+    epilog='Examples:\n\ndotfiles env show — the generated section, written nowhere',
+)
 def env_show(machine: str = MachineOption) -> None:
     """Print the generated section without writing anything."""
     emit_text(envfile.render(Session.resolve(machine).machine))
 
 
-system_app = typer.Typer(no_args_is_help=True, help='The parts of the OS this repo owns')
+system_app = typer.Typer(
+    no_args_is_help=True,
+    help='The parts of the OS this repo owns',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles system plan — packages and configuration rows apply would change\n\n'
+        'dotfiles system apply --source system_packages — packages, no configuration\n\n'
+        'dotfiles system check — configuration drift, and managers behind'
+    ),
+)
 
 
-@system_app.command('plan')
+@system_app.command(
+    'plan',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles system plan — what apply would install or configure\n\n'
+        'dotfiles system plan --source system_packages — the package payload only\n\n'
+        'dotfiles system plan --cached — do not ask the package managers'
+    ),
+)
 def system_plan(
     machine: str = MachineOption,
     source: str = SourceOption,
@@ -848,7 +1021,14 @@ def system_plan(
     )
 
 
-@system_app.command('check')
+@system_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles system check — configuration drift, and managers behind\n\n'
+        'dotfiles system check --cached — do not ask the package managers'
+    ),
+)
 def system_check(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
@@ -862,7 +1042,15 @@ def system_check(
     survey('system', machine, Lens.CHECK, as_json, offline=offline, refresh=currency(refresh, offline=offline))
 
 
-@system_app.command('apply')
+@system_app.command(
+    'apply',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles system apply — install system packages and configure the OS\n\n'
+        'dotfiles system apply --source system_packages — after adding one package\n\n'
+        'dotfiles system apply --offline — install from the staged bundle'
+    ),
+)
 def system_apply(
     machine: str = MachineOption,
     offline: bool = OfflineOption,
@@ -885,10 +1073,19 @@ def system_apply(
     apply_resource('system', machine, offline, source, entries=frozenset(entry or ()), as_json=as_json)
 
 
-identity_app = typer.Typer(no_args_is_help=True, help="This machine's git identity")
+identity_app = typer.Typer(
+    no_args_is_help=True,
+    help="This machine's git identity",
+    epilog=(
+        'Examples:\n\ndotfiles identity check — does git have a name and email here\n\ndotfiles identity show — which file set each value'
+    ),
+)
 
 
-@identity_app.command('plan')
+@identity_app.command(
+    'plan',
+    epilog='Examples:\n\ndotfiles identity plan — whether apply would set a git identity',
+)
 def identity_plan(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
@@ -897,7 +1094,14 @@ def identity_plan(
     survey('identity', machine, Lens.PLAN, as_json, refresh=False)
 
 
-@identity_app.command('check')
+@identity_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles identity check — before the first commit on a new machine\n\n'
+        'dotfiles identity check --json — the same, for a script'
+    ),
+)
 def identity_check(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
@@ -911,7 +1115,14 @@ def identity_check(
     survey('identity', machine, Lens.CHECK, as_json, refresh=False)
 
 
-@identity_app.command('show')
+@identity_app.command(
+    'show',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles identity show — which include set a value, and what it overrode\n\n'
+        'dotfiles identity show --json — the include chain, for a script'
+    ),
+)
 def identity_show(as_json: bool = JsonOption) -> None:
     """Show the include chain git assembles this machine's configuration from.
 
@@ -936,10 +1147,21 @@ def identity_show(as_json: bool = JsonOption) -> None:
     raise typer.Exit(ExitCode.ISSUE if layering.conflicts else ExitCode.CONVERGED)
 
 
-auth_app = typer.Typer(no_args_is_help=True, help='The tools declared under `auth:`, and whether each can log in')
+auth_app = typer.Typer(
+    no_args_is_help=True,
+    help='The tools declared under `auth:`, and whether each can log in',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles auth check — tools that cannot show a credential\n\n'
+        'dotfiles auth show — every declared tool, logged in or not'
+    ),
+)
 
 
-@auth_app.command('plan')
+@auth_app.command(
+    'plan',
+    epilog='Examples:\n\ndotfiles auth plan — confirms apply leaves logins to a person',
+)
 def auth_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Show what `apply` would do about a missing credential, which is nothing.
 
@@ -952,7 +1174,10 @@ def auth_plan(machine: str = MachineOption, as_json: bool = JsonOption, verbose:
     survey('auth', machine, Lens.PLAN, as_json, refresh=False)
 
 
-@auth_app.command('check')
+@auth_app.command(
+    'check',
+    epilog=('Examples:\n\ndotfiles auth check — which tools still need a login\n\ndotfiles auth check --json — the same, for a script'),
+)
 def auth_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption) -> None:
     """Report the tools declared under `auth:` that cannot show a credential.
 
@@ -965,7 +1190,10 @@ def auth_check(machine: str = MachineOption, as_json: bool = JsonOption, verbose
     survey('auth', machine, Lens.CHECK, as_json, refresh=False)
 
 
-@auth_app.command('show')
+@auth_app.command(
+    'show',
+    epilog=('Examples:\n\ndotfiles auth show — did that login work\n\ndotfiles auth show --json — each tool and its verdict, for a script'),
+)
 def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """List every tool this machine declares under `auth:` and what asking found.
 
@@ -990,10 +1218,21 @@ def auth_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
         console.print(f'[{color}]{credential.verdict:<{VERDICT_COLUMN}}[/] {tool:<{SUBJECT_COLUMN}} {credential.detail}')
 
 
-credentials_app = typer.Typer(no_args_is_help=True, help='The git credential helpers this machine is configured with')
+credentials_app = typer.Typer(
+    no_args_is_help=True,
+    help='The git credential helpers this machine is configured with',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles credentials check — helpers that will not run\n\n'
+        'dotfiles credentials show --probe — ask each helper for a real credential'
+    ),
+)
 
 
-@credentials_app.command('plan')
+@credentials_app.command(
+    'plan',
+    epilog='Examples:\n\ndotfiles credentials plan — confirms apply leaves helpers to a person',
+)
 def credentials_plan(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
@@ -1007,7 +1246,14 @@ def credentials_plan(
     survey('credentials', machine, Lens.PLAN, as_json, refresh=False)
 
 
-@credentials_app.command('check')
+@credentials_app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles credentials check — why a git push asks for a password\n\n'
+        'dotfiles credentials check --json — the same, for a script'
+    ),
+)
 def credentials_check(
     machine: str = MachineOption, as_json: bool = JsonOption, verbose: int = VerboseOption, quiet: bool = QuietOption
 ) -> None:
@@ -1021,7 +1267,14 @@ def credentials_check(
     survey('credentials', machine, Lens.CHECK, as_json, refresh=False)
 
 
-@credentials_app.command('show')
+@credentials_app.command(
+    'show',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles credentials show — every helper and the file that set it\n\n'
+        'dotfiles credentials show --probe — did that fix it; may open a window'
+    ),
+)
 def credentials_show(
     machine: str = MachineOption,
     probe: bool = typer.Option(False, '--probe', help='Also ask each helper for a real credential. Interactive; may contact a server.'),

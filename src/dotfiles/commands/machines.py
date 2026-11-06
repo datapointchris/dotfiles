@@ -34,7 +34,16 @@ from dotfiles.output import section_line
 from dotfiles.resources import env
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help='Machine manifests: what each machine declares')
+app = typer.Typer(
+    no_args_is_help=True,
+    help='Machine manifests: what each machine declares',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles machines list — the manifests a machine can be set to\n\n'
+        'dotfiles machines show — everything this machine should have\n\n'
+        'dotfiles machines check — every manifest validated, after editing one'
+    ),
+)
 
 
 def precondition_note(precondition: planning.Precondition) -> str:
@@ -94,7 +103,12 @@ def loaded(name: str) -> machines.Machine:
     return machines.load(name)
 
 
-@app.command('list')
+@app.command(
+    'list',
+    epilog=(
+        'Examples:\n\ndotfiles machines list — the names MACHINE can be set to\n\ndotfiles machines list --json — the same, for a script'
+    ),
+)
 def list_machines(as_json: bool = typer.Option(False, '--json', help='Emit the names as JSON')) -> None:
     """List the machines this repo can install."""
     names = manifest_names()
@@ -105,7 +119,15 @@ def list_machines(as_json: bool = typer.Option(False, '--json', help='Emit the n
         console.print(name)
 
 
-@app.command('show')
+@app.command(
+    'show',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles machines show — everything this machine should have, resolved\n\n'
+        'dotfiles machines show NAME --raw — another manifest as written\n\n'
+        'dotfiles machines show --json — the resolved plan, for a script'
+    ),
+)
 def show_machine(
     name: str = typer.Argument(None, help='Machine name (default: $MACHINE)'),
     owner: str = typer.Option(None, '--owner', help='Only what this GitHub owner publishes'),
@@ -202,7 +224,15 @@ def render(plan: planning.Plan) -> None:
     section('total', f'{len(plan.items)} item(s) this machine declares')
 
 
-@app.command('requirements')
+@app.command(
+    'requirements',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles machines requirements — what to set by hand before an apply\n\n'
+        'dotfiles machines requirements NAME — the same for a machine not this one\n\n'
+        'dotfiles machines requirements --safekeep — the files, as backup blocks'
+    ),
+)
 def machine_requirements(
     name: str = typer.Argument(None, help='Machine name (default: $MACHINE)'),
     as_json: bool = typer.Option(False, '--json', help='Emit the register as JSON'),
@@ -328,7 +358,15 @@ def safekeep_block(machine: machines.Machine) -> str:
     return '\n'.join([*lines, ''])
 
 
-@app.command('check')
+@app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles machines check — every manifest validated, after editing one\n\n'
+        'dotfiles machines check NAME — one manifest\n\n'
+        'dotfiles machines check --json — the findings, for a script'
+    ),
+)
 def check_machines(
     name: str = typer.Argument(None, help='Machine name (default: every manifest)'),
     as_json: bool = typer.Option(False, '--json', help='Emit the findings as JSON'),
@@ -378,7 +416,10 @@ def render_findings(findings: tuple[validate.Finding, ...]) -> None:
     console.print(f'{broken} errors, {warned} warnings')
 
 
-@app.command('edit')
+@app.command(
+    'edit',
+    epilog=("Examples:\n\ndotfiles machines edit — open this machine's manifest in $EDITOR\n\ndotfiles machines edit NAME — open another"),
+)
 def edit_machine(name: str = typer.Argument(None, help='Machine name (default: $MACHINE)')) -> None:
     """Open a machine's manifest in $EDITOR."""
     path = manifest_path(resolve_machine(name))

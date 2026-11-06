@@ -62,14 +62,26 @@ from dotfiles.results import ResourceVerdict
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help='Whether this network reaches what this machine installs from')
+app = typer.Typer(
+    no_args_is_help=True,
+    help='Whether this network reaches what this machine installs from',
+    epilog='Examples:\n\ndotfiles network check — which install sources this network blocks',
+)
 
 MachineOption = typer.Option(None, '--machine', '-m', help='Measure what this manifest would install, not this machine')
 OutputOption = typer.Option(None, '--output', '-o', help='Write the results file a bundle is planned from')
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
 
-@app.command('check')
+@app.command(
+    'check',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles network check — which install sources this network blocks\n\n'
+        'dotfiles network check -m NAME — measured for what another manifest installs\n\n'
+        'dotfiles network check -o reach.json — and keep the results a bundle plans from'
+    ),
+)
 def check(
     machine_name: str | None = MachineOption,
     output: Path | None = OutputOption,

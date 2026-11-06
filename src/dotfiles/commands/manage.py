@@ -35,7 +35,15 @@ from dotfiles.output import warn
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
 
-repo_app = typer.Typer(no_args_is_help=True, help='The dotfiles repository itself')
+repo_app = typer.Typer(
+    no_args_is_help=True,
+    help='The dotfiles repository itself',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles repo show — uncommitted changes, and the last commit\n\n'
+        'cd "$(dotfiles repo path)" — go to the checkout from anywhere'
+    ),
+)
 
 DEPLOYED_PREFIXES = ('apps/', 'configs/', 'shell/')
 """A change under one of these is deployed by a symlink, so pulling it leaves the
@@ -49,7 +57,7 @@ new code. Only the dependency set is resolved once at install time, so these two
 files are the whole of what a rebuild can be needed for."""
 
 
-@repo_app.command('show')
+@repo_app.command('show', epilog='Examples:\n\ndotfiles repo show — uncommitted changes, and the last commit')
 def show() -> None:
     """Show the working tree and the last commit.
 
@@ -75,13 +83,18 @@ def show() -> None:
     console.print(last.transcript, end='', markup=False, highlight=False)
 
 
-@repo_app.command('path')
+@repo_app.command(
+    'path',
+    epilog=(
+        'Examples:\n\ndotfiles repo path — where the checkout this tool runs from is\n\ncd "$(dotfiles repo path)" — go there from anywhere'
+    ),
+)
 def path() -> None:
     """Print the repository path."""
     print(paths.REPO_ROOT)
 
 
-@repo_app.command('edit')
+@repo_app.command('edit', epilog='Examples:\n\ndotfiles repo edit — open the checkout in $EDITOR')
 def edit() -> None:
     """Open the repository in $EDITOR."""
     os.execvp(editor := os.environ.get('EDITOR', 'nvim'), [editor, str(paths.REPO_ROOT)])

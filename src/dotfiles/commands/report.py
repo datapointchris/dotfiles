@@ -45,7 +45,16 @@ from dotfiles.resources import OutcomeStatus
 from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help='What past runs did, and what they cost')
+app = typer.Typer(
+    no_args_is_help=True,
+    help='What past runs did, and what they cost',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles report latest — what the last run did\n\n'
+        'dotfiles report list — recent runs, and which ones went wrong\n\n'
+        'dotfiles report stats — which addresses are slow, and which never converge'
+    ),
+)
 
 JsonOption = typer.Option(False, '--json', help='Emit machine-readable output on stdout')
 
@@ -363,14 +372,29 @@ def emit(path: Path, record: runs.RunRecord, as_json: bool) -> None:
         render(path, record)
 
 
-@app.command('latest')
+@app.command(
+    'latest',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles report latest — what the last run did, and where its record is\n\n'
+        'dotfiles report latest --json — the record itself'
+    ),
+)
 def latest(as_json: bool = JsonOption) -> None:
     """Show the most recent run."""
     found = find(None)
     emit(found, runs.read(found), as_json)
 
 
-@app.command('list')
+@app.command(
+    'list',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles report list — the newest runs, and which went wrong\n\n'
+        'dotfiles report list --verb apply -n 5 — the last five applies\n\n'
+        'dotfiles report list --json — each run with what it left outstanding'
+    ),
+)
 def list_runs(
     machine: str = typer.Option(None, '--machine', help='Only runs on this machine'),
     verb: str = typer.Option(None, '--verb', help='Only runs of this verb'),
@@ -409,20 +433,37 @@ def list_runs(
     console.print(table)
 
 
-@app.command('show')
+@app.command(
+    'show',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles report show RUN — one run, by the id report list printed\n\n'
+        'dotfiles report show RUN --json — the record itself'
+    ),
+)
 def show(identifier: str = typer.Argument(..., help='Run id, or a unique prefix'), as_json: bool = JsonOption) -> None:
     """Show one run in full."""
     found = find(identifier)
     emit(found, runs.read(found), as_json)
 
 
-@app.command('path')
+@app.command(
+    'path',
+    epilog=(
+        'Examples:\n\ndotfiles report path — the newest record, to hand to another command\n\ndotfiles report path RUN — one run by id'
+    ),
+)
 def path(identifier: str = typer.Argument(None, help='Run id (default: the newest)')) -> None:
     """Print a run record's path, for piping into another command."""
     print(find(identifier))
 
 
-@app.command('upload')
+@app.command(
+    'upload',
+    epilog=(
+        'Examples:\n\ndotfiles report upload — send every record the remote does not have\n\ndotfiles report upload RUN — send one run'
+    ),
+)
 def upload(
     identifier: str = typer.Argument(None, help='Run id (default: every record the remote does not have)'),
     verbose: int = VerboseOption,
@@ -454,7 +495,14 @@ def upload(
     render_note(f'sent {sent} file(s) to {directory}')
 
 
-@app.command('download')
+@app.command(
+    'download',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles report download --machine NAME — what that apply installed\n\n'
+        'dotfiles report download --machine NAME -n 1 — its newest run only'
+    ),
+)
 def download(
     machine: str = typer.Option(None, '--machine', help="Whose shelf to read, by its manifest's name (default: this machine's)"),
     limit: int = LimitOption,
@@ -634,7 +682,14 @@ def publish_after_apply() -> None:
         render_note(f'published {sent} file(s) to {directory}')
 
 
-@app.command('stats')
+@app.command(
+    'stats',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles report stats — time per address, and what never converges\n\n'
+        'dotfiles report stats --json — the same, for a script'
+    ),
+)
 def stats(as_json: bool = JsonOption) -> None:
     """Aggregate time per address across every recorded run.
 

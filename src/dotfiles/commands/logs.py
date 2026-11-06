@@ -42,7 +42,16 @@ from dotfiles.output import emit_json
 from dotfiles.output import error
 from dotfiles.vocabulary import ExitCode
 
-app = typer.Typer(no_args_is_help=True, help='The debug stream a run emitted, live or afterwards')
+app = typer.Typer(
+    no_args_is_help=True,
+    help='The debug stream a run emitted, live or afterwards',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles logs show -f — watch a run in another pane as it goes\n\n'
+        'dotfiles logs show — what the newest run logged\n\n'
+        'dotfiles logs list — which runs left a stream'
+    ),
+)
 
 IdentifierArgument = typer.Argument(None, help='Run id or filename prefix (default: the newest run on this machine)')
 FollowOption = typer.Option(False, '--follow', '-f', help='Stream new lines, switching to the next run when one starts')
@@ -196,7 +205,16 @@ def emit(line: str, as_json: bool) -> None:
     console.print(row(entry))
 
 
-@app.command('show')
+@app.command(
+    'show',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles logs show — what the newest run on this machine logged\n\n'
+        'dotfiles logs show --follow — stream it live, onto the next run too\n\n'
+        'dotfiles logs show RUN -n 50 — the last fifty lines of one run\n\n'
+        'dotfiles logs show --json — the stream unchanged, for jq'
+    ),
+)
 def show(
     identifier: str = IdentifierArgument,
     follow: bool = FollowOption,
@@ -324,7 +342,12 @@ def announce(path: Path, as_json: bool) -> None:
     console.rule(Text(path.stem), style='blue')
 
 
-@app.command('list')
+@app.command(
+    'list',
+    epilog=(
+        'Examples:\n\ndotfiles logs list — every run that left a stream\n\ndotfiles logs list -n 5 --json — the newest five, for a script'
+    ),
+)
 def list_logs(limit: int | None = RunsOption, as_json: bool = ListingJsonOption) -> None:
     """The runs on this machine that have a stream, newest first.
 
@@ -356,7 +379,12 @@ def list_logs(limit: int | None = RunsOption, as_json: bool = ListingJsonOption)
         console.print(row)
 
 
-@app.command('path')
+@app.command(
+    'path',
+    epilog=(
+        "Examples:\n\ndotfiles logs path — the newest run's stream, to hand to another command\n\ndotfiles logs path RUN — one run by id"
+    ),
+)
 def path(identifier: str = IdentifierArgument) -> None:
     """Print where one run's stream is, and nothing else.
 
