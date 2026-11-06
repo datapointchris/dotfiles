@@ -6,7 +6,7 @@
 
     "modules-left": ["hyprland/workspaces", "hyprland/submap", "mpris"],
     "modules-center": [],
-    "modules-right": ["tray", "pulseaudio", "temperature", "cpu", "memory", "network", "clock", "privacy", "custom/spacer"],
+    "modules-right": ["tray", "pulseaudio", "temperature", "cpu", "memory", "network", "custom/fleet-budget", "clock", "privacy", "custom/spacer"],
 
     "hyprland/workspaces": {
         "format": "{name}",
@@ -89,6 +89,13 @@
             { "type": "audio-in", "tooltip": true },
             { "type": "audio-out", "tooltip": false }
         ]
+    },
+
+    "custom/fleet-budget": {
+        "exec": "~/.config/waybar/fleet-budget.sh",
+        "exec-if": "command -v fleet",
+        "return-type": "json",
+        "interval": 60
     },
 
     "custom/spacer": {

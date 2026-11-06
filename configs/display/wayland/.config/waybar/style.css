@@ -72,6 +72,7 @@ window#waybar {
 /* Right side modules */
 #clock,
 #cpu,
+#custom-fleet-budget,
 #memory,
 #network,
 #pulseaudio,
@@ -91,6 +92,31 @@ window#waybar {
 
 #cpu {
     color: @green;
+}
+
+#custom-fleet-budget {
+    color: @green;
+}
+
+#custom-fleet-budget.surplus {
+    color: @cyan;
+}
+
+#custom-fleet-budget.running-low {
+    color: @yellow;
+}
+
+#custom-fleet-budget.critically-low,
+#custom-fleet-budget.out {
+    color: @red;
+}
+
+#custom-fleet-budget.paused {
+    color: @magenta;
+}
+
+#custom-fleet-budget.unreached {
+    color: @fg-dark;
 }
 
 #memory {

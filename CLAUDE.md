@@ -41,6 +41,9 @@ with none of it, so an apply or a check that reaches for that data breaks there.
 
 - **Permitted**: a fleet-scoped config file under `configs/trust/fleet/` naming a path.
   `configs/trust/nonfleet/` carries the other machine's answer.
+- **Permitted**: a program's config that calls `fleet`, such as the waybar module running `fleet
+  budget now`. That program makes the call, and a box without `fleet` loses that one module, as any
+  config loses what its dependency provides. `dotfiles` itself and `dotfiles check` never call it.
 - **Forbidden**: a fleet path hardcoded in `configs/common/`, `apps/common/` or `shell/common/`; a
   manifest declaring a fleet data clone; an engine resource that clones, pulls or reports on fleet data.
 - **When common code needs the location**, it reads an environment variable declared in

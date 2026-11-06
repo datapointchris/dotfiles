@@ -1,0 +1,53 @@
+# Formats a budget reading as waybar's {text, tooltip, class}.
+
+def epoch: sub("\\.[0-9]+"; "") | fromdateiso8601;
+def clock: epoch | strflocaltime("%a %H:%M");
+def duration:
+  if . >= 86400 then "\(. / 86400 | floor)d \(. % 86400 / 3600 | floor)h"
+  elif . >= 3600 then "\(. / 3600 | floor)h \(. % 3600 / 60 | floor)m"
+  else "\([. / 60 | floor, 0] | max)m" end;
+def span: epoch - now | duration;
+# A rate at two decimals. Null reads as a dash.
+def rate:
+  if . == null then "-"
+  else (. * 100 | round) as $hundredths
+    | ($hundredths | fabs) as $whole
+    | (if $hundredths < 0 then "-" else "" end)
+      + "\($whole / 100 | floor)." + ("0\($whole % 100)" | .[-2:]) + "%/h"
+  end;
+def pad($width): . + (" " * ([$width - length, 0] | max));
+def pad_left($width): (" " * ([$width - length, 0] | max)) + .;
+def out_text:
+  if . == "refused" then "refused" elif . == "on_reserve" then "on reserve" else "out" end;
+
+.timeline.whole_budget as $whole
+| [.timeline.weeks[] | select(.current)] as $weeks
+| ([$weeks[].account_name | length] | max // 0) as $name_width
+| ($weeks | map(
+    "\(.account_name | pad($name_width))  \(.left_pct | round | tostring | pad_left(3))% left"
+    + "  ↻ \(.ends_at | span | pad(7))"
+    + (if .level == 0 then "  \(.out_reason | out_text)"
+       elif .level == null then ""
+       else "  \(.label), queue \(.pace.rate_pct_per_hour | rate)" end)
+    + (if .lapse_pct >= 1 then ", lapses \(.lapse_pct | round)%" else "" end))) as $plans
+| ([.held.jobs[]? | select(.waiting) | .name]) as $waiting
+| ([
+    "\($whole.label): \($whole.why)",
+    "",
+    "attended    \($whole.attended.actual_pct_per_hour | rate) lately, \($whole.attended.forecast_pct_per_hour | rate) forecast",
+    "unattended  \($whole.unattended.actual_pct_per_hour | rate) lately, \($whole.unattended.allowed_pct_per_hour | rate) allowed, \($whole.unattended.sustainable_pct_per_hour | rate) sustainable",
+    "combined    \($whole.combined.actual_pct_per_hour | rate) lately, \($whole.combined.supply_pct_per_hour | rate) supplied",
+    ""
+  ] + $plans + [
+    "",
+    "next refill \($whole.next_refill_at | clock)" + (if $whole.lapse_pct >= 1 then ", \($whole.lapse_pct | round)% lapses at the resets" else "" end)
+  ]
+  + (if $whole.first_shortage_at then ["sessions run \($whole.short_pct | round)% short from \($whole.first_shortage_at | clock)"] else [] end)
+  + (if .paused then ["paused by \(.paused.by): \(.paused.reason)"] else [] end)
+  + (if ($waiting | length) > 0 then ["waiting on the budget: \($waiting | join(", "))"] else [] end)
+  ) as $lines
+| {
+    text: "budget \($whole.above_pct | round)% · \($whole.combined.actual_pct_per_hour | rate) · ↻ \($whole.next_refill_at | span)",
+    tooltip: "<tt>\($lines | join("\n") | @html)</tt>",
+    class: ([$whole.label | gsub(" "; "-")] + (if .paused then ["paused"] else [] end))
+  }
