@@ -304,6 +304,9 @@ class Worktree:
     # What a peer about to edit the same files collides with. None where origin/<base> is
     # unreadable, the same split `ahead` makes.
     changed_paths: tuple[str, ...] | None = None
+    # Who wrote the newest commit ahead of the base, from its `Agent-Session` trailer. A reader
+    # joins it to whoever holds the work when nobody stands in the tree.
+    agent_session: str | None = None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -317,6 +320,7 @@ class Worktree:
             'state': str(self.state),
             'detached': self.detached,
             'changed_paths': None if self.changed_paths is None else list(self.changed_paths),
+            'agent_session': self.agent_session,
             'sessions': None
             if self.sessions is None
             else [
@@ -588,6 +592,16 @@ def divergence(path: Path, base: str) -> tuple[int | None, int | None]:
     return int(behind), int(ahead)
 
 
+def commit_session(path: Path, ahead: int | None) -> str | None:
+    """The session HEAD's `Agent-Session` trailer names, where HEAD is ahead of the base.
+
+    A commit already on the base says nothing about who holds this tree, so none is read.
+    """
+    if not ahead:
+        return None
+    return git_optional(path, 'log', '-1', '--format=%(trailers:key=Agent-Session,valueonly)') or None
+
+
 def changed_paths(path: Path, base: str) -> tuple[str, ...] | None:
     """Every path changed since the tree left origin/<base>, committed or not.
 
@@ -720,6 +734,7 @@ def describe(repo: str, path: Path, checkout: bool, sessions: Sequence[Session] 
         # branch behind it, so `published` and the ahead count are answers about nothing.
         detached=branch == 'HEAD',
         changed_paths=changed_paths(path, base),
+        agent_session=commit_session(path, ahead),
     )
 
 
