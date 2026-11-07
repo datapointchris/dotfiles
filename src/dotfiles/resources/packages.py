@@ -457,7 +457,7 @@ def undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
     A whole-machine run only, because the question is whether the *declaration*
     explains the machine and `--entry` narrows the declaration to one entry.
     Everything else that owner published then falls outside the declared set:
-    `packages apply --package forge` advised removing fleet, ifiles and todoui,
+    `packages apply --package forge` advised removing fleet, ifiles and projects,
     and `~/go/bin` holds the only copy of each. `--owner` narrows to one
     owner's whole set, which still answers.
     """

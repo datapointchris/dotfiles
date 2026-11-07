@@ -271,7 +271,7 @@ def unreferenced(declared: catalogs.Catalog, manifests: dict[str, machines.Machi
     A warning rather than an error, and the reason is `packages.yml`'s own: an
     entry lands there before the manifest that wants it, and a tool being staged
     is not a broken declaration. It becomes worth saying when nothing ever
-    subscribes — `todoui` and `forge` shipped ghost-installed for weeks that way.
+    subscribes — `projects` and `forge` shipped ghost-installed for weeks that way.
 
     A section any manifest takes wholesale is skipped: every entry in it is
     referenced by construction, and reporting them all would bury the real ones.
