@@ -1079,7 +1079,7 @@ user_timers:
     argv:
       - sh
       - -c
-      - git -C ~/code/fleet-data-catalog pull --ff-only --quiet && exec uv run --directory ~/code/fleet-data-catalog catalog-contracts coverage --json
+      - git -C ~/code/fleet-data-catalog pull --ff-only --quiet && exec uv run --quiet --directory ~/code/fleet-data-catalog catalog-contracts coverage --json
     every: 1d
     network_trust: fleet
     feature: primary_workstation
