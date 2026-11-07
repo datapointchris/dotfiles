@@ -22,13 +22,28 @@ if [[ "${1:-}" != "--write" ]]; then
 fi
 
 failure=$(mktemp)
-trap 'rm -f "$failure"' EXIT
+screen="${2:-}"
+filed=""
+
+# A screenshot no row names is one nobody would find to remove, and it can show anything.
+leave() {
+  rm -f "$failure"
+  if [[ -z "$filed" && -n "$screen" ]]; then
+    rm -f "$screen"
+  fi
+}
+trap leave EXIT
+# Closing the window cancels the note, which is why this exits without a notification.
+trap 'exit 1' HUP TERM
 
 screen_flag=()
-if [[ -n "${2:-}" ]]; then
-  screen_flag=(--screen "$2")
+if [[ -n "$screen" ]]; then
+  screen_flag=(--screen "$screen")
 fi
 
 # The window closes when this exits, so a failure has to outlive it.
-VISUAL="nvim +startinsert" fleet inbox capture note "${screen_flag[@]}" 2>"$failure" \
-  || notify-send "fleet inbox capture" "$(<"$failure")"
+if VISUAL="nvim +startinsert" fleet inbox capture note "${screen_flag[@]}" 2>"$failure"; then
+  filed=yes
+else
+  notify-send "fleet inbox capture" "$(<"$failure")"
+fi
