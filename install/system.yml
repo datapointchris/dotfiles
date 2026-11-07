@@ -1049,6 +1049,13 @@ user_timers:
     network_trust: fleet
     excludes_os_family: windows
 
+  - name: repos-apply
+    description: Carry out each clone's syncer policy, cloning any registered repo this box lacks
+    argv: [syncer, apply]
+    every: 1d
+    network_trust: fleet
+    excludes_os_family: windows
+
   # These run only where a manifest sets primary_workstation. What they build
   # syncs to the other machines, or reads this machine's own sessions.
   - name: exemplar-pull
