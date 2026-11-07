@@ -218,6 +218,13 @@ system_packages:
     pacman: bind
     description: dig and nslookup, which Debian ships in bind9-dnsutils and Arch in bind (macOS has them built-in)
 
+  - name: diffstat
+    tier: core
+    apt: diffstat
+    pacman: diffstat
+    brew: diffstat
+    description: Histogram of insertions and deletions per file from a diff or patch
+
   - name: tree
     tier: core
     apt: tree
