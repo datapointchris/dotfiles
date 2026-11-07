@@ -408,8 +408,8 @@ def test_the_agent_declares_the_same_directories_as_the_unit() -> None:
     """launchd hands an agent `/usr/bin:/bin:/usr/sbin:/sbin`, so `/usr/local/bin`
     is absent and `gh` resolves to nothing. Measured 2026-08-21: one
     scheduled run spent 26 requests of the 60-per-hour anonymous GitHub quota and
-    zero authenticated ones, because `github_token` gates on `shutil.which('gh')`
-    and degrades to an unauthenticated request instead of failing."""
+    zero authenticated ones, because `github_token` finds no `gh` to ask and
+    degrades to an unauthenticated request instead of failing."""
     job = plistlib.loads(periodic_job.agent_content(schedule.CHECK))
 
     assert job['EnvironmentVariables']['PATH'] == periodic_job.unit_path()

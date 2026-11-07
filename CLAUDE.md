@@ -51,6 +51,26 @@ with none of it, so an apply or a check that reaches for that data breaks there.
   a default is the hardcoding one indirection later, and it produces a wrong answer instead of a
   missing-value error.
 
+## A process or a request leaves `src/dotfiles/` through one door
+
+`effects.py` starts every process and lands every downloaded file. `effects.run` runs a command:
+it closes the child's stdin, reports a missing binary as exit 127 and a timeout as exit 124, and
+writes each command to the run's debug stream with secrets redacted. `effects.fetch`, `unpack`,
+`gunzip` and `install` download and place files. HTTP goes out through `github_release.request`,
+`revalidate` and `carries`, the only functions that call `httpx2` for a read, and `effects.fetch`
+reaches the network through them. A new effect calls one of these, so a timeout or a redaction
+rule lands once.
+
+Four call sites stay outside, each needing what `effects.run` does not give:
+
+- `timer_reports.run` keeps stdout apart from stderr, and keeps what a timed-out child printed.
+  `Completed` carries neither.
+- `persona_review/headless_call.py` reads `claude -p`'s stream-json frames from a `Popen` as they
+  arrive.
+- `persona_review/runs.py` reads `git archive`'s tar as bytes. Its `git` helper raises, so a bad
+  ref stops the export.
+- `request_hook.py` makes the one POST, signed with a secret that must reach no log line.
+
 ## Where things go
 
 **Install patterns**, chosen by what a thing is, never by how large it grew:

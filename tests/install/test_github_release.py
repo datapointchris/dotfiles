@@ -7,13 +7,13 @@ install. Every fallback below was earned by a real release.
 Run with: pytest tests/install/test_github_release.py
 """
 
-import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
 
 import httpx2
 import pytest
 
+from dotfiles import effects
 from dotfiles import github_release
 
 
@@ -721,12 +721,11 @@ class TestTokenLookup:
         runs: list[list[str]] = []
 
         def fake(command, **_kwargs):
-            runs.append(command)
+            runs.append(list(command))
             time.sleep(delay)
-            return subprocess.CompletedProcess(command, 0, stdout='ghp_from_gh\n', stderr='')
+            return effects.Completed(command=tuple(command), returncode=0, transcript='', stdout='ghp_from_gh\n')
 
-        monkeypatch.setattr(github_release.shutil, 'which', lambda name: '/usr/bin/gh')
-        monkeypatch.setattr(github_release.subprocess, 'run', fake)
+        monkeypatch.setattr(effects, 'run', fake)
         return runs
 
     def test_the_gh_subprocess_runs_once_however_often_it_is_asked(self, monkeypatch):
@@ -767,13 +766,13 @@ class TestTokenLookup:
         def refuse(command, **_kwargs):
             raise AssertionError(f'asked gh for a token the environment already carried: {command}')
 
-        monkeypatch.setattr(github_release.subprocess, 'run', refuse)
+        monkeypatch.setattr(effects, 'run', refuse)
 
         assert github_release.github_token() == 'ghp_from_the_environment'
 
-    def test_a_box_with_no_gh_and_no_variable_has_no_token(self, monkeypatch):
+    def test_a_box_with_no_gh_and_no_variable_has_no_token(self, monkeypatch, tmp_path):
         monkeypatch.delenv('GITHUB_TOKEN', raising=False)
-        monkeypatch.setattr(github_release.shutil, 'which', lambda name: None)
+        monkeypatch.setenv('PATH', str(tmp_path))
 
         assert github_release.github_token() is None
 

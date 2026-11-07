@@ -25,7 +25,6 @@ import logging
 import os
 import re
 import shutil
-import subprocess
 import tarfile
 import tempfile
 import tomllib
@@ -38,6 +37,7 @@ from typing import Any
 import httpx2
 
 from dotfiles import catalog
+from dotfiles import effects
 from dotfiles import github_release
 from dotfiles import machine as machines
 from dotfiles import paths
@@ -1320,15 +1320,13 @@ def declared_closure() -> list[tuple[str, str]]:
     marker itself at install time; a wheel wrongly *excluded* fails the bootstrap
     on the one machine that cannot go and fetch it.
     """
-    exported = subprocess.run(
+    exported = effects.run(
         ['uv', 'export', '--no-default-groups', '--no-emit-project', '--no-hashes', '--no-header', '--no-annotate'],
         cwd=paths.REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
+        output=effects.Output.QUIET,
     )
-    if exported.returncode != 0:
-        raise BundleError(f'could not read the dependency closure from uv:\n{tail_lines(exported.stderr)}')
+    if not exported.ok:
+        raise BundleError(f'could not read the dependency closure from uv:\n{tail_lines(exported.transcript)}')
 
     closure = []
     for line in exported.stdout.splitlines():

@@ -27,8 +27,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
-import subprocess
 import sys
 import tempfile
 import urllib.parse
@@ -274,13 +272,15 @@ def github_token() -> str | None:
     `releases.refresh` primes this before it opens its pool, which is what collapses
     it to one.
     """
+    # Imported here because `effects` imports this module at its top.
+    from dotfiles import effects
+
     token = os.environ.get('GITHUB_TOKEN')
     if token:
         return token
-    if shutil.which('gh'):
-        result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, check=False)
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
+    asked = effects.run(['gh', 'auth', 'token'], output=effects.Output.QUIET)
+    if asked.ok and asked.stdout.strip():
+        return asked.stdout.strip()
     return None
 
 
