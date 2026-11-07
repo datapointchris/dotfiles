@@ -47,7 +47,7 @@ GITHUB_ASSET_HOSTS = frozenset(
 """Where github.com redirects a release download.
 
 A firewall that refuses these refuses every release asset while github.com still
-serves clones and the API, which is the shape of the network this module exists for.
+serves clones and the API. This module routes around exactly that firewall.
 """
 
 RELEASE_DOWNLOAD = frozenset({GITHUB, *GITHUB_ASSET_HOSTS})

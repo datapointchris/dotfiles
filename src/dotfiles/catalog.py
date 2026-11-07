@@ -570,8 +570,8 @@ class GithubRelease(Entry):
     The same field and the same declared-rather-than-discovered reasoning as
     `SystemPackage.supersedes`, and one thing is different: the name is held by a
     manager this entry has nothing to do with. syncthing is `syncthing` under both
-    pacman and Homebrew, and this entry is what says the release is now the one
-    install path for it.
+    pacman and Homebrew, and this entry declares the release the one install path
+    for it.
 
     What makes it a blocker rather than a duplicate is the service. Two syncthings
     on one machine is two daemons over one config directory and one port, so an

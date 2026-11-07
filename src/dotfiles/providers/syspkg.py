@@ -398,8 +398,8 @@ def uninstall(manager: str, names: Sequence[str], privilege: Escalates) -> Resul
     Nothing here decides that it should happen. An entry's `supersedes` names the
     package. `--force` authorizes removing it before the entry installs, and the
     entry being installed already authorizes removing a copy left beside it. So
-    this is handed a list somebody wrote down and confirmed, which is the whole of
-    what separates it from the inference `REMOVE` refuses to make.
+    this is handed a list somebody wrote down and confirmed, and never infers one,
+    which `REMOVE` refuses to do.
 
     Streamed on both branches for `install`'s reason: a removal that resolves reverse
     dependencies can take a while, and a silent transaction reads as a hung run.
