@@ -1073,3 +1073,14 @@ user_timers:
     network_trust: fleet
     feature: primary_workstation
     excludes_os_family: windows
+  - name: data-catalog-unlisted-sources-check
+    description: Whether this box and its checkouts hold a store, API, schema, record file or tail the data catalog does not list
+    # A merged pull request does not move this checkout, and its data-sources.yaml is the list.
+    argv:
+      - sh
+      - -c
+      - git -C ~/code/fleet-data-catalog pull --ff-only --quiet && exec uv run --directory ~/code/fleet-data-catalog catalog-contracts coverage --json
+    every: 1d
+    network_trust: fleet
+    feature: primary_workstation
+    excludes_os_family: windows
