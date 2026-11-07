@@ -1,4 +1,5 @@
-# Formats a budget reading as waybar's {text, tooltip, class}.
+# Formats a budget reading as waybar's {text, class}, and as the heading and rows
+# fleet-budget-menu.sh opens.
 
 def epoch: sub("\\.[0-9]+"; "") | fromdateiso8601;
 def clock: epoch | strflocaltime("%a %H:%M");
@@ -31,12 +32,11 @@ def out_text:
        else "  \(.label), queue \(.pace.rate_pct_per_hour | rate)" end)
     + (if .lapse_pct >= 1 then ", lapses \(.lapse_pct | round)%" else "" end))) as $plans
 | ([.held.jobs[]? | select(.waiting) | .name]) as $waiting
+| (if $whole.combined.window_hours then "over \($whole.combined.window_hours)h" else "lately" end) as $lately
 | ([
-    "\($whole.label): \($whole.why)",
-    "",
-    "attended    \($whole.attended.actual_pct_per_hour | rate) lately, \($whole.attended.forecast_pct_per_hour | rate) forecast",
-    "unattended  \($whole.unattended.actual_pct_per_hour | rate) lately, \($whole.unattended.allowed_pct_per_hour | rate) allowed, \($whole.unattended.sustainable_pct_per_hour | rate) sustainable",
-    "combined    \($whole.combined.actual_pct_per_hour | rate) lately, \($whole.combined.supply_pct_per_hour | rate) supplied",
+    "attended    \($whole.attended.actual_pct_per_hour | rate) \($lately), \($whole.attended.forecast_pct_per_hour | rate) forecast",
+    "unattended  \($whole.unattended.actual_pct_per_hour | rate) \($lately), \($whole.unattended.allowed_pct_per_hour | rate) allowed, \($whole.unattended.sustainable_pct_per_hour | rate) sustainable",
+    "combined    \($whole.combined.actual_pct_per_hour | rate) \($lately), \($whole.combined.supply_pct_per_hour | rate) supplied",
     ""
   ] + $plans + [
     "",
@@ -44,10 +44,11 @@ def out_text:
   ]
   + (if $whole.first_shortage_at then ["sessions run \($whole.short_pct | round)% short from \($whole.first_shortage_at | clock)"] else [] end)
   + (if .paused then ["paused by \(.paused.by): \(.paused.reason)"] else [] end)
-  + (if ($waiting | length) > 0 then ["waiting on the budget: \($waiting | join(", "))"] else [] end)
-  ) as $lines
+  + (if ($waiting | length) > 0 then ["", "waiting on the budget"] + ($waiting | map("  \(.)")) else [] end)
+  ) as $rows
 | {
-    text: "budget \($whole.above_pct | round)% · \($whole.combined.actual_pct_per_hour | rate) · ↻ \($whole.next_refill_at | span)",
-    tooltip: "<tt>\($lines | join("\n") | @html)</tt>",
+    text: "Fleet Budget \($whole.label) · \($whole.above_pct | round)% left · burn \($whole.combined.actual_pct_per_hour | rate) · refill \($whole.next_refill_at | span)",
+    heading: ("\($whole.label): \($whole.why)" | @html),
+    rows: $rows,
     class: ([$whole.label | gsub(" "; "-")] + (if .paused then ["paused"] else [] end))
   }

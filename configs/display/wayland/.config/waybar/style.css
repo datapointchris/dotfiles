@@ -69,10 +69,38 @@ window#waybar {
     color: @green;
 }
 
+/* Model budget. Not every theme has a yellow: terafox's @yellow is the peach the
+   audio button wears. Mixing toward pure yellow reads as yellow on all of them. */
+@define-color fleet-budget-yellow mix(@yellow, #ffff00, 0.5);
+
+#custom-fleet-budget {
+    padding: 0 10px;
+    margin: 6px 2px;
+    background: @bg-highlight;
+    border-radius: 4px;
+    color: @fleet-budget-yellow;
+}
+
+#custom-fleet-budget.running-low {
+    color: @orange;
+}
+
+#custom-fleet-budget.critically-low,
+#custom-fleet-budget.out {
+    color: @red;
+}
+
+#custom-fleet-budget.paused {
+    color: @magenta;
+}
+
+#custom-fleet-budget.unreached {
+    color: @fg-dark;
+}
+
 /* Right side modules */
 #clock,
 #cpu,
-#custom-fleet-budget,
 #memory,
 #network,
 #pulseaudio,
@@ -92,31 +120,6 @@ window#waybar {
 
 #cpu {
     color: @green;
-}
-
-#custom-fleet-budget {
-    color: @green;
-}
-
-#custom-fleet-budget.surplus {
-    color: @cyan;
-}
-
-#custom-fleet-budget.running-low {
-    color: @yellow;
-}
-
-#custom-fleet-budget.critically-low,
-#custom-fleet-budget.out {
-    color: @red;
-}
-
-#custom-fleet-budget.paused {
-    color: @magenta;
-}
-
-#custom-fleet-budget.unreached {
-    color: @fg-dark;
 }
 
 #memory {
