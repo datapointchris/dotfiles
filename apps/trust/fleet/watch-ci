@@ -46,14 +46,14 @@ run's AGE is how long it has waited. A run is RUNNING once any job of its attemp
 QUEUED until then, because GitHub calls a whole run queued while any one of its
 jobs waits for a runner.
 
-FAILED lists every run with a failed job in any attempt, and under it one row per
-failed job: its newest failed attempt, and how many attempts failed. A run's
-conclusion is its latest attempt's, so a run whose failed job was rerun, or that
-was cancelled after a job failed, would otherwise hide that failure. A failure
-whose rerun passed, whose workflow has passed on that branch since, or whose pull
-request has closed says so in green and drops its log excerpt. A standing one
-shows its age in red, and under its step the lines of the step's log that name
-the failure, read once per job.
+FAILED lists every run with a failed job in any attempt. A run's conclusion is its
+latest attempt's, so a run whose failed job was rerun, or that was cancelled after
+a job failed, would otherwise hide that failure. A failure whose rerun passed, whose
+workflow has passed on that branch since, or whose pull request has closed says so
+in green and folds to its run's one row. A standing one stays open however old it
+is. It shows its age in red, and under it one row per failed job: its newest failed
+attempt, and how many attempts failed. Under each step are the lines of the step's
+log that name the failure, read once per job.
 
 Every GET sends If-None-Match with the last ETag, and GitHub does not count a 304
 against the hourly rate limit, so reading a repo's runs is free against it while
@@ -1128,9 +1128,11 @@ class Layout:
         return JobRow(job, symbol, color, name, duration(now - epoch(job['created_at'])), '', f'needs {labels}')
 
     def rows(self, entry: Entry) -> list[JobRow]:
-        """One row per job. A failure folds a job's failed attempts into one row, its newest, and counts them."""
+        """One row per job. A failure folds a job's failed attempts into one row, its newest, and counts them. A resolved one has none."""
         if entry.failure is None:
             return [self.job_row(job, '', runner=True) for job in entry.jobs]
+        if entry.failure.resolution:
+            return []
         attempts: dict[str, list[Json]] = {}
         for job in entry.failure.jobs:
             attempts.setdefault(job['name'], []).append(job)
@@ -1169,7 +1171,7 @@ class Layout:
             )
         ]
         failure = entry.failure
-        excerpted = {job['id'] for job in failure.latest_attempt_jobs()} if failure and not failure.resolution else set()
+        excerpted = {job['id'] for job in failure.latest_attempt_jobs()} if failure else set()
         for job in jobs:
             passed = job.color == GREEN
             row: Line = [
@@ -1979,8 +1981,9 @@ def main() -> int:
         description='Watch the GitHub Actions runs on every repo in the registry, grouped by\n'
         'state and redrawn in place.\n\n'
         'Each run names what it ran for: the pull request it tested or merged, the tag on\n'
-        'its commit, the commit itself and its title. Standing failures show the log\n'
-        'lines that name the failure.\n\n'
+        'its commit, the commit itself and its title. A standing failure shows its failed\n'
+        'jobs and the log lines naming the failure, and folds to one row once a later run\n'
+        'passes or its pull request closes.\n\n'
         "With --commit REF --wait it draws no board. It blocks on that commit's runs and\n"
         'prints one line per run, with each failed job and the log lines naming its failure:\n\n'
         '  watch-ci --commit HEAD --wait --json',
