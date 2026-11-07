@@ -6,6 +6,9 @@ go_tools:
   - tmux-tree-editor
   - read-markdown
 
+github_releases:
+  - tuidrive
+
 custom_installers:
   - theme
   - font

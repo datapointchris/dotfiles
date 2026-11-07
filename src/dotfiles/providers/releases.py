@@ -490,11 +490,11 @@ def zk(tag: str, target: Target) -> ReleaseArtifact:
 
 
 def go_release_cli(binary: str) -> Callable[[str, Target], ReleaseArtifact]:
-    """The data CLIs, which are goreleaser builds in monorepos.
+    """A goreleaser build, with the binary at the tarball's root.
 
-    Their tag carries a `cli/` prefix because the same repo releases an API and a
-    web app, so the version in the asset name is the tag with that prefix and the
-    `v` both removed.
+    A data CLI's tag carries a `cli/` prefix because the same repo releases an API
+    and a web app, so the version in the asset name is the tag with any prefix and
+    the `v` both removed.
     """
 
     def build(tag: str, target: Target) -> ReleaseArtifact:
@@ -536,6 +536,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'tflint': tflint,
     'tree-sitter': tree_sitter,
     'trivy': trivy,
+    'tuidrive': go_release_cli('tuidrive'),
     'win32yank': win32yank,
     'yazi': yazi,
     'yq': yq,

@@ -1134,6 +1134,11 @@ github_releases:
     description: Work tracker built for coding agents
     tags: [cli, personal]
 
+  - name: tuidrive
+    repo: datapointchris/tuidrive
+    description: Drive a terminal program's real binary on a pty, wait on its screen and compare frames as text
+    tags: [cli, development]
+
 # ================================================================
 # CUSTOM INSTALLERS
 # ================================================================
