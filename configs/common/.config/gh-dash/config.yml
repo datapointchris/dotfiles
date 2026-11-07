@@ -126,7 +126,6 @@ repoPaths:
     datapointchris/data-conversion: ~/code/python-projects/data-conversion
     datapointchris/datapointchris: ~/code/datapointchris
     datapointchris/dectl: ~/tools/dectl
-    datapointchris/digest: ~/tools/digest
     datapointchris/dimensional-modeling: ~/code/sql/dimensional-modeling
     datapointchris/docker-redis-cicd: ~/code/tutorials/docker-redis-cicd
     datapointchris/docs: ~/docs
@@ -159,6 +158,7 @@ repoPaths:
     datapointchris/object-detection-keras-unet: ~/code/python-projects/object-detection-keras-unet
     datapointchris/parquet: ~/code/python-projects/parquet
     datapointchris/post-shift: ~/code/sql/post-shift
+    datapointchris/psyche: ~/tools/psyche
     datapointchris/pyclisteno: ~/tools/pyclisteno
     datapointchris/pyselfupdate: ~/tools/pyselfupdate
     datapointchris/pytermstyle: ~/tools/pytermstyle

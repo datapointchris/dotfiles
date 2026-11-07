@@ -517,8 +517,7 @@ fi
 # so these are the slow ones.
 cache_eval dectl env _DECTL_COMPLETE=source_zsh dectl
 cache_eval indy env _INDY_COMPLETE=source_zsh indy
-# Homebrew's nss installs a different binary by this name, so it is named by path.
-cache_eval -b "$HOME/.local/bin/digest" digest env _DIGEST_COMPLETE=source_zsh "$HOME/.local/bin/digest"
+cache_eval psyche env _PSYCHE_COMPLETE=source_zsh psyche
 cache_eval syncer env _SYNCER_COMPLETE=source_zsh syncer
 cache_eval safekeep env _SAFEKEEP_COMPLETE=source_zsh safekeep
 

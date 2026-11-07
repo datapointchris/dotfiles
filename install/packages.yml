@@ -1741,9 +1741,10 @@ uv_tools:
 # the lock otherwise. src/dotfiles/providers/uvtool.py carries both reasons.
 
 git_uv_tools:
-  - name: digest
-    repo: https://github.com/datapointchris/digest.git
+  - name: psyche
+    repo: https://github.com/datapointchris/psyche.git
     requires_github_auth: true
+    supersedes: ['uv:digest']
     description: Analyze YouTube videos and web articles with Claude, building a searchable knowledge base
 
   - name: homelab

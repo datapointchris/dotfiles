@@ -23,4 +23,4 @@ uv_tools:
   - git-graph
 
 git_uv_tools:
-  - digest
+  - psyche

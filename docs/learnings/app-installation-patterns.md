@@ -54,7 +54,7 @@ GitHub. Run `theme update` or `font update` to pull updates to the installed ver
 
 ### 4. Python Tools (Remote Install via `uv tool install`)
 
-**Examples**: `logsift`, `indy`, `refcheck`, `syncer`, `safekeep` from the index; `digest`
+**Examples**: `logsift`, `indy`, `refcheck`, `syncer`, `safekeep` from the index; `psyche`
 from git
 
 **Installation**: two paths, chosen by whether the repo is public.

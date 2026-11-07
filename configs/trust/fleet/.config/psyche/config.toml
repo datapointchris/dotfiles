@@ -1,5 +1,5 @@
-# digest — machine config. Everything here is a property of this fleet, not of the
-# tool, which is why none of it ships as a digest default.
+# psyche — machine config. Everything here is a property of this fleet, not of the
+# tool, which is why none of it ships as a psyche default.
 
 # The registry is a literal, never a shared shell variable: ~/.env is invisible to
 # any process that sources no profile. A shared file is named here rather than
@@ -15,21 +15,21 @@
 # refused.
 repos_registry = "~/.local/share/terminal-library-fleet/repos.json"
 
-# digest's corpus reaches every machine because `data_dir` below points into a
+# psyche's corpus reaches every machine because `data_dir` below points into a
 # directory replicated between machines, which is a fact about this fleet and not
-# about digest — so digest defaults to $XDG_DATA_HOME/digest and is pointed here
+# about psyche — so psyche defaults to $XDG_DATA_HOME/psyche and is pointed here
 # instead of carrying the answer.
 #
 # Under trust/fleet for the reason above it: the `data_dir` directory exists on
 # this domain's machines and nowhere else, so a machine of the other domain gets
 # no key and the XDG default.
 #
-# The log deliberately does not follow. It stays at $XDG_STATE_HOME/digest, because it
+# The log deliberately does not follow. It stays at $XDG_STATE_HOME/psyche, because it
 # describes the machine that wrote it and replicating it to the others is noise.
-data_dir = "~/shart/digest"
+data_dir = "~/shart/psyche"
 
 # The knowledge notes belong in the notes store, beside the ones written by hand,
-# because what digest extracts is read the same way and searched by the same tools.
-# digest files `dev/` and `digest/` under this root, so the technical notes land in
-# ~/notes/dev with the hand-written ones and everything else in ~/notes/digest.
+# because what psyche extracts is read the same way and searched by the same tools.
+# psyche files `dev/` and `psyche/` under this root, so the technical notes land in
+# ~/notes/dev with the hand-written ones and everything else in ~/notes/psyche.
 notes_dir = "~/notes"
