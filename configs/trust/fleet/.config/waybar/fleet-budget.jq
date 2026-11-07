@@ -1,7 +1,16 @@
 # Formats a budget reading as waybar's {text, class}, and as the heading and rows
 # fleet-budget-menu.sh opens. $status_line is the status line's budget text, in its
-# terminal colors, and the module's class gives the bar its color instead.
+# terminal colors, and $palette maps the active theme's color names to their hex values.
 
+# Turns terminal color codes into Pango spans, which is the markup waybar draws.
+def terminal_colors_as_spans:
+  {"31": "red", "32": "green", "33": "yellow", "34": "blue", "35": "magenta", "36": "cyan"} as $names
+  | @html
+  | gsub("\u001b\\[(?<code>[0-9]+)m";
+      if .code == "0" then "</span>"
+      else $palette[$names[.code] // "fg"] as $hex
+        | if $hex then "<span color=\"\($hex)\">" else "<span>" end
+      end);
 def epoch: sub("\\.[0-9]+"; "") | fromdateiso8601;
 def clock: epoch | strflocaltime("%a %H:%M");
 def duration:
@@ -48,7 +57,7 @@ def out_text:
   + (if ($waiting | length) > 0 then ["", "waiting on the budget"] + ($waiting | map("  \(.)")) else [] end)
   ) as $rows
 | {
-    text: ($status_line | gsub("\u001b\\[[0-9;]*m"; "") | if . == "" then "Fleet Budget ?" else @html end),
+    text: (if $status_line == "" then "Fleet Budget ?" else $status_line | terminal_colors_as_spans end),
     heading: ("\($whole.label): \($whole.why)" | @html),
     rows: $rows,
     class: ([$whole.label | gsub(" "; "-")] + (if .paused then ["paused"] else [] end))
