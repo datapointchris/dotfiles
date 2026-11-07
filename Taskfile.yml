@@ -144,6 +144,30 @@ tasks:
       - docker ps -aq --filter name=dotfiles-e2e | xargs -r docker rm -f
 
   # ================================================================
+  # LINT AND FORMAT
+  # ================================================================
+
+  # The same tools and arguments as the ruff and mypy pre-commit hooks, over the
+  # whole tree rather than the staged files.
+  lint:
+    desc: Run ruff's checks, the format check and the typecheck, writing no file
+    cmds:
+      - uv run ruff check .
+      - uv run ruff format --check .
+      - task: typecheck
+
+  format:
+    desc: Apply ruff's autofixes and rewrite files with ruff format
+    cmds:
+      - uv run ruff check --fix .
+      - uv run ruff format .
+
+  typecheck:
+    desc: Typecheck the package and tests with mypy
+    cmds:
+      - uv run --all-extras mypy . --install-types --non-interactive
+
+  # ================================================================
   # DOCUMENTATION
   # ================================================================
 
