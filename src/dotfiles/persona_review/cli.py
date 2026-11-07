@@ -180,24 +180,85 @@ def render(record: dict[str, Any]) -> None:
     print(f'\ninventory  {len(report["inventory"])} items; --json prints them')
 
 
+ROOT_EXAMPLES = """\
+Examples:
+  persona-review list                                 the scenarios, and every value each axis takes
+  persona-review run workbox-security-intake --mock   a whole run for no tokens, writing the canned report
+  persona-review run workbox-security-intake          the same review, by a model
+  persona-review runs                                 stored runs, newest first
+  persona-review show                                 the newest run's report
+"""
+
+LIST_EXAMPLES = """\
+Examples:
+  persona-review list          scenario names for `run`, and the persona, machine, os and subject values
+  persona-review list --json   the same catalog, as one document
+"""
+
+MATRIX_EXAMPLES = """\
+Examples:
+  persona-review matrix          every persona, machine, os and subject a machine allows, and its scenario if one exists
+  persona-review matrix --json   the same combinations, as one document
+"""
+
+RUN_EXAMPLES = """\
+Name a scenario from `list`, or all four of --persona, --machine, --os and --subject.
+A machine accepts only the operating systems `matrix` pairs it with.
+
+Examples:
+  persona-review run workbox-security-intake --mock
+      a scenario, run end to end for no tokens
+  persona-review run workbox-security-intake
+      the same scenario, reviewed by a model
+  persona-review run --persona enterprise-security-reviewer --machine mini-computer \\
+      --os arch-linux --subject dotfiles --mock
+      a combination no scenario names, by its four axes
+"""
+
+RUNS_EXAMPLES = """\
+Examples:
+  persona-review runs          the 20 newest stored runs
+  persona-review runs -n 5     the 5 newest
+"""
+
+SHOW_EXAMPLES = """\
+Examples:
+  persona-review show            the newest run's report
+  persona-review show <run_id>   one run, by an id `runs` prints
+  persona-review show --json     the newest run's whole record
+"""
+
+
 def parser() -> argparse.ArgumentParser:
-    root = argparse.ArgumentParser(prog='persona-review', description=__doc__.splitlines()[0].split(': ', 1)[1])
+    keep_lines = argparse.RawDescriptionHelpFormatter
+    root = argparse.ArgumentParser(
+        prog='persona-review', description=__doc__.splitlines()[0].split(': ', 1)[1], epilog=ROOT_EXAMPLES, formatter_class=keep_lines
+    )
     verbs = root.add_subparsers(dest='verb', required=True)
 
-    listed = verbs.add_parser('list', help='every persona, machine, operating system, subject and scenario')
+    listed = verbs.add_parser(
+        'list', help='every persona, machine, operating system, subject and scenario', epilog=LIST_EXAMPLES, formatter_class=keep_lines
+    )
     listed.add_argument('--json', action='store_true')
     listed.set_defaults(handler=list_catalog)
 
-    points = verbs.add_parser('matrix', help='every combination the machines allow, and the scenario naming it')
+    points = verbs.add_parser(
+        'matrix',
+        help='every combination the machines allow, and the scenario naming it',
+        epilog=MATRIX_EXAMPLES,
+        formatter_class=keep_lines,
+    )
     points.add_argument('--json', action='store_true')
     points.set_defaults(handler=show_matrix)
 
-    running = verbs.add_parser('run', help='run one review, by scenario or by naming all four axes')
+    running = verbs.add_parser(
+        'run', help='run one review, by scenario or by naming all four axes', epilog=RUN_EXAMPLES, formatter_class=keep_lines
+    )
     running.add_argument('scenario', nargs='?', help='a scenario from `list`')
-    running.add_argument('--persona')
-    running.add_argument('--machine')
-    running.add_argument('--os', dest='operating_system')
-    running.add_argument('--subject')
+    running.add_argument('--persona', help='a persona from `list`; give all four axes together')
+    running.add_argument('--machine', help='a machine from `list`')
+    running.add_argument('--os', dest='operating_system', help='an operating system the machine runs, from `matrix`')
+    running.add_argument('--subject', help='a subject from `list`')
     running.add_argument('--submission', help="the submitter's words, for a run named by its axes")
     running.add_argument('--model', default='opus', help='the model claude is given (default: opus)')
     running.add_argument(
@@ -212,12 +273,12 @@ def parser() -> argparse.ArgumentParser:
     running.add_argument('--json', action='store_true')
     running.set_defaults(handler=run)
 
-    stored = verbs.add_parser('runs', help='stored runs, newest first')
+    stored = verbs.add_parser('runs', help='stored runs, newest first', epilog=RUNS_EXAMPLES, formatter_class=keep_lines)
     stored.add_argument('-n', '--limit', type=int, default=20)
     stored.add_argument('--json', action='store_true')
     stored.set_defaults(handler=list_runs)
 
-    shown = verbs.add_parser('show', help='one stored run, the newest by default')
+    shown = verbs.add_parser('show', help='one stored run, the newest by default', epilog=SHOW_EXAMPLES, formatter_class=keep_lines)
     shown.add_argument('run_id', nargs='?')
     shown.add_argument('--json', action='store_true')
     shown.set_defaults(handler=show)
