@@ -51,3 +51,78 @@ otelcol.receiver.filelog "hook_runs" {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }
 }
+
+// Each call a session made into a watched CLI, scored for suspicion, one call a line.
+// A review drains a session's ledger by renaming it into reviewed/. The receiver tells
+// files apart by their opening bytes, so reading both globs ships each line once.
+otelcol.receiver.filelog "session_review_ledgers" {
+  include = [
+    string.format("%s/session-review/sessions/*.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME")))),
+    string.format("%s/session-review/reviewed/*.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME")))),
+  ]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      parse_to  = "attributes.record",
+      on_error  = "send_quiet",
+      timestamp = {parse_from = "attributes.record.at", layout_type = "epoch", layout = "s.us"},
+    },
+    {type = "remove", if = "attributes.record != nil", field = "attributes.record"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "claude.cli_call"},
+  ]
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+// What the dispatch-work skill sent a worker and what the worker reported: one
+// indented JSON document a file, so a record opens at a brace in the first column.
+// A worker's model stream sits beside these under a numbered name, and stays out.
+otelcol.receiver.filelog "dispatch_worker_records" {
+  include  = [string.format("%s/dispatch-work/*/*.[a-z]*.json", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at = "beginning"
+  storage  = otelcol.storage.file.offsets.handler
+
+  operators = [
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "dispatch.worker_record"},
+  ]
+
+  multiline {
+    line_start_pattern = "^\\{"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+// What the director skill heard and carried between its user and running sessions.
+otelcol.receiver.filelog "director_log" {
+  include          = [string.format("%s/claude/director/*.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      parse_to  = "attributes.record",
+      on_error  = "send_quiet",
+      timestamp = {parse_from = "attributes.record.at", layout_type = "gotime", layout = "2006-01-02T15:04:05.999999999Z07:00"},
+    },
+    {type = "remove", if = "attributes.record != nil", field = "attributes.record"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "claude.director_event"},
+  ]
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}

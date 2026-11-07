@@ -1,0 +1,26 @@
+// The record files `syncer` writes on this machine, each record once. Nothing syncs
+// this directory, so the glob names no host.
+
+// What each syncer run did to a set of repos, one run a line.
+otelcol.receiver.filelog "syncer_events" {
+  include          = [string.format("%s/syncer/*-events.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      parse_to  = "attributes.record",
+      on_error  = "send_quiet",
+      timestamp = {parse_from = "attributes.record.timestamp", layout_type = "gotime", layout = "2006-01-02T15:04:05.999999999Z07:00"},
+    },
+    {type = "remove", if = "attributes.record != nil", field = "attributes.record"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "syncer.event"},
+  ]
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}

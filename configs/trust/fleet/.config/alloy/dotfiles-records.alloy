@@ -90,3 +90,66 @@ otelcol.receiver.filelog "timer_reports" {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }
 }
+
+// One end-to-end test matrix's outcome: one indented JSON document a run, so a record
+// opens at a brace in the first column. Its own machine field names the box.
+otelcol.receiver.filelog "test_runs" {
+  include  = [string.format("%s/dotfiles/test-runs/*/record.json", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at = "beginning"
+  storage  = otelcol.storage.file.offsets.handler
+
+  operators = [
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "dotfiles.test_run"},
+  ]
+
+  multiline {
+    line_start_pattern = "^\\{"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+// One mutation-testing run's survivors and score: one indented JSON document a run.
+otelcol.receiver.filelog "mutation_runs" {
+  include  = [string.format("%s/dotfiles/mutation-runs/*-%s.json", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  start_at = "beginning"
+  storage  = otelcol.storage.file.offsets.handler
+
+  operators = [
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "dotfiles.mutation_run"},
+  ]
+
+  multiline {
+    line_start_pattern = "^\\{"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+// Every notification the ntfy client received here. A delivery opens at its time of
+// day and may run over several lines. The line carries no date, so only a delivery
+// arriving from now on has a true timestamp, and the tail starts at the end.
+otelcol.receiver.filelog "ntfy_deliveries" {
+  include  = [string.format("%s/ntfy/notify.log", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at = "end"
+  storage  = otelcol.storage.file.offsets.handler
+
+  operators = [
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "ntfy.delivery"},
+  ]
+
+  multiline {
+    line_start_pattern = "^[0-9]{2}:[0-9]{2}:[0-9]{2}  "
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}

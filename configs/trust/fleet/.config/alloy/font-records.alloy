@@ -1,0 +1,26 @@
+// The record files `font` writes on this machine, each record once. Nothing syncs
+// this directory, so the glob names no host.
+
+// Each font this box switched to, one switch a line.
+otelcol.receiver.filelog "font_history" {
+  include          = [string.format("%s/font/history.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      parse_to  = "attributes.record",
+      on_error  = "send_quiet",
+      timestamp = {parse_from = "attributes.record.ts", layout_type = "gotime", layout = "2006-01-02T15:04:05.999999999Z07:00"},
+    },
+    {type = "remove", if = "attributes.record != nil", field = "attributes.record"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "font.switch"},
+  ]
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
