@@ -190,7 +190,8 @@ Most are the installers `diagnose.removal_of` attributes a copy to by package,
 which is what a row is matched against. An AUR build is pacman's to remove.
 `go` and `release` keep no receipt, so their row names a file instead: the
 binary of that name in the directory the installer writes to, which is
-`superseded.PLACED`. `go:actionlint` is `~/go/bin/actionlint`.
+`superseded.PLACED`. `go:actionlint` is `~/go/bin/actionlint`. A `uv:` row on an
+entry that installs under another name is asked of `uv tool list`.
 """
 
 
@@ -822,9 +823,16 @@ class GitUvTool(Entry):
 
     repo: str
 
+    supersedes: tuple[str, ...] = ()
+    """What this tool took over from, as `GithubRelease.supersedes` reads it. A
+    tool renamed in place names its former self with `uv:`."""
+
     @property
     def owner(self) -> str | None:
         return owner_of(self.repo)
+
+    def problems(self) -> tuple[str, ...]:
+        return (*supersedes_problems(self.supersedes), *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)

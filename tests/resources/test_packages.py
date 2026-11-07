@@ -47,6 +47,7 @@ from dotfiles.providers import custom
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
 from dotfiles.providers import npm
+from dotfiles.providers import superseded
 from dotfiles.providers import syspkg
 from dotfiles.providers import uvtool
 from dotfiles.resources import Change
@@ -1673,6 +1674,22 @@ def test_the_apply_that_installs_a_replacement_deletes_the_go_binary_it_was_rena
 
     assert outcome.status is OutcomeStatus.DONE
     assert not old.exists()
+
+
+@pytest.mark.parametrize(
+    ('claimed', 'command'),
+    [('oldfrob', ['uv', 'tool', 'uninstall', 'oldfrob']), ('', None)],
+    ids=['uv-owns-it', 'another-program-of-that-name'],
+)
+def test_a_uv_row_under_a_former_name_takes_only_a_tool_uv_claims(
+    monkeypatch: pytest.MonkeyPatch, claimed: str, command: list[str] | None
+) -> None:
+    """A rename puts no second copy on PATH, so uv's receipt names the old one."""
+    monkeypatch.setattr(superseded, 'uv_tool_providing', lambda _name: claimed)
+
+    removal = superseded.under_former_name('uv', 'oldfrob')
+
+    assert (superseded.argv(removal) if removal else None) == command
 
 
 @pytest.mark.parametrize(('removes', 'status'), [(True, OutcomeStatus.DONE), (False, OutcomeStatus.FAILED)], ids=['removed', 'refused'])

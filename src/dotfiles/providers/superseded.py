@@ -16,6 +16,7 @@ from pathlib import Path
 from dotfiles import effects
 from dotfiles import paths
 from dotfiles.diagnose import Removal
+from dotfiles.diagnose import uv_tool_providing
 from dotfiles.effects import Output
 from dotfiles.privilege import Escalates
 from dotfiles.providers import Kind
@@ -48,6 +49,19 @@ def placed(installer: str, binary: str) -> Removal | None:
     if path.is_symlink() or not path.is_file():
         return None
     return Removal(installer, f'rm {paths.under_home(path, Path.home())}', binary, path=str(path))
+
+
+def under_former_name(installer: str, name: str) -> Removal | None:
+    """The copy a row names under a name its entry does not install as, where one is here.
+
+    uv keeps a receipt, so it is asked whether the tool is its own. That leaves any
+    other program of the same name alone, such as one a system package installs.
+    """
+    if installer in PLACED:
+        return placed(installer, name)
+    if installer == 'uv' and uv_tool_providing(name) == name:
+        return Removal('uv', f'uv tool uninstall {name}', name, path=str(bin_dir() / name))
+    return None
 
 
 def removable(removal: Removal) -> bool:

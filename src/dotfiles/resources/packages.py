@@ -407,7 +407,7 @@ def left_beside(session: Session, item: DesiredItem) -> list[diagnose.Removal]:
 
 
 def placed_beside(item: DesiredItem) -> list[diagnose.Removal]:
-    """The files the item's `go:` and `release:` rows name that are still on disk.
+    """The copies the item's `go:`, `release:` and `uv:` rows name that are still here.
 
     Looked up by name rather than found by `shadowing`, because a replacement
     under a new name is no second copy of anything: jactionlint's install never
@@ -417,7 +417,7 @@ def placed_beside(item: DesiredItem) -> list[diagnose.Removal]:
     return [
         removal
         for installer, binary in map(catalog.superseded_row, getattr(item.entry, 'supersedes', ()))
-        if installer in superseded.PLACED and binary != item.executable and (removal := superseded.placed(installer, binary))
+        if binary != item.executable and (removal := superseded.under_former_name(installer, binary))
     ]
 
 
