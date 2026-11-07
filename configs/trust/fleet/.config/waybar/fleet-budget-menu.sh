@@ -13,7 +13,7 @@ rofi -dmenu -no-custom -mesg "$(jq -r '.heading' <<<"$budget")" -theme-str "
   configuration { font: \"JetBrainsMono Nerd Font 22\"; }
   window { location: north west; anchor: north west; x-offset: ${pointer_x}px; y-offset: 4px; width: $((widest < 60 ? 66 : widest + 6))ch; }
   mainbox { children: [message, listview]; }
-  message { padding: 0 0 12px 0; }
+  message { padding: 0 20px 12px 50px; }
   textbox { text-color: @fg; background-color: transparent; }
   listview { lines: ${row_count}; scrollbar: false; spacing: 0; }
   element { padding: 1px 8px; }
