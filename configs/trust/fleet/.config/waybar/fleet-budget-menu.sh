@@ -10,8 +10,8 @@ row_count=$(wc -l <<<"$rows")
 pointer_x=$(hyprctl cursorpos -j | jq '.x')
 
 rofi -dmenu -no-custom -mesg "$(jq -r '.heading' <<<"$budget")" -theme-str "
-  configuration { font: \"JetBrainsMono Nerd Font 22\"; }
-  window { location: north west; anchor: north west; x-offset: ${pointer_x}px; y-offset: 4px; width: $((widest < 60 ? 66 : widest + 6))ch; }
+  configuration { font: \"JetBrainsMono Nerd Font 11\"; }
+  window { location: north west; anchor: north west; x-offset: ${pointer_x}px; y-offset: 4px; width: $((widest < 60 ? 72 : widest + 12))ch; }
   mainbox { children: [message, listview]; }
   message { padding: 0 20px 12px 50px; }
   textbox { text-color: @fg; background-color: transparent; }

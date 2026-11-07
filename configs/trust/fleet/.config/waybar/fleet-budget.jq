@@ -1,5 +1,6 @@
 # Formats a budget reading as waybar's {text, class}, and as the heading and rows
-# fleet-budget-menu.sh opens.
+# fleet-budget-menu.sh opens. $status_line is the status line's budget text, in its
+# terminal colors, and the module's class gives the bar its color instead.
 
 def epoch: sub("\\.[0-9]+"; "") | fromdateiso8601;
 def clock: epoch | strflocaltime("%a %H:%M");
@@ -47,7 +48,7 @@ def out_text:
   + (if ($waiting | length) > 0 then ["", "waiting on the budget"] + ($waiting | map("  \(.)")) else [] end)
   ) as $rows
 | {
-    text: "Fleet Budget \($whole.label) · \($whole.above_pct | round)% left · burn \($whole.combined.actual_pct_per_hour | rate) · refill \($whole.next_refill_at | span)",
+    text: ($status_line | gsub("\u001b\\[[0-9;]*m"; "") | if . == "" then "Fleet Budget ?" else @html end),
     heading: ("\($whole.label): \($whole.why)" | @html),
     rows: $rows,
     class: ([$whole.label | gsub(" "; "-")] + (if .paused then ["paused"] else [] end))
