@@ -5,18 +5,30 @@
 # its class. fleet reads the same class to record the window the key was pressed over.
 #
 # Usage:
-#   fleet-capture-window           Open the window
-#   fleet-capture-window --write   Inside it, write the note and report a failure
+#   fleet-capture-window                    Keep the screen, then open the window
+#   fleet-capture-window --write [SCREEN]   Inside it, write the note and report a failure
 
 set -euo pipefail
 
 if [[ "${1:-}" != "--write" ]]; then
-  exec ghostty --class=fleet.inbox.capture -e "$0" --write
+  screens="${XDG_STATE_HOME:-$HOME/.local/state}/fleet/capture-screens"
+  mkdir -p "$screens"
+  chmod 700 "$screens"
+  screen="$screens/$(date -u +%Y%m%dT%H%M%S%3NZ).jpg"
+  # Taken before the window exists, so the note is not in the shot. A desk with
+  # no screenshot still gets its note.
+  grim -t jpeg -q 80 "$screen" || screen=""
+  exec ghostty --class=fleet.inbox.capture -e "$0" --write "$screen"
 fi
 
 failure=$(mktemp)
 trap 'rm -f "$failure"' EXIT
 
+screen_flag=()
+if [[ -n "${2:-}" ]]; then
+  screen_flag=(--screen "$2")
+fi
+
 # The window closes when this exits, so a failure has to outlive it.
-VISUAL="nvim +startinsert" fleet inbox capture note 2>"$failure" \
+VISUAL="nvim +startinsert" fleet inbox capture note "${screen_flag[@]}" 2>"$failure" \
   || notify-send "fleet inbox capture" "$(<"$failure")"
