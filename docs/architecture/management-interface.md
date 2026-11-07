@@ -182,7 +182,7 @@ about the machine.
 
 `plugins/typos.lua` is the counter-example, and worth keeping in mind before
 reaching for this vocabulary at all. It was `PLATFORM ~= 'wsl'`, then
-`MACHINE_ROLE ~= 'work'`, then a test for `~/notes` — each one a label standing
+`MACHINE_ROLE ~= 'work'`, then a test for a notes directory — each one a label standing
 in for a condition that turned out not to need expressing. It is an unconditional
 remote spec: capture is scoped to `notes_root`, so a machine without one writes
 nothing, and `setup()` creates no directories. The gate existed only because a

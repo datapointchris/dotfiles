@@ -306,7 +306,7 @@ def describe(config: Config, env_file: Path) -> tuple[Setting, ...]:
     resolved value reports which layer set it.
 
     The value is expanded, because the question this answers is what the tool will
-    do rather than what someone typed: `repos_registry = "~/dev/repos.json"` is a
+    do rather than what someone typed: `repos_registry = "~/code/repos.json"` is a
     perfectly ordinary thing to write in the config file, and printing it back
     unexpanded answers a question nobody asked.
     """
