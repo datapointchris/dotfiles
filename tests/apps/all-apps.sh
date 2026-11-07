@@ -25,6 +25,14 @@ set -euo pipefail
 # modeling WSL, and then failed on a coordinate directory that machine never
 # deploys. It cannot answer the trust or capacity axes at all, because nothing on
 # a box knows them.
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+
+# A commit made where dotfiles was never deployed, such as a fix in a pod, has no machine to test.
+if [[ ! -f "$HOME/.env" && ! -d "$SHELL_DIR" ]]; then
+  echo "Nothing is deployed here: no ~/.env and no $SHELL_DIR, so there is no machine to test."
+  exit 0
+fi
+
 if [[ -f "$HOME/.env" ]]; then
   # shellcheck disable=SC1091
   source "$HOME/.env"
@@ -34,8 +42,6 @@ if [[ -z "${MACHINE:-}" ]]; then
   echo "ERROR: ~/.env does not declare this machine. Run: dotfiles env apply"
   exit 1
 fi
-
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 
 # Whether the machine deploys a given `<axis>/<value>` layer, asked of the
 # deployed tree. `dotfiles symlinks apply` deploys the directories this machine's
