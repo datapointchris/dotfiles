@@ -52,6 +52,15 @@ hl.window_rule({
   center = true,
 })
 
+-- The note SUPER+C opens; fleet reads this class too, so a rename changes both
+hl.window_rule({
+  name = 'fleet-capture-window',
+  match = { class = '^(fleet\\.inbox\\.capture)$' },
+  float = true,
+  center = true,
+  size = 'monitor_w*0.33 monitor_h*0.33',
+})
+
 -- Rofi already floats; this keeps keyboard focus on it
 hl.window_rule({
   name = 'rofi',

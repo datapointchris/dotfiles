@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# fleet-capture-window - Open a floating Ghostty on a fleet inbox capture note
+#
+# SUPER+C runs this on Hyprland, whose window rule floats and centers the window by
+# its class. fleet reads the same class to record the window the key was pressed over.
+#
+# Usage:
+#   fleet-capture-window           Open the window
+#   fleet-capture-window --write   Inside it, write the note and report a failure
+
+set -euo pipefail
+
+if [[ "${1:-}" != "--write" ]]; then
+  exec ghostty --class=fleet.inbox.capture -e "$0" --write
+fi
+
+failure=$(mktemp)
+trap 'rm -f "$failure"' EXIT
+
+# The window closes when this exits, so a failure has to outlive it.
+VISUAL="nvim +startinsert" fleet inbox capture note 2>"$failure" \
+  || notify-send "fleet inbox capture" "$(<"$failure")"
