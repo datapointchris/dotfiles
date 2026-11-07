@@ -30,9 +30,13 @@ def pad($width): . + (" " * ([$width - length, 0] | max));
 def pad_left($width): (" " * ([$width - length, 0] | max)) + .;
 def out_text:
   if . == "refused" then "refused" elif . == "on_reserve" then "on reserve" else "out" end;
+# What a week is forecast to leave past its target with the surplus list spending.
+def past_target:
+  if .pace.landing_pct == null then 0 else [(.lands_with_surplus_pct // 0) - .pace.landing_pct, 0] | max end;
 
 .timeline.whole_budget as $whole
 | [.timeline.weeks[] | select(.current)] as $weeks
+| ($weeks | map(past_target * (.pace.scale_to_largest // 1)) | add // 0) as $lapses
 | ([$weeks[].account_name | length] | max // 0) as $name_width
 | ($weeks | map(
     "\(.account_name | pad($name_width))  \(.left_pct | round | tostring | pad_left(3))% left"
@@ -40,7 +44,7 @@ def out_text:
     + (if .level == 0 then "  \(.out_reason | out_text)"
        elif .level == null then ""
        else "  \(.label), queue \(.pace.rate_pct_per_hour | rate)" end)
-    + (if .lapse_pct >= 1 then ", lapses \(.lapse_pct | round)%" else "" end))) as $plans
+    + (if past_target >= 1 then ", lapses \(past_target | round)%" else "" end))) as $plans
 | ([.held.jobs[]? | select(.waiting) | .name]) as $waiting
 | (if $whole.combined.window_hours then "over \($whole.combined.window_hours)h" else "lately" end) as $lately
 | ([
@@ -50,7 +54,7 @@ def out_text:
     ""
   ] + $plans + [
     "",
-    "next refill \($whole.next_refill_at | clock)" + (if $whole.lapse_pct >= 1 then ", \($whole.lapse_pct | round)% lapses at the resets" else "" end)
+    "next refill \($whole.next_refill_at | clock)" + (if $lapses >= 1 then ", \($lapses | round)% lapses at the resets" else "" end)
   ]
   + (if $whole.first_shortage_at then ["sessions run \($whole.short_pct | round)% short from \($whole.first_shortage_at | clock)"] else [] end)
   + (if .paused then ["paused by \(.paused.by): \(.paused.reason)"] else [] end)
