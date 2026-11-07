@@ -6,7 +6,7 @@
 
 ### 1. Go Apps (Remote Install via `go install`)
 
-**Examples**: `todoui`, `forge`
+**Examples**: `projects`, `forge`
 
 **Installation**: declared in `install/packages.yml` under `go_tools` and installed with
 `go install` by `src/dotfiles/providers/gotool.py`.

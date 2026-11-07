@@ -2,7 +2,7 @@
 # composes this file, so a CLI added here also reaches a box that takes every one.
 
 go_tools:
-  - todoui
+  - projects
   - tmux-tree-editor
   - read-markdown
 

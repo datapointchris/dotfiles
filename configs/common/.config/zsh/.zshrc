@@ -409,7 +409,7 @@ cache_completion gh gh completion -s zsh
 
 # Own cobra tools.
 cache_completion forge forge completion zsh
-cache_completion todoui todoui completion zsh
+cache_completion projects projects completion zsh
 cache_completion icb icb completion zsh
 cache_completion learning learning completion zsh
 cache_completion meso meso completion zsh

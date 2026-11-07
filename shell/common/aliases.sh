@@ -94,6 +94,8 @@ alias watchports='watch -n 1 -d lsof -iTCP -sTCP:LISTEN -n -P'
 
 # ---------- Miscellaneous ---------- #
 
+alias pj='projects'
+
 # ---------- Git ---------- #
 
 # Git - different from alias in gitconfig where these don't have to use `git` first

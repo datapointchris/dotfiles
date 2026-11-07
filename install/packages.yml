@@ -1853,11 +1853,15 @@ go_tools:
     binary_pattern: "sesh_{Os}_{Arch}.tar.gz"
     description: Smart tmux session manager with zoxide integration
 
-  - name: todoui
-    package: github.com/datapointchris/todoui
-    github_repo: datapointchris/todoui
-    binary_pattern: "todoui_{version_num}_{os}_{go_arch}.tar.gz"
+  # `supersedes` deletes the binary this was installed as under its former name.
+  # One run of that binary after the data moves creates an empty database at the
+  # old path, and this tool then stops until the file is gone.
+  - name: projects
+    package: github.com/datapointchris/projects
+    github_repo: datapointchris/projects
+    binary_pattern: "projects_{version_num}_{os}_{go_arch}.tar.gz"
     description: Project organization and task management with local-first SQLite
+    supersedes: ['go:todoui']
 
   # `supersedes` deletes the glow binary this took over from.
   - name: read-markdown

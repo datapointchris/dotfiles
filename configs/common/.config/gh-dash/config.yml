@@ -158,6 +158,7 @@ repoPaths:
     datapointchris/object-detection-keras-unet: ~/code/python-projects/object-detection-keras-unet
     datapointchris/parquet: ~/code/python-projects/parquet
     datapointchris/post-shift: ~/code/sql/post-shift
+    datapointchris/projects: ~/webapps/projects
     datapointchris/psyche: ~/tools/psyche
     datapointchris/pyclisteno: ~/tools/pyclisteno
     datapointchris/pyselfupdate: ~/tools/pyselfupdate
@@ -177,7 +178,6 @@ repoPaths:
     datapointchris/terminal-library: ~/.local/share/terminal-library
     datapointchris/theme: ~/tools/theme
     datapointchris/timeline: ~/webapps/timeline
-    datapointchris/todoui: ~/tools/todoui
     datapointchris/tomato-blocks: ~/code/python-projects/tomato-blocks
     datapointchris/typos: ~/code/typos
     datapointchris/verbal-morality: ~/code/python-projects/verbal-morality
