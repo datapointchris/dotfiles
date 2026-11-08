@@ -41,6 +41,7 @@ and every adapter answers the same ones.
   muxctl pane open worker --name ph3 --cwd DIR -- claude '...'
   muxctl pane status ph3
   muxctl pane read ph3 --lines 40 --color
+  muxctl pane focus %89               show that pane on this client
   muxctl pane close ph3
 
 Adapters, in the order they are tried:

@@ -10,6 +10,7 @@
     tmuxctl pane plan reviewer --for %26  where its reviewer would go
     tmuxctl pane open worker -- <cmd>     make the pane and run <cmd> in it
     tmuxctl pane release                  drop the marks this tool wrote
+    tmuxctl pane focus %89                show that pane on this client
     tmuxctl coordinator claim billing     name this pane's window billing-coordinator
 
 This is the tmux adapter for the port `muxctl` routes to. Callers name `muxctl`
@@ -200,6 +201,7 @@ class Refusal(StrEnum):
     BAD_LINES = 'bad_lines'
     BAD_SUBJECT = 'bad_subject'
     BAD_PER_WINDOW = 'bad_per_window'
+    NO_CLIENT = 'no_client'
 
 
 REFUSALS: dict[Refusal, str] = {
@@ -219,6 +221,7 @@ REFUSALS: dict[Refusal, str] = {
     Refusal.BAD_LINES: '--lines takes a count of lines, and {lines} is not one',
     Refusal.BAD_SUBJECT: '{subject!r} is not a usable subject: letters, digits, dot, dash and underscore, starting with a letter or digit',
     Refusal.BAD_PER_WINDOW: '--per-window takes how many workers share a window, one or more, and {count} is not one',
+    Refusal.NO_CLIENT: 'no tmux client is attached here, so nothing would show {pane}',
 }
 
 
@@ -1658,6 +1661,30 @@ def cmd_read(address: str, lines: int | None, color: bool, strip: bool, as_json:
     return 0
 
 
+def cmd_focus(address: str, as_json: bool) -> int:
+    """Show a pane on the client this ran under: its session, its window and the pane.
+
+    One `switch-client -t %id` moves all three, wherever the pane has gone since
+    it opened, because a pane id survives every move a window index does not.
+
+    The client is read first and named outright. With none attached,
+    `switch-client` says only "no current client", and a caller deserves to hear
+    that nothing would show the pane.
+    """
+    pane_id = resolve(address)
+    if pane_state(pane_id)[0] is PaneState.GONE:
+        raise Usage(Refusal.NO_SUCH_PANE, pane=address)
+    client = (tmux_read('display-message', '-p', '#{client_name}') or '').strip()
+    if not client:
+        raise Usage(Refusal.NO_CLIENT, pane=pane_id)
+    tmux('switch-client', '-c', client, '-t', pane_id)
+    if as_json:
+        emit({'pane': pane_id, 'handle': handle_of(pane_id), 'client': client})
+    else:
+        print(pane_id)
+    return 0
+
+
 def cmd_close(address: str, as_json: bool) -> int:
     """Destroy a pane, and drop the marks that would outlive it.
 
@@ -1687,6 +1714,7 @@ EXAMPLES = """examples:
                                              put an agent there, with phase-3 on its window
   tmuxctl pane plan reviewer --for ph3       where ph3's reviewer would go: directly below it
   tmuxctl pane status ph3                    running, dead with a code, or gone
+  tmuxctl pane focus ph3                     show ph3 on this client, wherever it is
   tmuxctl pane release ph3                   stop treating ph3 as a pane this tool placed
   tmuxctl coordinator claim billing          make this pane the coordinator, in billing-coordinator
 
@@ -1807,6 +1835,14 @@ def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
     reading.add_argument('--strip', action='store_true', help='drop blank lines, for reading what a dead pane printed')
     reading.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
+    focusing = command(
+        'focus',
+        'show a pane on this client',
+        "Switch the client this runs under to the pane's session, window and pane, wherever the pane has moved.",
+    )
+    focusing.add_argument('address', metavar='ADDRESS', help=ADDRESS)
+    focusing.add_argument('--json', action='store_true', help='machine-readable output on stdout')
+
     closing = command('close', 'destroy a pane', 'Kill a pane and drop the marks that would otherwise outlive it.')
     closing.add_argument('address', metavar='ADDRESS', help=ADDRESS)
     closing.add_argument('--json', action='store_true', help='machine-readable output on stdout')
@@ -1886,6 +1922,7 @@ PANE_VERBS = {
     'open': cmd_open,
     'status': lambda args: cmd_status(args.address, args.json),
     'read': lambda args: cmd_read(args.address, args.lines, args.color, args.strip, args.json),
+    'focus': lambda args: cmd_focus(args.address, args.json),
     'close': lambda args: cmd_close(args.address, args.json),
     'release': lambda args: cmd_release(args.panes, args.json),
 }

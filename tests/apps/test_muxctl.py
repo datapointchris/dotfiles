@@ -30,7 +30,7 @@ TMUXCTL = REPO / 'apps' / 'common' / 'tmuxctl'
 
 needs_tmux = pytest.mark.interpreter('tmux')
 
-PORT_VERBS = ('list', 'current', 'plan', 'open', 'status', 'read', 'close', 'release')
+PORT_VERBS = ('list', 'current', 'plan', 'open', 'status', 'read', 'focus', 'close', 'release')
 """Every verb the port defines. An adapter answering fewer is not one."""
 
 PLACEMENT_KEYS = frozenset({'handle', 'pane', 'window', 'role', 'pair', 'width', 'height', 'readable', 'opened_window', 'how'})
