@@ -234,6 +234,7 @@ required:
       - configs/trust/fleet/.config/icb/config.toml.tmpl
       - configs/trust/fleet/.config/ifiles/config.toml.tmpl
       - configs/trust/fleet/.config/learning/config.toml.tmpl
+      - configs/trust/fleet/.config/life/config.toml.tmpl
       - configs/trust/fleet/.config/meso/config.toml.tmpl
       - configs/trust/fleet/.config/nomad/config.toml.tmpl
       - configs/trust/fleet/.config/projects/config.toml.tmpl
@@ -253,6 +254,7 @@ required:
       - configs/trust/fleet/.config/homelab/config.toml.tmpl
       - configs/trust/fleet/.config/icb/config.toml.tmpl
       - configs/trust/fleet/.config/learning/config.toml.tmpl
+      - configs/trust/fleet/.config/life/config.toml.tmpl
       - configs/trust/fleet/.config/meso/config.toml.tmpl
       - configs/trust/fleet/.config/nomad/config.toml.tmpl
       - configs/trust/fleet/.config/projects/config.toml.tmpl
