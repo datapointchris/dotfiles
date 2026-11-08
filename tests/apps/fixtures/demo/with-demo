@@ -1,7 +1,0 @@
-#!/bin/sh
-# Run any command against the fake provider: the stubs beside this file go first
-# on PATH, so `pull-requests` resolves a fixture registry and talks to a stub gh
-# and a stub bbkt. Everything downstream is the real code.
-#
-#   with-demo pull-requests   the JSON
-exec env PATH="$(cd "$(dirname "$0")" && pwd):$PATH" "$@"

@@ -31,9 +31,9 @@ not survive a reload.
 
 - `--listen=<path>.sock` needs the suffix to be read as a socket. A Unix socket accepts
   `reload` without `--listen-unsafe`.
-- A reload that blanks the list is the failure to design against. `pull-requests` answers `[]`
-  and exit 0 with a warning on stderr when a provider is unreachable, so an empty listing with
-  a warning has to keep the old rows. A laptop losing its network reaches that path.
+- A reload that blanks the list is the failure to design against. A lister that answers `[]`
+  and exit 0 with a warning on stderr when a provider is unreachable gives an empty listing that
+  has to keep the old rows. A laptop losing its network reaches that path.
 - A choice can arrive for a row fzf has not replaced yet, so resolve rows against every PR seen
   this run, keyed by `slug#number`, never against the latest list by index.
 - *Rejected:* fzf 0.73's `every(N)` event with `bg-transform`. It removes the thread and the
