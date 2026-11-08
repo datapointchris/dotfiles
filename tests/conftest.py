@@ -118,17 +118,8 @@ def answerable_names() -> tuple[str, ...]:
     return tuple(sorted(set(declared_names()) | set(settings.SHARED_PATHS) | twins))
 
 
-GIT_LOCATION = (
-    'GIT_DIR',
-    'GIT_WORK_TREE',
-    'GIT_COMMON_DIR',
-    'GIT_INDEX_FILE',
-    'GIT_OBJECT_DIRECTORY',
-    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
-    'GIT_PREFIX',
-    'GIT_NAMESPACE',
-)
-"""The variables that decide *which repository* a `git` command acts on.
+GIT_LOCATION = tuple(subprocess.run(['git', 'rev-parse', '--local-env-vars'], capture_output=True, text=True, check=True).stdout.split())
+"""The variables that decide *which repository* a `git` command acts on, as git itself lists them.
 
 Dropped for the whole session, because a dozen fixtures build a throwaway repo in
 `tmp_path` and every one of them would otherwise operate on the caller's.

@@ -40,6 +40,14 @@ tasks:
     cmds:
       - uv run pytest tests/e2e --docker {{.CLI_ARGS}}
 
+  # Each spec drives a clean headless Neovim against the config's own Lua and the
+  # plugins lazy installed, and exits non-zero on a failure. Every spec runs, so
+  # one run reports each that failed.
+  test:nvim:
+    desc: The nvim config's Lua specs, each in a headless Neovim
+    cmds:
+      - status=0; for spec in tests/nvim/*_spec.lua; do nvim --headless -u NONE -l "$spec" || status=1; done; exit $status
+
   test:watch:
     desc: Re-run the suite on file changes (requires entr)
     cmds:
