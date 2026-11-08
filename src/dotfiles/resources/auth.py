@@ -471,6 +471,7 @@ PROBES: dict[str, Probe] = {
     'learning': keychain_cli('learning'),
     'meso': keychain_cli('meso'),
     'nomad': keychain_cli('nomad'),
+    'projects': keychain_cli('projects'),
     'slate': keychain_cli('slate', login='slate auth login "https://slate.$HOMELAB_DOMAIN" --client-id "slate-$OAUTH_CLIENT_SUFFIX"'),
     'ypl': keychain_cli('ypl'),
     'atuin': atuin,

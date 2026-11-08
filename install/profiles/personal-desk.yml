@@ -27,5 +27,6 @@ auth:
   - learning
   - meso
   - nomad
+  - projects
   - slate
   - ypl
