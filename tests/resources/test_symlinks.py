@@ -622,6 +622,21 @@ def test_a_template_lands_without_its_suffix_holding_this_machine_s_value(sessio
     assert changes(session) == ()
 
 
+def test_a_shared_path_renders_as_its_config_names_it_rather_than_as_the_shell_export(
+    session: Session, repo: Path, home: Path, no_ambient_answer: Path
+) -> None:
+    """`~/.env` carries `$HOME/repos.json`, which a program reading the file cannot open."""
+    declare(repo, APP_TEMPLATE, 'repos_registry: "${REPOS_REGISTRY}"\n')
+    config = no_ambient_answer / 'dotfiles' / 'config.toml'
+    config.parent.mkdir(parents=True)
+    config.write_text('repos_registry = "~/repos.json"\n')
+    session.env_file.write_text('export REPOS_REGISTRY="${REPOS_REGISTRY:-$HOME/repos.json}"\n')
+
+    apply(session)
+
+    assert rendered_target(home).read_text() == 'repos_registry: "~/repos.json"\n'
+
+
 def test_an_unset_value_is_named_and_nothing_is_written(session: Session, repo: Path, home: Path) -> None:
     declare(repo, APP_TEMPLATE, TEMPLATE_TEXT)
 

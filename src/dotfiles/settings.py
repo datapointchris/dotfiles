@@ -245,21 +245,23 @@ def resolve_all(names: Iterable[str], config: Config) -> Resolved:
 def answer(declared: str, on_file: Mapping[str, str], resolved: Resolved) -> str:
     """What this machine supplies for one register name, or '' where it supplies nothing.
 
-    `~/.env` first, and for a name outside `SHARED_PATHS` it is the only place
-    asked. The other rung such a name has is an ambient variable, which belongs to
-    the shell this run started in rather than to the machine. Accepting it reports
-    a box converged while its `~/.env` says nothing, and the next process finds
-    nothing either.
+    A name in `SHARED_PATHS` asks its own rungs first. Its line in `~/.env` is the
+    copy `env apply` exports from them, in a shell's spelling: `~/x` becomes
+    `$HOME/x`. A template is read by a program rather than a shell, so it takes
+    the rung's own `~/x`, and the same path `repos-registry` prints.
+
+    Any other name asks `~/.env` alone. The other rung such a name has is an
+    ambient variable, which belongs to the shell this run started in rather than to
+    the machine. Accepting it reports a box converged while its `~/.env` says
+    nothing, and the next process finds nothing either.
 
     The env check and the template renderer both call this. With two copies, a
     value answered in `~/.config/dotfiles/config.toml` could satisfy `check` and
     still leave a template unrendered.
     """
-    if value := on_file.get(declared):
-        return value
     if declared in SHARED_PATHS and (found := resolved.of(declared)):
         return found.value
-    return ''
+    return on_file.get(declared, '')
 
 
 def where_to_name(declared: str, env_file: Path) -> str:
