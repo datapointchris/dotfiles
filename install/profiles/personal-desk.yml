@@ -23,8 +23,8 @@ github_releases:
 auth:
   - doit
   - homelab
-  - icb
   - learning
+  - life
   - meso
   - nomad
   - projects

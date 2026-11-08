@@ -346,14 +346,14 @@ def test_auth_show_lists_the_roster_that_check_reports_one_row_of(sandbox: Sandb
     lists every declared tool with what asking found is a different verb rather
     than a flag on that one.
     """
-    sandbox.shadow('icb', LOGGED_IN)
+    sandbox.shadow('life', LOGGED_IN)
     sandbox.shadow('meso', LOGGED_OUT)
-    declares(sandbox, 'icb', 'meso')
+    declares(sandbox, 'life', 'meso')
 
     ran = cli('auth', 'show', '--json')
 
     assert ran.document == {
-        'icb': {'verdict': 'matched', 'detail': 'Logged in as synthetic'},
+        'life': {'verdict': 'matched', 'detail': 'Logged in as synthetic'},
         'meso': {'verdict': 'missing', 'detail': 'the OS keychain holds no token'},
     }
 
@@ -361,13 +361,13 @@ def test_auth_show_lists_the_roster_that_check_reports_one_row_of(sandbox: Sandb
 def test_auth_show_keeps_the_roster_in_the_order_the_manifest_wrote_it(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Declaration order, not sorted, so the rows read as the `auth:` list with the
     logged-out ones lifted out of it."""
-    for tool in ('nomad', 'icb', 'meso'):
+    for tool in ('nomad', 'life', 'meso'):
         sandbox.shadow(tool, LOGGED_IN)
-    declares(sandbox, 'nomad', 'icb', 'meso')
+    declares(sandbox, 'nomad', 'life', 'meso')
 
     ran = cli('auth', 'show', '--json')
 
-    assert list(ran.document) == ['nomad', 'icb', 'meso']
+    assert list(ran.document) == ['nomad', 'life', 'meso']
 
 
 def test_auth_show_says_so_when_a_machine_declares_no_tools(

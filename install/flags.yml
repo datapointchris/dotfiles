@@ -231,7 +231,6 @@ required:
     consumers:
       - configs/trust/fleet/.config/fleet/config.toml.tmpl
       - configs/trust/fleet/.config/homelab/config.toml.tmpl
-      - configs/trust/fleet/.config/icb/config.toml.tmpl
       - configs/trust/fleet/.config/ifiles/config.toml.tmpl
       - configs/trust/fleet/.config/learning/config.toml.tmpl
       - configs/trust/fleet/.config/life/config.toml.tmpl
@@ -252,7 +251,6 @@ required:
     consumers:
       - configs/trust/fleet/.config/fleet/config.toml.tmpl
       - configs/trust/fleet/.config/homelab/config.toml.tmpl
-      - configs/trust/fleet/.config/icb/config.toml.tmpl
       - configs/trust/fleet/.config/learning/config.toml.tmpl
       - configs/trust/fleet/.config/life/config.toml.tmpl
       - configs/trust/fleet/.config/meso/config.toml.tmpl
@@ -382,7 +380,7 @@ required_files:
   # both: nothing carries this directory, so there is no link for the
   # replication to carry.
   #
-  # It is unlike gh, icb, nomad and meso in the way that matters, though. Those
+  # It is unlike gh, life, nomad and meso in the way that matters, though. Those
   # mint their own token through a browser and a rebuilt desk runs `auth login`;
   # ntfy has no such flow, so nothing here can regenerate itself and the only
   # answer to "where does it come back from" is the vault.

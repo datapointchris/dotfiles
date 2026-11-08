@@ -28,7 +28,7 @@ from dotfiles.resources import Verdict
 from dotfiles.resources import auth
 from dotfiles.session import Session
 
-KEYCHAIN_CLIS = ('doit', 'homelab', 'icb', 'learning', 'meso', 'nomad', 'projects', 'slate', 'ypl')
+KEYCHAIN_CLIS = ('doit', 'homelab', 'learning', 'life', 'meso', 'nomad', 'projects', 'slate', 'ypl')
 
 
 def executable(directory: Path, name: str, script: str = '#!/bin/sh\nexit 0\n') -> Path:
@@ -177,9 +177,9 @@ def test_a_keychain_cli_is_asked_with_status_rather_than_token(xdg: Path, fake_b
     the machine where the answer is yes — the inverse of what `gh` wants, which is
     why this is pinned rather than left to the next reader's intuition."""
     log = xdg / 'asked'
-    executable(fake_bin, 'icb', f'#!/bin/sh\necho "$@" >> {log}\nexit 0\n')
+    executable(fake_bin, 'life', f'#!/bin/sh\necho "$@" >> {log}\nexit 0\n')
 
-    changes(build(xdg, 'icb'))
+    changes(build(xdg, 'life'))
 
     assert log.read_text().split() == ['auth', 'status']
 
@@ -289,9 +289,9 @@ def test_the_row_counts_the_credentials_found_rather_than_claiming_all_are(xdg: 
     """This resource reaches its converged sentence under `plan` whatever it found,
     because nothing here is ever actionable — so a summary asserting every tool is
     authenticated would contradict the rows printed right above it."""
-    executable(fake_bin, 'icb', '#!/bin/sh\nexit 0\n')
+    executable(fake_bin, 'life', '#!/bin/sh\nexit 0\n')
     executable(fake_bin, 'meso', '#!/bin/sh\nexit 1\n')
-    session = build(xdg, 'icb', 'meso')
+    session = build(xdg, 'life', 'meso')
 
     observed = auth.RESOURCE.observe(session, session.plan)
 

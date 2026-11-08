@@ -413,7 +413,7 @@ system_packages:
     description: Modern file encryption tool (used by sops)
 
   # macOS has Keychain; this is the Secret Service provider Linux CLIs
-  # (icb, learning, nomad, meso) store their Authelia bearer token in.
+  # (life, learning, nomad, meso) store their Authelia bearer token in.
   - name: gnome-keyring
     pacman: gnome-keyring
     description: Secret Service provider for storing credentials
@@ -1095,11 +1095,15 @@ github_releases:
   # through the REST asset endpoint with a token — and says so with
   # `requires_github_auth: true`, which is also what stops verification reporting
   # a correctly-installed machine with no credentials as a broken one.
-  - name: icb
+  #
+  # `supersedes` removes the binary this CLI was released as under its former
+  # name.
+  - name: life
     repo: datapointchris/ichrisbirch
     release_tag_prefix: "cli/"
-    description: Tasks, habits, books, projects, articles, events, countdowns, recipes
+    description: Tasks, habits, books, articles, events, countdowns, recipes
     tags: [cli, personal]
+    supersedes: ['release:icb']
 
   - name: learning
     repo: datapointchris/learning
