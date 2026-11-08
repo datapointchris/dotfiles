@@ -1,22 +1,14 @@
 # projects — machine config.
 #
-# The twin of the copy in the other trust domain, differing only in where the
-# registry lives. A machine in this domain has neither the shared directory nor
-# the library clone; it keeps its own registry, listing its own work, at the XDG
-# config path every machine has.
+# A machine in this domain works in database mode: no api key, so every command
+# reads and writes the SQLite database under ~/.local/share/projects, and nothing
+# written here travels to an API. A personal task list reaching a domain from a
+# managed machine sends personal data across a monitored egress, authenticated as
+# me, which is the arrangement data-loss monitoring is built to notice. The atuin
+# config follows the same standing rule.
 #
-# A bare key, so it has to stay above the first [section] — TOML reads anything
-# after one as belonging to it.
+# The machine has neither the shared directory nor the library clone, so it keeps
+# its own registry, listing its own work, at the XDG config path every machine
+# has. A bare key, so it stays above any [section] added later — TOML reads
+# anything after one as belonging to it.
 repos_registry = "~/.config/repos.json"
-
-# Sync is off here and on in the other copy. A personal task list syncing from a
-# managed machine sends personal data across a monitored egress to a domain that
-# is nobody's business but mine, authenticated as me — which is the arrangement
-# data-loss monitoring is built to notice, and it is the same standing rule the
-# atuin config follows: nothing written on this box travels back.
-#
-# The URL stays so the file still says where sync would go. There is no
-# token_command, because the CLI that prints the token is not installed here.
-[sync]
-enabled = false
-api_url = "https://ichrisbirch.com"
