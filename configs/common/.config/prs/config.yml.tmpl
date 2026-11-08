@@ -10,7 +10,8 @@ repos_registry: "${REPOS_REGISTRY}"
 
 # The two Claude keys, offered only where claude is on PATH, which a network
 # that blocks claude.ai leaves uninstalled. Each opens a tmux window in the pull
-# request's checkout.
+# request's checkout. r runs a review round, so the row reads claude running
+# while its window is open.
 window_actions:
   - key: r
     label: claude review
@@ -19,6 +20,7 @@ window_actions:
     providers: [github]
     window: "review {repo} #{number}"
     command: "claude --permission-mode bypassPermissions '/review-pr {number}'"
+    runs_review_round: true
   - key: C
     label: claude explain
     detail: a Claude window running /explain-code-changes on it
