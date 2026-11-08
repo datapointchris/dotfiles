@@ -28,3 +28,20 @@ window_actions:
     providers: [github]
     window: "explain {repo} #{number}"
     command: "claude --permission-mode bypassPermissions '/explain-code-changes #{number}'"
+
+# The recaps tab, drawn only where every program in needs is on PATH, so a
+# machine without them draws none. list sorts, because the recap listing puts
+# the oldest window first with days and weeks mixed. pipefail makes a failure
+# ahead of the pipe fail the list, which jq's exit would otherwise read as no
+# recap written. write is a model call, which prs asks before running.
+recaps:
+  needs: [fleet, jq]
+  list:
+    - sh
+    - -c
+    - >-
+      set -o pipefail;
+      fleet ledger recap --since 90d --json
+      | jq -r 'sort_by(.window.since) | reverse | .[].window | "\(.kind) \(.label)"'
+  show: [fleet, ledger, recap, "--{kind}", "{label}"]
+  write: [fleet, agents, dispatch, recap, "--{kind}", "{label}"]
