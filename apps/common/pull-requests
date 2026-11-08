@@ -16,8 +16,7 @@
 
     pull-requests [--registry FILE]
 
-The one implementation, and it prints JSON and nothing else. `prs` renders it as
-a picker, so no shape lives here.
+It prints JSON and nothing else, so no shape lives here.
 
 Lives in dotfiles rather than in fleet because fleet is not installed on every
 machine and this has to be. The registry is: repos.json says which repos exist
@@ -415,7 +414,6 @@ EXAMPLES = (
     ("pull-requests | jq -r '.[].url'", 'just the links, to open or paste'),
     ('pull-requests --registry ~/work/repos.json', 'a registry other than this one'),
     ('prs list', 'the same rows, as a table to read'),
-    ('prs', 'the same rows, as a picker'),
 )
 
 OPTIONS = (

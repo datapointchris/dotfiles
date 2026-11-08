@@ -98,6 +98,7 @@ status bar color the same way it owns `pane-border-format`.
 | `prefix s` | sesh picker — open a session, or make one from a directory |
 | `prefix w` | Find a window in any session |
 | `prefix .` | Move the focused window into another session (tmux default) |
+| `prefix p` | The `prs` session, or back to the session you left it from |
 
 Both pairs repeat by holding Alt rather than re-arming a leader, and both are unprefixed because
 moving around is the most frequent action of the day.
@@ -296,6 +297,14 @@ hand-tuned window whose panes get split across sessions loses its layout permane
 layout string encodes pane ids and the old geometry; only the per-pane fraction transfers, and only
 where the group stays together. It sees content, never intent: it can tell that two conversations
 cite the same item, not that you want them apart.
+
+## The prs Session Is Not an Initiative
+
+`prs` is the one session `prefix p` owns. It holds the pull request board, `prs tui`, and one process
+serves every other session, refreshing while you work elsewhere. `q` quits it and ends the session,
+and the next `prefix p` starts it again. It sits on line 1 and in the `M-,` / `M-.` walk like any
+session. The comment above the binding in `tmux.conf` says why it is a session rather than a popup
+or a window in each session.
 
 ## A tmux Client Inside a Popup Stalls on Esc
 
