@@ -19,5 +19,7 @@ if not profiles.is_vscode then
   require('core.autocmds')
   -- Custom floating terminal (Space t t). VSCode has its own terminal.
   require('core.floaterminal')
+  -- The pull request beside a diff prs opened. Nothing where prs did not start nvim.
+  require('core.pull-request-panel').setup()
   require('lsp')
 end

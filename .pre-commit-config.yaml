@@ -423,6 +423,17 @@ repos:
         files: ^(configs/|shell/)
         stages: [pre-commit]
 
+      # The nvim config's Lua, each spec driven in a headless Neovim. A spec
+      # loads the plugins lazy installed, which a machine running this config
+      # has once nvim has started there.
+      - id: nvim-specs
+        name: nvim specs (headless Neovim)
+        entry: task test:nvim
+        language: system
+        pass_filenames: false
+        files: ^(configs/common/\.config/nvim/|tests/nvim/)
+        stages: [pre-commit]
+
       # Tests a broken run would satisfy: every assertion a negative claim about
       # an external effect, with nothing pinning how the run ended. A command
       # that died before reaching the write leaves exactly that state. An
