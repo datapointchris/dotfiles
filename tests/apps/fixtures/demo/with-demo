@@ -3,7 +3,5 @@
 # on PATH, so `pull-requests` resolves a fixture registry and talks to a stub gh
 # and a stub bbkt. Everything downstream is the real code.
 #
-#   with-demo prs          the picker
-#   with-demo prs list     the table
 #   with-demo pull-requests   the JSON
 exec env PATH="$(cd "$(dirname "$0")" && pwd):$PATH" "$@"

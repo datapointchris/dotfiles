@@ -1863,6 +1863,12 @@ go_tools:
     description: Project organization and task management with local-first SQLite
     supersedes: ['go:todoui']
 
+  - name: prs
+    package: github.com/datapointchris/prs
+    github_repo: datapointchris/prs
+    binary_pattern: "prs_{version_num}_{os}_{go_arch}.tar.gz"
+    description: Every open pull request across a registry's repos on one self-refreshing terminal board, with a key per action
+
   # `supersedes` deletes the glow binary this took over from.
   - name: read-markdown
     package: github.com/datapointchris/gotermboard/cmd/read-markdown

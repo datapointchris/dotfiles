@@ -272,14 +272,14 @@ repos:
         name: ruff format (uv run scripts)
         types: [text]
         types_or: [file]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/tmuxctl|apps/common/worktree|apps/common/zsh-startup|apps/trust/fleet/watch-ci)$'
+        files: '^(apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/tmuxctl|apps/common/worktree|apps/common/zsh-startup|apps/trust/fleet/watch-ci)$'
       - id: ruff-check
         alias: ruff-check-scripts
         name: ruff check (uv run scripts)
         args: [--fix]
         types: [text]
         types_or: [file]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/tmuxctl|apps/common/worktree|apps/common/zsh-startup|apps/trust/fleet/watch-ci)$'
+        files: '^(apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/tmuxctl|apps/common/worktree|apps/common/zsh-startup|apps/trust/fleet/watch-ci)$'
 
   # A separate hook from the repo-wide mypy rather than a wider selection on it.
   # That one runs `mypy .` with pass_filenames: false, and mypy collects a
@@ -308,7 +308,7 @@ repos:
         # that share one .mypy_cache, and one crashes with an INTERNAL ERROR.
         require_serial: true
         types: [text]
-        files: '^(apps/common/prs|apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/tmuxctl|apps/common/worktree|apps/common/zsh-startup|apps/trust/fleet/watch-ci)$'
+        files: '^(apps/common/pull-requests|apps/common/tmux-rearrange|apps/common/tmuxctl|apps/common/worktree|apps/common/zsh-startup|apps/trust/fleet/watch-ci)$'
 
 # generated:lua - Lua
   # The release binary, installed from npm at the StyLua hook's rev. StyLua's

@@ -19,8 +19,7 @@ vim.treesitter.language.register('yaml', 'asl-yaml')
 -- A PEP 723 script starts `#!/usr/bin/env -S uv run --script`, so the interpreter
 -- Neovim finds is `uv`. There is no filetype by that name, and the file falls
 -- through to `conf` — no highlighting, no LSP, no formatter. Every uv script in
--- dotfiles hits this: `prs`, `pr-list-python` and `tmux-rearrange` are all Python
--- with no extension to fall back on.
+-- dotfiles hits this: they are Python with no extension to fall back on.
 --
 -- Registered as a `.*` pattern at the lowest possible priority rather than as an
 -- extension, because these files have no extension and the rule must never win

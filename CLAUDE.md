@@ -90,10 +90,7 @@ profile fits the machines that want it, the boundary moves. `dotfiles machines c
 two files declare. `docs/architecture/index.md` holds why.
 
 An app that is part of the CLI's own surface becomes a module in `src/dotfiles/` with a
-`[project.scripts]` entry; a standalone tool stays in `apps/`. `prs` cannot move at all:
-`declared_closure()` in `create_bundle.py` keeps only `==` requirements, so its git-sourced
-`pytermstyle` would be dropped silently and the offline bundle would ship missing a dependency.
-`docs/learnings/app-installation-patterns.md` has the detail.
+`[project.scripts]` entry; a standalone tool stays in `apps/`.
 
 **Choosing an install method.** `install/packages.yml` is the source of truth, and its header maps
 each section to a method. OS utilities, GUI apps and compiled libraries go to `system_packages`. Rust

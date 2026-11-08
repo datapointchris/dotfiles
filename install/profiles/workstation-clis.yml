@@ -3,6 +3,7 @@
 
 go_tools:
   - projects
+  - prs
   - tmux-tree-editor
   - read-markdown
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Session switching for tmux.
 #
-# A session is a repo and its windows are the tasks in flight. The top status
+# A session is an initiative and its windows are the tasks in flight. The top status
 # line draws every session with #{S:}, which walks them in session-id order,
 # while tmux's own switch-client -n/-p walk them alphabetically. Navigating with
 # the built-ins would therefore land on a session other than the one sitting
@@ -29,6 +29,11 @@ Commands:
   move-first        Send the focused session to the front of the list
   move-last         Send the focused session to the end of the list
   install-status    Move tmux's stock window row to the second status line
+  board <name> <command>
+                    Show the board session <name> running <command>, starting
+                    it when missing, or leave it when already there
+  forget-boards <file>
+                    Drop board sessions from a tmux-resurrect save file
 EOF
 }
 
@@ -275,6 +280,101 @@ install_status() {
   tmux set-option -g 'status-format[1]' "$(tmux show-options -gv 'status-format[0]')"
 }
 
+# A board is a session a key owns, holding one long-running program, such as
+# prefix p's prs-board running `prs tui`. A press from any other session shows
+# the program, starting it when it is missing. A press from inside the session
+# goes back. The program keeps running behind the other sessions, so one process
+# serves all of them.
+#
+# The program's window carries @board_window and the session @board_command.
+# The marks find the program among the windows it opens beside itself, such as
+# prs's Claude windows, which are never touched. Only a marked window whose
+# program died is restarted. tmux-rearrange reads @board_command to leave the
+# session alone, and forget-boards reads it to keep the session out of saves.
+#
+# remain-on-exit failed keeps a program that exits nonzero on screen with its
+# error, and the next press restarts it. Not failed-key, which closes the pane
+# on the prefix and hands the rest of the press to whatever pane is next. A
+# clean exit, such as prs's `q`, closes the window, and the session with it when
+# nothing else is open there.
+board() {
+  local name="${1:-}" command="${2:-}"
+  if [[ -z $name || -z $command ]]; then
+    echo "tmux-sessions: board needs a session name and a command" >&2
+    exit 1
+  fi
+
+  if [[ $(current_session) == "$name" ]]; then
+    leave_board
+    return 0
+  fi
+
+  local window="" dead=""
+  read -r window dead < <(board_window "$name") || true
+  if [[ -z $window ]]; then
+    # One tmux call, so the window is marked before its program can exit.
+    local mark=(
+      \; set-option -w -t "=$name:" remain-on-exit failed
+      \; set-option -w -t "=$name:" @board_window 1
+      \; set-option -t "=$name:" @board_command "$command"
+    )
+    if tmux has-session -t "=$name" 2>/dev/null; then
+      tmux new-window -t "=$name:" "$command" "${mark[@]}"
+    else
+      tmux new-session -d -s "$name" "$command" "${mark[@]}"
+    fi
+    read -r window dead < <(board_window "$name") || true
+  elif [[ $dead == 1 ]]; then
+    tmux respawn-pane -t "$window"
+  fi
+
+  if [[ -z $window ]]; then
+    tmux display-message "tmux-sessions: the $name board did not start"
+    exit 1
+  fi
+  tmux switch-client -t "=$name" \; select-window -t "$window"
+}
+
+# Back to the session the client came from. A client that reached the board
+# another way, such as tmux moving it there when its own session closed, has no
+# last session, so it takes the next one in the status line's order.
+leave_board() {
+  if [[ -n $(tmux display-message -p '#{client_last_session}') ]]; then
+    tmux switch-client -l
+  else
+    step next
+  fi
+}
+
+# The board window's id, then 1 when its program has died. Prints nothing when
+# the session or the marked window is missing.
+board_window() {
+  tmux list-windows -t "=$1" -F '#{window_id} #{?#{@board_window},1,0} #{pane_dead}' 2>/dev/null \
+    | awk '$2 == 1 { print $1, $3; exit }'
+}
+
+# tmux-resurrect's post-save-layout hook, handed the save file. resurrect saves
+# the command a pane's shell runs, and a board's pane is its program with no
+# shell. So a restored board would be a shell under a picture of the program.
+# Left out of the save, the board starts fresh on the next press instead.
+forget_boards() {
+  local file="${1:-}"
+  if [[ ! -f $file ]]; then
+    echo "tmux-sessions: forget-boards needs a tmux-resurrect save file" >&2
+    exit 1
+  fi
+
+  local boards
+  boards=$(tmux list-sessions -F "#{session_name}"$'\t'"#{@board_command}" | awk -F '\t' '$2 != "" { print $1 }')
+  if [[ -z $boards ]]; then
+    return 0
+  fi
+  # Pane and window lines carry the session name in their second field.
+  awk -F '\t' 'NR == FNR { board[$0] = 1; next } !(($1 == "pane" || $1 == "window") && ($2 in board))' \
+    <(printf '%s\n' "$boards") "$file" >"$file.tmp"
+  mv "$file.tmp" "$file"
+}
+
 case "${1:-}" in
   next)
     require_server
@@ -319,6 +419,14 @@ case "${1:-}" in
   move-last)
     require_server
     send_session last
+    ;;
+  board)
+    require_server
+    board "${2:-}" "${3:-}"
+    ;;
+  forget-boards)
+    require_server
+    forget_boards "${2:-}"
     ;;
   *)
     usage

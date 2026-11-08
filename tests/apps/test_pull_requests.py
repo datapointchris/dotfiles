@@ -1,4 +1,4 @@
-"""`pull-requests` is the one query behind `prs` and doit's PRS lane.
+"""`pull-requests` is the query other tools read every open pull request through.
 
 The seam is the provider CLI, shadowed on PATH, because nothing else here is
 worth asserting: the mapping is short and the interesting failures are all about

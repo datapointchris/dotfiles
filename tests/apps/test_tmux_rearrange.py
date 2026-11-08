@@ -217,15 +217,17 @@ class TestLiveSessionGuard:
         assert tmux_rearrange.guarded_panes(scope) == {}
 
     @pytest.mark.parametrize('kind', ['SESSION', 'SERVER'])
-    def test_a_broader_scope_guards_every_live_session(self, tmux_rearrange, monkeypatch, kind):
+    def test_a_broader_scope_guards_every_live_session_and_board(self, tmux_rearrange, monkeypatch, kind):
         monkeypatch.setattr(tmux_rearrange, 'live_session_panes', lambda: {'@7.%2': 'peer-8f'})
+        monkeypatch.setattr(tmux_rearrange, 'board_panes', lambda: {'@9.%4': 'prs-board'})
         scope = tmux_rearrange.Scope(getattr(tmux_rearrange.ScopeKind, kind), '', '')
-        assert tmux_rearrange.guarded_panes(scope) == {'@7.%2': 'peer-8f'}
+        assert tmux_rearrange.guarded_panes(scope) == {'@7.%2': 'peer-8f', '@9.%4': 'prs-board'}
 
     def test_every_kind_is_dispatched_rather_than_falling_through(self, tmux_rearrange, monkeypatch):
         # A fourth kind added later would otherwise take whichever branch the
         # last line happened to be, silently, at both dispatch sites.
         monkeypatch.setattr(tmux_rearrange, 'live_session_panes', dict)
+        monkeypatch.setattr(tmux_rearrange, 'board_panes', dict)
         for kind in tmux_rearrange.ScopeKind:
             scope = tmux_rearrange.Scope(kind, '=x' if kind is tmux_rearrange.ScopeKind.SESSION else '', '')
             tmux_rearrange.guarded_panes(scope)
