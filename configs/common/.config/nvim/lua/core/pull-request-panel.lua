@@ -1,21 +1,26 @@
--- The pull request beside its diff, in an nvim that prs started with `d`.
+-- The pull request beside its diff, in an nvim prs started to show a pull
+-- request's diff.
 --
 -- prs writes the pull request's markdown document and its review threads to two
--- files, and names them in PRS_DIFF_DOCUMENT and PRS_DIFF_THREADS. Where neither is
--- set, setup() does nothing, so every other nvim is untouched.
+-- files, and names them in PRS_DIFF_DOCUMENT and PRS_DIFF_THREADS, which
+-- core.profiles reads. Where PRS_DIFF_DOCUMENT was unset, setup() does nothing, so
+-- every other nvim is untouched.
 --
 -- - <leader>gr shows the document in a split at the right edge, and hides it.
 -- - <leader>gR shows it in a float, and hides it.
 -- - <CR> or gf on a `path` or `path:line` mention in the document selects that file
 --   in the open diffview, through its Lua API, and puts the cursor on the line.
 --   Where the cursor is on no file the diff changes, the first backticked one on
---   the line is taken, so a thread's heading or a row of the files table jumps
---   from anywhere on it.
+--   the line is taken, then the nearest heading above, so a row of the files
+--   table, a thread's heading and each line of its comments jump to it.
 -- - Each review thread shows as virtual text at the end of its line, on the side of
 --   the diff its `side` names: LEFT is the base's copy of the file, RIGHT the head's.
 --   octo.nvim's reviews.show_virtual_text is the model.
 --
--- The threads file's shape is prs's cmd/prs/diff-threads.schema.json.
+-- The threads file is JSON. This reads its title, threads_read, and each thread's
+-- path, line, side, resolved, comments and comment_count.
+
+local profiles = require('core.profiles')
 
 local M = {}
 
@@ -34,8 +39,15 @@ local function say(message, level)
   vim.notify(message, level or vim.log.levels.INFO, { title = 'Pull request' })
 end
 
+-- A diff with no thread on it reads as a pull request nobody commented on, so each
+-- way of ending up with no threads to show says so.
 local function read_threads(path)
-  if not path or path == '' or vim.fn.filereadable(path) == 0 then
+  if not path then
+    say('prs named no review threads, so none show on the diff.', vim.log.levels.WARN)
+    return {}
+  end
+  if vim.fn.filereadable(path) == 0 then
+    say(path .. ' is gone, so no review threads show on the diff.', vim.log.levels.WARN)
     return {}
   end
   local ok, decoded = pcall(vim.json.decode, table.concat(vim.fn.readfile(path), '\n'), {
@@ -46,6 +58,9 @@ local function read_threads(path)
     return {}
   end
   state.title = decoded.title
+  if decoded.threads_read == false then
+    say('prs had not read the review threads when the diff opened, so none show on it.', vim.log.levels.WARN)
+  end
   return decoded.threads or {}
 end
 
@@ -110,7 +125,7 @@ end
 
 -- Each mention the cursor could mean, best first: the word under it, then each
 -- backticked span on the line. A mention is a path with an optional :line.
-function M.mentions(text, col)
+local function mentions(text, col)
   local found = {}
   local function add(token)
     token = (token or ''):gsub('^%./', ''):gsub('[.:,;]+$', '')
@@ -138,22 +153,44 @@ function M.mentions(text, col)
   return found
 end
 
--- The path of the diff's file a mention names: the same path, or else the one file
--- whose path ends in it.
+-- The path of the diff's file a mention names: the same path, wherever diffview
+-- lists it, or else the one file whose path ends in it.
 local function resolve(view, mentioned)
-  local ending
+  local endings = {}
   for _, file in view.files:iter() do
     if file.path == mentioned then
       return file.path
     end
     if vim.endswith(file.path, '/' .. mentioned) then
-      if ending then
-        return nil
-      end
-      ending = file.path
+      table.insert(endings, file.path)
     end
   end
-  return ending
+  if #endings == 1 then
+    return endings[1]
+  end
+  return nil
+end
+
+-- The first of the mentions that names a file the diff changes, and its line.
+local function first_resolved(view, found)
+  for _, mention in ipairs(found) do
+    local path = resolve(view, mention.path)
+    if path then
+      return path, mention.line
+    end
+  end
+  return nil
+end
+
+-- What a jump that found no file says: the first mention shaped like a path, since
+-- the word under the cursor may be any word in a comment.
+local function refusal(found)
+  for _, mention in ipairs(found) do
+    if mention.path:find('[/.]') then
+      return mention.path .. ' is not a file this diff changes.'
+    end
+  end
+  return 'No file this diff changes is named on this line.'
 end
 
 local function side_of(path, line)
@@ -182,26 +219,28 @@ local function place_cursor(view, path, line)
   vim.cmd('normal! zz')
 end
 
--- Selects the file the line under the cursor mentions in the open diffview.
+-- Selects the file the line under the cursor mentions in the open diffview. A line
+-- naming none takes the nearest heading above it, which for a thread's comments is
+-- the thread's own path:line.
 function M.jump()
   local view = diff_view()
   if not view then
     say('No diffview is open to jump in.', vim.log.levels.WARN)
     return
   end
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local mentions = M.mentions(vim.api.nvim_get_current_line(), cursor[2])
-  local path, line
-  for _, mention in ipairs(mentions) do
-    path = resolve(view, mention.path)
-    if path then
-      line = mention.line
-      break
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local here = mentions(vim.api.nvim_get_current_line(), col)
+  local path, line = first_resolved(view, here)
+  if not path then
+    for _, text in ipairs(vim.fn.reverse(vim.api.nvim_buf_get_lines(0, 0, row, false))) do
+      if text:match('^#+%s') then
+        path, line = first_resolved(view, mentions(text, 0))
+        break
+      end
     end
   end
   if not path then
-    local named = mentions[1] and mentions[1].path or 'Nothing under the cursor'
-    say(named .. ' is not a file this diff changes.', vim.log.levels.WARN)
+    say(refusal(here), vim.log.levels.WARN)
     return
   end
   if vim.api.nvim_win_is_valid(state.float) and vim.api.nvim_get_current_win() == state.float then
@@ -309,15 +348,14 @@ function M.toggle_float()
   dress(state.float)
 end
 
--- Reads the two variables prs sets, and does nothing where the document's is unset.
--- Returns whether it set anything up.
+-- Maps the keys and hangs the threads on the diff, in a pull request's diff alone.
 function M.setup()
-  local document = vim.env.PRS_DIFF_DOCUMENT
-  if not document or document == '' then
-    return false
+  local diff = profiles.pull_request_diff
+  if not diff then
+    return
   end
-  state.document = document
-  state.threads = read_threads(vim.env.PRS_DIFF_THREADS)
+  state.document = diff.document
+  state.threads = read_threads(diff.threads)
   vim.keymap.set('n', '<leader>gr', M.toggle_panel, { desc = 'Git: pull request beside the diff' })
   vim.keymap.set('n', '<leader>gR', M.toggle_float, { desc = 'Git: pull request in a float' })
   vim.api.nvim_create_autocmd('User', {
@@ -326,7 +364,6 @@ function M.setup()
     pattern = { 'DiffviewDiffBufWinEnter', 'DiffviewViewEnter' },
     callback = M.decorate,
   })
-  return true
 end
 
 return M

@@ -41,7 +41,8 @@ task test:nvim
 Runs each `tests/nvim/*_spec.lua` in a clean headless Neovim, with no test
 framework. A spec prepends the config to `runtimepath`, drives the real API and
 exits non-zero on a failure. One that needs a plugin loads the copy lazy
-installed, so it runs on a machine where nvim has started with this config.
+installed. Where nvim has never started with this config, lazy has installed
+nothing, so the spec prints SKIP and passes.
 
 **Speed:** Fast (~2 seconds)
 

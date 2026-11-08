@@ -424,8 +424,8 @@ repos:
         stages: [pre-commit]
 
       # The nvim config's Lua, each spec driven in a headless Neovim. A spec
-      # loads the plugins lazy installed, which a machine running this config
-      # has once nvim has started there.
+      # loads the plugins lazy installed, and passes saying SKIP on a machine
+      # where nvim has not started yet, so lazy installed none.
       - id: nvim-specs
         name: nvim specs (headless Neovim)
         entry: task test:nvim
