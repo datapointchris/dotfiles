@@ -375,6 +375,18 @@ forget_boards() {
   mv "$file.tmp" "$file"
 }
 
+# Every verb answers -h and --help with the usage before anything reaches tmux. A verb reads its
+# first word alone, so `new --help` would open a session named --help, and a help reader walking
+# each verb would rebuild the live sessions.
+for arg in "$@"; do
+  case "$arg" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+  esac
+done
+
 case "${1:-}" in
   next)
     require_server
