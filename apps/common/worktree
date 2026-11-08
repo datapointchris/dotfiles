@@ -1946,6 +1946,13 @@ def build_parser() -> argparse.ArgumentParser:
         'new',
         parents=[quiet],
         help="isolate a session off origin's default branch, run the repo's `task setup`, print the path",
+        description=(
+            'Create a worktree of the repo holding the current directory, on a new branch off '
+            "origin's default branch, run that repo's `task setup` in it, and print its path. "
+            'It takes no -C, --repo or --json: the repo is the one you stand in, so to isolate work '
+            'in another repo, run it from that checkout (`cd <checkout> && worktree new <slug>`). '
+            'The path is the only thing it prints to stdout.'
+        ),
     )
     new.add_argument('slug', help='names both the directory and the branch')
 
@@ -2012,7 +2019,19 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
-    drop = commands.add_parser('drop', parents=[quiet], help='abandon the worktree you are in, without landing it')
+    drop = commands.add_parser(
+        'drop',
+        parents=[quiet],
+        help='abandon the worktree you are in, without landing it',
+        description=(
+            'Remove the worktree holding the current directory, and delete its branch, without landing it. '
+            'It takes no slug and no --repo: run it from inside the worktree to drop. '
+            'It asks nothing, so it has no --yes. '
+            'Instead it refuses a dirty tree, and commits that origin/<base> does not carry; '
+            '`worktree land` keeps them and --force throws them away. '
+            '`worktree sweep` is the one that removes already-merged worktrees from anywhere.'
+        ),
+    )
     drop.add_argument('--force', action='store_true', help='throw the work away, commits included')
     # Caught here for `list --all`'s reason, and one worse failure of its own. A
     # slug is what the name invites, and every recorded attempt was piped into a
