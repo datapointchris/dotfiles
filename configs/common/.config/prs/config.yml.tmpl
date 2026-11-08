@@ -45,3 +45,20 @@ recaps:
       | jq -r 'sort_by(.window.since) | reverse | .[].window | "\(.kind) \(.label)"'
   show: [fleet, ledger, recap, "--{kind}", "{label}"]
   write: [fleet, agents, dispatch, recap, "--{kind}", "{label}"]
+
+# The fix menu's worktrees sit beside the ones `worktree new` adds, so `worktree
+# list` shows a merge prs left waiting, as <repo>/pr-<number>-merge.
+worktree_root: "~/.worktrees"
+
+# The fix menu's Claude choice, for a pull request GitHub will not merge. It runs
+# /make-pr-mergeable in a tmux window behind the board, and the row reads claude
+# fixing while that window is open. Its blocker names what it fixes.
+merge_fixes:
+  - key: c
+    label: hand to claude
+    detail: a Claude window running /make-pr-mergeable on it
+    needs: [claude]
+    blockers: [conflicts, behind, failing-checks]
+    window: "fix {repo} #{number}"
+    command: "claude --permission-mode bypassPermissions '/make-pr-mergeable {number} {blocker}'"
+    row_reads: claude fixing
