@@ -89,6 +89,17 @@ required:
     consumers:
       - provisioning code outside this repo
 
+  # The repo registry every machine keeps, in either trust domain, so no axis
+  # narrows it. `repos-registry` resolves it for a shell; this entry is what lets
+  # a template carry the same answer into a config read without one. No
+  # file_must_exist, because a machine that names the path before its clone lands
+  # is still configured correctly.
+  - name: REPOS_REGISTRY
+    description: Absolute or ~-rooted path to this machine's repo registry
+    consumers:
+      - apps/common/repos-registry
+      - configs/common/.config/prs/config.yml.tmpl
+
   # The roster beside the inventory above, on the same two axes and for the same
   # reason. It carries each workstation's public key, which is what lets the
   # homelab authorize a fleet machine from one declaration rather than from a

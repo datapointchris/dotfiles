@@ -1,0 +1,28 @@
+# prs — machine config.
+#
+# A template rather than a trust-scoped literal, because prs reads the same
+# registry `repos-registry` names, and REPOS_REGISTRY resolves through the same
+# two rungs: the DOTFILES_REPOS_REGISTRY variable, then repos_registry in
+# dotfiles' own config. A machine that moves its registry changes that setting, and this file
+# follows on the next apply. Change a key here rather than in the rendered file,
+# which apply overwrites.
+repos_registry: "${REPOS_REGISTRY}"
+
+# The two Claude keys, offered only where claude is on PATH, which a network
+# that blocks claude.ai leaves uninstalled. Each opens a tmux window in the pull
+# request's checkout.
+window_actions:
+  - key: r
+    label: claude review
+    detail: a Claude window running /review-pr on it
+    needs: [claude]
+    providers: [github]
+    window: "review {repo} #{number}"
+    command: "claude --permission-mode bypassPermissions '/review-pr {number}'"
+  - key: C
+    label: claude explain
+    detail: a Claude window running /explain-code-changes on it
+    needs: [claude]
+    providers: [github]
+    window: "explain {repo} #{number}"
+    command: "claude --permission-mode bypassPermissions '/explain-code-changes #{number}'"
