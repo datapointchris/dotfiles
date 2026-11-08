@@ -1864,7 +1864,7 @@ go_tools:
     supersedes: ['go:todoui']
 
   - name: prs
-    package: github.com/datapointchris/prs
+    package: github.com/datapointchris/prs/cmd/prs
     github_repo: datapointchris/prs
     binary_pattern: "prs_{version_num}_{os}_{go_arch}.tar.gz"
     description: Every open pull request across a registry's repos on one self-refreshing terminal board, with a key per action
