@@ -94,7 +94,7 @@ alias watchports='watch -n 1 -d lsof -iTCP -sTCP:LISTEN -n -P'
 
 # ---------- Miscellaneous ---------- #
 
-alias pj='projects'
+alias pj='projects tui'
 
 # ---------- Git ---------- #
 
