@@ -28,6 +28,7 @@ otelcol.receiver.filelog "dotfiles_runs" {
       on_error = "send_quiet",
       trace    = {trace_id = {parse_from = "attributes.trace_id"}, span_id = {parse_from = "attributes.span_id"}},
     },
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "dotfiles.run"},
   ]
 
@@ -63,6 +64,7 @@ otelcol.receiver.filelog "dotfiles_effects" {
       on_error = "send_quiet",
       trace    = {trace_id = {parse_from = "attributes.trace_id"}, span_id = {parse_from = "attributes.span_id"}},
     },
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "dotfiles.effect"},
   ]
 
