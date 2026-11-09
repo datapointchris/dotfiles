@@ -1,0 +1,103 @@
+// Every line a queued job writes to its stdout or stderr on this machine. Each job
+// runs as the user unit fleet-run-<run id>.service, whose output goes to this
+// machine's journal and nowhere else. Each line goes to the collector as a log
+// record with fleet.kind fleet.run.output.line, the kind the collector routes to
+// the table that holds every job's output.
+//
+// systemd points a unit's stderr at the same journal stream as its stdout, so the
+// journal holds one stream per unit and the line's log.iostream says stdout+stderr.
+//
+// A record is keyed by its run, its unit and its read order, so a retried send lands
+// once. The journal reader hands Alloy no sequence number, and a burst of lines the
+// unit writes at once shares one journal timestamp. So each line is stamped with the
+// nanosecond Alloy reads it, which follows the journal's order.
+//
+// Alloy only reads a journal on Linux. On macOS this component starts and reads
+// nothing.
+
+loki.relabel "fleet_run_output_fields" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__journal__systemd_user_unit"]
+    regex         = "fleet-run-.+\\.service"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__journal__systemd_user_unit"]
+    target_label  = "unit"
+  }
+
+  rule {
+    source_labels = ["__journal__systemd_user_unit"]
+    regex         = "fleet-run-(.+)\\.service"
+    target_label  = "run_id"
+  }
+
+  rule {
+    source_labels = ["__journal__systemd_invocation_id"]
+    target_label  = "invocation_id"
+  }
+
+  rule {
+    source_labels = ["__journal__pid"]
+    target_label  = "pid"
+  }
+}
+
+// Only the stdout transport carries a unit's output. A line the unit logs through
+// syslog or the journal's own API is a log record rather than output, and stays here.
+loki.source.journal "fleet_run_output" {
+  max_age       = "12h"
+  matches       = "_TRANSPORT=stdout"
+  relabel_rules = loki.relabel.fleet_run_output_fields.rules
+  forward_to    = [loki.process.fleet_run_output_read_order.receiver]
+}
+
+loki.process "fleet_run_output_read_order" {
+  forward_to = [otelcol.receiver.loki.fleet_run_output.receiver]
+
+  stage.template {
+    source   = "read_unix_nano"
+    template = "{{ now.UnixNano }}"
+  }
+
+  stage.labels {
+    values = {
+      read_unix_nano = "",
+    }
+  }
+}
+
+otelcol.receiver.loki "fleet_run_output" {
+  output {
+    logs = [otelcol.processor.transform.fleet_run_output_record.input]
+  }
+}
+
+// The relabelled fields arrive as attributes named as Loki labels, and leave under
+// the names run_output_lines reads.
+otelcol.processor.transform "fleet_run_output_record" {
+  error_mode = "ignore"
+
+  log_statements {
+    context = "log"
+    statements = [
+      `set(attributes["fleet.kind"], "fleet.run.output.line")`,
+      `set(attributes["run.id"], attributes["run_id"])`,
+      `set(attributes["fleet.run.unit"], attributes["unit"])`,
+      `set(attributes["fleet.run.unit.invocation_id"], attributes["invocation_id"]) where attributes["invocation_id"] != nil`,
+      `set(attributes["process.pid"], Int(attributes["pid"])) where attributes["pid"] != nil`,
+      `set(attributes["fleet.run.output.line.read_unix_nano"], attributes["read_unix_nano"])`,
+      `set(attributes["log.iostream"], "stdout+stderr")`,
+      `delete_matching_keys(attributes, "^(run_id|unit|invocation_id|pid|read_unix_nano|job)$")`,
+      `delete_key(attributes, "loki.attribute.labels")`,
+      `set(resource.attributes["service.name"], "fleet-run")`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.processor.transform.local_host.input]
+  }
+}
