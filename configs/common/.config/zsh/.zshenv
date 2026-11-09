@@ -51,5 +51,7 @@ export CLAUDE_CODE_SHELL
 
 # Claude Code puts each session's scratch under $CLAUDE_CODE_TMPDIR/claude-<uid>,
 # and /tmp by default. A session builds virtualenvs and clones there, and on a
-# tmpfs /tmp those are held in RAM. /var/tmp is on disk on every platform.
+# tmpfs /tmp those are held in RAM. /var/tmp is on disk on every platform. A
+# systemd unit reads none of this file, so environment.d/scratch-on-disk.conf sets
+# the same for the sessions a unit starts.
 export CLAUDE_CODE_TMPDIR=/var/tmp
