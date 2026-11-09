@@ -35,6 +35,11 @@ otelcol.receiver.filelog "dotfiles_runs" {
     line_start_pattern = "^\\{"
   }
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }
@@ -60,6 +65,11 @@ otelcol.receiver.filelog "dotfiles_effects" {
     },
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "dotfiles.effect"},
   ]
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
 
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
@@ -90,6 +100,11 @@ otelcol.receiver.filelog "timer_reports" {
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "desk.check"},
   ]
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }
@@ -109,6 +124,11 @@ otelcol.receiver.filelog "test_runs" {
 
   multiline {
     line_start_pattern = "^\\{"
+  }
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
   }
 
   output {
@@ -131,6 +151,11 @@ otelcol.receiver.filelog "mutation_runs" {
     line_start_pattern = "^\\{"
   }
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }
@@ -151,6 +176,11 @@ otelcol.receiver.filelog "persona_review_runs" {
 
   multiline {
     line_start_pattern = "^\\{"
+  }
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
   }
 
   output {
@@ -179,6 +209,11 @@ otelcol.receiver.filelog "ntfy_deliveries" {
 
   multiline {
     line_start_pattern = "^[0-9]{2}:[0-9]{2}:[0-9]{2}  "
+  }
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
   }
 
   output {

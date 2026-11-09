@@ -23,6 +23,11 @@ otelcol.receiver.filelog "macos_crash_reports" {
     line_start_pattern = "^\\{"
   }
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.processor.transform.local_host.input]
   }

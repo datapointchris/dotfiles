@@ -24,6 +24,11 @@ otelcol.receiver.filelog "machine_snapshots" {
     line_start_pattern = "^\\{"
   }
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }

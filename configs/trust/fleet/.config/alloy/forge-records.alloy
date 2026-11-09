@@ -21,6 +21,11 @@ otelcol.receiver.filelog "forge_die_stats" {
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "forge.die_stat"},
   ]
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }

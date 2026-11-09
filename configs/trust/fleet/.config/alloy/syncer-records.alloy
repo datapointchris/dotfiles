@@ -20,6 +20,11 @@ otelcol.receiver.filelog "syncer_events" {
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "syncer.event"},
   ]
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }

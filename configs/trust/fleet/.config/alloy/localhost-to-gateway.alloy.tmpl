@@ -5,6 +5,8 @@
 // Alloy reads every *.alloy file in this directory as one configuration. This file
 // is the agent. Each other file reads one writer's records or metrics and sends them
 // to the exporter below, so a new source of telemetry is a new file beside this one.
+// A file receiver retries while the queue is full rather than dropping what it read,
+// because the file still holds every record it has not sent.
 
 otelcol.receiver.otlp "local" {
   grpc {

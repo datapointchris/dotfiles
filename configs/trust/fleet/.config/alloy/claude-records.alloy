@@ -20,6 +20,11 @@ otelcol.receiver.filelog "budget_readings" {
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "budget.reading"},
   ]
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }
@@ -46,6 +51,11 @@ otelcol.receiver.filelog "hook_runs" {
     {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "claude.hook.record"},
   ]
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
 
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
@@ -76,6 +86,11 @@ otelcol.receiver.filelog "session_review_ledgers" {
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "claude.cli_call"},
   ]
 
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
   }
@@ -96,6 +111,11 @@ otelcol.receiver.filelog "dispatch_worker_records" {
 
   multiline {
     line_start_pattern = "^\\{"
+  }
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
   }
 
   output {
@@ -121,6 +141,11 @@ otelcol.receiver.filelog "director_log" {
     {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
     {type = "add", field = "attributes[\"fleet.kind\"]", value = "claude.director_event"},
   ]
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
 
   output {
     logs = [otelcol.exporter.otlphttp.collector.input]
