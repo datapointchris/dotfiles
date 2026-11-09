@@ -263,9 +263,9 @@ def test_a_placeholder_that_parses_is_reported_as_merely_behind(sandbox: Sandbox
     verdict, the same detail and the same repair as a tool one version behind. The
     only thing separating them on screen is the measured value in parentheses.
 
-    **The limit, not an open fault.** `icb` 486 settled it by asking whatever
-    recorded the fact rather than reading the string, and for a `go install`-ed
-    binary that is `go version -m` — see
+    **The limit, not an open fault.** The version is asked of whatever recorded
+    the fact rather than read from the string, and for a `go install`-ed binary
+    that is `go version -m` — see
     `tests/resolver/test_evidence.py::test_a_go_installed_binary_answers_from_the_toolchain_whatever_its_banner_says`.
     A binary unpacked from a GitHub release has no second source: nothing but the
     banner ever knew what it is. Widening the parse to treat `0.0.0` as unparseable
@@ -274,8 +274,7 @@ def test_a_placeholder_that_parses_is_reported_as_merely_behind(sandbox: Sandbox
 
     So the remedy here is the declaration. `reports_version: false` on the entry
     says this artifact cannot be asked, which is a fact about the artifact rather
-    than a guess about its output, and it is why that field survived 486 removing
-    its other user.
+    than a guess about its output.
     """
     behind, placeholder = CACHED[1], CACHED[3]
     machine(sandbox, behind)
@@ -291,8 +290,8 @@ def test_a_placeholder_that_parses_is_reported_as_merely_behind(sandbox: Sandbox
 UNASKABLE = {'github_releases': [{'name': TOOL, 'repo': REPO, 'reports_version': False}]}
 """The same entry declaring that its artifact cannot be asked its version.
 
-The remedy `icb` 486 leaves for a release-installed placeholder, and a fact about
-the artifact rather than a guess about its output.
+The remedy for a release-installed placeholder, and a fact about the artifact
+rather than a guess about its output.
 """
 
 
