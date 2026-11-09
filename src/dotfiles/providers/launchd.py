@@ -1,8 +1,9 @@
 """launchd's half of a supervised job: where the file goes, and how it is reloaded.
 
-Two callers declare different jobs — `providers/schedule.py` a periodic check,
-`providers/ghrelease.py` a release's daemon — and they agree on every mechanical
-detail, because none of it was either one's choice. The directory launchd reads,
+Three callers declare different jobs — `providers/periodic_job.py` a periodic run,
+`providers/ghrelease.py` a release's daemon, `providers/user_services.py` a command
+kept running — and they agree on every mechanical detail, because none of it was
+any one's choice. The directory launchd reads,
 plistlib on both sides of the comparison, and booting out before bootstrapping are
 facts about launchd, so they are owned once rather than restated per caller.
 

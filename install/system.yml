@@ -1080,3 +1080,17 @@ user_timers:
     network_trust: fleet
     feature: primary_workstation
     excludes_os_family: windows
+
+# Commands this account keeps running, each started again whenever it exits.
+# `providers/user_services.py` installs them. A row applies only where the plan
+# installs the program its argv starts, so a box without that program owes nothing.
+user_services:
+  # Every file a Claude Code session writes beside its transcript, sent whole over
+  # OTLP through this desk's Alloy on 127.0.0.1:4318. Its ledger keeps a restart
+  # from sending a file again. It exits when an install replaces its binary, and
+  # the restart runs the new one.
+  - name: session-files-ship
+    description: Send each file Claude Code sessions write beside their transcripts to the warehouse
+    argv: [fleet, warehouse, session-files, ship]
+    network_trust: fleet
+    excludes_os_family: windows

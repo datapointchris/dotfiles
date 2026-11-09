@@ -8,7 +8,8 @@ shell, and — on a Mac — hold its `defaults` keys where this repo put them.
 `install/system.yml` declares all of it. Four kinds share one mechanism and live
 in `src/dotfiles/providers/sysconfig.py`. Preference keys are their own kind, in
 `providers/macdefaults.py`. Commands run on an interval are their own kind, in
-`providers/timers.py`. What is left shares no mechanism at all and is
+`providers/timers.py`, and commands kept running are another, in
+`providers/user_services.py`. What is left shares no mechanism at all and is
 `providers/steps.py`. Root is `src/dotfiles/privilege.py` and nowhere else. Each
 of those docstrings is the account of how its own rows converge. This page holds
 what no one of them can state.
@@ -97,6 +98,18 @@ machines, so running it on each would repeat the work.
 A unit row narrowed by `feature: desk_runner` works the same way. The service runs
 what that desk's own sessions queued, so a manifest turns it on for one desk at a
 time, and only once that desk holds the service's client and secret.
+
+## A service row applies where the plan installs its program
+
+A `user_services` row keeps a command running, and that command is a program some
+`packages.yml` entry installs. So the row applies only where the first pass plans
+that program, and names it once, in `argv`. A Linux server on a trusted network
+that never installs the program owes no unit, and its apply has nothing to fail.
+
+*Rejected:* widening `requires_package` to every section. It reads system
+packages alone, and a cask or a release sharing a name with one would carry
+existing rows, such as the docker group, onto machines they were never written
+for.
 
 ## A browser's extensions are configuration where the browser has a policy
 

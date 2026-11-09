@@ -18,7 +18,7 @@ from dotfiles import effects
 from dotfiles.effects import Completed
 from dotfiles.effects import Output
 
-__all__ = ['available', 'disable', 'enable', 'enabled', 'restart']
+__all__ = ['active', 'available', 'disable', 'enable', 'enabled', 'restart']
 
 
 def available() -> bool:
@@ -33,6 +33,11 @@ def available() -> bool:
 def enabled(unit: str) -> bool:
     """Whether the user manager starts this unit without being asked."""
     return effects.run(['systemctl', '--user', 'is-enabled', unit], output=Output.QUIET).ok
+
+
+def active(unit: str) -> bool:
+    """Whether the unit is running now."""
+    return effects.run(['systemctl', '--user', 'is-active', unit], output=Output.QUIET).ok
 
 
 def enable(unit: str) -> Completed:

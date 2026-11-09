@@ -37,6 +37,7 @@ from dotfiles.privilege import Escalates
 from dotfiles.providers import sysconfig
 from dotfiles.providers import syspkg
 from dotfiles.providers import timers
+from dotfiles.providers import user_services
 from dotfiles.resources import Change
 from dotfiles.resources import Examined
 from dotfiles.resources import Outcome
@@ -135,6 +136,9 @@ class Observed:
     stray_timers: dict[str, str] = dc.field(default_factory=dict)
     """Timer name → the command removing it, for an installed timer no row declares here."""
 
+    stray_services: dict[str, str] = dc.field(default_factory=dict)
+    """Service name → the command removing it, for an installed service no row declares here."""
+
     @property
     def summary(self) -> str:
         """How much of each half is settled, counted through the verdict `diff`
@@ -208,6 +212,7 @@ class SystemResource:
             # reach of the next edit.
             undeclared=undeclared_packages(session),
             stray_timers=undeclared_timers(session),
+            stray_services=undeclared_services(session),
         )
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
@@ -267,7 +272,19 @@ class SystemResource:
             )
             for name, command in observed.stray_timers.items()
         )
-        return packages + configuration + undeclared + stray_timers
+        stray_services = tuple(
+            Change(
+                NAME,
+                Stage.SYSTEM_CONFIG,
+                f'user-service/{name}',
+                Verdict.UNDECLARED,
+                repair=Repair.BY_HAND,
+                detail='installed, and no user_services row declares it for this machine',
+                advice=f'undeclared: not in install/system.yml -> {command}',
+            )
+            for name, command in observed.stray_services.items()
+        )
+        return packages + configuration + undeclared + stray_timers + stray_services
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
         """Whichever provider planned it repairs it, or says why it cannot."""
@@ -448,6 +465,15 @@ def undeclared_timers(session: Session) -> dict[str, str]:
     if session.entries:
         return {}
     return timers.strays({item.entry.name for item in session.plan.for_resource(NAME) if isinstance(item.entry, catalog.UserTimer)})
+
+
+def undeclared_services(session: Session) -> dict[str, str]:
+    """Each installed service no `user_services` row explains, read as `undeclared_timers` reads timers."""
+    if session.entries:
+        return {}
+    return user_services.strays(
+        {item.entry.name for item in session.plan.for_resource(NAME) if isinstance(item.entry, catalog.UserService)}
+    )
 
 
 def observe_config(items: list[DesiredItem], session: Session) -> dict[str, sysconfig.State]:

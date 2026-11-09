@@ -1246,6 +1246,32 @@ class UserTimer(SystemConfig):
         return (*wrong, *SystemConfig.problems(self))
 
 
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class UserService(SystemConfig):
+    """A command this account keeps running, started again whenever it exits.
+
+    The unit starts `argv` itself, so the manager's stop signal reaches the command.
+    `argv[0]` names a program the first pass installs, which is what decides the
+    machines a row applies to, and it is resolved on the unit's PATH when the unit is
+    written. `~` in the rest is expanded then.
+    """
+
+    section: ClassVar[str] = 'user_services'
+
+    needs_root: bool = False
+    argv: tuple[str, ...]
+
+    def problems(self) -> tuple[str, ...]:
+        wrong = []
+        if not self.argv:
+            wrong.append('declares an empty argv; a service runs a command')
+        elif '/' in self.argv[0] or self.argv[0].startswith('~'):
+            wrong.append(f'starts {self.argv[0]!r}; name the program bare, as a packages.yml entry installs it')
+        if self.needs_root:
+            wrong.append('declares needs_root; a user service runs as this account')
+        return (*wrong, *SystemConfig.problems(self))
+
+
 SECTION_CLASSES: tuple[type[Entry], ...] = (
     SystemPackage,
     Runtime,
@@ -1276,6 +1302,7 @@ SYSTEM_SECTION_CLASSES: tuple[type[SystemConfig], ...] = (
     MacosDefault,
     Step,
     UserTimer,
+    UserService,
 )
 """`system.yml`, in its own map rather than merged into `SECTIONS`.
 

@@ -61,6 +61,7 @@ from dotfiles.providers import sysconfig
 from dotfiles.providers import syspkg
 from dotfiles.providers import timers
 from dotfiles.providers import toolchain
+from dotfiles.providers import user_services
 from dotfiles.providers import uvtool
 from dotfiles.providers import winget
 from dotfiles.resources import Change
@@ -1371,6 +1372,30 @@ class UserTimerProvider(SystemConfigProvider):
         return timers.apply(entry)
 
 
+@dc.dataclass(frozen=True, slots=True)
+class UserServiceProvider(SystemConfigProvider):
+    """The `user_services` rows, each a systemd user service or a LaunchAgent."""
+
+    def plan(self, machine: machines.Machine, declaration: catalogs.Catalog, planned: tuple[DesiredItem, ...]) -> tuple[DesiredItem, ...]:
+        """The rows whose program the first pass installs, and no others."""
+        programs = {item.executable or item.name for item in planned}
+        return tuple(
+            item
+            for item in SystemConfigProvider.plan(self, machine, declaration, planned)
+            if isinstance(item.entry, catalogs.UserService) and item.entry.argv[0] in programs
+        )
+
+    def state(
+        self, entry: catalogs.SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None], session: MachineContext
+    ) -> sysconfig.State:
+        assert isinstance(entry, catalogs.UserService)
+        return user_services.observe(entry)
+
+    def repair(self, entry: catalogs.SystemConfig, privilege: Escalates, session: MachineContext) -> Result:
+        assert isinstance(entry, catalogs.UserService)
+        return user_services.apply(entry)
+
+
 def configuration(entry: catalogs.Entry | None) -> catalogs.SystemConfig:
     assert isinstance(entry, catalogs.SystemConfig)
     return entry
@@ -1430,6 +1455,7 @@ PROVIDERS: tuple[Provider, ...] = (
     MacDefaultProvider('macos-default', 'system', Stage.SYSTEM_CONFIG, 'macos_defaults'),
     StepProvider('step', 'system', Stage.SYSTEM_CONFIG, 'steps'),
     UserTimerProvider('user-timer', 'system', Stage.SYSTEM_CONFIG, 'user_timers'),
+    UserServiceProvider('user-service', 'system', Stage.SYSTEM_CONFIG, 'user_services'),
 )
 """The registry, in planning order — which is the two passes.
 

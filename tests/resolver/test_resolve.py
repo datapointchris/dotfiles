@@ -536,6 +536,17 @@ def test_an_entry_is_dropped_where_the_package_it_configures_is_not_installed(tm
     assert without.for_resource('system') == ()
 
 
+def test_a_service_applies_only_where_the_plan_installs_its_program(tmp_path: Path) -> None:
+    """A box that never installs the program owes no unit, so its apply has nothing to fail."""
+    declared = {'user_services': [{'name': 'keeper', 'argv': ['docker', 'events']}]}
+
+    with_it = system_plan(tmp_path / 'a', declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': 'workstation'})
+    without = system_plan(tmp_path / 'b', declared, {'machine': 'box', 'platform': 'archlinux', 'system_packages': False})
+
+    assert [item.address for item in with_it.for_resource('system') if item.provider == 'user-service'] == ['user-service/keeper']
+    assert without.for_resource('system') == ()
+
+
 def test_a_feature_narrows_an_entry_to_the_manifests_that_asked_for_it(tmp_path: Path) -> None:
     declared = {'login_shell': [{'name': 'zsh', 'feature': 'configure_zsh'}]}
 
