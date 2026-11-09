@@ -12,7 +12,7 @@ otelcol.receiver.filelog "macos_crash_reports" {
   ]
   start_at      = "beginning"
   storage       = otelcol.storage.file.offsets.handler
-  poll_interval = "30s"
+  poll_interval = "250ms"
   max_log_size  = "8MiB"
 
   operators = [

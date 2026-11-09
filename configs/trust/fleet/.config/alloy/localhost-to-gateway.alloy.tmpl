@@ -68,12 +68,13 @@ otelcol.exporter.otlphttp "collector" {
     storage    = otelcol.storage.file.queue.handler
 
     // Sized in bytes, so a request stays under an OTLP receiver's default 20 MiB
-    // body however many record files a first start reads at once.
+    // body however many record files a first start reads at once. A batch below
+    // the minimum leaves within 200ms, so a record waits here at most that long.
     batch {
       sizer         = "bytes"
       min_size      = 1048576
       max_size      = 16777216
-      flush_timeout = "1s"
+      flush_timeout = "200ms"
     }
   }
 

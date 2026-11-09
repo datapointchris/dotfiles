@@ -6,17 +6,20 @@
 // A JSON record carrying a W3C traceparent lands under the trace that wrote it.
 // One without the field passes through unparsed.
 //
-// The runs directory holds thousands of files, and each poll opens every one and
-// matches its fingerprint against the rest. So its two tails poll every 30s
-// rather than every 200ms. That is a fifteenth of the CPU, and no reader of these
-// records works within minutes.
+// The runs directory keeps every run, and other machines' downloads beside them.
+// Each poll lists it and stats every file of this machine's, then opens and
+// checkpoints each one it keeps. So its two tails keep only files written in the
+// last day, which no run outlasts, and poll every 2s. On a desk with 5,400 run
+// files of its own, a 250ms poll costs 1.5 cores over all of them and 0.3 over the
+// last day's. A 2s poll over the last day's costs 0.04.
 
 // A dotfiles run: one JSON object per file, its closing brace at the first column.
 otelcol.receiver.filelog "dotfiles_runs" {
-  include       = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.json", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
-  start_at      = "beginning"
-  storage       = otelcol.storage.file.offsets.handler
-  poll_interval = "30s"
+  include            = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.json", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  exclude_older_than = "24h"
+  start_at           = "beginning"
+  storage            = otelcol.storage.file.offsets.handler
+  poll_interval      = "2s"
 
   operators = [
     {
@@ -41,11 +44,12 @@ otelcol.receiver.filelog "dotfiles_runs" {
 // tool's long usage text, the same across runs, so its first KiB does not tell it
 // from another run's and the receiver would take it for a file already read.
 otelcol.receiver.filelog "dotfiles_effects" {
-  include          = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.jsonl", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
-  start_at         = "beginning"
-  storage          = otelcol.storage.file.offsets.handler
-  poll_interval    = "30s"
-  fingerprint_size = "8KiB"
+  include            = [string.format("%s/.local/state/dotfiles/runs/*-%s-*.jsonl", sys.env("HOME"), string.to_lower(string.split(constants.hostname, ".")[0]))]
+  exclude_older_than = "24h"
+  start_at           = "beginning"
+  storage            = otelcol.storage.file.offsets.handler
+  poll_interval      = "2s"
+  fingerprint_size   = "8KiB"
 
   operators = [
     {
