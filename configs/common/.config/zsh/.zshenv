@@ -45,7 +45,8 @@ export SOPS_AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}
 # bash, and two zsh defaults break it: an unquoted variable is not word-split, and
 # a glob matching nothing aborts the command. Here and not in .zshrc because a
 # tmux pane starts claude from non-interactive zsh. Below the PATH line, so a Mac
-# resolves Homebrew's bash ahead of its own 3.2.
+# resolves Homebrew's bash ahead of its own 3.2. A systemd unit reads none of this
+# file, so environment.d/claude-code-shell.conf sets it for the sessions a unit starts.
 CLAUDE_CODE_SHELL="$(command -v bash)"
 export CLAUDE_CODE_SHELL
 
