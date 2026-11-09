@@ -228,9 +228,8 @@ test_cmd "fzf installed" "command -v fzf"
 if [[ "$(layer_value trust)" == fleet ]]; then
   echo ""
   echo "Fleet:"
-  # --help only: a bare run of either watches and never returns, which the 5s
-  # timeout would report as a failure rather than the success it actually is.
-  test_cmd "claude-ci-watch help" "claude-ci-watch --help"
+  # --help only: a bare run watches and never returns, which the 5s timeout
+  # would report as a failure rather than the success it actually is.
   test_cmd "watch-ci help" "watch-ci --help"
   # The git config skips each hook while its script is absent, so nothing else
   # would notice it missing.

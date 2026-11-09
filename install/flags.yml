@@ -112,24 +112,6 @@ required:
     consumers:
       - provisioning code outside this repo
 
-  # A service address on the machine's own network, which this repo is public and
-  # must not carry. The consumer refuses by name when it is unset, and that is
-  # late: it is an interactive command, so nothing reports the gap until somebody
-  # runs it. Declared here, `dotfiles check` says so on a fresh machine instead.
-  #
-  # Two axes. Trust matches the consumer, which lives under apps/trust/fleet/ for
-  # the reason its own header gives — a subscriber that reconnects forever against
-  # a private address is pointed at a stranger's machine on any other network.
-  # Capacity is what the consumer's *purpose* decides: it exists so a Claude
-  # session can watch the repo it is working in, and nobody works in a repo on a
-  # server.
-  - name: CLAUDE_CI_WATCH_NTFY_HOST
-    description: The ntfy server this machine's CI watcher subscribes to
-    network_trust: fleet
-    capacity: workstation
-    consumers:
-      - apps/trust/fleet/claude-ci-watch
-
   # An OpenBao server on the machine's own network, and the private CA its
   # certificate chains to, both read by the bao CLI from the environment. The
   # address is one this public repo must not carry, and the CA's certificate
@@ -141,8 +123,8 @@ required:
   # the system store is left as it is. So nothing here needs root, and a machine
   # on any other network trusts nothing new.
   #
-  # Two axes, for CLAUDE_CI_WATCH_NTFY_HOST's reasons: a private address means
-  # nothing on another network, and a person reads secrets from a workstation.
+  # Two axes: a private address means nothing on another network, and a person
+  # reads secrets from a workstation.
   - name: BAO_ADDR
     description: URL of the OpenBao server on this machine's network, such as https://<address>:8200
     network_trust: fleet
