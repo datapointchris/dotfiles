@@ -1,0 +1,105 @@
+// Every line of every Claude Code transcript on this machine, whole, for the
+// warehouse's bronze, named for this machine by its lowercased short hostname. The
+// session, agent, workflow and project come from the path, because a line's own
+// sessionId can differ. A workflow's agents and its journal sit a level below the
+// session's subagents.
+//
+// A project directory can be a symlink onto another: `-Users-chris-<repo>` points at
+// `-home-chris-<repo>`, so a repo's sessions share one directory on every OS. The glob
+// follows the links, so one file matches under two names. The receiver tells files
+// apart by their opening bytes and reads each once, and the path a line carries is the
+// resolved one, so it names the real directory whichever name matched. A file under
+// the 1 KiB fingerprint that grows can still be read again under its second name, and
+// bronze's (SessionId, LineHash) key folds that copy.
+//
+// Each poll stats every transcript in the tree, and opens and checkpoints each one it
+// keeps. On a desk holding 18,000 transcripts, a 2s poll over all of them costs most
+// of a core, and over the files written in the last day about a fifth. A file older
+// than the window is not read, and once it is written again it is read whole, so a
+// session resumed after a day ships every line again and bronze folds the repeats.
+// The window also bounds a first start to a day of lines.
+
+// How far each transcript has been read, so a restart reads nothing twice.
+otelcol.storage.file "transcript_offsets" { }
+
+otelcol.receiver.filelog "claude_transcripts" {
+  include = [
+    string.format("%s/.claude/projects/*/*.jsonl", sys.env("HOME")),
+    string.format("%s/.claude/projects/*/*/subagents/*.jsonl", sys.env("HOME")),
+    string.format("%s/.claude/projects/*/*/subagents/workflows/*/*.jsonl", sys.env("HOME")),
+  ]
+  exclude_older_than         = "24h"
+  start_at                   = "beginning"
+  storage                    = otelcol.storage.file.transcript_offsets.handler
+  fingerprint_size           = "1KiB"
+  poll_interval              = "2s"
+  max_log_size               = "16MiB"
+  include_file_path          = true
+  include_file_path_resolved = true
+  include_file_record_number = true
+
+  operators = [
+    {type = "move", from = "attributes[\"log.file.path_resolved\"]", to = "attributes[\"log.file.path\"]"},
+    {
+      type       = "regex_parser",
+      parse_from = "attributes[\"log.file.path\"]",
+      regex      = "/(?P<project>[^/]+)/(?P<session>[^/]+?)(?:/subagents(?:/workflows/(?P<workflow>[^/]+))?/(?:agent-(?P<agent>[^/]+)|[^/]+))?\\.jsonl$",
+      on_error   = "send_quiet",
+    },
+    {type = "move", from = "attributes.session", to = "attributes[\"session.id\"]"},
+    {type = "move", if = "attributes.agent != nil and attributes.agent != \"\"", from = "attributes.agent", to = "attributes[\"agent.id\"]"},
+    {type = "move", if = "attributes.workflow != nil and attributes.workflow != \"\"", from = "attributes.workflow", to = "attributes[\"workflow.id\"]"},
+    {type = "remove", if = "attributes.agent != nil", field = "attributes.agent"},
+    {type = "remove", if = "attributes.workflow != nil", field = "attributes.workflow"},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "claude.transcript.line"},
+    {type = "add", field = "resource[\"service.name\"]", value = "claude-transcripts"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+  ]
+
+  // Reading waits while the queue is full, so a first read never drops a line.
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+// What started each subagent, one JSON document beside its transcript. The session
+// and agent come from the resolved path, so a row joins the transcript lines it
+// describes.
+otelcol.receiver.filelog "claude_subagent_metadata" {
+  include                    = [string.format("%s/.claude/projects/*/*/subagents/*.meta.json", sys.env("HOME"))]
+  exclude_older_than         = "24h"
+  start_at                   = "beginning"
+  storage                    = otelcol.storage.file.transcript_offsets.handler
+  poll_interval              = "30s"
+  include_file_path          = true
+  include_file_path_resolved = true
+
+  operators = [
+    {type = "move", from = "attributes[\"log.file.path_resolved\"]", to = "attributes[\"log.file.path\"]"},
+    {
+      type       = "regex_parser",
+      parse_from = "attributes[\"log.file.path\"]",
+      regex      = "/(?P<project>[^/]+)/(?P<session>[^/]+)/subagents/agent-(?P<agent>[^/]+)\\.meta\\.json$",
+      on_error   = "send_quiet",
+    },
+    {type = "move", if = "attributes.session != nil", from = "attributes.session", to = "attributes[\"session.id\"]"},
+    {type = "move", if = "attributes.agent != nil", from = "attributes.agent", to = "attributes[\"agent.id\"]"},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "claude.subagent_meta"},
+    {type = "add", field = "resource[\"service.name\"]", value = "claude-transcripts"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+  ]
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
