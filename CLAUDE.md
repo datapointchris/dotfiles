@@ -183,8 +183,8 @@ should not be.
 **Never run `./install.sh` or a whole `dotfiles apply` in a Claude Code session.** Its system
 part needs interactive sudo. Test a provider directly, or in a Docker container with passwordless
 sudo. `dotfiles apply --skip system`, `dotfiles apply --entry <name>` and a scoped `dotfiles
-packages apply --package <name>` need none, and a session runs them on a fleet workstation without
-asking, here or over SSH (`fleet approvals show run-dotfiles-apply-without-sudo`).
+packages apply --package <name>` need none, so a session may run them on a workstation, here or
+over SSH.
 
 **Homebrew builds no new Intel bottles, and the macOS machines here are Intel.** Intel drops to Tier 3
 in September 2026 and is unsupported from September 2027. This is settled; the errors are the expected
