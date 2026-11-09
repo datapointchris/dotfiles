@@ -65,6 +65,13 @@ class Observed:
     value drift anywhere and call the machine converged.
     """
 
+    generated_text: str
+    """The section above the OVERRIDES marker as the file holds it, comments included."""
+
+    rendered_text: str
+    """The same section as `render` writes it today, read in `observe` because `render`
+    reads config.toml. Required, for the reason `generated` is."""
+
     by_hand: frozenset[str]
     """The required values this machine declares, whose contents never reach a screen.
 
@@ -152,6 +159,8 @@ class EnvResource:
             present_files=frozenset(entry.path for entry in plan.machine.required_files if entry.is_present(resolved)),
             by_hand=frozenset(entry.name for entry in plan.machine.required_values),
             generated=envfile.read_generated(path),
+            generated_text=envfile.generated_text(path),
+            rendered_text=envfile.render(plan.machine).split(envfile.MARKER, 1)[0],
             resolved=resolved,
             named_files=settings.describe(config, path),
             config_problem=config.problem,
@@ -181,6 +190,8 @@ class EnvResource:
         changes.extend(requirements(machine, observed))
         changes.extend(orphaned(machine, observed))
         changes.extend(undeclared(machine, observed))
+        if not any(change.actionable for change in changes):
+            changes.extend(restated(observed))
         return tuple(changes)
 
     def perform(self, session: Session, change: Change, privilege: Escalates) -> Outcome:
@@ -538,6 +549,28 @@ def unready(entry, machine, observed: Observed) -> list[Change]:
             repair=Repair.BY_HAND,
             detail=f'present, and reads {", ".join(unmet)} which nothing sets',
             advice=settings.where_to_name(unmet[0], observed.path),
+        )
+    ]
+
+
+def restated(observed: Observed) -> list[Change]:
+    """A generated section whose values all match but whose text does not.
+
+    Every other check here compares values, so a comment the declaration dropped,
+    such as the hand-set list naming a requirement the repo removed, would stay on
+    every box. `diff` asks this only once nothing else is actionable, because any
+    value drift already earns the same rewrite.
+    """
+    if not observed.generated_text or observed.generated_text == observed.rendered_text:
+        return []
+    return [
+        Change(
+            NAME,
+            Stage.ENVIRONMENT,
+            str(observed.path),
+            Verdict.STALE,
+            repair=Repair.AUTOMATIC,
+            detail='its generated section holds text the declaration does not render, such as a comment naming a dropped value',
         )
     ]
 

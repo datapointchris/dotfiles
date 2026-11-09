@@ -204,6 +204,14 @@ def read_generated(path: Path) -> dict[str, str]:
     return parse_env_assignments(text.split(MARKER, 1)[0]) if MARKER in text else {}
 
 
+def generated_text(path: Path) -> str:
+    """The section above the marker as written, or empty for an absent or markerless file."""
+    if not path.exists():
+        return ''
+    text = path.read_text()
+    return text.split(MARKER, 1)[0] if MARKER in text else ''
+
+
 def write(path: Path, machine: Machine) -> bool:
     """Rewrite the generated section, preserving everything below the marker.
 

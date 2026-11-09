@@ -336,6 +336,20 @@ def test_applying_converges_a_flag_whose_value_drifted(tmp_path: Path, unprivile
     assert changes(tmp_path, flags=NOW_ON) == ()
 
 
+def test_a_comment_naming_a_dropped_requirement_is_rewritten(tmp_path: Path, unprivileged: Privilege) -> None:
+    """Every value still matches, so only the section's text shows the drift."""
+    stale = session(tmp_path, MANIFEST, REQUIRED)
+    envfile.write(stale.env_file, stale.machine)
+    live = session(tmp_path)
+    found = changes(tmp_path)
+
+    assert items(found) == {str(live.env_file): Verdict.STALE}
+    env_resource.RESOURCE.perform(live, found[0], unprivileged)
+
+    assert changes(tmp_path) == ()
+    assert 'WINDOWS_USER' not in live.env_file.read_text()
+
+
 def test_a_hand_edited_override_below_the_marker_is_not_drift(tmp_path: Path) -> None:
     """It is the last assignment in the file, so the shell takes it — rewriting
     the generated section above it changes nothing the machine reads. Reported as
