@@ -161,33 +161,6 @@ otelcol.receiver.filelog "mutation_runs" {
   }
 }
 
-// One persona review's run record and report: one indented JSON document a run. Nothing
-// syncs this directory, so the glob names no host.
-otelcol.receiver.filelog "persona_review_runs" {
-  include      = [string.format("%s/dotfiles/persona-review/runs/*/run.json", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
-  start_at     = "beginning"
-  storage      = otelcol.storage.file.offsets.handler
-  max_log_size = "8MiB"
-
-  operators = [
-    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
-    {type = "add", field = "attributes[\"fleet.kind\"]", value = "dotfiles.persona_review_run"},
-  ]
-
-  multiline {
-    line_start_pattern = "^\\{"
-  }
-
-  retry_on_failure {
-    enabled          = true
-    max_elapsed_time = "0s"
-  }
-
-  output {
-    logs = [otelcol.exporter.otlphttp.collector.input]
-  }
-}
-
 // Every notification the ntfy client received here. A delivery opens at its time of
 // day and may run over several lines. The line carries no date, so only a delivery
 // arriving from now on has a true timestamp, and the tail starts at the end. The title

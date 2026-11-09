@@ -61,14 +61,10 @@ writes each command to the run's debug stream with secrets redacted. `effects.fe
 reaches the network through them. A new effect calls one of these, so a timeout or a redaction
 rule lands once.
 
-Four call sites stay outside, each needing what `effects.run` does not give:
+Two call sites stay outside, each needing what `effects.run` does not give:
 
 - `timer_reports.run` keeps stdout apart from stderr, and keeps what a timed-out child printed.
   `Completed` carries neither.
-- `persona_review/headless_call.py` reads `claude -p`'s stream-json frames from a `Popen` as they
-  arrive.
-- `persona_review/runs.py` reads `git archive`'s tar as bytes. Its `git` helper raises, so a bad
-  ref stops the export.
 - `request_hook.py` makes the one POST, signed with a secret that must reach no log line.
 
 ## Where things go

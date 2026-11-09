@@ -22,7 +22,6 @@ dependencies = [
 [project.scripts]
 dotfiles = "dotfiles.main:app"
 packages = "dotfiles.declaration:cli"
-persona-review = "dotfiles.persona_review.cli:main"
 
 
 # ---------- Tool Configurations ---------- #
