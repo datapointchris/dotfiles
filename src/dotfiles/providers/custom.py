@@ -68,7 +68,8 @@ class Request:
     There is no force flag and nowhere for one to attach: currency is measured
     before an installer is called, so reaching a function below means the machine
     needs it. A flag overriding that could only mean "write despite the
-    measurement", and a flag never decides whether the command writes.
+    measurement", which turns converging into a different verb, and a flag never
+    turns one verb into another.
 
     The routes rather than one offline flag, because one installer reaches several
     hosts. `theme` takes its script from a host the work network blocks and clones
