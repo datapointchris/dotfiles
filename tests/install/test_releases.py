@@ -126,7 +126,7 @@ def test_a_repo_never_asked_about_answers_nothing() -> None:
 def test_two_clis_in_one_monorepo_do_not_share_a_cache_entry() -> None:
     """Four declared releases are CLIs in repos that also release other things.
     Keying on the repo alone would have them overwrite each other's answer."""
-    assert releases.Wanted('datapointchris/ichrisbirch', 'cli/').key != releases.Wanted('datapointchris/ichrisbirch').key
+    assert releases.Wanted('datapointchris/life', 'cli/').key != releases.Wanted('datapointchris/life').key
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -170,11 +170,11 @@ def test_a_refresh_records_what_upstream_said_and_when(answers: dict) -> None:
 
 
 def test_a_refresh_passes_the_prefix_through(answers: dict) -> None:
-    answers[('datapointchris/ichrisbirch', 'cli/')] = 'cli/1.4.0'
+    answers[('datapointchris/life', 'cli/')] = 'cli/1.4.0'
 
-    entries = releases.refresh((releases.Wanted('datapointchris/ichrisbirch', 'cli/'),), {}, NOW)
+    entries = releases.refresh((releases.Wanted('datapointchris/life', 'cli/'),), {}, NOW)
 
-    assert entries['datapointchris/ichrisbirch#cli/'].version == 'cli/1.4.0'
+    assert entries['datapointchris/life#cli/'].version == 'cli/1.4.0'
 
 
 def test_a_repo_that_did_not_answer_keeps_its_previous_entry(answers: dict) -> None:

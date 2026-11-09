@@ -29,7 +29,7 @@ already installed one way does not get split for being slow — see
 
 Node.js versions come from **fnm**, installed as a cargo package. Repos across
 the portfolio pin different versions in `.nvmrc` — several want 24, meso wants
-26. Running the wrong one is not a subtle failure: ichrisbirch's frontend suite
+26. Running the wrong one is not a subtle failure: life's frontend suite
 dies outright on 26 with `localStorage is undefined`.
 
 `src/dotfiles/providers/toolchain.py` installs the fleet default and links it

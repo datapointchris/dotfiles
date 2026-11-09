@@ -357,7 +357,7 @@ def test_the_executable_an_entry_installs(tmp_path: Path, declared: dict[str, An
 @pytest.mark.parametrize(
     ('section', 'declared', 'expected'),
     [
-        ('github_releases', {'name': 'icb', 'repo': 'datapointchris/icb'}, 'datapointchris'),
+        ('github_releases', {'name': 'life', 'repo': 'datapointchris/life'}, 'datapointchris'),
         ('git_uv_tools', {'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'}, 'datapointchris'),
         ('go_tools', {'name': 'task', 'package': 'github.com/go-task/task/v3/cmd/task'}, 'go-task'),
         ('npm_globals', {'name': 'eslint'}, None),

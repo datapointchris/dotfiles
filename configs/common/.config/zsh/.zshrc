@@ -410,7 +410,7 @@ cache_completion gh gh completion -s zsh
 # Own cobra tools.
 cache_completion forge forge completion zsh
 cache_completion projects projects completion zsh
-cache_completion icb icb completion zsh
+cache_completion life life completion zsh
 cache_completion learning learning completion zsh
 cache_completion meso meso completion zsh
 cache_completion nomad nomad completion zsh
@@ -687,7 +687,7 @@ cache_eval zoxide zoxide init --cmd z zsh
 # directory, which is removed when that shell exits.
 #
 # --use-on-cd reads .nvmrc on entering a directory, which is the whole point:
-# ichrisbirch, nomad and timeline pin 24 while meso pins 26. .zshenv already
+# life, nomad and timeline pin 24 while meso pins 26. .zshenv already
 # puts the default alias on PATH for non-interactive shells; this layers
 # per-directory switching over it for interactive ones.
 if command -v fnm >/dev/null 2>&1; then

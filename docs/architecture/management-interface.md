@@ -336,7 +336,7 @@ their own identity and `howto find` discovery. Folding them into
 An app leaves this directory when its data outgrows a file. `patterns` captured
 timestamped fragments into a per-machine JSONL that reached no other desk, and a
 tool for finding patterns over time needs every entry rather than one box's — so
-it became `icb patterns` against the ichrisbirch API. The test is the store, not
+it became `life patterns` against the life API. The test is the store, not
 the script: a file-backed app whose file has to roam is already an API client
 that has not been written yet.
 

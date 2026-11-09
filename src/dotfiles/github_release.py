@@ -463,7 +463,7 @@ def latest_version(repo: str, tag_prefix: str = '', ceiling: str = '') -> str | 
 
     A prefix is not a nicety: several of the declared releases are CLIs living in a
     monorepo that also releases an API and a web app, so `releases/latest` there
-    answers with whichever component shipped most recently. Asking it for `icb`
+    answers with whichever component shipped most recently. Asking it for `life`
     would report the CLI outdated every time the API released, and current every
     time the API released after it.
 

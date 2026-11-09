@@ -296,7 +296,7 @@ class TestLatestVersion:
     """The prefixed form exists because four declared releases are CLIs living in
     a repo that also releases an API and a web app. `releases/latest` there
     answers with whichever component shipped most recently, so asking it about
-    `icb` reports the CLI outdated every time the API ships."""
+    `life` reports the CLI outdated every time the API ships."""
 
     def test_no_prefix_reads_the_latest_release_endpoint(self, monkeypatch):
         seen = []

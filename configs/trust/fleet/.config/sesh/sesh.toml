@@ -19,5 +19,5 @@ name = "dev"
 path = "~/dev"
 
 [[session]]
-name = "ichrisbirch"
-path = "~/webapps/ichrisbirch"
+name = "life"
+path = "~/webapps/life"

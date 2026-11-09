@@ -75,9 +75,9 @@ system_packages:
   # that applies offline never gets fnm's Node, because fnm downloads it from
   # nodejs.org and no bundle stages it, so there this package is the Node it runs.
   #
-  # Per-project switching is emphatically used: ichrisbirch, nomad and timeline
+  # Per-project switching is emphatically used: life, nomad and timeline
   # pin 24 and meso pins 26, and running the wrong one is not a subtle failure —
-  # ichrisbirch's whole vitest suite dies with `localStorage is undefined` under
+  # life's whole vitest suite dies with `localStorage is undefined` under
   # 26. Removing nvm on the grounds that switching was unused was wrong; the
   # real fault was nvm being a shell function, invisible to every
   # non-interactive shell. fnm is a binary and does not have that problem.
@@ -1099,7 +1099,7 @@ github_releases:
   # `supersedes` removes the binary this CLI was released as under its former
   # name.
   - name: life
-    repo: datapointchris/ichrisbirch
+    repo: datapointchris/life
     release_tag_prefix: "cli/"
     description: Tasks, habits, books, articles, events, countdowns, recipes
     tags: [cli, personal]

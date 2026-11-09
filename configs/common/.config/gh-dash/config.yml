@@ -139,8 +139,8 @@ repoPaths:
     datapointchris/goselfupdate: ~/tools/goselfupdate
     datapointchris/gotermstyle: ~/tools/gotermstyle
     datapointchris/homelab: ~/homelab
-    datapointchris/ichrisbirch-rust: ~/code/rust/ichrisbirch
-    datapointchris/ichrisbirch: ~/webapps/ichrisbirch
+    datapointchris/life-rust: ~/code/rust/life
+    datapointchris/life: ~/webapps/life
     datapointchris/ifiles: ~/tools/ifiles
     datapointchris/indy: ~/tools/indy
     datapointchris/interview-questions: ~/code/python-projects/interview-questions

@@ -5,7 +5,7 @@
 # fnm's default alias comes first so bare `node` is the fleet version rather
 # than whatever brew last upgraded to. It has to be here and not in .zshrc:
 # pre-commit hooks, agents and scripts run non-interactive, and that is exactly
-# where the wrong node bites — ichrisbirch pins 24 and its vitest suite fails
+# where the wrong node bites — life pins 24 and its vitest suite fails
 # outright on 26. --use-on-cd in .zshrc handles per-directory overrides on top.
 #
 # /usr/local/go/bin is the Go toolchain itself, and it belongs here rather than

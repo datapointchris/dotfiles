@@ -415,7 +415,7 @@ def test_a_checksum_url_that_will_not_answer_exits_failed(tmp_path, github):
         ('https://github.com/sharkdp/fd/releases/download/v10.2.0/fd.tar.gz', 'sharkdp/fd|v10.2.0\n'),
         # A nested module's tag keeps its slashes, which is why the tag is the
         # rest of the path rather than one segment.
-        ('https://github.com/owner/repo/releases/download/cli/v0.9.0/icb.tar.gz', 'owner/repo|cli/v0.9.0\n'),
+        ('https://github.com/owner/repo/releases/download/cli/v0.9.0/life.tar.gz', 'owner/repo|cli/v0.9.0\n'),
         # Not a GitHub release: recording a checksum against one of these would
         # claim a verification that never happened.
         ('https://releases.hashicorp.com/terraform/1.0/terraform.zip', ''),

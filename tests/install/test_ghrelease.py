@@ -490,9 +490,9 @@ class TestTagResolution:
     def test_a_prefixed_tag_is_rebuilt_from_the_bundled_version(self, bundle):
         """The bundle records the version without the prefix, because that is what
         the tool calls itself; the asset lives under the full tag."""
-        (bundle / 'manifest.txt').write_text('binary|icb|v0.9.0|icb_0.9.0_linux_amd64.tar.gz\n')
+        (bundle / 'manifest.txt').write_text('binary|life|v0.9.0|life_0.9.0_linux_amd64.tar.gz\n')
 
-        assert ghrelease.resolve_tag(entry('icb', release_tag_prefix='cli/'), offline=True) == 'cli/v0.9.0'
+        assert ghrelease.resolve_tag(entry('life', release_tag_prefix='cli/'), offline=True) == 'cli/v0.9.0'
 
     def test_offline_with_nothing_staged_answers_nothing(self, bundle):
         assert ghrelease.resolve_tag(entry(), offline=True) is None
