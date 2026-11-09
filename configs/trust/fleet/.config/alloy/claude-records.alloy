@@ -96,22 +96,26 @@ otelcol.receiver.filelog "session_review_ledgers" {
   }
 }
 
-// What the dispatch-work skill sent a worker and what the worker reported: one
-// indented JSON document a file, so a record opens at a brace in the first column.
-// A worker's model stream sits beside these under a numbered name, and stays out.
-otelcol.receiver.filelog "dispatch_worker_records" {
-  include  = [string.format("%s/dispatch-work/*/*.[a-z]*.json", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
-  start_at = "beginning"
-  storage  = otelcol.storage.file.offsets.handler
+// What the dispatch-work skill sent each worker and what the worker reported, one
+// saved record a line. A line names its own host, chain, slug and kind, and carries
+// the record whole. So the line is the body, and the warehouse parses it.
+//
+// Nothing removes a worker's log, so the glob matches more of them every day. A
+// 250ms poll over 3,000 logs costs 0.6 cores. A worker's records span hours, so the
+// receiver keeps only logs written in the last three days, and the same poll costs
+// 0.04. A log appended after three quiet days is read again whole. The warehouse
+// keeps one copy of each line, so that costs only the repeated rows.
+otelcol.receiver.filelog "dispatch_worker_record_lines" {
+  include            = [string.format("%s/dispatch-work/*/*.records.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  exclude_older_than = "72h"
+  start_at           = "beginning"
+  storage            = otelcol.storage.file.offsets.handler
+  poll_interval      = "250ms"
 
   operators = [
     {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
-    {type = "add", field = "attributes[\"fleet.kind\"]", value = "dispatch.worker_record"},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "dispatch.worker_record_line"},
   ]
-
-  multiline {
-    line_start_pattern = "^\\{"
-  }
 
   retry_on_failure {
     enabled          = true
