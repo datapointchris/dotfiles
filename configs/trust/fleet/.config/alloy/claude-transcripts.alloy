@@ -9,14 +9,15 @@
 // follows the links, so one file matches under two names. The receiver tells files
 // apart by their opening bytes and reads each once, and the path a line carries is the
 // resolved one, so it names the real directory whichever name matched. A file under
-// the 1 KiB fingerprint that grows can still be read again under its second name, and
-// bronze's (SessionId, LineHash) key folds that copy.
+// the 1 KiB fingerprint that grows can still be read again under its second name.
+// Bronze keys a line by its path below the project directory and its record number,
+// which the second read gives it again, so it folds that copy.
 //
 // Each poll stats every transcript in the tree, and opens and checkpoints each one it
 // keeps. On a desk holding 18,000 transcripts, a 2s poll over all of them costs most
 // of a core, and over the files written in the last day about a fifth. A file older
 // than the window is not read, and once it is written again it is read whole, so a
-// session resumed after a day ships every line again and bronze folds the repeats.
+// session resumed after a day ships every line again and bronze folds the copies.
 // The window also bounds a first start to a day of lines.
 
 // How far each transcript has been read, so a restart reads nothing twice.
