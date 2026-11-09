@@ -89,3 +89,5 @@ General technical notes that name nothing in this repo live on the hub at
 - [Reloading a Running fzf From Outside](fzf-reload-from-outside.md) — a `change-header` chained
   after `reload-sync` over `--listen` answers 200 and does nothing, and a reload must not blank the
   list when a provider is unreachable
+- [/tmp Has a Per-User Quota Below Its Size](tmp-has-a-per-user-quota-below-its-size.md) — `go
+  build` fails with `disk quota exceeded` while `df` shows gigabytes free on `/tmp`
