@@ -9,8 +9,10 @@ nothing here restarting anything. So the unit says `Restart=always`, and the age
 **The unit runs the command itself, not `dotfiles`.** A timer row's run goes through
 `dotfiles timers run` so this repo records it. A service has no run to record, and
 the manager's stop signal has to reach the command, which saves its state on it.
-Its output goes to the journal on Linux and to one file under `~/Library/Logs` on
-macOS, because launchd sends a job's output nowhere by default.
+
+**Its output goes to the journal on Linux, and nowhere on macOS.** A row's program
+sends its own log records to the box's OTLP agent, as a timer's run records itself.
+launchd would append the output to one file that nothing reads or rotates.
 
 A row applies only where the first pass plans the program its `argv` starts. So a
 box that never installs it owes no unit, and the row names the program once.
@@ -57,10 +59,6 @@ def command(entry: catalogs.UserService) -> list[str] | None:
     return [program, *(os.path.expanduser(argument) for argument in entry.argv[1:])]
 
 
-def log_path(entry: catalogs.UserService) -> Path:
-    return Path.home() / 'Library' / 'Logs' / f'{label(entry)}.log'
-
-
 def service_content(entry: catalogs.UserService, argv: list[str]) -> str:
     # Five seconds keeps a command that exits at once under systemd's default start
     # limit of five starts in ten seconds, so it goes on being retried.
@@ -73,7 +71,6 @@ def service_content(entry: catalogs.UserService, argv: list[str]) -> str:
 
 
 def agent_content(entry: catalogs.UserService, argv: list[str]) -> bytes:
-    log = str(log_path(entry))
     return launchd.serialize(
         {
             'Label': label(entry),
@@ -82,8 +79,8 @@ def agent_content(entry: catalogs.UserService, argv: list[str]) -> bytes:
             'KeepAlive': True,
             'RunAtLoad': True,
             'ProcessType': 'Background',
-            'StandardOutPath': log,
-            'StandardErrorPath': log,
+            'StandardOutPath': '/dev/null',
+            'StandardErrorPath': '/dev/null',
         }
     )
 
@@ -140,12 +137,11 @@ def apply(entry: catalogs.UserService) -> Result:
     if periodic_job.is_darwin():
         agent = launchd.agent_path(label(entry))
         agent.parent.mkdir(parents=True, exist_ok=True)
-        log_path(entry).parent.mkdir(parents=True, exist_ok=True)
         agent.write_bytes(agent_content(entry, argv))
         loaded = launchd.reload(label(entry))
         if not loaded.ok:
             return Result(False, f'could not load {label(entry)}: {loaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
-        return Result(True, f'{label(entry)} loaded, logging to {paths.under_home(log_path(entry))}', kind=Kind.APPLIED)
+        return Result(True, f'{label(entry)} loaded', kind=Kind.APPLIED)
 
     placed = systemd_file(entry)
     placed.parent.mkdir(parents=True, exist_ok=True)
