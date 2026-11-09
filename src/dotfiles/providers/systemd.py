@@ -5,7 +5,7 @@ The narrow half of what `providers/sysconfig.py` does. That module drives declar
 for a unit a provider wrote into `~/.config/systemd/user` itself, where the scope is
 never in question and no write needs root.
 
-Owned once because both callers agreed on the sequence and neither chose it:
+Owned once because every caller agrees on the sequence and none chose it:
 reloading before enabling is systemd's requirement, not a preference — without it
 the manager enables the copy it read at boot.
 """
