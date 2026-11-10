@@ -82,11 +82,18 @@ A credential is short, so the length cut is exactly what lets one through.
 """
 
 SECRET_SHAPES = (
+    re.compile(r'-----BEGIN [A-Z ]*PRIVATE KEY-----(?:.*?-----END [A-Z ]*PRIVATE KEY-----)?', re.DOTALL),
     re.compile(r'\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}'),
     re.compile(r'\bxox[abposr]-[A-Za-z0-9-]{10,}'),
+    re.compile(r'\bsk-ant-[A-Za-z0-9_-]{20,}'),
+    re.compile(r'\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}'),
     re.compile(r'\b(?:sk|rk)-[A-Za-z0-9]{20,}'),
-    re.compile(r'\bAKIA[0-9A-Z]{16}\b'),
+    re.compile(r'\b(?:AKIA|ASIA)[0-9A-Z]{16}\b'),
     re.compile(r'\bey[JI][A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+'),
+    re.compile(r'\bAIza[0-9A-Za-z_-]{35}'),
+    re.compile(r'\b[rs]k_live_[0-9A-Za-z]{24,}'),
+    re.compile(r'\bnpm_[A-Za-z0-9]{36}\b'),
+    re.compile(r'"d"\s*:\s*"[A-Za-z0-9_-]{20,}"'),
 )
 """Token shapes scrubbed from anything a command said before it is recorded.
 
