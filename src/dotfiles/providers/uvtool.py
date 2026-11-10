@@ -1,7 +1,7 @@
-"""Installing a Python tool with uv: from PyPI, or pinned to a git repo's release.
+"""Installing a Python tool with uv: from PyPI, from a package index, or pinned to a git repo's release.
 
 Two providers, one mechanism. What separates them is where the requirement comes
-from, and only the git one has anything to decide.
+from. A PyPI install has nothing to decide.
 
 **A git install is pinned to a release tag, never left tracking the branch.** Each
 of these tools updates itself, and `pyselfupdate` reads uv's receipt to decide
@@ -14,11 +14,12 @@ releases back that way. Pinning here writes the same receipt shape `<tool>
 update` writes, and both read the newest release from the same API, so the two
 cannot disagree about which release that is.
 
-**A git install is held to the lock at that revision.** CI tests the lock, and
-`uv tool install` ignores it, so the revision is cloned first and its lock
-handed over as `uv_lock` describes. A revision with no `uv.lock` installs
-unconstrained, with a warning naming it. A clone or an export that fails
-refuses the install rather than installing unconstrained.
+**A git or index install is held to the lock at the revision it installs.** CI
+tests the lock, and `uv tool install` ignores it, so the revision is cloned
+first and its lock handed over as `uv_lock` describes. An index install reads
+the tag its version was released from, in the repo its row names. A revision
+with no `uv.lock` installs unconstrained, with a warning naming it. A clone or an
+export that fails refuses the install rather than installing unconstrained.
 
 **A repair that does not move the requirement needs `--reinstall`.** `uv tool
 install` is a no-op against an unchanged requirement, which is every PyPI entry
@@ -78,16 +79,20 @@ def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Res
     The index goes on this one command, never machine-wide. uv records it in the
     tool's receipt, which is where `uv tool upgrade` and a tool's own `update`
     read it back.
+
+    **An index install is held to the lock at the tag of the version it installs**,
+    the way a git install is. That version is the declared one, or else the
+    newest final release the index lists, which is what uv picks unpinned.
     """
     wanted = f'{entry.name}=={entry.version}' if entry.version else entry.name
     if not entry.index_url:
         return uv_tool_install(entry.name, wanted, offline=offline, again=again)
 
+    stranded = ', and the offline bundle stages no Python tools to fall back on' if offline else ''
     page = python_index.project_url(entry.index_url, entry.name)
     try:
-        listed = python_index.lists(page)
+        listed = python_index.listed(page)
     except github_release.Unreadable as unreadable:
-        stranded = ', and the offline bundle stages no Python tools to fall back on' if offline else ''
         return Result(False, f'{entry.name}: {unreadable}{stranded}', kind=unreadable_kind(unreadable.reached))
     if not listed:
         return Result(
@@ -95,7 +100,19 @@ def install(entry: catalog.UvTool, *, offline: bool, again: bool = False) -> Res
             f'{entry.name}: the {entry.index} index lists no release at {page}, so uv would install the {entry.name} on PyPI instead',
             kind=Kind.DECLARATION_INVALID,
         )
-    return uv_tool_install(entry.name, wanted, offline=offline, again=again, index=(entry.index, entry.index_url))
+    index = (entry.index, entry.index_url)
+    version = entry.version or python_index.newest_of(listed)
+    if version is None:
+        warn(f'{entry.name}: the {entry.index} index lists no final release, so no tag names the uv.lock to hold it to')
+        return uv_tool_install(entry.name, wanted, offline=offline, again=again, index=index)
+
+    with tempfile.TemporaryDirectory(prefix=f'dotfiles-{entry.name}-') as scratch:
+        try:
+            pins = locked_at(entry.name, f'https://github.com/{entry.repo}.git', python_index.tag_of(version), Path(scratch))
+        except LockUnreadable as unreadable:
+            return Result(False, f'{entry.name}: {unreadable}{stranded}', kind=unreadable.kind)
+        held = pins.arguments(Path(scratch)) if pins is not None else []
+        return uv_tool_install(entry.name, wanted, offline=offline, again=again, held=held, index=index)
 
 
 def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False) -> Result:
@@ -120,7 +137,7 @@ def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False)
 
     with tempfile.TemporaryDirectory(prefix=f'dotfiles-{entry.name}-') as scratch:
         try:
-            pins = locked_at(entry, tag, Path(scratch))
+            pins = locked_at(entry.name, entry.repo, tag, Path(scratch))
         except LockUnreadable as unreadable:
             return Result(False, f'{entry.name}: {unreadable}{stranded}', kind=unreadable.kind)
         held = pins.arguments(Path(scratch)) if pins is not None else []
@@ -158,23 +175,21 @@ class LockUnreadable(Exception):
         self.kind = kind
 
 
-def locked_at(entry: catalog.GitUvTool, tag: str | None, scratch: Path) -> uv_lock.Pins | None:
-    """What the lock at `tag`, or at the branch head, pins. None where that revision has no lock."""
+def locked_at(name: str, repo: str, tag: str | None, scratch: Path) -> uv_lock.Pins | None:
+    """What the lock in the clone URL `repo` at `tag`, or at the branch head, pins. None where that revision has no lock."""
     revision = tag or 'the default branch'
     checkout = scratch / 'checkout'
     branch = ('--branch', tag) if tag else ()
-    cloned = effects.run(('git', 'clone', '--quiet', '--depth', '1', *branch, entry.repo, str(checkout)), output=Output.QUIET)
+    cloned = effects.run(('git', 'clone', '--quiet', '--depth', '1', *branch, repo, str(checkout)), output=Output.QUIET)
     if not cloned.ok:
-        raise LockUnreadable(
-            f'could not clone {entry.repo} at {revision} to read its uv.lock: {cloned.transcript.strip()}', Kind.DOWNLOAD_FAILED
-        )
+        raise LockUnreadable(f'could not clone {repo} at {revision} to read its uv.lock: {cloned.transcript.strip()}', Kind.DOWNLOAD_FAILED)
 
     try:
         pins = uv_lock.read(checkout)
     except uv_lock.Unexportable as unexportable:
         raise LockUnreadable(f'uv export would not read the uv.lock at {revision}: {unexportable}', Kind.COMMAND_FAILED) from unexportable
     if pins is None:
-        warn(f'{entry.name}: {revision} has no uv.lock, so its dependencies resolve to the newest rather than what its CI tested')
+        warn(f'{name}: {revision} has no uv.lock, so its dependencies resolve to the newest rather than what its CI tested')
     return pins
 
 

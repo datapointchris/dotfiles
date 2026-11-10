@@ -32,7 +32,7 @@ from dotfiles.providers import uvtool
 
 RUFF = catalog.UvTool.from_mapping({'name': 'ruff'})
 OWN_INDEX = 'https://packages.example.com/simple/'
-INDEXED = dc.replace(catalog.UvTool.from_mapping({'name': 'refcheck', 'index': 'own'}), index_url=OWN_INDEX)
+INDEXED = dc.replace(catalog.UvTool.from_mapping({'name': 'refcheck', 'index': 'own', 'repo': 'owner/refcheck'}), index_url=OWN_INDEX)
 SYNCER = catalog.GitUvTool.from_mapping({'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'})
 
 
@@ -167,13 +167,13 @@ def test_offline_still_tries_pypi_and_says_there_is_no_fallback(uv) -> None:
 @pytest.mark.parametrize('listed', [True, False])
 def test_an_index_tool_installs_from_its_index_only_where_the_index_lists_it(uv, monkeypatch, listed: bool) -> None:
     """uv asks the named index first and quietly takes PyPI's project where the index has none."""
-    monkeypatch.setattr(python_index, 'lists', lambda page: listed)
+    monkeypatch.setattr(python_index, 'listed', lambda page: ['1.0.0'] if listed else [])
     reached = uv()
 
     result = uvtool.install(INDEXED, offline=False)
 
     if listed:
-        assert reached.calls == [('uv', 'tool', 'install', '--index', f'own={OWN_INDEX}', 'refcheck')]
+        assert installs(reached) == [('uv', 'tool', 'install', '--index', f'own={OWN_INDEX}', 'refcheck')]
     else:
         assert installs(reached) == []
         assert result.kind is Kind.DECLARATION_INVALID
@@ -356,6 +356,21 @@ def test_a_lock_uv_will_not_export_refuses_rather_than_installing_unlocked(uv, r
     assert 'uv.lock at v6.0.0' in result.detail
     assert 'unsupported lock version' in result.detail
     assert installs(reached) == []
+
+
+def test_an_index_tool_is_held_to_the_lock_at_the_tag_of_the_version_it_installs(uv, monkeypatch, locked) -> None:
+    """A wheel carries no lock, so an index install with none ran dependencies its CI never tested."""
+    monkeypatch.setattr(python_index, 'listed', lambda page: ['1.0.0', '2.0.0', '2.1.0rc1'])
+    locked(PINS)
+    reached = uv()
+
+    result = uvtool.install(INDEXED, offline=False)
+
+    [clone] = clones(reached)
+    assert clone[:-1] == ('git', 'clone', '--quiet', '--depth', '1', '--branch', 'v2.0.0', 'https://github.com/owner/refcheck.git')
+    [install] = installs(reached)
+    assert (install[5], install[7], install[-1]) == ('--constraints', '--overrides', 'refcheck')
+    assert result.ok
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -325,7 +325,10 @@ FROM_GIT = '{{ name = "{name}", git = "https://github.com/datapointchris/{name}.
     [
         pytest.param({'name': 'tool'}, FROM_GIT.format(name='tool'), [('uv/tool', Verdict.STALE)], id='pypi row, git install'),
         pytest.param(
-            {'name': 'tool', 'index': 'own'}, FROM_GIT.format(name='tool'), [('uv/tool', Verdict.STALE)], id='index row, git install'
+            {'name': 'tool', 'index': 'own', 'repo': 'owner/tool'},
+            FROM_GIT.format(name='tool'),
+            [('uv/tool', Verdict.STALE)],
+            id='index row, git install',
         ),
         pytest.param({'name': 'tool'}, '{ name = "tool" }', [], id='pypi row, installed by name'),
     ],
@@ -1912,7 +1915,7 @@ def test_a_uv_tool_the_plan_does_not_take_is_reported_where_its_receipt_says_it_
     declared = {
         **GO_TOOL,
         'uv_indexes': {'own': 'https://index.example/simple/'},
-        'uv_tools': {'group': [{'name': 'kept', 'index': 'own'}]},
+        'uv_tools': {'group': [{'name': 'kept', 'index': 'own', 'repo': 'owner/kept'}]},
     }
     live = session(tmp_path, declared, {**DECLARES_TASK, 'uv_tools': ['kept']})
 

@@ -411,11 +411,18 @@ def test_show_names_the_index_a_uv_tool_installs_from(
 ) -> None:
     point_at(
         tmp_path / 'repo',
-        {'uv_indexes': {'own': 'https://index.example/simple/'}, 'uv_tools': {'self_published': [{'name': 'refcheck', 'index': 'own'}]}},
+        {
+            'uv_indexes': {'own': 'https://index.example/simple/'},
+            'uv_tools': {'self_published': [{'name': 'refcheck', 'index': 'own', 'repo': 'owner/refcheck'}]},
+        },
         monkeypatch,
     )
 
-    assert answered(capsys, 'show', 'refcheck')[0]['metadata'] == {'index': 'own', 'index_url': 'https://index.example/simple/'}
+    assert answered(capsys, 'show', 'refcheck')[0]['metadata'] == {
+        'index': 'own',
+        'index_url': 'https://index.example/simple/',
+        'repo': 'owner/refcheck',
+    }
 
 
 EVERY_ROW: dict[str, Any] = {

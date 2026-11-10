@@ -1601,6 +1601,10 @@ npm_globals:
 # because every `uv lock` on the box would then ask it first. A name the index
 # does not list is refused rather than installed, because uv would quietly take
 # PyPI's project of that name instead. src/dotfiles/providers/uvtool.py says so.
+#
+# A row naming an `index` also names its GitHub `repo`. The install clones the
+# `v<version>` tag it is about to install and holds the tool to that tag's
+# uv.lock, which a wheel does not carry.
 
 uv_indexes:
   datapointchris: https://pypi.ichrisbirch.com/simple/
@@ -1668,34 +1672,42 @@ uv_tools:
   self_published:
     - name: refcheck
       index: datapointchris
+      repo: datapointchris/refcheck
       description: Find broken file references and fragile path patterns
 
     - name: syncer
       index: datapointchris
+      repo: datapointchris/syncer
       description: Sync files and directories
 
     - name: doit
       index: datapointchris
+      repo: datapointchris/doit
       description: What a person attends to now, and everything that decides it — the draw, the dashboard, the journal and the review
 
     - name: howto
       index: datapointchris
+      repo: datapointchris/howto
       description: Search and show reference cards, Labs, a tool registry, and the shell's own functions and keybindings
 
     - name: indy
       index: datapointchris
+      repo: datapointchris/indy
       description: Semantic search index for local codebases, docs, and notes
 
     - name: logsift
       index: datapointchris
+      repo: datapointchris/logsift
       description: Intelligent log analysis and command monitoring tool for LLM-driven workflows
 
     - name: dectl
       index: datapointchris
+      repo: datapointchris/dectl
       description: Verb-last data-engineering control CLI
 
     - name: safekeep
       index: datapointchris
+      repo: datapointchris/safekeep
       description: Dated snapshots of the files no package manager will put back
 
     # The analyzer half of typos. Its capture half is a Neovim plugin lazy installs
@@ -1703,24 +1715,29 @@ uv_tools:
     # that reads them.
     - name: typos
       index: datapointchris
+      repo: datapointchris/typos
       description: Passive typing analyzer over captured Neovim keystrokes
 
     - name: runthrough
       index: datapointchris
+      repo: datapointchris/runthrough
       description: Record real terminal sessions from declarative tapes, and author those tapes from a question
 
     - name: git-graph
       index: datapointchris
+      repo: datapointchris/git-graph
       description: Build synthetic git histories from named scenarios, to see what merge, rebase, squash and worktrees produce
 
     - name: sparkxray-cli
       command: sparkxray
       index: datapointchris
+      repo: datapointchris/sparkxray
       description: Find why a Spark run was slow from its event log, with no JVM
 
     - name: doppeldata-cli
       command: doppeldata
       index: datapointchris
+      repo: datapointchris/doppeldata
       description: Profile a dataset into a reviewable file holding no rows, then generate synthetic data from it
 
 # ================================================================

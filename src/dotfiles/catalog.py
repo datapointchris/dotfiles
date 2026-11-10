@@ -810,6 +810,30 @@ class UvTool(Entry):
     )
     """The URL `index` names. `load` fills it in, and a declaration cannot set it."""
 
+    repo: str = ''
+    """The GitHub `owner/name` whose tag for each version on `index` holds the lock it was tested with.
+
+    A wheel carries no `uv.lock`, and `uv tool install` reads none, so the tag is
+    where the install finds the versions its CI ran. Required beside `index`,
+    because an index row without one installs every dependency at its newest.
+    """
+
+    @property
+    def owner(self) -> str | None:
+        return owner_of(self.repo) if self.repo else None
+
+    def problems(self) -> tuple[str, ...]:
+        found = list(Entry.problems(self))
+        if self.index and not self.repo:
+            found.append(
+                f'installs from the {self.index} index and names no repo, so nothing holds it to the uv.lock its release was tested with'
+            )
+        if self.repo and not self.index:
+            found.append(f'names the repo {self.repo!r} and no index, and only an index install reads a repo')
+        if self.repo and repo_slug_of(self.repo) != self.repo:
+            found.append(f"declares 'repo' as {self.repo!r}, which is not a GitHub owner/name")
+        return tuple(found)
+
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class GitUvTool(Entry):

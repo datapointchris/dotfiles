@@ -611,8 +611,9 @@ class UvToolProvider(CatalogProvider):
     def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
         index = item.entry.index_url if isinstance(item.entry, catalogs.UvTool) else ''
         if index:
+            # github.com is the clone of the tag whose uv.lock the install is held to.
             served = frozenset({routing.host_of(index)})
-            return routing.ItemHosts(version=served, download=served | routing.PYPI)
+            return routing.ItemHosts(version=served, download=served | routing.PYPI | {routing.GITHUB})
         return routing.ItemHosts(download=routing.PYPI)
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:

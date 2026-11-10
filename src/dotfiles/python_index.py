@@ -48,10 +48,10 @@ def newest_version(page: str, etag: str = '') -> github_release.Newest:
     return github_release.Newest(version=newest_in(answer.payload, project_of(page)), etag=answer.etag)
 
 
-def lists(page: str) -> bool:
-    """Whether the index holds a file of this project that is not yanked.
+def listed(page: str) -> list[str]:
+    """The version of each file of this project the index holds and has not yanked.
 
-    False only on an answer: a 404, or a page with no such file. Raises
+    Empty only on an answer: a 404, or a page with no such file. Raises
     `github_release.Unreadable` where the index could not say, because an install
     that went ahead on that silence is the one that lands PyPI's project instead.
     """
@@ -59,20 +59,34 @@ def lists(page: str) -> bool:
         answer = github_release.revalidate(page)
     except httpx2.HTTPStatusError as refused:
         if refused.response.status_code == github_release.NOT_FOUND:
-            return False
+            return []
         raise github_release.Unreadable.because(f'could not read {page}', refused) from refused
     except httpx2.HTTPError as unreachable:
         raise github_release.Unreadable.because(f'could not reach {page}', unreachable) from unreachable
-    return bool(released(answer.payload or b'', project_of(page)))
+    return released(answer.payload or b'', project_of(page))
 
 
 def newest_in(page: bytes, project: str) -> str | None:
     """The highest final release among the page's files for `project`."""
+    return newest_of(released(page, project))
+
+
+def newest_of(found: list[str]) -> str | None:
+    """The highest final release among these versions, which is the one uv picks unpinned."""
     ranked = []
-    for version in released(page, project):
+    for version in found:
         if FINAL_RELEASE.match(version) and (parsed := versions.parse(version)) is not None:
             ranked.append((parsed, version))
     return max(ranked)[1] if ranked else None
+
+
+def tag_of(version: str) -> str:
+    """The git tag a version on the index was released from.
+
+    A repo that publishes to an index tags each release `v<version>`, and the tag
+    is where that release's `uv.lock` is read.
+    """
+    return f'v{version}'
 
 
 def released(page: bytes, project: str) -> list[str]:

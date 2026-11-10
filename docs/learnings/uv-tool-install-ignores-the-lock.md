@@ -13,13 +13,19 @@ crash and exited 3, while its CI passed.
 dotfiles' own CLI had the same gap. `install.sh` and `dotfiles update` both run
 `uv tool install --editable`, which ignores the lock too.
 
+So did a tool installed from a package index, whose wheel carries no lock at all.
+logsift v0.4.0 locks typer 0.20.0 and installed with 0.29.0, where Typer runs its own
+copy of Click. `logsift config` failed in the installed tool with
+`LookupError: logsift has no subcommand monitor`, while its CI passed.
+
 ## Solution
 
 `uv export` turns the lock into requirements, and they reach `uv tool install` in two
 files: registry pins as `--constraints`, URL pins as `--overrides`.
 `src/dotfiles/uv_lock.py` holds the mechanism. The git tool provider clones the tag at
-depth 1 to export its lock. A tag with no `uv.lock` installs unconstrained, with a
-warning naming the tag.
+depth 1 to export its lock. An index row names its GitHub `repo`, and its install
+clones the `v<version>` tag of the version it is about to install. A tag with no
+`uv.lock` installs unconstrained, with a warning naming the tag.
 
 `packages check` reports a tool at its newest tag as drift when the tag carries a lock
 and the tool's receipt holds neither list. The release cache records whether each tag
@@ -47,3 +53,6 @@ carries one, read once per release with a `HEAD` on the contents endpoint.
 - **A tool with no dependencies records no lists.** Its lock pins nothing, so its receipt
   holds no constraints. The check reads the environment as well, and one holding only
   the tool had nothing to hold.
+- **A workspace's root lock holds the CLI member it publishes.** A virtual root exports
+  every member's closure. A constraint never adds a package, so the extra lines cost
+  nothing and no `--package` is needed.
