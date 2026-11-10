@@ -4,36 +4,37 @@
 // sessionId can differ. A workflow's agents and its journal sit a level below the
 // session's subagents.
 //
-// A project directory can be a symlink onto another: `-Users-chris-<repo>` points at
-// `-home-chris-<repo>`, so a repo's sessions share one directory on every OS. The glob
-// follows the links, so one file matches under two names. The receiver tells files
-// apart by their opening bytes and reads each once, and the path a line carries is the
-// resolved one, so it names the real directory whichever name matched. A file under
-// the 1 KiB fingerprint that grows can still be read again under its second name.
-// Bronze keys a line by its path below the project directory and its record number,
-// which the second read gives it again, so it folds that copy.
+// Each OS reads only the project directories its own Claude Code writes. A desk
+// running Claude Code under /Users links each `-Users-chris-<repo>` to
+// `-home-chris-<repo>`, so a repo's sessions share one directory on every OS. On
+// Linux a `-Users-` entry is such a link, which nothing here writes through. On
+// macOS a `-home-`, `-tmp-` or `-var-` entry is named for a Linux path, and macOS
+// reaches its own sessions in `-home-` through the `-Users-` links. So each file
+// matches under one name, and the path a line carries is the resolved one, naming
+// the real directory.
 //
-// Each poll stats every transcript in the tree, and opens and checkpoints each one it
-// keeps. On a desk holding 18,000 transcripts, a 2s poll over all of them costs most
-// of a core, and over the files written in the last day about a fifth. A file older
-// than the window is not read, and once it is written again it is read whole, so a
-// session resumed after a day ships every line again and bronze folds the copies.
-// The window also bounds a first start to a day of lines.
+// Each poll stats every transcript the glob matches, and opens and checkpoints each
+// one it keeps, at roughly 25 to 35 microseconds of CPU a transcript. So a 1s poll
+// over a week of sessions holds about a tenth of a core. A 250ms poll over the same
+// week holds about half, since a poll then takes longer than the interval. A file
+// older than the window is not read, and once it is written again it is read whole,
+// so a session resumed after a day ships every line again and bronze folds the
+// copies. The window also bounds a first start to a day of lines.
 
 // How far each transcript has been read, so a restart reads nothing twice.
 otelcol.storage.file "transcript_offsets" { }
 
 otelcol.receiver.filelog "claude_transcripts" {
   include = [
-    string.format("%s/.claude/projects/*/*.jsonl", sys.env("HOME")),
-    string.format("%s/.claude/projects/*/*/subagents/*.jsonl", sys.env("HOME")),
-    string.format("%s/.claude/projects/*/*/subagents/workflows/*/*.jsonl", sys.env("HOME")),
+    string.format("%s/.claude/projects/%s/*.jsonl", sys.env("HOME"), {linux = "-[!U]*", darwin = "-[!htv]*"}[constants.os]),
+    string.format("%s/.claude/projects/%s/*/subagents/*.jsonl", sys.env("HOME"), {linux = "-[!U]*", darwin = "-[!htv]*"}[constants.os]),
+    string.format("%s/.claude/projects/%s/*/subagents/workflows/*/*.jsonl", sys.env("HOME"), {linux = "-[!U]*", darwin = "-[!htv]*"}[constants.os]),
   ]
   exclude_older_than         = "24h"
   start_at                   = "beginning"
   storage                    = otelcol.storage.file.transcript_offsets.handler
   fingerprint_size           = "1KiB"
-  poll_interval              = "2s"
+  poll_interval              = "1s"
   max_log_size               = "16MiB"
   include_file_path          = true
   include_file_path_resolved = true
