@@ -1056,6 +1056,17 @@ user_timers:
     network_trust: fleet
     excludes_os_family: windows
 
+  # A session leaves this desk a week after its last write, once the warehouse
+  # rebuilds each of its files byte for byte, and a restore brings it back. A run
+  # checks at most 2 GiB, so a desk's backlog leaves over several days.
+  - name: claude-sessions-age-out
+    description: Remove this desk's Claude Code sessions past a week that the warehouse rebuilds byte for byte
+    argv: [fleet, machine, claude-sessions, age-out]
+    every: 1d
+    at: "04:30"
+    network_trust: fleet
+    excludes_os_family: windows
+
   # These run only where a manifest sets primary_workstation. What they build
   # syncs to the other machines, or reads this machine's own sessions.
   - name: exemplar-pull
