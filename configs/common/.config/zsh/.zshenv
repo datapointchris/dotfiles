@@ -21,10 +21,13 @@ export PATH="$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/share/npm/b
 # Absolute, so a command run with HOME pointed at a scratch directory still shares
 # these caches instead of downloading and compiling everything again. -modcacherw
 # keeps a module cache deletable, because Go otherwise leaves it read-only and
-# nothing cleaning a temporary directory can remove it.
+# nothing cleaning a temporary directory can remove it. -trimpath keeps a
+# package's directory out of its build cache key, so every worktree of a commit
+# shares one compile instead of caching its own. Stack traces then name files by
+# module path rather than absolute path.
 export GOMODCACHE="${GOMODCACHE:-$HOME/go/pkg/mod}"
 export GOCACHE="${GOCACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/go-build}"
-export GOFLAGS="${GOFLAGS:--modcacherw}"
+export GOFLAGS="${GOFLAGS:--modcacherw -trimpath}"
 
 # SSH sessions inherit no locale (no SendEnv/AcceptEnv), leaving LC_CTYPE=C,
 # where zsh's $'\uXXXX' escapes fail with "character not in range".

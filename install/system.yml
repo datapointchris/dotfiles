@@ -1067,6 +1067,15 @@ user_timers:
     network_trust: fleet
     excludes_os_family: windows
 
+  # Go limits its build cache only by age, five days unused, and a day of
+  # building many worktrees has filled it past 80 GB. A box without Go has no
+  # cache, and the run reports that and succeeds.
+  - name: go-build-cache-trim
+    description: Hold Go's build cache under 20 GiB, deleting the least recently used entries first
+    argv: [go-build-cache-trim, --max-gib, "20"]
+    every: 1h
+    excludes_os_family: windows
+
   # These run only where a manifest sets primary_workstation. What they build
   # syncs to the other machines, or reads this machine's own sessions.
   - name: exemplar-pull
