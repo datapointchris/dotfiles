@@ -1105,3 +1105,13 @@ user_services:
     argv: [fleet, warehouse, session-files, ship]
     network_trust: fleet
     excludes_os_family: windows
+
+  # Every version of a file people edit, as a synced folder writes it or a landing
+  # moves a checkout's default branch, sent through the same Alloy. Its ledgers keep a
+  # restart from sending a version again, and a first start sends each synced
+  # file once. It exits when an install replaces its binary.
+  - name: file-versions-ship
+    description: Send each version of an edited file to the warehouse as it is written
+    argv: [fleet, warehouse, file-versions, ship]
+    network_trust: fleet
+    excludes_os_family: windows
