@@ -708,7 +708,7 @@ def wanted_release(item: DesiredItem) -> releases.Wanted:
         # verbatim at install time — and the cache keys on what the API path wants.
         return releases.Wanted(repo=catalog.repo_slug_of(entry.repo), asks_lock=True)
     if isinstance(entry, catalog.UvTool) and entry.index_url:
-        return releases.Wanted(repo='', python_project=python_index.project_url(entry.index_url, entry.name))
+        return releases.Wanted(repo='', python_project=python_index.project_url(entry.index_url, entry.name), lock_repo=entry.repo)
     return releases.Wanted(repo='')
 
 
@@ -1041,14 +1041,15 @@ def installed_elsewhere(item: DesiredItem, observed: Observed) -> Change | None:
 
 
 def installed_without_its_lock(item: DesiredItem, reported: str, cached: releases.Cached) -> bool:
-    """A git tool at the tag the cache measured, whose tag has a lock its receipt does not hold.
+    """A git or index tool at the version the cache measured, whose tag has a lock its receipt does not hold.
 
-    `uvtool.install_git` holds every install to its tag's lock, so this is an
-    install it did not make, such as one a tool's own updater replaced. Only the
-    exact tag, because `locked` answers for `cached.version` and nothing else.
+    `uvtool` holds every such install to its tag's lock, so this is an install it
+    did not make, such as one a tool's own updater replaced. Only the exact
+    version, because `locked` answers for `cached.version` and nothing else.
     """
+    entry = item.entry
     return (
-        isinstance(item.entry, catalog.GitUvTool)
+        (isinstance(entry, catalog.GitUvTool) or (isinstance(entry, catalog.UvTool) and bool(entry.repo)))
         and cached.locked is True
         and versions.exactly(reported, cached.version) is True
         and not ev.uv_tool_held(item.name)

@@ -27,8 +27,8 @@ depth 1 to export its lock. An index row names its GitHub `repo`, and its instal
 clones the `v<version>` tag of the version it is about to install. A tag with no
 `uv.lock` installs unconstrained, with a warning naming the tag.
 
-`packages check` reports a tool at its newest tag as drift when the tag carries a lock
-and the tool's receipt holds neither list. The release cache records whether each tag
+`packages check` reports a tool at its newest tag or index version as drift when the tag
+carries a lock and the tool's receipt holds neither list. The release cache records whether each tag
 carries one, read once per release with a `HEAD` on the contents endpoint.
 
 ## Key Learnings

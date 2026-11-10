@@ -400,6 +400,17 @@ def test_a_new_release_records_whether_its_tag_carries_a_lock(answers: dict, loc
     assert lock_files == [('owner/tool', 'v2.0.0', 'uv.lock')]
 
 
+def test_an_index_version_is_asked_for_its_lock_at_its_tag_in_the_lock_repo(monkeypatch: pytest.MonkeyPatch, lock_files: list) -> None:
+    """The index serves 0.4.1 from the tag v0.4.1, and asking at 0.4.1 would read every lock as absent."""
+    monkeypatch.setattr(releases.python_index, 'newest_version', lambda page, etag='': github_release.Newest(version='0.4.1'))
+    wanted = releases.Wanted('', python_project='https://index.example/simple/tool/', lock_repo='owner/tool')
+
+    entries = releases.refresh((wanted,), {}, NOW)
+
+    assert entries[wanted.key].locked is True
+    assert lock_files == [('owner/tool', 'v0.4.1', 'uv.lock')]
+
+
 def test_an_unchanged_release_keeps_its_answer_without_asking_again(answers: dict, lock_files: list) -> None:
     """A tag's tree does not change, so asking on every refresh would spend the rate
     limit on an answer already held."""

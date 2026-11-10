@@ -69,7 +69,9 @@ from git
   `git_uv_tools`, pinned to the repo's newest release tag and held to that tag's
   `uv.lock`.
 
-Both paths are the module docstring in `src/dotfiles/providers/uvtool.py`.
+Both paths are the module docstring in `src/dotfiles/providers/uvtool.py`. A tool's own
+`update` reinstalls with no lock. `packages check` reports that as drift, and the next
+apply installs it held again.
 
 **Development**: Source code lives in `~/tools/{app}/`. Changes are tested locally, then
 pushed to GitHub. A release must be cut for a machine to pick them up, since both paths

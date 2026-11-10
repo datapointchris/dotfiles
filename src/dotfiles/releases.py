@@ -89,11 +89,11 @@ class Cached:
     """
 
     locked: bool | None = None
-    """Whether `version`'s tag carries a `uv.lock`, for a repo whose `Wanted` asks.
+    """Whether `version`'s tag carries a `uv.lock`, for a repo or index project whose `Wanted` asks.
 
     None means not asked or not answered, and either is asked again on the next
     refresh. An answer is kept until the version changes, because a tag's tree
-    does not. It tells a git tool installed without its lock from one whose tag
+    does not. It tells a uv tool installed without its lock from one whose tag
     has none to hold it to.
     """
 
@@ -121,7 +121,15 @@ class Wanted:
     """
 
     asks_lock: bool = False
-    """Whether to record `Cached.locked` for this repo's newest tag. Only git uv tools install from a lock."""
+    """Whether to record `Cached.locked` for this repo's newest tag. Only uv tools install from a lock."""
+
+    lock_repo: str = ''
+    """The GitHub `owner/name` whose tag for the newest version on `python_project` holds its lock.
+
+    Its own field rather than `repo`, because a `repo` would make the version a
+    question for GitHub. An index row's version is the index's answer, and only
+    the lock is read from the repo.
+    """
 
     version_file: str = ''
     """A URL whose whole body is the newest version, asked instead of any repo.
@@ -271,6 +279,9 @@ def answered(wanted: Wanted, previous: Cached | None, now: dt.datetime) -> Cache
         return None
     if wanted.asks_lock and entry.locked is None:
         entry = dc.replace(entry, locked=github_release.carries(wanted.repo, entry.version, uv_lock.LOCK_FILE))
+    elif wanted.lock_repo and entry.locked is None:
+        tag = python_index.tag_of(entry.version)
+        entry = dc.replace(entry, locked=github_release.carries(wanted.lock_repo, tag, uv_lock.LOCK_FILE))
     return entry
 
 

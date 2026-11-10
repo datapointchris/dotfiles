@@ -426,7 +426,10 @@ def test_a_git_uv_tool_with_a_cold_cache_is_unmeasured_not_current(
 def holding(uv_tools: Path, tool: str, *distributions: str) -> None:
     """The tool's environment, holding these distributions the way uv lays one out."""
     for distribution in distributions:
-        (uv_tools / tool / 'lib' / 'python3.13' / 'site-packages' / f'{distribution}.dist-info').mkdir(parents=True)
+        info = uv_tools / tool / 'lib' / 'python3.13' / 'site-packages' / f'{distribution}.dist-info'
+        info.mkdir(parents=True)
+        name, _, version = distribution.rpartition('-')
+        (info / 'METADATA').write_text(f'Name: {name}\nVersion: {version}\n')
 
 
 def locked_cache(path: Path, version: str, *, locked: bool) -> None:
@@ -446,6 +449,26 @@ def test_a_git_uv_tool_at_its_tag_installed_without_its_lock_is_stale(
     found = changes(live)
 
     assert [(change.item, change.verdict, change.repair) for change in found] == [('uv-git/doit', Verdict.STALE, Repair.AUTOMATIC)]
+    assert 'without its uv.lock' in found[0].detail
+
+
+def test_an_index_tool_at_its_version_installed_without_its_lock_is_stale(
+    tmp_path: Path, fake_bin: Path, uv_tools: Path, release_cache: Path
+) -> None:
+    """A tool's own `update` reinstalls from the index with no lock, which the next apply repairs."""
+    index = 'https://index.example/simple/'
+    executable(fake_bin, 'tool')
+    receipt(uv_tools, 'tool', '{ name = "tool" }')
+    with (uv_tools / 'tool' / 'uv-receipt.toml').open('a') as recorded:
+        recorded.write(f'[tool.options]\nindex = [{{ url = "{index}" }}]\n')
+    holding(uv_tools, 'tool', 'tool-1.1.0', 'typer-0.27.3')
+    releases.save({f'{index}tool/': releases.Cached('1.1.0', dt.datetime.now(dt.UTC), locked=True)}, release_cache)
+    declared = {'uv_indexes': {'own': index}, 'uv_tools': {'group': [{'name': 'tool', 'index': 'own', 'repo': 'owner/tool'}]}}
+    live = session(tmp_path, declared, {'machine': 'box', 'platform': 'linux', 'uv_tools': ['tool']})
+
+    found = changes(live)
+
+    assert [(change.item, change.verdict, change.repair) for change in found] == [('uv/tool', Verdict.STALE, Repair.AUTOMATIC)]
     assert 'without its uv.lock' in found[0].detail
 
 
