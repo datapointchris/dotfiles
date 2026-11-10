@@ -21,8 +21,10 @@ refused, so a wrong path deletes nothing. One JSON line reports the run.
 """
 
 import argparse
+import contextlib
 import json
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -38,17 +40,33 @@ def cache_dir() -> Path:
     return Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache') / 'go-build'
 
 
+def size_of(entry: os.DirEntry) -> int:
+    """An output file's size, or the total under a directory, which is how Go caches a linked executable."""
+    if not entry.is_dir(follow_symlinks=False):
+        return entry.stat(follow_symlinks=False).st_size
+    return sum((Path(root) / name).stat().st_size for root, _, names in os.walk(entry.path) for name in names)
+
+
 def entries(cache: Path) -> list[tuple[float, int, str]]:
-    """Each action and output file as (mtime, size, path), skipping Go's README, trim.txt and fuzz cache."""
+    """Each cache entry as (mtime, size, path), skipping Go's README, trim.txt and fuzz cache."""
     found = []
     for shard in os.scandir(cache):
         if not (shard.is_dir(follow_symlinks=False) and len(shard.name) == 2):
             continue
         for item in os.scandir(shard.path):
             if item.name.endswith(('-a', '-d')):
-                with_stat = item.stat(follow_symlinks=False)
-                found.append((with_stat.st_mtime, with_stat.st_size, item.path))
+                with contextlib.suppress(FileNotFoundError):
+                    found.append((item.stat(follow_symlinks=False).st_mtime, size_of(item), item.path))
     return found
+
+
+def remove(path: str) -> None:
+    """Go's own trim removes an executable's directory whole, and a file on its own."""
+    if os.path.isdir(path) and not os.path.islink(path):
+        shutil.rmtree(path, ignore_errors=True)
+    else:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(path)
 
 
 def main() -> int:
@@ -77,10 +95,7 @@ def main() -> int:
     for mtime, size, path in found:
         if total <= limit or now - mtime < IN_USE_SECONDS:
             break
-        try:
-            os.remove(path)
-        except FileNotFoundError:
-            pass
+        remove(path)
         total -= size
         removed += 1
         removed_bytes += size
