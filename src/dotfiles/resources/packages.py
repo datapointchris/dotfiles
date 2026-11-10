@@ -265,8 +265,9 @@ class PackagesResource:
             reported={address: answer.version for address, answer in probed.items() if answer.version},
             refused={address: answer.refusal for address, answer in probed.items() if answer.refusal},
             shadowed=shadowing(mine, evidence, plan, session.repo),
-            undeclared=undeclared_own_tools(session, plan),
-            undeclared_uv=undeclared_own_uv_tools(session, plan),
+            # The whole declaration, because a `--source` run's plan holds one section's rows.
+            undeclared=undeclared_own_tools(session, session.plan),
+            undeclared_uv=undeclared_own_uv_tools(session, session.plan),
             latest=latest,
             consulted_network=consulted,
             from_bundle=from_bundle,

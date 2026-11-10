@@ -35,6 +35,7 @@ from matrix.harness import staged_bundle
 
 from dotfiles import catalog
 from dotfiles import crates_io
+from dotfiles import engine
 from dotfiles import evidence as ev
 from dotfiles import providers
 from dotfiles import registry
@@ -1964,6 +1965,19 @@ def test_a_run_narrowed_to_one_package_reports_none_of_the_others(tmp_path: Path
     live = session(tmp_path, declares_both, {'machine': 'box', 'platform': 'linux', 'go_tools': ['task', 'gum']})
 
     assert undeclared_own(dc.replace(live, entries=frozenset({'task'}))) == []
+
+
+def test_a_run_narrowed_to_one_section_reports_none_of_the_others(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`--source` hands the resource one section's rows, so a scan of that plan
+    calls the owner's tools in every other section undeclared."""
+    go_bin(tmp_path)
+    fake_go(monkeypatch, fake_bin, ('task', 'github.com/go-task/task'))
+    executable(fake_bin, 'task')
+    declared = {**GO_TOOL, 'git_uv_tools': [{'name': 'tool', 'repo': 'https://github.com/go-task/tool.git'}]}
+    live = session(tmp_path, declared, {**DECLARES_TASK, 'git_uv_tools': ['tool']})
+    narrowed = engine.Selection.of('packages/uv-git').plan_for('packages', live.plan)
+
+    assert packages.RESOURCE.observe(live, narrowed).undeclared == {}
 
 
 def test_a_run_narrowed_to_an_owner_still_answers(tmp_path: Path, fake_bin: Path, monkeypatch: pytest.MonkeyPatch) -> None:
