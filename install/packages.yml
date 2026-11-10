@@ -718,24 +718,6 @@ system_packages:
     description: Claude desktop app (Arch only - macOS uses cask)
     tags: [gui]
 
-  - name: aerc
-    brew: aerc
-    pacman: aerc
-    description: Terminal email client
-    tags: [cli, communication]
-
-  - name: w3m
-    brew: w3m
-    pacman: w3m
-    description: Text-based web browser and HTML renderer for aerc
-    tags: [cli, communication]
-
-  - name: urlscan
-    brew: urlscan
-    pacman: urlscan
-    description: URL selector for aerc message bodies
-    tags: [cli, communication]
-
   - name: newsboat
     brew: newsboat
     pacman: newsboat
