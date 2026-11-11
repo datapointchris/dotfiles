@@ -1,7 +1,6 @@
 -- Fleet trust only, because the plugin records keystrokes typed in Markdown. A
 -- nonfleet box is someone else's machine, so it gets no spec and lazy never
--- clones the plugin there. The `typos` CLI that reads the captures installs
--- only through the personal desk profile for the same reason.
+-- clones the plugin there.
 --
 -- A normal remote spec rather than a `dir =` local checkout: a `dir` that is not
 -- on disk errors on every startup no matter what `cond` says.
@@ -11,8 +10,8 @@
 -- them, so a machine that has not run `syncer apply` has neither and captures
 -- nothing.
 --
--- data_dir is absent because the plugin and the `typos` CLI both default to
--- $XDG_STATE_HOME/typos, so they agree without either naming it.
+-- data_dir is absent because TYPOS_DATA_DIR, exported in .zshrc, names the
+-- directory for both the plugin and the `typos` CLI.
 --
 -- nvim loads the lazy clone, not ~/code/typos, so a local Lua change needs a
 -- push and `:Lazy update` to show up here.

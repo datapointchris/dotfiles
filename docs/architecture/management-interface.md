@@ -187,11 +187,9 @@ standing in for a condition that turned out not to need expressing, because
 capture is scoped to the watched directories and a machine without them writes
 nothing. The gate existed only because a `dir =` local checkout errors on every
 startup when the directory is absent. That is a fact about local specs rather than
-about machines. The spec does now live under `configs/trust/fleet/`, for a reason
-the earlier gates never named. It records keystrokes, and a nonfleet box belongs to
-someone else, so that box should not carry a keystroke recorder at all. Trust is
-the coordinate that states it, and placing the file is a variant rather than a
-`cond`, so Lua reads no coordinate.
+about machines. The spec lives under `configs/trust/fleet/` because it records
+keystrokes, and a nonfleet box is someone else's machine. Trust is the coordinate
+that says so, and a trust variant states it without Lua reading any coordinate.
 
 `core/options.lua` keeps its check and spells it `WSL_DISTRO_NAME`, which WSL
 sets itself. It read `DOTFILES_HOST == 'wsl'` first, on the reasoning that
