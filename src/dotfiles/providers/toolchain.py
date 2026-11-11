@@ -1,9 +1,10 @@
 """Installing the language runtimes, one function per version manager.
 
 Four unrelated mechanisms wearing one word, which is why this is four functions
-rather than an engine with the variation pushed into a data class. uv and rustup
-publish an install script and are two more callers of `providers/script.py`; Go
-publishes a tarball that belongs under `/usr/local`, making it the one runtime
+rather than an engine with the variation pushed into a data class. uv is the
+pinned release's archive, checked against the sha256 astral publishes beside it;
+rustup publishes an install script and is one more caller of `providers/script.py`;
+Go publishes a tarball that belongs under `/usr/local`, making it the one runtime
 whose install needs root; Node is whatever fnm pins as its default alias, and fnm
 itself arrives as a cargo package earlier in the same run.
 
@@ -51,6 +52,7 @@ from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import bin_dir
 from dotfiles.providers import bundle
+from dotfiles.providers import cargo
 from dotfiles.providers import npm
 from dotfiles.providers import place
 from dotfiles.providers import script
@@ -60,15 +62,13 @@ from dotfiles.providers import staged_bundles
 # uv
 # ─────────────────────────────────────────────────────────────────────────────
 
-UV_INSTALL_URL = 'https://astral.sh/uv/{version}/install.sh'
-"""astral's install script for one release, which installs that release and no other.
+UV_RELEASES = 'https://releases.astral.sh/github/uv/releases/download'
+"""astral's mirror of uv's GitHub releases, one directory per release number.
 
-`install.sh` spells the unversioned script, which installs whatever is newest.
-That is all the bootstrap needs, since it runs before this package exists to read
-the pin, and the first apply converges what it installed."""
-
-UV_WINDOWS_INSTALL_URL = 'https://astral.sh/uv/{version}/install.ps1'
-"""The same release's PowerShell installer, which Windows runs for the reason `install.sh` gives."""
+Each archive has its `.sha256` beside it. The mirror rather than github.com,
+because a network that refuses GitHub's release-asset hosts still reaches it, and
+astral's own installer tries it first. `install.sh` fetches from the same place,
+spelling the URL itself because it runs before this package is installed."""
 
 UV_BUNDLED = 'uv'
 """The category and the name of the bundle row for `bin/uv`, as `create_bundle.add_uv` records it."""
@@ -146,11 +146,11 @@ def pinned_uv(config: Path | None = None) -> str:
     return exact.group(1)
 
 
-def install_uv(config: Path, os_family: OSFamily, *, offline: bool) -> Result:
+def install_uv(config: Path, target: Target, *, offline: bool) -> Result:
     """The uv release `config` pins, then the interpreter everything else resolves against.
 
     Never `uv self update`, which needs the receipt astral's installer writes, and
-    a uv copied out of a bundle has none.
+    neither a uv copied out of a bundle nor one unpacked from its archive has one.
 
     A uv at the pin is left wherever it is, since it writes the pinned lock format.
 
@@ -167,7 +167,7 @@ def install_uv(config: Path, os_family: OSFamily, *, offline: bool) -> Result:
     if found is None or not versions.exactly(uv_version() or '', version):
         if found is not None and (refusal := uv_installed_elsewhere(Path(found), version)):
             return refusal
-        placed = uv_from_bundle(version) or uv_from_vendor(version, os_family, offline=offline)
+        placed = uv_from_bundle(version) or uv_from_vendor(version, target, offline=offline)
         if not placed.ok:
             return placed
         put_on_path(bin_dir())
@@ -194,8 +194,8 @@ def install_uv(config: Path, os_family: OSFamily, *, offline: bool) -> Result:
 def uv_installed_elsewhere(found: Path, pin: str) -> Result | None:
     """The refusal for the uv at `found`, or None where `install_uv` wrote it.
 
-    A uv outside `bin_dir()` came from a package manager, pip or cargo. astral's
-    installer would write beside it, and PATH would still run the other one.
+    A uv outside `bin_dir()` came from a package manager, pip or cargo. Installing
+    would write beside it, and PATH would still run the other one.
     `resources/toolchains.py` reports this detail and advice as a by-hand repair,
     so plan names the refusal apply would return.
     """
@@ -210,9 +210,14 @@ def uv_installed_elsewhere(found: Path, pin: str) -> Result | None:
     )
 
 
-def uv_installer_url(version: str, os_family: OSFamily) -> str:
-    """astral's installer for `version` on `os_family`, which the network probe checks too."""
-    return (UV_WINDOWS_INSTALL_URL if os_family is OSFamily.WINDOWS else UV_INSTALL_URL).format(version=version)
+def uv_archive(target: Target) -> str:
+    """The release asset astral builds for `target`: a zip on Windows, where it publishes no tarball."""
+    return f'uv-{cargo.triple(target)}.{"zip" if target.os_family is OSFamily.WINDOWS else "tar.gz"}'
+
+
+def uv_archive_url(version: str, target: Target) -> str:
+    """`uv_archive(target)` at `version` on astral's mirror, which the network probe checks too."""
+    return f'{UV_RELEASES}/{version}/{uv_archive(target)}'
 
 
 def bundled_uv(version: str) -> Path | None:
@@ -245,11 +250,12 @@ def uv_from_bundle(version: str) -> Result | None:
     return Result(True, '', kind=Kind.APPLIED)
 
 
-def uv_from_vendor(version: str, os_family: OSFamily, *, offline: bool) -> Result:
-    """astral's installer for `version`, from the network and never from a bundle.
+def uv_from_vendor(version: str, target: Target, *, offline: bool) -> Result:
+    """`version`'s release archive from astral's mirror, placed only when it matches the `.sha256` beside it.
 
-    The script downloads the release it names, so a staged copy of it cannot
-    install anything offline.
+    The archive rather than astral's installer script, because piping the script
+    into a shell runs it unchecked. Both `uv` and `uvx` are placed, as the script
+    would have.
     """
     if offline:
         carried = bundle.staged(UV_BUNDLED, UV_BUNDLED)
@@ -261,14 +267,30 @@ def uv_from_vendor(version: str, os_family: OSFamily, *, offline: bool) -> Resul
             kind=Kind.NOT_IN_BUNDLE,
             refused=True,
         )
-    return script.run(
-        'uv',
-        uv_installer_url(version, os_family),
-        offline=False,
-        env={'XDG_BIN_HOME': str(bin_dir()), 'UV_NO_MODIFY_PATH': '1'},
-        interpreter=script.POWERSHELL if os_family is OSFamily.WINDOWS else script.BASH,
-        from_bundle=False,
-    )
+    url = uv_archive_url(version, target)
+    suffix = '.exe' if target.os_family is OSFamily.WINDOWS else ''
+    with tempfile.TemporaryDirectory(prefix='dotfiles-uv-') as scratch:
+        staging = Path(scratch)
+        archive = staging / uv_archive(target)
+        published = staging / f'{archive.name}.sha256'
+        err_console.print(f'uv {version}: {url}', soft_wrap=True)
+        for source, destination in ((url, archive), (f'{url}.sha256', published)):
+            arrived = effects.fetch(source, destination)
+            if not arrived:
+                return Result(False, f'could not download {source}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
+        expected = next(iter(published.read_text().split()), '')
+        if not expected or not github_release.digests_match(expected, github_release.sha256_of(archive)):
+            return Result(False, f'{archive.name} does not match the sha256 astral publishes beside it', kind=Kind.UNVERIFIED)
+
+        unpacked = staging / 'unpacked'
+        if not effects.unpack(archive, unpacked):
+            return Result(False, f'{archive.name} would not extract', kind=Kind.ARCHIVE_UNREADABLE)
+        for name in (f'uv{suffix}', f'uvx{suffix}'):
+            found = next((path for path in unpacked.rglob(name) if path.is_file()), None)
+            if found is None:
+                return Result(False, f'{archive.name} carries no {name}', kind=Kind.ARCHIVE_INCOMPLETE)
+            place(found, bin_dir() / name)
+    return Result(True, '', kind=Kind.APPLIED)
 
 
 def uv_version() -> str | None:

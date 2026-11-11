@@ -214,8 +214,10 @@ the build output.
 **Bootstrapping that box runs from the bundle too.** `install.sh` reads
 `uname -s`, answers `uv.exe` under Git Bash, and copies `$BUNDLE/bin/uv.exe` onto
 PATH, which is the name a Windows bundle stages. With a network but no bundle it
-runs astral's PowerShell installer; the sh one is not a fallback there, because it
-fetches a Linux binary Git Bash will copy into place and then fail to run. See
+downloads the pinned release's Windows zip and its `.sha256` from
+`releases.astral.sh`, astral's mirror of the GitHub releases, which this network
+does not block. It unpacks the zip with PowerShell's `Expand-Archive` only once the
+two agree. See
 `docs/reference/rebuilding-a-machine.md` for what a first install needs.
 
 ## Why the Neovim setup does not need any of this

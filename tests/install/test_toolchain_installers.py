@@ -18,6 +18,7 @@ import io
 import json
 import os
 import tarfile
+import zipfile
 from itertools import chain
 from pathlib import Path
 
@@ -39,6 +40,7 @@ from dotfiles.providers import toolchain
 
 LINUX = Target(OSFamily.LINUX, Arch.X86_64)
 DARWIN = Target(OSFamily.DARWIN, Arch.ARM64)
+WINDOWS = Target(OSFamily.WINDOWS, Arch.X86_64)
 
 RELEASE = 'go1.26.5'
 
@@ -394,34 +396,49 @@ PIN = '0.12.24'
 
 BUNDLED = b'#!/bin/sh\n# the bundle uv\n'
 
-INSTALLERS = ('bash', 'powershell')
+VENDORED = b'#!/bin/sh\n# the release archive uv\n'
 
 
 class Reports(Runs):
     """`uv --version` answers `before` until uv is installed, and `after` once it has been.
 
-    Installed means an installer ran, or `binary` holds the bundle's bytes. A
-    recorded installer writes nothing, so where `writes` is set it puts `binary`
-    on disk itself, for `shutil.which` to find.
+    Installed means `binary` holds the bytes a bundle or the release archive carries.
     """
 
-    def __init__(self, before: str | None, *, after: str = PIN, binary: Path | None = None, writes: bool = False) -> None:
+    def __init__(self, before: str | None, *, after: str = PIN, binary: Path | None = None) -> None:
         super().__init__()
-        self.before, self.after, self.binary, self.writes = before, after, binary, writes
+        self.before, self.after, self.binary = before, after, binary
 
     def __call__(self, command, **kwargs) -> Completed:
         answer = super().__call__(command, **kwargs)
         argv = self.calls[-1]
-        if argv[0] in INSTALLERS and self.writes and self.binary is not None:
-            executable(self.binary)
         if argv[-1] == '--version':
             reported = self.after if self.installed() else self.before
             return Completed(argv, 0, f'uv {reported} (x86_64-unknown-linux-gnu)') if reported else Completed(argv, 1, '')
         return answer
 
     def installed(self) -> bool:
-        placed = self.binary is not None and self.binary.is_file() and self.binary.read_bytes() == BUNDLED
-        return placed or any(argv[0] in INSTALLERS for argv in self.calls)
+        return self.binary is not None and self.binary.is_file() and self.binary.read_bytes() in (BUNDLED, VENDORED)
+
+
+def uv_release(target: Target = LINUX, *, tampered: bool = False) -> Fetches:
+    """astral's mirror serving `target`'s archive at the pin, with the `.sha256` it publishes beside it."""
+    buffer = io.BytesIO()
+    if target.os_family is OSFamily.WINDOWS:
+        with zipfile.ZipFile(buffer, 'w') as archive:
+            for name in ('uv.exe', 'uvx.exe'):
+                archive.writestr(name, VENDORED)
+    else:
+        top = toolchain.uv_archive(target).removesuffix('.tar.gz')
+        with tarfile.open(fileobj=buffer, mode='w:gz') as archive:
+            for name in ('uv', 'uvx'):
+                member = tarfile.TarInfo(f'{top}/{name}')
+                member.size, member.mode = len(VENDORED), 0o755
+                archive.addfile(member, io.BytesIO(VENDORED))
+    body = buffer.getvalue()
+    published = hashlib.sha256(body + (b'x' if tampered else b'')).hexdigest()
+    url = toolchain.uv_archive_url(PIN, target)
+    return Fetches({url: body, f'{url}.sha256': f'{published}  {toolchain.uv_archive(target)}\n'.encode()})
 
 
 def executable(path: Path) -> Path:
@@ -483,45 +500,45 @@ def test_uv_at_the_pin_is_not_reinstalled_but_still_sets_the_default(home, bundl
     executable(home / '.local' / 'bin' / 'uv')
     runs, fetches = effected(Reports(PIN))
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=False)
+    result = toolchain.install_uv(hooks, LINUX, offline=False)
 
     assert result.ok, result.detail
     assert fetches.urls == []
-    assert not runs.ran('bash')
     assert runs.ran('python', 'install', '--default', toolchain.DEFAULT_PYTHON)
 
 
-def test_uv_at_another_release_is_reinstalled_from_the_pinned_releases_script(home, bundle, effected, hooks) -> None:
+def test_uv_at_another_release_is_reinstalled_from_the_pinned_release(home, bundle, effected, hooks) -> None:
     """A uv above the pin is converged like one below it: either one writes uv.lock
     in a format revision the pinned release does not."""
-    executable(home / '.local' / 'bin' / 'uv')
-    runs, fetches = effected(Reports('0.12.2'))
+    placed = executable(home / '.local' / 'bin' / 'uv')
+    _, fetches = effected(Reports('0.12.2', binary=placed), uv_release())
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=False)
-
-    assert result.ok, result.detail
-    assert fetches.urls == [toolchain.UV_INSTALL_URL.format(version=PIN)]
-    assert PIN in result.detail
-
-
-def test_an_absent_uv_is_installed_at_the_pin(home, bundle, effected, hooks) -> None:
-    _, fetches = effected(Reports(None, binary=home / '.local' / 'bin' / 'uv', writes=True))
-
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=False)
+    result = toolchain.install_uv(hooks, LINUX, offline=False)
 
     assert result.ok, result.detail
-    assert fetches.urls == [toolchain.UV_INSTALL_URL.format(version=PIN)]
+    assert fetches.urls == [toolchain.uv_archive_url(PIN, LINUX), f'{toolchain.uv_archive_url(PIN, LINUX)}.sha256']
+    assert placed.read_bytes() == VENDORED
+    assert (home / '.local' / 'bin' / 'uvx').read_bytes() == VENDORED
 
 
-def test_windows_runs_astrals_powershell_installer(home, bundle, effected, hooks) -> None:
-    runs, fetches = effected(Reports(None, binary=home / '.local' / 'bin' / 'uv', writes=True))
+def test_an_archive_that_does_not_match_its_published_sha256_is_not_placed(home, bundle, effected, hooks) -> None:
+    placed = executable(home / '.local' / 'bin' / 'uv')
+    effected(Reports('0.12.2', binary=placed), uv_release(tampered=True))
 
-    result = toolchain.install_uv(hooks, OSFamily.WINDOWS, offline=False)
+    result = toolchain.install_uv(hooks, LINUX, offline=False)
+
+    assert result.kind is Kind.UNVERIFIED
+    assert placed.read_bytes() != VENDORED
+
+
+def test_windows_places_uv_and_uvx_from_the_zip(home, bundle, effected) -> None:
+    """astral publishes no tarball for Windows, and a PE without `.exe` is a file Windows will not run."""
+    effected(fetches=uv_release(WINDOWS))
+
+    result = toolchain.uv_from_vendor(PIN, WINDOWS, offline=False)
 
     assert result.ok, result.detail
-    assert fetches.urls == [toolchain.UV_WINDOWS_INSTALL_URL.format(version=PIN)]
-    assert runs.ran('powershell', '-File', 'install.ps1')
-    assert not runs.ran('bash')
+    assert [(home / '.local' / 'bin' / name).read_bytes() for name in ('uv.exe', 'uvx.exe')] == [VENDORED, VENDORED]
 
 
 def test_a_uv_installed_by_something_else_is_refused_rather_than_installed_beside(
@@ -534,32 +551,31 @@ def test_a_uv_installed_by_something_else_is_refused_rather_than_installed_besid
     monkeypatch.setenv('PATH', f'{packaged.parent}:{home / ".local" / "bin"}')
     runs, fetches = effected(Reports('0.12.2'))
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=False)
+    result = toolchain.install_uv(hooks, LINUX, offline=False)
 
     assert result.refused
     assert result.kind is Kind.TARGET_UNUSABLE
     assert str(packaged) in result.detail
     assert fetches.urls == []
-    assert not runs.ran('bash')
 
 
 def test_a_uv_installed_by_something_else_at_the_pin_is_left_where_it_is(home, bundle, effected, hooks, tmp_path, monkeypatch) -> None:
     """Plan reports this uv matched, so apply must not refuse it."""
     packaged = executable(tmp_path / 'usr' / 'bin' / 'uv')
     monkeypatch.setenv('PATH', f'{packaged.parent}:{home / ".local" / "bin"}')
-    runs, _ = effected(Reports(PIN))
+    _, fetches = effected(Reports(PIN))
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=False)
+    result = toolchain.install_uv(hooks, LINUX, offline=False)
 
     assert result.ok, result.detail
-    assert not runs.ran('bash')
+    assert fetches.urls == []
 
 
 def test_a_repo_pinning_no_uv_is_a_fault_in_the_repo(home, bundle, effected, hooks) -> None:
     hooks.write_text('repos: []\n')
     runs, fetches = effected()
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=False)
+    result = toolchain.install_uv(hooks, LINUX, offline=False)
 
     assert not result.ok
     assert result.kind is Kind.DECLARATION_INVALID
@@ -567,11 +583,11 @@ def test_a_repo_pinning_no_uv_is_a_fault_in_the_repo(home, bundle, effected, hoo
     assert fetches.urls == []
 
 
-def test_an_installer_that_puts_another_release_fails_verification(home, bundle, effected, hooks) -> None:
-    executable(home / '.local' / 'bin' / 'uv')
-    effected(Reports('0.12.2', after='0.12.3'))
+def test_an_archive_holding_another_release_fails_verification(home, bundle, effected, hooks) -> None:
+    placed = executable(home / '.local' / 'bin' / 'uv')
+    effected(Reports('0.12.2', after='0.12.3', binary=placed), uv_release())
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=False)
+    result = toolchain.install_uv(hooks, LINUX, offline=False)
 
     assert not result.ok
     assert result.kind is Kind.VERIFY_FAILED
@@ -584,27 +600,23 @@ def test_uv_is_placed_from_a_bundle_whose_row_names_the_pin(home, bundle, effect
     placed = executable(home / '.local' / 'bin' / 'uv')
     runs, fetches = effected(Reports('0.12.2', binary=placed))
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=offline)
+    result = toolchain.install_uv(hooks, LINUX, offline=offline)
 
     assert result.ok, result.detail
     assert placed.read_bytes() == BUNDLED
     assert fetches.urls == []
-    assert not runs.ran('bash')
 
 
 def test_a_bundle_staged_for_another_release_is_passed_over_online(home, bundle, effected, hooks) -> None:
-    """Its script installs its own release, so running it fails verification on
-    every apply until the bundle is deleted."""
+    """Placing it would fail verification on every apply until the bundle is deleted."""
     stage_uv(bundle, '0.12.3')
-    (bundle / 'scripts' / 'uv-install.sh').write_bytes(b'#!/bin/sh\n# installs 0.12.3\n')
     placed = executable(home / '.local' / 'bin' / 'uv')
-    _, fetches = effected(Reports('0.12.2', binary=placed))
+    effected(Reports('0.12.2', binary=placed), uv_release())
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=False)
+    result = toolchain.install_uv(hooks, LINUX, offline=False)
 
     assert result.ok, result.detail
-    assert fetches.urls == [toolchain.UV_INSTALL_URL.format(version=PIN)]
-    assert placed.read_bytes() != BUNDLED
+    assert placed.read_bytes() == VENDORED
 
 
 def test_offline_with_no_bundle_at_the_pin_names_both_releases(home, bundle, effected, hooks) -> None:
@@ -612,14 +624,13 @@ def test_offline_with_no_bundle_at_the_pin_names_both_releases(home, bundle, eff
     placed = executable(home / '.local' / 'bin' / 'uv')
     runs, fetches = effected(Reports('0.12.2', binary=placed))
 
-    result = toolchain.install_uv(hooks, OSFamily.LINUX, offline=True)
+    result = toolchain.install_uv(hooks, LINUX, offline=True)
 
     assert result.refused
     assert result.kind is Kind.NOT_IN_BUNDLE
     assert PIN in result.detail
     assert '0.12.3' in result.detail
     assert fetches.urls == []
-    assert not runs.ran('bash')
 
 
 # ─────────────────────────────────────────────────────────────────────────────

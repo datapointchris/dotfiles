@@ -15,6 +15,7 @@ import subprocess
 import pytest
 
 from dotfiles import catalog
+from dotfiles import coordinates
 from dotfiles import machine as machines
 from dotfiles import network
 from dotfiles import paths
@@ -135,7 +136,7 @@ def test_the_runtime_urls_are_the_installers_own() -> None:
     written and the probe cannot measure a URL no install would use."""
     targets = {probe.target for probe in probes_for(WSL) if probe.section == 'language_manager'}
 
-    uv = toolchain.UV_INSTALL_URL.format(version=toolchain.pinned_uv())
+    uv = toolchain.uv_archive_url(toolchain.pinned_uv(), coordinates.target_for(machines.load(WSL).coordinates))
     assert targets == {uv, toolchain.GO_VERSION_URL, toolchain.RUSTUP_URL}
 
 
@@ -318,7 +319,7 @@ def test_an_installer_with_nothing_to_probe_is_named_rather_than_dropped(monkeyp
     assert not any(probe.section == 'custom_installer' for probe in derived.probes)
 
 
-def test_a_repo_pinning_no_uv_names_the_uv_installer_as_unprobed(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_repo_pinning_no_uv_names_the_uv_release_as_unprobed(monkeypatch: pytest.MonkeyPatch) -> None:
     def unpinned(*_config: object) -> str:
         raise toolchain.UnpinnedUv('carries no uv-pre-commit hook')
 
@@ -326,8 +327,8 @@ def test_a_repo_pinning_no_uv_names_the_uv_installer_as_unprobed(monkeypatch: py
 
     derived = network.derive(machines.load(WSL))
 
-    assert 'uv installer: carries no uv-pre-commit hook' in derived.unprobed
-    assert not any(probe.name == 'uv installer' for probe in derived.probes)
+    assert 'uv release: carries no uv-pre-commit hook' in derived.unprobed
+    assert not any(probe.name == 'uv release' for probe in derived.probes)
 
 
 def test_the_summary_counts_what_the_rows_say() -> None:
