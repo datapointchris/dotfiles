@@ -182,12 +182,16 @@ about the machine.
 
 `plugins/typos.lua` is the counter-example, and worth keeping in mind before
 reaching for this vocabulary at all. It was `PLATFORM ~= 'wsl'`, then
-`MACHINE_ROLE ~= 'work'`, then a test for a notes directory — each one a label standing
-in for a condition that turned out not to need expressing. It is an unconditional
-remote spec: capture is scoped to `notes_root`, so a machine without one writes
-nothing, and `setup()` creates no directories. The gate existed only because a
-`dir =` local checkout errors on every startup when the directory is absent,
-which is a fact about local specs rather than about machines.
+`MACHINE_ROLE ~= 'work'`, then a test for a notes directory. Each one was a label
+standing in for a condition that turned out not to need expressing, because
+capture is scoped to the watched directories and a machine without them writes
+nothing. The gate existed only because a `dir =` local checkout errors on every
+startup when the directory is absent. That is a fact about local specs rather than
+about machines. The spec does now live under `configs/trust/fleet/`, for a reason
+the earlier gates never named. It records keystrokes, and a nonfleet box belongs to
+someone else, so that box should not carry a keystroke recorder at all. Trust is
+the coordinate that states it, and placing the file is a variant rather than a
+`cond`, so Lua reads no coordinate.
 
 `core/options.lua` keeps its check and spells it `WSL_DISTRO_NAME`, which WSL
 sets itself. It read `DOTFILES_HOST == 'wsl'` first, on the reasoning that

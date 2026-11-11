@@ -1,19 +1,21 @@
--- A normal remote spec rather than a `dir =` local checkout, so lazy resolves it
--- like every other plugin and there is nothing here to guard on. The gate this
--- replaces was three conditions deep — PLATFORM, then MACHINE_ROLE, then testing
--- for the checkout and ~/notes — because a `dir` that is not on disk errors on
--- every startup no matter what `cond` says, which no label could fix.
+-- Fleet trust only, because the plugin records keystrokes typed in Markdown. A
+-- nonfleet box is someone else's machine, so it gets no spec and lazy never
+-- clones the plugin there. The `typos` CLI that reads the captures installs
+-- only through the personal desk profile for the same reason.
+--
+-- A normal remote spec rather than a `dir =` local checkout: a `dir` that is not
+-- on disk errors on every startup no matter what `cond` says.
 --
 -- The plugin ships no directories of its own; these are the fleet's, and naming
 -- them is this file's whole job. Capture runs while the buffer is under one of
 -- them, so a machine that has not run `syncer apply` has neither and captures
--- nothing — no condition has to express that.
+-- nothing.
 --
--- data_dir is deliberately absent: TYPOS_DATA_DIR in .zshrc points both this and
--- the `typos` CLI at the synced location, so the path is declared once.
+-- data_dir is absent because the plugin and the `typos` CLI both default to
+-- $XDG_STATE_HOME/typos, so they agree without either naming it.
 --
--- Consequence worth knowing: nvim loads the lazy clone, not ~/code/typos, so a
--- local Lua change needs a push and `:Lazy update` to show up here.
+-- nvim loads the lazy clone, not ~/code/typos, so a local Lua change needs a
+-- push and `:Lazy update` to show up here.
 return {
   'datapointchris/typos',
   ft = 'markdown', -- Notes are .md, no need to load otherwise
