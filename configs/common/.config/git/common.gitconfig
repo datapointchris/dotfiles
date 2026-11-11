@@ -16,8 +16,20 @@ editor = nvim
 [init]
 defaultBranch = main
 # Written by the git-template-hooks step. Each clone gets a pre-commit and a
-# commit-msg hook that run the repo's .pre-commit-config.yaml, if it has one.
+# commit-msg hook that run the repo's .pre-commit-config.yaml, if it has one
+# and dotfiles.runRepoHooks is true there.
 templateDir = ~/.local/share/git/templates
+
+# A cloned repo's pre-commit config is code its author chose, so the template
+# hook runs it only where the remote is one of ours. Keyed on the remote, as
+# nonfleet.gitconfig picks the identity, and two blocks because the condition
+# matches the URL literally. A machine trusting another remote includes the same
+# file from its local.gitconfig.
+[includeIf "hasconfig:remote.*.url:https://github.com/datapointchris/**"]
+path = ~/.config/git/run-repo-hooks.gitconfig
+
+[includeIf "hasconfig:remote.*.url:git@github.com:datapointchris/**"]
+path = ~/.config/git/run-repo-hooks.gitconfig
 
 [fetch]
 prune = true

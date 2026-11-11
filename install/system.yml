@@ -997,7 +997,7 @@ steps:
   # template into each clone as a symlink, and `pre-commit install` opens the
   # hook for writing, which would write through the link into this repo.
   - name: git-template-hooks
-    description: The commit hooks git copies into every clone, which run a repo's pre-commit config
+    description: The commit hooks git copies into every clone, which run a trusted repo's pre-commit config
     needs_root: false
   - name: windows-fonts
     description: fontconfig pointing at the Windows user font directory

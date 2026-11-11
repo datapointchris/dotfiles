@@ -6,6 +6,11 @@
 # A repo with one, on a machine with no pre-commit, commits with a warning
 # rather than a refusal, because refusing would block every commit there.
 #
+# A repo's config is code its author chose, so it runs only where
+# dotfiles.runRepoHooks is true. common.gitconfig sets that by remote, and
+# `git config dotfiles.runRepoHooks true` sets it for one repo. Elsewhere the
+# commit goes ahead, and the pre-commit stage says how to allow the config.
+#
 # The ID line is the marker pre-commit looks for to recognize its own hook
 # scripts. Carrying it makes `pre-commit install` overwrite this file in place.
 # Without it, pre-commit moves the file to <stage>.legacy and runs it as well
@@ -16,6 +21,14 @@ config=.pre-commit-config.yaml
 stage=${0##*/}
 
 [ -f "$config" ] || exit 0
+
+if [ "$(git config --bool dotfiles.runRepoHooks 2>/dev/null)" != true ]; then
+  if [ "$stage" = pre-commit ]; then
+    echo "$stage: $config did not run, because dotfiles.runRepoHooks is not true in this repo" >&2
+    echo "$stage: to run it in this repo: git config dotfiles.runRepoHooks true" >&2
+  fi
+  exit 0
+fi
 
 if ! command -v pre-commit >/dev/null 2>&1; then
   echo "$stage: pre-commit is not installed, so no check in $config ran" >&2

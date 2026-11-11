@@ -441,8 +441,10 @@ def test_a_variant_gitconfig_no_include_names_is_an_error(tmp_path: Path) -> Non
 
 def test_an_include_no_variant_ships_is_a_warning(tmp_path: Path) -> None:
     """Harmless to git and misleading to a reader, which is the warning/error line
-    everywhere else in this module."""
-    root = git_tree(tmp_path, variants={'host/wsl': 'wsl.gitconfig'}, includes=['wsl.gitconfig', 'native.gitconfig'])
+    everywhere else in this module. A file common ships beside common.gitconfig
+    is shipped too."""
+    root = git_tree(tmp_path, variants={'host/wsl': 'wsl.gitconfig'}, includes=['wsl.gitconfig', 'native.gitconfig', 'shared.gitconfig'])
+    (root / 'configs' / 'common' / '.config' / 'git' / 'shared.gitconfig').write_text('[core]\nautocrlf = input')
 
     findings = validate.declaration(root)
 
