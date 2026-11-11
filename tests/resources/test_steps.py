@@ -487,11 +487,12 @@ def test_a_hook_linked_to_its_source_is_drift_and_is_replaced_by_a_file(home: Pa
     assert not pre_commit.is_symlink()
 
 
-def test_a_new_repo_runs_pre_commit_only_where_it_has_a_config(templated_repo: Path, fake_bin: Path, tmp_path: Path) -> None:
+def test_a_new_repo_runs_pre_commit_only_where_it_has_a_trusted_config(templated_repo: Path, fake_bin: Path, tmp_path: Path) -> None:
     """A pre-commit that fails the commit-msg stage, so a commit that succeeds is
-    one the hooks let through. No config never reaches pre-commit. A config
-    reaches it at both stages. A config on a machine without pre-commit commits
-    rather than blocking."""
+    one the hooks let through. No config never reaches pre-commit, and neither
+    does a config in an untrusted repo, which is told how to allow it. A trusted
+    config reaches it at both stages. A config on a machine without pre-commit
+    commits rather than blocking."""
     log = tmp_path / 'pre-commit.log'
     executable(fake_bin, 'pre-commit', f'#!/bin/sh\necho "$1 $3" >> {log}\n[ "$3" != --hook-type=commit-msg ]\n')
     for stage in steps.TEMPLATE_HOOK_STAGES:
@@ -502,12 +503,36 @@ def test_a_new_repo_runs_pre_commit_only_where_it_has_a_config(templated_repo: P
     assert not log.exists()
 
     (templated_repo / '.pre-commit-config.yaml').write_text('repos: []\n')
+    untrusted = git(templated_repo, 'commit', '--allow-empty', '-m', 'untrusted')
+    assert untrusted.returncode == 0 and 'git config dotfiles.runRepoHooks true' in untrusted.stderr
+    assert not log.exists()
+
+    assert git(templated_repo, 'config', 'dotfiles.runRepoHooks', 'true').returncode == 0
     assert git(templated_repo, 'commit', '--allow-empty', '-m', 'config').returncode != 0
     assert log.read_text().splitlines() == ['hook-impl --hook-type=pre-commit', 'hook-impl --hook-type=commit-msg']
 
     nothing_on_path = tmp_path / 'empty'
     nothing_on_path.mkdir()
     assert git(templated_repo, 'commit', '--allow-empty', '-m', 'no pre-commit', path=str(nothing_on_path)).returncode == 0
+
+
+def test_replacing_the_template_rewrites_its_copies_in_clones_and_leaves_edits(home: Path, tmp_path: Path) -> None:
+    """git copies the template at clone time, so a clone made before a change
+    keeps the old hook until the step rewrites it."""
+    old = b'#!/bin/sh\n# an earlier template\n'
+    for hook in steps.template_hooks():
+        steps.write_executable(hook, old)
+    for name in ('copied', 'edited'):
+        assert git(home, 'init', '-q', name).returncode == 0
+    edited = home / 'edited' / '.git' / 'hooks' / 'pre-commit'
+    edited.write_bytes(old + b'echo mine\n')
+
+    assert steps.apply('git-template-hooks', Privilege(), ANY_RUN).ok
+
+    source = steps.TEMPLATE_HOOK.read_bytes()
+    for stage in steps.TEMPLATE_HOOK_STAGES:
+        assert (home / 'copied' / '.git' / 'hooks' / stage).read_bytes() == source
+    assert edited.read_bytes() == old + b'echo mine\n'
 
 
 @pytest.mark.skipif(shutil.which('pre-commit') is None, reason='needs pre-commit, whose install is what reads the marker')

@@ -28,6 +28,7 @@ from the half of the run that must never prompt.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -536,16 +537,69 @@ def write_executable(target: Path, content: bytes) -> None:
         raise
 
 
+def held_template(hook: Path) -> bytes | None:
+    try:
+        return hook.read_bytes() if stat.S_ISREG(hook.lstat().st_mode) else None
+    except OSError:
+        return None
+
+
+def clone_hooks_holding(contents: set[bytes], root: Path) -> list[Path]:
+    """Every pre-commit and commit-msg hook in a `.git` under `root` whose bytes
+    are one of `contents`.
+
+    A walk of the whole tree, because a clone can sit anywhere, and in Python
+    because the step runs before any search tool is installed. It costs seconds
+    on a full home directory, so only an apply that is replacing the template
+    pays it. A worktree's `.git` is a file, and its hooks are its primary's.
+    """
+    sizes = {len(content) for content in contents}
+    found: list[Path] = []
+    pending = [str(root)]
+    while pending:
+        try:
+            with os.scandir(pending.pop()) as listing:
+                directories = [entry for entry in listing if entry.is_dir(follow_symlinks=False)]
+        except OSError:
+            continue
+        for directory in directories:
+            if directory.name != '.git':
+                pending.append(directory.path)
+                continue
+            for stage in TEMPLATE_HOOK_STAGES:
+                hook = Path(directory.path, 'hooks', stage)
+                with contextlib.suppress(OSError):
+                    if hook.lstat().st_size in sizes and held_template(hook) in contents:
+                        found.append(hook)
+    return found
+
+
 def write_git_template_hooks() -> Result:
     """Write each hook as a regular executable file, replacing a link rather than
-    writing through it."""
+    writing through it.
+
+    git copied the template into every clone made since it was written, and a
+    clone keeps its copy when the template changes. So before replacing the
+    template, every clone hook still holding what it held gets the new source.
+    A hook differing from it is pre-commit's own or someone's edit, and stays.
+    The sweep runs first, so a copy it cannot rewrite fails the step and the next
+    apply looks again.
+    """
     source = TEMPLATE_HOOK.read_bytes()
+    retired = {held for hook in template_hooks() if (held := held_template(hook)) is not None and held != source}
+    copies = clone_hooks_holding(retired, Path.home()) if retired else []
+    for copy in copies:
+        try:
+            write_executable(copy, source)
+        except OSError as error:
+            return Result(False, f'could not rewrite {copy}, a copy of the old template hook: {error}', kind=Kind.WRITE_FAILED)
     for hook in template_hooks():
         try:
             write_executable(hook, source)
         except OSError as error:
             return Result(False, f'could not write {hook}: {error}', kind=Kind.WRITE_FAILED)
-    return Result(True, f'{", ".join(TEMPLATE_HOOK_STAGES)} written to {template_hooks()[0].parent}', kind=Kind.APPLIED)
+    written = f'{", ".join(TEMPLATE_HOOK_STAGES)} written to {template_hooks()[0].parent}'
+    return Result(True, f'{written}, and {len(copies)} copies in clones rewritten from the old template', kind=Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

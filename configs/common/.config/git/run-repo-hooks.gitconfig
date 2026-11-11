@@ -1,0 +1,8 @@
+# Marks a repo as one whose .pre-commit-config.yaml the template hook may run.
+#
+# Read only where an include names it: common.gitconfig includes it for the
+# datapointchris remotes, and a machine's local.gitconfig may include it for
+# another remote it trusts. A repo outside those turns it on for itself with
+# `git config dotfiles.runRepoHooks true`.
+[dotfiles]
+runRepoHooks = true

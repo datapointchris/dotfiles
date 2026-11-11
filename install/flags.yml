@@ -298,6 +298,11 @@ required_files:
   # it is `configs/trust/nonfleet/`: every machine that deploys the consumer needs
   # the file, and naming one machine meant the second nonfleet box — the Windows
   # side of the same laptop — deployed an include of a file nothing declared.
+  #
+  # It also names the organization's remotes whose pre-commit config the template
+  # hook may run, written by hand beside the identity. One block per URL spelling:
+  #   [includeIf "hasconfig:remote.*.url:https://<host>/<workspace>/**"]
+  #   path = ~/.config/git/run-repo-hooks.gitconfig
   - name: local.gitconfig
     path: ~/.config/git/local.gitconfig
     description: This machine's default git identity, for repos that are not personal
