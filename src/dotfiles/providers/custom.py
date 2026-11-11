@@ -393,6 +393,16 @@ BUSY_INSTALLING = re.compile(r'another process is currently installing|claude.*r
 
 AWSCLI_ZIPS = {'x86_64': 'awscli-exe-linux-x86_64.zip', 'arm64': 'awscli-exe-linux-aarch64.zip'}
 
+AWSCLI_KEYS = ('FB5DB77FD5C118B80511ADA8A6310ACC4672475C',)
+"""The AWS CLI Team key that signs every awscli zip, as AWS's install guide prints it.
+
+AWS serves the key from no URL, so `signing_keys/aws-cli-team.asc` is the guide's
+block, copied. gpg still reports a good signature from it once it expires, and
+exits 0, so the copy changes only when AWS signs with another key.
+"""
+
+AWSCLI_KEY_FILE = Path(__file__).with_name('signing_keys') / 'aws-cli-team.asc'
+
 
 def awscli_zip(entry: catalog.CustomInstaller, target: Target) -> str:
     """'' on macOS, where awscli is a Homebrew package and this installs nothing."""
@@ -414,6 +424,9 @@ def awscli(request: Request) -> Result:
     here therefore means the machine is missing it or behind, and the 73MB is
     being spent on a difference someone measured.
 
+    The zip's detached `.sig` is checked against AWS's pinned key before
+    `aws/install` runs, because that installer runs with this user's rights.
+
     macOS never reaches this at all: Homebrew has the formula, and the entry
     declares `excludes_os_family: darwin` so the item is not planned there. That
     was a branch here returning success without installing anything, which left
@@ -432,6 +445,11 @@ def awscli(request: Request) -> Result:
         arrived = effects.fetch(url, archive)
         if not arrived:
             return Result(False, f'could not download {url}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
+
+        refused = verify_signature('awscli', archive, f'{url}.sig', AWSCLI_KEY_FILE, AWSCLI_KEYS, staging)
+        if refused:
+            return Result(False, refused, kind=Kind.UNVERIFIED)
+
         if not effects.unpack(archive, staging / 'unpacked'):
             return Result(False, 'the awscli zip did not unpack', kind=Kind.ARCHIVE_UNREADABLE)
 
@@ -494,7 +512,9 @@ def mount_s3(request: Request) -> Result:
         if not arrived:
             return Result(False, f'could not download {tarball_url}: {arrived.reason}', kind=Kind.DOWNLOAD_FAILED)
 
-        refused = verify_signature(archive, tarball_url, f'{request.entry.url}/public_keys/KEYS', staging)
+        refused = verify_signature(
+            'mount-s3', archive, f'{tarball_url}.asc', f'{request.entry.url}/public_keys/KEYS', MOUNT_S3_KEYS, staging
+        )
         if refused:
             return Result(False, refused, kind=Kind.UNVERIFIED)
 
@@ -510,27 +530,34 @@ def mount_s3(request: Request) -> Result:
     return confirm_on_path('mount-s3', request.entry.executable)
 
 
-def verify_signature(archive: Path, tarball_url: str, keys_url: str, staging: Path) -> str:
-    """'' when the tarball's detached signature checks out, else why it does not.
+def verify_signature(tool: str, archive: Path, signature_url: str, keys: Path | str, pinned: tuple[str, ...], staging: Path) -> str:
+    """'' when the archive's detached signature checks out, else why it does not.
 
-    KEYS comes from the same bucket as the tarball, so only the pinned keys stay in
-    the scratch keyring. `gpg --verify` accepts a signature from any key it holds,
-    and this leaves it holding no key an attacker could have added beside them.
+    `keys` is a key file dotfiles ships, or the URL of one the vendor serves. A
+    served one comes from the same bucket as the archive, so only the pinned keys
+    stay in the scratch keyring. `gpg --verify` accepts a signature from any key it
+    holds, and this leaves it holding no key an attacker could have added beside them.
 
-    Fails closed on a bad signature or an unpinned key, and warns without refusing
-    when the signature or gpg itself is unavailable — the same split the shell made,
-    for the same reason: a machine with no gnupg has not been shown a bad signature,
-    it has been unable to look.
+    Fails closed on a bad signature, an unpinned key, or a signature or key file
+    that does not arrive, because the host that just served the archive could as
+    easily withhold its signature. Warns without refusing when gpg itself is
+    missing: a machine with no gnupg has not been shown a bad signature, it has
+    been unable to look.
     """
     if not shutil.which('gpg'):
-        warn('gpg is not installed, so the mount-s3 signature could not be checked')
+        warn(f'gpg is not installed, so the {tool} signature could not be checked')
         return ''
 
-    signature = staging / 'mount-s3.tar.gz.asc'
-    keys = staging / 'KEYS'
-    if not effects.fetch(f'{tarball_url}.asc', signature) or not effects.fetch(keys_url, keys):
-        warn('could not fetch the mount-s3 signature or signing keys, so the signature was not checked')
-        return ''
+    signature = staging / f'{archive.name}.sig'
+    arrived = effects.fetch(signature_url, signature)
+    if not arrived:
+        return f'could not download the {tool} signature {signature_url}: {arrived.reason}'
+    if isinstance(keys, str):
+        served = staging / 'KEYS'
+        arrived = effects.fetch(keys, served)
+        if not arrived:
+            return f'could not download the {tool} signing keys {keys}: {arrived.reason}'
+        keys = served
 
     home = staging / 'gnupg'
     home.mkdir(mode=0o700)
@@ -539,15 +566,15 @@ def verify_signature(archive: Path, tarball_url: str, keys_url: str, staging: Pa
 
     listed = effects.run(['gpg', '--list-keys', '--with-colons'], env=environment, output=Output.QUIET)
     imported = primary_fingerprints(listed.stdout)
-    if not imported & set(MOUNT_S3_KEYS):
-        return 'the mount-s3 signing key is not one of the pinned fingerprints'
+    if not imported & set(pinned):
+        return f'the {tool} signing key is not one of the pinned fingerprints'
 
-    unpinned = sorted(imported - set(MOUNT_S3_KEYS))
+    unpinned = sorted(imported - set(pinned))
     if unpinned and not effects.run(['gpg', '--batch', '--yes', '--delete-keys', *unpinned], env=environment, output=Output.QUIET).ok:
-        return 'the mount-s3 KEYS file holds an unpinned key that could not be removed'
+        return f'the {tool} signing keys include an unpinned one that could not be removed'
 
     verified = effects.run(['gpg', '--verify', str(signature), str(archive)], env=environment, output=Output.QUIET)
-    return '' if verified.ok else 'the mount-s3 GPG signature did not verify against a pinned key'
+    return '' if verified.ok else f'the {tool} GPG signature did not verify against a pinned key'
 
 
 def primary_fingerprints(listing: str) -> set[str]:

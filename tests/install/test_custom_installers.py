@@ -467,11 +467,7 @@ class TestAwscli:
         only other thing that knows what version it holds."""
         reports(monkeypatch, aws='aws-cli/2.36.18 Python/3.14.6')
         stub_binary(home, 'aws')
-        zipped = io.BytesIO()
-        with zipfile.ZipFile(zipped, 'w') as archive:
-            archive.writestr('aws/install', '#!/bin/sh\n')
-        url = 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip'
-        runs, _ = effected(fetches=Fetches({url: zipped.getvalue()}))
+        runs, _ = effected(Runs(**AWSCLI_KEY_LISTED), fetches=Fetches({AWSCLI_ZIP_URL: aws_zip()}))
 
         result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
 
@@ -506,11 +502,7 @@ class TestAwscli:
     def test_an_absent_aws_runs_the_vendor_installer_against_local_directories(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, aws=None)
         stub_binary(home, 'aws')
-        zipped = io.BytesIO()
-        with zipfile.ZipFile(zipped, 'w') as archive:
-            archive.writestr('aws/install', '#!/bin/sh\n')
-        url = 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip'
-        runs, _ = effected(fetches=Fetches({url: zipped.getvalue()}))
+        runs, _ = effected(Runs(**AWSCLI_KEY_LISTED), fetches=Fetches({AWSCLI_ZIP_URL: aws_zip()}))
 
         result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
 
@@ -519,6 +511,31 @@ class TestAwscli:
         assert str(home / '.local' / 'aws-cli') in installed
         assert str(home / '.local' / 'bin') in installed
         assert '--update' in installed
+
+    def test_a_bad_signature_refuses_before_the_vendor_installer_runs(self, declared, home, bundle, effected, monkeypatch):
+        reports(monkeypatch, aws=None)
+        monkeypatch.setattr(custom.shutil, 'which', lambda name: '/usr/bin/gpg' if name == 'gpg' else None)
+        runs, fetches = effected(
+            Runs(**AWSCLI_KEY_LISTED, **{'--verify': Completed(('gpg',), 1, 'BAD signature')}),
+            fetches=Fetches({AWSCLI_ZIP_URL: aws_zip()}),
+        )
+
+        result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
+
+        assert result.kind is Kind.UNVERIFIED
+        assert f'{AWSCLI_ZIP_URL}.sig' in fetches.urls
+        assert not any('aws/install' in argv[0] for argv in runs.calls)
+
+
+AWSCLI_ZIP_URL = 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip'
+AWSCLI_KEY_LISTED = {'--list-keys': Completed(('gpg',), 0, f'pub:::::::::\nfpr:::::::::{custom.AWSCLI_KEYS[0]}:\n')}
+
+
+def aws_zip() -> bytes:
+    zipped = io.BytesIO()
+    with zipfile.ZipFile(zipped, 'w') as archive:
+        archive.writestr('aws/install', '#!/bin/sh\n')
+    return zipped.getvalue()
 
 
 class TestMountS3:
