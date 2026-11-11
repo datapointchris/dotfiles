@@ -24,7 +24,7 @@ stage=${0##*/}
 
 if [ "$(git config --bool dotfiles.runRepoHooks 2>/dev/null)" != true ]; then
   if [ "$stage" = pre-commit ]; then
-    echo "$stage: $config did not run, because no remote of this repo is trusted" >&2
+    echo "$stage: $config did not run, because dotfiles.runRepoHooks is not true in this repo" >&2
     echo "$stage: to run it in this repo: git config dotfiles.runRepoHooks true" >&2
   fi
   exit 0

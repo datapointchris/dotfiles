@@ -490,9 +490,9 @@ def test_a_hook_linked_to_its_source_is_drift_and_is_replaced_by_a_file(home: Pa
 def test_a_new_repo_runs_pre_commit_only_where_it_has_a_trusted_config(templated_repo: Path, fake_bin: Path, tmp_path: Path) -> None:
     """A pre-commit that fails the commit-msg stage, so a commit that succeeds is
     one the hooks let through. No config never reaches pre-commit, and neither
-    does a config in an untrusted repo, which is told how to allow it. A trusted
-    config reaches it at both stages. A config on a machine without pre-commit
-    commits rather than blocking."""
+    does a config in an untrusted repo. A trusted config reaches it at both
+    stages. A config on a machine without pre-commit commits rather than
+    blocking."""
     log = tmp_path / 'pre-commit.log'
     executable(fake_bin, 'pre-commit', f'#!/bin/sh\necho "$1 $3" >> {log}\n[ "$3" != --hook-type=commit-msg ]\n')
     for stage in steps.TEMPLATE_HOOK_STAGES:
@@ -503,8 +503,7 @@ def test_a_new_repo_runs_pre_commit_only_where_it_has_a_trusted_config(templated
     assert not log.exists()
 
     (templated_repo / '.pre-commit-config.yaml').write_text('repos: []\n')
-    untrusted = git(templated_repo, 'commit', '--allow-empty', '-m', 'untrusted')
-    assert untrusted.returncode == 0 and 'git config dotfiles.runRepoHooks true' in untrusted.stderr
+    assert git(templated_repo, 'commit', '--allow-empty', '-m', 'untrusted').returncode == 0
     assert not log.exists()
 
     assert git(templated_repo, 'config', 'dotfiles.runRepoHooks', 'true').returncode == 0

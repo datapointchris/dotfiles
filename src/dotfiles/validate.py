@@ -474,7 +474,10 @@ def git_variants(root: Path) -> list[Finding]:
 
     # The stale half, and only a warning: git ignores the line, so nothing is
     # misconfigured. What it costs is a reader trusting the file, who sees a value
-    # named here and goes looking for the variant that no longer ships it.
+    # named here and goes looking for the variant that no longer ships it. A file
+    # common ships beside common.gitconfig, such as one an includeIf reads, is
+    # shipped everywhere and named for what it holds rather than for a value.
+    shipped |= {path.name for path in common.parent.glob('*.gitconfig')}
     for name in sorted(included - shipped):
         findings.append(Finding('gitconfig', Severity.WARNING, f'{COMMON_GITCONFIG} includes {name!r}, which no variant ships'))
     return findings

@@ -544,9 +544,15 @@ def held_template(hook: Path) -> bytes | None:
         return None
 
 
-def clone_hooks_holding(contents: set[bytes], root: Path) -> list[Path]:
+SWEEP_SKIPS = ('Library', '.Trash')
+"""Directories directly under the home directory the sweep never enters. macOS
+keeps other apps' data and iCloud Drive in `~/Library`, behind privacy prompts,
+and no clone is committed in either."""
+
+
+def clone_hooks_holding(contents: set[bytes], root: Path) -> tuple[list[Path], int]:
     """Every pre-commit and commit-msg hook in a `.git` under `root` whose bytes
-    are one of `contents`.
+    are one of `contents`, and how many directories could not be read.
 
     A walk of the whole tree, because a clone can sit anywhere, and in Python
     because the step runs before any search tool is installed. It costs seconds
@@ -554,15 +560,20 @@ def clone_hooks_holding(contents: set[bytes], root: Path) -> list[Path]:
     pays it. A worktree's `.git` is a file, and its hooks are its primary's.
     """
     sizes = {len(content) for content in contents}
+    skipped = {os.path.join(root, name) for name in SWEEP_SKIPS}
     found: list[Path] = []
+    unreadable = 0
     pending = [str(root)]
     while pending:
         try:
             with os.scandir(pending.pop()) as listing:
                 directories = [entry for entry in listing if entry.is_dir(follow_symlinks=False)]
         except OSError:
+            unreadable += 1
             continue
         for directory in directories:
+            if directory.path in skipped:
+                continue
             if directory.name != '.git':
                 pending.append(directory.path)
                 continue
@@ -571,7 +582,7 @@ def clone_hooks_holding(contents: set[bytes], root: Path) -> list[Path]:
                 with contextlib.suppress(OSError):
                     if hook.lstat().st_size in sizes and held_template(hook) in contents:
                         found.append(hook)
-    return found
+    return found, unreadable
 
 
 def write_git_template_hooks() -> Result:
@@ -579,27 +590,38 @@ def write_git_template_hooks() -> Result:
     writing through it.
 
     git copied the template into every clone made since it was written, and a
-    clone keeps its copy when the template changes. So before replacing the
-    template, every clone hook still holding what it held gets the new source.
-    A hook differing from it is pre-commit's own or someone's edit, and stays.
-    The sweep runs first, so a copy it cannot rewrite fails the step and the next
-    apply looks again.
+    clone keeps its copy when the template changes. So every clone hook still
+    holding what the template held gets the new source. A hook holding anything
+    else stays: pre-commit's own, an edit, or a copy of an older template.
+
+    The template is written first, so a copy the user cannot write costs only
+    that clone. Such a copy is named in the result, which is partial rather than
+    failed, because no later apply could write it either.
     """
     source = TEMPLATE_HOOK.read_bytes()
     retired = {held for hook in template_hooks() if (held := held_template(hook)) is not None and held != source}
-    copies = clone_hooks_holding(retired, Path.home()) if retired else []
-    for copy in copies:
-        try:
-            write_executable(copy, source)
-        except OSError as error:
-            return Result(False, f'could not rewrite {copy}, a copy of the old template hook: {error}', kind=Kind.WRITE_FAILED)
     for hook in template_hooks():
         try:
             write_executable(hook, source)
         except OSError as error:
             return Result(False, f'could not write {hook}: {error}', kind=Kind.WRITE_FAILED)
     written = f'{", ".join(TEMPLATE_HOOK_STAGES)} written to {template_hooks()[0].parent}'
-    return Result(True, f'{written}, and {len(copies)} copies in clones rewritten from the old template', kind=Kind.APPLIED)
+    if not retired:
+        return Result(True, written, kind=Kind.APPLIED)
+
+    copies, unreadable = clone_hooks_holding(retired, Path.home())
+    stuck = []
+    for copy in copies:
+        try:
+            write_executable(copy, source)
+        except OSError as error:
+            stuck.append(f'{copy} ({error.strerror})')
+    detail = f'{written}; {len(copies) - len(stuck)} copies in clones rewritten from the old template'
+    if unreadable:
+        detail += f'; {unreadable} directories under {Path.home()} could not be read, so clones there were not checked'
+    if stuck:
+        detail += f'; {len(stuck)} copies still run any repo config, because they could not be written: {", ".join(stuck)}'
+    return Result(True, detail, kind=Kind.PARTIALLY_APPLIED if stuck else Kind.APPLIED)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

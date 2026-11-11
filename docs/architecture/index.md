@@ -246,7 +246,10 @@ than for the axis. `wsl.gitconfig` carries `core.autocrlf`, because a checkout o
 the Linux side is edited from Windows tools too, and `fleet.gitconfig` or
 `nonfleet.gitconfig` carries identity. All are ignored while absent, so a machine
 needing none ships nothing. Trust comes last, because its nonfleet form overrides
-a default with an `includeIf` and git resolves last-wins.
+a default with an `includeIf` and git resolves last-wins. A file that
+`configs/common/` ships beside `common.gitconfig`, such as
+`run-repo-hooks.gitconfig`, is read only behind an `includeIf`. It is named for
+what it holds, because it belongs to no coordinate value.
 
 Two rules hold that scheme together. Git enforces neither, so
 `dotfiles machines check` does. `git_variants` in `src/dotfiles/validate.py` is
