@@ -1141,12 +1141,12 @@ class UvToolchain(ToolchainProvider):
     """uv at the release the session's uv-pre-commit hook pins, then the default interpreter it manages."""
 
     def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
-        return routing.ItemHosts(download=routing.hosts_of([toolchain.UV_INSTALL_URL]) | routing.RELEASE_DOWNLOAD)
+        return routing.ItemHosts(download=routing.hosts_of([toolchain.UV_RELEASES]))
 
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
         return toolchain.install_uv(
             session.repo / paths.PRE_COMMIT_CONFIG.name,
-            session.machine.coordinates.os_family,
+            coordinates.target_for(session.machine.coordinates),
             offline=self.routed(session).bundled,
         )
 

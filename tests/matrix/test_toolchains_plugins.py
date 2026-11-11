@@ -33,7 +33,7 @@ from typing import Any
 
 import pytest
 
-from dotfiles.coordinates import OSFamily
+from dotfiles.coordinates import Target
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
 from dotfiles.providers import toolchain
@@ -930,7 +930,7 @@ def test_applying_one_named_runtime_converges_it_and_leaves_a_missing_neighbor_a
     sandbox.installed('uv', 'uv 0.9.8')
     asked: list[bool] = []
 
-    def install_uv(_config: Path, _os_family: OSFamily, *, offline: bool) -> Result:
+    def install_uv(_config: Path, _target: Target, *, offline: bool) -> Result:
         asked.append(offline)
         sandbox.installed('uv', f'uv {UV_RELEASE}')
         return Result(True, f'uv {UV_RELEASE}', kind=Kind.APPLIED)

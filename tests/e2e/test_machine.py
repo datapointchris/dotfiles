@@ -37,8 +37,8 @@ pytestmark = pytest.mark.docker
 
 
 def test_the_bootstrap_put_uv_on_the_machine(machine: Machine) -> None:
-    """Online it comes from astral.sh; offline from the bundle's `bin/uv`. Either
-    way nothing after this line can run without it."""
+    """Online it is the pinned release's archive from astral's mirror; offline it is
+    the bundle's `bin/uv`. Either way nothing after this line can run without it."""
     assert machine.succeeds('command -v uv'), machine.install_log[-3000:]
 
 

@@ -29,6 +29,7 @@ from shells import REPO
 from dotfiles import coordinates
 from dotfiles import uv_lock
 from dotfiles.create_bundle import ARCHIVE_MEMBER
+from dotfiles.providers import toolchain
 
 BOOTSTRAP = REPO / 'install.sh'
 
@@ -79,6 +80,38 @@ def test_the_bootstrap_and_the_cli_agree_on_what_windows_looks_like(reported: st
 
     assert any(fnmatch(reported, glob) for glob in globs), f'install.sh calls {reported} unix'
     assert coordinates.detect().os_family is coordinates.OSFamily.WINDOWS, f'the CLI calls {reported} linux'
+
+
+UNAMES = {
+    ('Linux', 'x86_64'): coordinates.Target(coordinates.OSFamily.LINUX, coordinates.Arch.X86_64),
+    ('Linux', 'aarch64'): coordinates.Target(coordinates.OSFamily.LINUX, coordinates.Arch.ARM64),
+    ('Darwin', 'x86_64'): coordinates.Target(coordinates.OSFamily.DARWIN, coordinates.Arch.X86_64),
+    ('Darwin', 'arm64'): coordinates.Target(coordinates.OSFamily.DARWIN, coordinates.Arch.ARM64),
+    ('MINGW64_NT-10.0-26100', 'x86_64'): coordinates.Target(coordinates.OSFamily.WINDOWS, coordinates.Arch.X86_64),
+    ('MINGW64_NT-10.0-26100', 'aarch64'): coordinates.Target(coordinates.OSFamily.WINDOWS, coordinates.Arch.ARM64),
+}
+
+
+@pytest.mark.parametrize(('system', 'machine'), list(UNAMES))
+def test_the_bootstrap_fetches_the_uv_archive_the_cli_names(system: str, machine: str, tmp_path: Path) -> None:
+    """The asset name is written in the shell and in `toolchain.uv_archive`, and the
+    two have to agree, or a bootstrap fetches an archive astral never published."""
+    shim = tmp_path / 'uname'
+    shim.write_text(f'#!/bin/sh\ncase "$1" in -s) echo {system} ;; -m) echo {machine} ;; esac\n')
+    shim.chmod(0o755)
+    archive = re.search(r'^uv_archive\(\) \{\n.*?^\}\n', BOOTSTRAP.read_text(), re.MULTILINE | re.DOTALL)
+    assert archive, 'install.sh no longer names the uv archive in a uv_archive function'
+    uv = 'uv.exe' if UNAMES[system, machine].os_family is coordinates.OSFamily.WINDOWS else 'uv'
+
+    named = subprocess.run(
+        ['sh', '-c', f'UV={uv}\n{archive.group(0)}uv_archive'],
+        env={**os.environ, 'PATH': f'{tmp_path}:{os.environ["PATH"]}'},
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+    assert named == toolchain.uv_archive(UNAMES[system, machine])
 
 
 def test_the_bootstrap_stages_the_uv_its_platform_carries() -> None:

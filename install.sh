@@ -231,21 +231,76 @@ case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*) UV=uv.exe ;;
 esac
 
+sha256_of() {
+  if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1
+}
+
+# The uv release the uv-pre-commit hook's rev names, which `toolchain.pinned_uv`
+# reads too, so the bootstrap and the first apply agree on one uv.
+uv_pin() {
+  sed -n '\#repo: https://github.com/astral-sh/uv-pre-commit$#{n;s/^[[:space:]]*rev:[[:space:]]*v\{0,1\}\([0-9.]*\)[[:space:]]*$/\1/p;}' \
+    "$DOTFILES_DIR/.pre-commit-config.yaml"
+}
+
+# The archive astral builds for this machine, as `toolchain.uv_archive` names it.
+uv_archive() {
+  case "$(uname -m)" in
+    x86_64 | amd64) arch=x86_64 ;;
+    aarch64 | arm64) arch=aarch64 ;;
+    *) die "astral publishes no uv archive install.sh knows for $(uname -m)" ;;
+  esac
+  if [ "$UV" = uv.exe ]; then
+    echo "uv-$arch-pc-windows-msvc.zip"
+  elif [ "$(uname -s)" = Darwin ]; then
+    echo "uv-$arch-apple-darwin.tar.gz"
+  else
+    echo "uv-$arch-unknown-linux-gnu.tar.gz"
+  fi
+}
+
+# The pinned release's archive from astral's mirror, the host `toolchain.UV_RELEASES`
+# names, placed only once it matches the sha256 published beside it. astral's
+# installer scripts check the archive against hashes they carry, but piping one
+# into a shell runs the script itself unchecked.
+bootstrap_uv() {
+  version=$(uv_pin)
+  [ -n "$version" ] || die "$DOTFILES_DIR/.pre-commit-config.yaml pins no uv release in its uv-pre-commit hook"
+  asset=$(uv_archive)
+
+  require curl
+  fetched=$(mktemp -d)
+  trap 'rm -rf "$fetched"' EXIT
+  release="https://releases.astral.sh/github/uv/releases/download/$version/$asset"
+  curl -fsSL "$release" -o "$fetched/$asset" || die "could not download $release"
+  curl -fsSL "$release.sha256" -o "$fetched/$asset.sha256" || die "could not download $release.sha256"
+  published=$(cut -d' ' -f1 <"$fetched/$asset.sha256")
+  actual=$(sha256_of "$fetched/$asset")
+  if [ -z "$published" ] || [ "$actual" != "$published" ]; then
+    die "$asset is $actual, where astral publishes ${published:-nothing}; refusing to install it"
+  fi
+
+  mkdir -p "$fetched/unpacked" "$HOME/.local/bin"
+  if [ "$UV" = uv.exe ]; then
+    # Expand-Archive, because packages.yml declares no winget `unzip`, and Git
+    # Bash's tar reads no zip.
+    require powershell
+    powershell -NoProfile -Command "Expand-Archive -LiteralPath '$(cygpath -w "$fetched/$asset")' -DestinationPath '$(cygpath -w "$fetched/unpacked")'"
+    cp "$fetched/unpacked/uv.exe" "$fetched/unpacked/uvx.exe" "$HOME/.local/bin/"
+  else
+    tar -xzf "$fetched/$asset" -C "$fetched/unpacked"
+    cp "$fetched/unpacked/${asset%.tar.gz}/uv" "$fetched/unpacked/${asset%.tar.gz}/uvx" "$HOME/.local/bin/"
+  fi
+  rm -rf "$fetched"
+  trap - EXIT
+}
+
 if ! command -v uv >/dev/null; then
   if [ -n "$OFFLINE" ]; then
     [ -x "$BUNDLE/bin/$UV" ] || die "offline: the staged bundle carries no bin/$UV"
     mkdir -p "$HOME/.local/bin"
     cp "$BUNDLE/bin/$UV" "$HOME/.local/bin/$UV"
-  elif [ "$UV" = uv.exe ]; then
-    # astral publishes a PowerShell installer for Windows and a sh one for
-    # everything else. Under Git Bash the sh one fetches the Windows zip and
-    # extracts it with `unzip`, which packages.yml declares for apt, pacman and
-    # brew and not for winget.
-    require powershell
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
   else
-    require curl
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    bootstrap_uv
   fi
 fi
 

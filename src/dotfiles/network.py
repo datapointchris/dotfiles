@@ -207,7 +207,7 @@ def derive(machine: machines.Machine) -> Derived:
     """
     plan = resolve.resolve(catalog.load(), machine)
     installers, unprobed = custom_installer_probes(plan, coordinates.target_for(machine.coordinates))
-    runtimes, runtimes_unprobed = runtime_probes(machine.coordinates.os_family)
+    runtimes, runtimes_unprobed = runtime_probes(coordinates.target_for(machine.coordinates))
     return Derived(
         probes=(
             *release_probes(plan),
@@ -304,7 +304,7 @@ def custom_installer_probes(plan: planning.Plan, target: Target) -> tuple[tuple[
     return tuple(found), tuple(unprobed)
 
 
-def runtime_probes(os_family: coordinates.OSFamily) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
+def runtime_probes(target: coordinates.Target) -> tuple[tuple[Probe, ...], tuple[str, ...]]:
     """Where the language runtimes come from, imported rather than retyped.
 
     The installer's own constant is the one that decides where a real install
@@ -316,10 +316,10 @@ def runtime_probes(os_family: coordinates.OSFamily) -> tuple[tuple[Probe, ...], 
         Probe('language_manager', 'rustup', toolchain.RUSTUP_URL),
     ]
     try:
-        uv = toolchain.uv_installer_url(toolchain.pinned_uv(), os_family)
+        uv = toolchain.uv_archive_url(toolchain.pinned_uv(), target)
     except toolchain.UnpinnedUv as error:
-        return tuple(found), (f'uv installer: {error}',)
-    return (Probe('language_manager', 'uv installer', uv), *found), ()
+        return tuple(found), (f'uv release: {error}',)
+    return (Probe('language_manager', 'uv release', uv), *found), ()
 
 
 REGISTRY_PROBES: tuple[tuple[type[catalog.Entry], str, str], ...] = (

@@ -1343,8 +1343,8 @@ def declared_closure() -> list[tuple[str, str]]:
 def add_uv(bundle: Bundle, cache: DownloadCache) -> None:
     """The uv binary at the release the uv-pre-commit hook pins.
 
-    `install.sh` copies it onto PATH before anything else, and `install_uv` places
-    it wherever this bundle's row names the pin. The bundle carries the binary
+    `install.sh --offline` copies it onto PATH before anything else, and
+    `toolchain.install_uv` places it wherever this bundle's row names the pin. The bundle carries the binary
     rather than astral's installer script: the script downloads the release it
     names, so it is no use on the network this exists for.
 
@@ -1365,7 +1365,7 @@ def add_uv(bundle: Bundle, cache: DownloadCache) -> None:
     target = Target(OSFamily(bundle.os_name), Arch(bundle.arch))
     windows = target.os_family is OSFamily.WINDOWS
     binary = 'uv.exe' if windows else 'uv'
-    asset = github_asset(UV_REPO, version, f'uv-{cargo.triple(target)}.{"zip" if windows else "tar.gz"}')
+    asset = github_asset(UV_REPO, version, toolchain.uv_archive(target))
 
     archive = bundle.bin / asset.filename
     cache.fetch(asset, archive, f'  uv ({version})')
