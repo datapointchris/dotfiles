@@ -540,13 +540,11 @@ def verify_signature(tool: str, archive: Path, signature_url: str, keys: Path | 
 
     Fails closed on a bad signature, an unpinned key, or a signature or key file
     that does not arrive, because the host that just served the archive could as
-    easily withhold its signature. Warns without refusing when gpg itself is
-    missing: a machine with no gnupg has not been shown a bad signature, it has
-    been unable to look.
+    easily withhold its signature. A missing gpg refuses too: `gnupg` is a core
+    package, so a machine without it is broken rather than one that may skip the check.
     """
     if not shutil.which('gpg'):
-        warn(f'gpg is not installed, so the {tool} signature could not be checked')
-        return ''
+        return f'gpg is not installed, so the {tool} signature cannot be checked; install gnupg and apply again'
 
     signature = staging / f'{archive.name}.sig'
     arrived = effects.fetch(signature_url, signature)

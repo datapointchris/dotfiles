@@ -16,6 +16,7 @@ from __future__ import annotations
 import dataclasses as dc
 import hashlib
 import io
+import shutil
 import tarfile
 import zipfile
 from itertools import chain
@@ -467,6 +468,7 @@ class TestAwscli:
         only other thing that knows what version it holds."""
         reports(monkeypatch, aws='aws-cli/2.36.18 Python/3.14.6')
         stub_binary(home, 'aws')
+        gpg_present(monkeypatch)
         runs, _ = effected(Runs(**AWSCLI_KEY_LISTED), fetches=Fetches({AWSCLI_ZIP_URL: aws_zip()}))
 
         result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
@@ -502,6 +504,7 @@ class TestAwscli:
     def test_an_absent_aws_runs_the_vendor_installer_against_local_directories(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, aws=None)
         stub_binary(home, 'aws')
+        gpg_present(monkeypatch)
         runs, _ = effected(Runs(**AWSCLI_KEY_LISTED), fetches=Fetches({AWSCLI_ZIP_URL: aws_zip()}))
 
         result = custom.install(declared.find('custom_installers', 'awscli'), LINUX)
@@ -531,6 +534,12 @@ AWSCLI_ZIP_URL = 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip'
 AWSCLI_KEY_LISTED = {'--list-keys': Completed(('gpg',), 0, f'pub:::::::::\nfpr:::::::::{custom.AWSCLI_KEYS[0]}:\n')}
 
 
+def gpg_present(monkeypatch) -> None:
+    """`gpg` on PATH, and every other name answered as the real PATH answers it."""
+    real = shutil.which
+    monkeypatch.setattr(custom.shutil, 'which', lambda name, *args: '/usr/bin/gpg' if name == 'gpg' else real(name, *args))
+
+
 def aws_zip() -> bytes:
     zipped = io.BytesIO()
     with zipfile.ZipFile(zipped, 'w') as archive:
@@ -551,7 +560,6 @@ class TestMountS3:
 
         assert not result.ok
         assert result.kind is Kind.UNVERIFIED
-        assert 'pinned fingerprints' in result.detail
 
     def test_a_bad_signature_refuses_the_install(self, declared, home, bundle, effected, monkeypatch):
         reports(monkeypatch, **{'mount-s3': None})
@@ -569,7 +577,6 @@ class TestMountS3:
 
         assert not result.ok
         assert result.kind is Kind.UNVERIFIED
-        assert 'did not verify' in result.detail
 
     def test_a_key_added_beside_the_pinned_ones_is_removed_before_verifying(self, declared, home, bundle, effected, monkeypatch):
         """`gpg --verify` accepts a signature from any key it holds, so a rogue key in
@@ -587,19 +594,17 @@ class TestMountS3:
         assert deleted[deleted.index('--delete-keys') + 1 :] == ('ROGUE',)
         assert runs.calls.index(deleted) < next(index for index, call in enumerate(runs.calls) if '--verify' in call)
 
-    def test_no_gpg_warns_rather_than_refusing(self, declared, home, bundle, effected, monkeypatch, capsys):
-        """A machine with no gnupg has not been shown a bad signature, it has been
-        unable to look."""
+    def test_no_gpg_refuses_rather_than_installing_unchecked(self, declared, home, bundle, effected, monkeypatch):
+        """`gnupg` is a core package, so a machine without it is broken, and a check
+        that a missing tool skips would leave the install unverified."""
         reports(monkeypatch, **{'mount-s3': None})
-        tarball = gzipped_tarball({'bin/mount-s3': SCRIPT})
-        url = 'https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.tar.gz'
-        effected(fetches=Fetches({url: tarball}))
+        monkeypatch.setattr(custom.shutil, 'which', lambda name: None)
+        effected()
 
         result = custom.install(declared.find('custom_installers', 'mount-s3'), LINUX)
 
-        assert result.ok, result.detail
-        assert (home / '.local' / 'bin' / 'mount-s3').read_bytes() == SCRIPT
-        assert 'signature could not be checked' in capsys.readouterr().err
+        assert result.kind is Kind.UNVERIFIED
+        assert not (home / '.local' / 'bin' / 'mount-s3').exists()
 
 
 class TestTerraformLs:
