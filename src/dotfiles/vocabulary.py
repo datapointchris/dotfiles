@@ -68,6 +68,10 @@ EXCEPTION_VERBS: dict[str, str] = {
     'update': 'self-update, as everywhere in the fleet — here the checkout is the installation',
     'run': 'timers: runs one declared command now and records its outcome, which measures nothing about the machine',
     'set': 'remote hook-secret: stores a value a person carries in, from a pipe or a prompt, which no reconcile verb can produce',
+    'resolve': (
+        'packages: names the version each install would take, for a box with none installed. '
+        '`plan` asks upstream only about what this machine has, and `show` reads the declaration alone'
+    ),
 }
 """Each exception carries the reason it is not one of the five, so the next reader
 does not have to reconstruct it — and so a new one has to be argued for in writing."""

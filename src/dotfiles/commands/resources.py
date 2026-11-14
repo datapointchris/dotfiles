@@ -24,6 +24,7 @@ from dotfiles import deploy
 from dotfiles import engine
 from dotfiles import envfile
 from dotfiles import gitconfig
+from dotfiles import install_versions
 from dotfiles import offline_bundle
 from dotfiles import paths
 from dotfiles import reconcile
@@ -543,6 +544,40 @@ def packages_apply(
         reinstall=reinstall,
         as_json=as_json,
     )
+
+
+@packages_app.command(
+    'resolve',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles packages resolve — the version each install here would take now\n\n'
+        'dotfiles packages resolve --machine fleet-run-image --json — the same for an image, before it installs anything'
+    ),
+)
+def packages_resolve(
+    machine: str = MachineOption,
+    owner: str = OwnerOption,
+    package: list[str] = PackageOption,
+    as_json: bool = JsonOption,
+) -> None:
+    """Name the version an install of each declared package would take now.
+
+    Each is asked of the source its installer reads, and nothing on this machine is
+    measured, so a box with none of them installed gets every answer. `plan` asks
+    upstream only about what is present. Exits 3 where a version cannot be named.
+    """
+    session = Session.resolve(machine, owner, frozenset(package or ()))
+    items = session.plan.for_resource('packages')
+    if package and not items:
+        error(f'{session.machine_name} declares no package named {", ".join(package)}')
+        raise typer.Exit(ExitCode.USAGE)
+    found = install_versions.resolve(items)
+    if as_json:
+        emit_json({'machine': session.machine_name, 'packages': [one.as_dict() for one in found]})
+    else:
+        width = max((len(one.name) for one in found), default=0)
+        emit_text(''.join(f'{one.name:<{width}}  {one.version or "unresolved: " + one.why}\n' for one in found))
+    raise typer.Exit(ExitCode.ISSUE if any(not one.version for one in found) else ExitCode.CONVERGED)
 
 
 @packages_app.command(

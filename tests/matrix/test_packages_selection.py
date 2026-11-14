@@ -176,7 +176,10 @@ def test_a_refused_selector_names_the_verbs_that_take_it(cli: Callable[..., Invo
     ran = cli('packages', 'check', '--package', 'ruff')
 
     assert ran.exit_code == ExitCode.USAGE
-    assert 'No such option: --package. `dotfiles packages apply` and `dotfiles packages plan` take it.' in ran.stderr
+    assert (
+        'No such option: --package. `dotfiles packages apply`, `dotfiles packages plan` and `dotfiles packages resolve` take it.'
+        in ran.stderr
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
