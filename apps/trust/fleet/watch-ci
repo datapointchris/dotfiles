@@ -98,7 +98,7 @@ FAILED list never pushes a live run off the top.
 `--commit REF --wait` draws no board. It blocks on one commit's runs and says what
 became of them, and a session starts it in the background:
 
-    watch-ci --commit HEAD --wait --json
+    watch-ci --commit HEAD --wait
 
 The repo is `--repo`, or else the one this directory's origin remote names. The ref
 is resolved by git where this directory's origin is that repo, so HEAD and a short
@@ -1986,7 +1986,7 @@ def main() -> int:
         'passes or its pull request closes.\n\n'
         "With --commit REF --wait it draws no board. It blocks on that commit's runs and\n"
         'prints one line per run, with each failed job and the log lines naming its failure:\n\n'
-        '  watch-ci --commit HEAD --wait --json',
+        '  watch-ci --commit HEAD --wait',
         epilog='exit codes with --commit --wait:\n'
         '  0  every run counted concluded success, skipped or neutral\n'
         '     (a push run a newer push cancelled is not counted: the head of its branch is followed instead)\n'
