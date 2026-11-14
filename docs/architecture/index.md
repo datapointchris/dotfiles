@@ -113,6 +113,15 @@ it runs with no root, and the image it runs in owns its system packages.
 `GITHUB_TOKEN` is the only credential it needs, because `effects.run` hands the
 token to git for the private repos a Go module or a uv git install clones.
 
+The container image agent runs start from is a machine too, and `fleet-run-image`
+is its manifest. Its build holds a token that reads no private repo, and the image
+carries its own build of the `fleet` CLI. So it takes `fleet-run-image-clis`, the
+part of `fleet-member-clis` a public source installs, and `repo-checkouts-clis`.
+The build applies the packages alone. The image pins the Go and uv every install
+runs on, and `toolchains apply` would move both. Before it installs, `dotfiles
+packages resolve` names the version each install would take. That keys the image
+layer, so the layer rebuilds only when one of them moves.
+
 A name is declared once. The load refuses a name that two files in one machine's
 composition both declare, and `dotfiles machines check` refuses a name that two
 files declare anywhere. The second is an error rather than a warning, though a

@@ -6,3 +6,4 @@ go_tools:
 
 uv_tools:
   - syncer  # fast-forwards every checkout
+  - refcheck  # finds references a move or rename left broken

@@ -1,0 +1,16 @@
+# The CLIs Chris publishes that fleet's run image installs through dotfiles.
+# `fleet-member-clis` composes this file, so a CLI added here also reaches every
+# fleet member and a box that takes every one.
+#
+# Each comes from a public source, because the image build's token reads no
+# private repo. fleet, homelab and ccm stay in `fleet-member-clis`: the image
+# copies fleet's own release binary, and installs homelab and ccm from the wheels
+# their releases publish.
+
+go_tools:
+  - forge
+
+github_releases:
+  - life
+  - slate
+  - ypl

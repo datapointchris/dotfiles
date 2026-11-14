@@ -1,0 +1,16 @@
+machine: fleet-run-image
+platform: linux
+
+# The image fleet's agent runs start from. Its build applies only the packages,
+# as the unprivileged user the pods run as:
+#
+#   sh install.sh --machine fleet-run-image
+#   dotfiles packages resolve --machine fleet-run-image --json   # keys the layer
+#   dotfiles packages apply --machine fleet-run-image
+#
+# The image owns everything else, as fleet-clis-pod's does: its system packages,
+# and the Go, uv and Python every install here runs on, each pinned in its
+# Dockerfile. `dotfiles toolchains apply` would move Go to whatever go.dev serves
+# and uv to this repo's pin, so the build never runs it.
+
+profiles: [fleet-run-image-clis, repo-checkouts-clis]

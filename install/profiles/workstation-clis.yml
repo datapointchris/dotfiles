@@ -16,7 +16,6 @@ custom_installers:
 
 uv_tools:
   - howto
-  - refcheck
   - dectl
   - sparkxray-cli
   - doppeldata-cli
