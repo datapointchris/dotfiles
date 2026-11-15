@@ -1714,7 +1714,11 @@ EXAMPLES = """examples:
                                              put an agent there, with phase-3 on its window
   tmuxctl pane plan reviewer --for ph3       where ph3's reviewer would go: directly below it
   tmuxctl pane status ph3                    running, dead with a code, or gone
+  tmuxctl pane read ph3 --lines 40           the last 40 lines ph3 has on screen
+  tmuxctl pane read ph3 --strip              all ph3 printed, blank lines dropped, once it has died
   tmuxctl pane focus ph3                     show ph3 on this client, wherever it is
+  tmuxctl pane close ph3                     kill ph3 and its marks; a pane already gone is a success
+  tmuxctl pane current                       the pane this runs in: its handle, or its %id
   tmuxctl pane release ph3                   stop treating ph3 as a pane this tool placed
   tmuxctl coordinator claim billing          make this pane the coordinator, in billing-coordinator
 
@@ -1843,7 +1847,14 @@ def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
     focusing.add_argument('address', metavar='ADDRESS', help=ADDRESS)
     focusing.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
-    closing = command('close', 'destroy a pane', 'Kill a pane and drop the marks that would otherwise outlive it.')
+    closing = command(
+        'close',
+        'destroy a pane',
+        (
+            'Kill a pane and drop the marks that would otherwise outlive it. A pane that is already gone counts as '
+            'closed and exits 0. Closing the last pane of a window closes the window with it.'
+        ),
+    )
     closing.add_argument('address', metavar='ADDRESS', help=ADDRESS)
     closing.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
