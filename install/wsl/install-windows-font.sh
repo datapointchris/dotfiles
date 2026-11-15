@@ -75,6 +75,13 @@ install_font() {
 }
 
 # Process all arguments as font files
-for font_file in "$@"; do
-  install_font "$font_file"
-done
+main() {
+  local font_file
+  for font_file in "$@"; do
+    install_font "$font_file"
+  done
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
