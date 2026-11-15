@@ -87,21 +87,90 @@ def configs(home: Path) -> tuple[Path, ...]:
     return tuple(path for path in base + sourced if path.is_file())
 
 
+def name_of(plugin: str) -> str:
+    """The directory TPM clones a plugin line into.
+
+    `user/plugin`, `user/plugin.git`, `git://host/user/plugin.git` and
+    `user/plugin#branch` all land in a directory called `plugin`. `install_plugins`
+    splits the `#branch` off first, then `plugin_name_helper` takes the basename
+    minus the `.git`.
+    """
+    return plugin.partition('#')[0].rsplit('/', 1)[-1].removesuffix('.git')
+
+
 def declared(home: Path) -> tuple[str, ...]:
     """Every plugin the tmux config names, by the directory name TPM gives it.
 
-    `user/plugin`, `user/plugin.git` and `git://host/user/plugin.git` all land in a
-    directory called `plugin`: basename, minus the `.git`, which is
-    `plugin_name_helper`. Order is the config's and duplicates collapse, so a
-    plugin named twice is one row rather than two.
+    Order is the config's and duplicates collapse, so a plugin named twice is one
+    row rather than two.
     """
     names: list[str] = []
     for path in configs(home):
         for plugin in matches(PLUGIN_LINE, path):
-            name = plugin.rsplit('/', 1)[-1].removesuffix('.git')
+            name = name_of(plugin)
             if name and name not in names:
                 names.append(name)
     return tuple(names)
+
+
+def repository(source: str) -> str:
+    """`owner/repo`, lowercased, from a plugin line or from the remote TPM wrote.
+
+    TPM clones `owner/repo` as `https://git::@github.com/owner/repo`, so a checkout's
+    remote never matches the line that declared it as text. Every spelling ends in
+    the same two path segments once `.git` is gone and an SSH `host:owner` colon
+    reads as a slash.
+    """
+    path = source.strip().removesuffix('/').removesuffix('.git').replace(':', '/')
+    return '/'.join(path.split('/')[-2:]).lower()
+
+
+def origin(checkout: Path) -> tuple[str, str | None]:
+    """The remote a checkout was cloned from, and the branch it has out.
+
+    Read out of `.git` rather than asked of git, for the reason `uninstalled` gives.
+    The branch is None on a detached HEAD, which is how a checkout is pinned by
+    hand, and an unreadable checkout has no remote to compare.
+    """
+    try:
+        config = (checkout / '.git' / 'config').read_text()
+        head = (checkout / '.git' / 'HEAD').read_text().strip()
+    except OSError:
+        return '', None
+    url, section = '', ''
+    for line in (raw.strip() for raw in config.splitlines()):
+        if line.startswith('['):
+            section = line
+        elif section == '[remote "origin"]' and line.partition('=')[0].strip() == 'url':
+            url = line.partition('=')[2].strip()
+    branch = head.removeprefix('ref: refs/heads/') if head.startswith('ref: refs/heads/') else None
+    return url, branch
+
+
+def replaced(home: Path, plugins_dir: Path) -> tuple[str, ...]:
+    """Checkouts cloned from another repository, or another branch, than the line
+    that declares them now.
+
+    TPM decides a plugin is installed by its directory alone, so a line moved to a
+    fork of the same name finds the old checkout and installs nothing: a
+    `user/tmux-resurrect#branch` line in place of `tmux-plugins/tmux-resurrect`
+    leaves upstream running. `sync_tmux` removes each of these before TPM runs, so
+    TPM clones the declared one. TPM itself is dotfiles' clone, never TPM's.
+    """
+    found: list[str] = []
+    for path in configs(home):
+        for plugin in matches(PLUGIN_LINE, path):
+            name = name_of(plugin)
+            checkout = plugins_dir / name
+            if name in ('', 'tpm') or name in found or not (checkout / '.git').exists():
+                continue
+            url, branch = origin(checkout)
+            if not url:
+                continue
+            source, _, wanted = plugin.partition('#')
+            if repository(url) != repository(source) or (wanted and branch is not None and branch != wanted):
+                found.append(name)
+    return tuple(found)
 
 
 def uninstalled(names: tuple[str, ...], plugins_dir: Path) -> tuple[str, ...]:
@@ -217,6 +286,9 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
     installer = plugins_dir / 'tpm' / 'bin' / 'install_plugins'
     cleaner = plugins_dir / 'tpm' / 'bin' / 'clean_plugins'
     cleaned = None
+    swapped = replaced(home, plugins_dir)
+    for name in swapped:
+        shutil.rmtree(plugins_dir / name)
     with tempfile.TemporaryDirectory(prefix='dotfiles-tpm-') as scratch:
         socket = Path(scratch) / f'tmux-{os.getuid()}' / 'default'
         socket.parent.mkdir(mode=0o700)
@@ -270,7 +342,8 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
             kind=Kind.COMMAND_FAILED,
         )
     removed = ' and removed the ones it no longer does' if cleaned is not None else ''
-    return Result(True, f'TPM installed the plugins {config.name} declares{removed}', kind=Kind.APPLIED)
+    recloned = f', cloning {listed(swapped)} again from the source it now names' if swapped else ''
+    return Result(True, f'TPM installed the plugins {config.name} declares{recloned}{removed}', kind=Kind.APPLIED)
 
 
 def diagnostics(config: Path, plugins_dir: Path) -> str:

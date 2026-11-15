@@ -86,15 +86,42 @@ def test_every_spelling_of_a_plugin_line_is_read(tmux: Tmux) -> None:
 
 
 def test_a_plugin_named_by_url_lands_under_the_name_tpm_gives_it(tmux: Tmux) -> None:
-    """`plugin_name_helper` is basename minus `.git`, so the three spellings of one
-    plugin are one directory and must not read as three."""
+    """`plugin_name_helper` is basename minus `.git`, after `install_plugins` splits
+    off a `#branch`, so the four spellings of one plugin are one directory and must
+    not read as four."""
     tmux.config.write_text(
         "set -g @plugin 'git://github.com/tmux-plugins/tmux-yank.git'\n"
         "set -g @plugin 'tmux-plugins/tmux-yank.git'\n"
         "set -g @plugin 'tmux-plugins/tmux-yank'\n"
+        "set -g @plugin 'someone/tmux-yank#a-branch'\n"
     )
 
     assert pluginsync.declared(tmux.home) == ('tmux-yank',)
+
+
+def test_a_checkout_from_another_repository_or_branch_is_replaced(tmux: Tmux) -> None:
+    """TPM counts a plugin installed by its directory alone, so moving a line to a
+    fork of the same name would leave upstream running. A checkout pinned by hand to
+    a detached HEAD is left as it is."""
+
+    def checkout(name: str, url: str, head: str) -> None:
+        git = tmux.plugins / name / '.git'
+        git.mkdir(parents=True)
+        (git / 'config').write_text(f'[core]\n\tbare = false\n[remote "origin"]\n\turl = {url}\n')
+        (git / 'HEAD').write_text(f'{head}\n')
+
+    tmux.config.write_text(
+        "set -g @plugin 'someone/tmux-resurrect#fix-restore'\n"
+        "set -g @plugin 'tmux-plugins/tmux-yank'\n"
+        "set -g @plugin 'someone/tmux-cpu#pinned-branch'\n"
+        "set -g @plugin 'someone/tmux-sidebar#wanted'\n"
+    )
+    checkout('tmux-resurrect', 'https://git::@github.com/tmux-plugins/tmux-resurrect', 'ref: refs/heads/master')
+    checkout('tmux-yank', 'https://git::@github.com/tmux-plugins/tmux-yank', 'ref: refs/heads/master')
+    checkout('tmux-cpu', 'https://git::@github.com/someone/tmux-cpu', '0123456789abcdef0123456789abcdef01234567')
+    checkout('tmux-sidebar', 'git@github.com:someone/tmux-sidebar.git', 'ref: refs/heads/other')
+
+    assert pluginsync.replaced(tmux.home, tmux.plugins) == ('tmux-resurrect', 'tmux-sidebar')
 
 
 def test_a_sourced_file_contributes_its_plugins(tmux: Tmux) -> None:

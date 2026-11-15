@@ -6,13 +6,19 @@
 #
 # The named pane survives and becomes abtop; every other pane in its window is
 # killed. The respawn comes last because it kills whatever runs in that pane,
-# which is this script when sesh's startup_command calls it.
+# which is this script when it is typed in the pane it rebuilds.
+#
+# Each program runs under a shell rather than as the pane's own process.
+# tmux-resurrect records a pane's child, so a pane that is the program saves no
+# command and comes back an empty shell. The shell also keeps the pane open when
+# the program quits.
 set -euo pipefail
 
 pane="${1:-${TMUX_PANE:?run inside tmux or name a pane}}"
+shell="$(tmux show-options -gv default-shell)"
 
 tmux rename-window -t "$pane" monitor
 tmux kill-pane -a -t "$pane"
 tmux split-window -h -f -d -t "$pane" -c "$HOME"
-tmux split-window -v -d -t "$pane" -c "$HOME" btop
-tmux respawn-pane -k -t "$pane" -c "$HOME" abtop
+tmux split-window -v -d -t "$pane" -c "$HOME" "btop; exec $shell"
+tmux respawn-pane -k -t "$pane" -c "$HOME" "abtop; exec $shell"

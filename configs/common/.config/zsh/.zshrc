@@ -429,10 +429,9 @@ cache_completion howto howto shell completion zsh
 # COMPLETIONS" after compinit runs.
 
 # Third party, kept to what is typed at a prompt rather than run from a Taskfile
-# or a hook. task completes task names out of the Taskfile and sesh completes
-# session names, which is most of the value here.
+# or a hook. task completes task names out of the Taskfile, which is most of the
+# value here.
 cache_completion task task --completion zsh
-cache_completion sesh sesh completion zsh
 cache_completion tenv tenv completion zsh
 cache_completion trivy trivy completion zsh
 cache_completion yq yq completion zsh

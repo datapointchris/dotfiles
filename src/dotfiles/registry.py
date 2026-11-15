@@ -855,9 +855,14 @@ class TmuxSyncProvider(PluginSyncProvider):
         declared = pluginsync.declared(session.home)
         missing = pluginsync.uninstalled(declared, directory)
         stray = pluginsync.undeclared(declared, directory)
+        swapped = pluginsync.replaced(session.home, directory)
         said = []
         if missing:
             said.append(f'{len(missing)} of the {len(declared)} plugins tmux.conf declares are not installed: {pluginsync.listed(missing)}')
+        if swapped:
+            said.append(
+                f'{len(swapped)} plugin checkouts came from another repository or branch than tmux.conf names: {pluginsync.listed(swapped)}'
+            )
         if stray:
             said.append(f'{len(stray)} plugin checkouts tmux.conf no longer declares are still on disk: {pluginsync.listed(stray)}')
         return '; '.join(said)

@@ -328,48 +328,6 @@ git-alias() {
   done
 }
 
-# tm - create new tmux session, or switch to existing one. Works from within tmux too. (@bag-man)
-# `tm` will allow you to select your tmux session via fzf.
-# `tm irc` will attach to the irc session (if it exists), else it will create it.
-
-#@tm
-#--> Switch or create tmux sessions via fzf; tm <name> attaches or creates it
-tm() {
-  [[ -n "$TMUX" ]] && change="switch-client" || change="attach-session"
-  if [ -n "$1" ]; then
-    tmux "$change" -t "$1" 2>/dev/null || (tmux new-session -d -s "$1" && tmux "$change" -t "$1")
-    return
-  fi
-  session=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | fzf --exit-0) && tmux "$change" -t "$session" || echo "No sessions found."
-}
-
-# sesh wrapper: warm up tmux + run resurrect restore synchronously before the
-# first sesh attach. Replaces @continuum-boot (which started tmux under systemd
-# pre-graphical-session, losing HYPRLAND_INSTANCE_SIGNATURE/WAYLAND_DISPLAY) and
-# @continuum-restore (which ran restore backgrounded and raced sesh's attach).
-# Inside tmux, the server is already up so this is a no-op passthrough.
-# tmux's own run-shell spawns a non-interactive shell that does not source this
-# file, so keybinds inside tmux continue to call the real sesh binary directly.
-sesh() {
-  if ! command tmux info >/dev/null 2>&1; then
-    local restore="$HOME/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh"
-    if [ -x "$restore" ]; then
-      # resurrect's new_session() calls `tmux -S "$(tmux_socket)"` where tmux_socket()
-      # parses $TMUX for the socket path. Outside a tmux client $TMUX is unset, so
-      # `tmux -S ""` silently fails and no sessions are ever created.
-      # Predict the default socket path and inject it. When restore.sh calls
-      # new-session and no server exists yet, tmux auto-starts the server and loads
-      # tmux.conf — so explicit start-server + source-file are not needed.
-      local uid
-      uid=$(id -u)
-      # Stderr suppressed: no-client errors from resurrect's spinner and switch-client
-      # are cosmetic; session/window/pane creation works headlessly.
-      TMUX="${TMUX_TMPDIR:-/tmp}/tmux-${uid}/default,0,0" "$restore" 2>/dev/null
-    fi
-  fi
-  command sesh "$@"
-}
-
 #@tmux-reload
 #--> Reload tmux.conf into every active session
 tmux-reload() {

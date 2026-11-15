@@ -15,7 +15,7 @@ The unit of work is the **window**, not the session. Several are open at once an
 them is the most frequent action of the day, which is why they hold the unshifted key pair.
 
 A session being a repo is the degenerate case of this, and it is what the layer was originally used
-for. It was abandoned because it carried no information: `sesh` names a session after a directory
+for. It was abandoned because it carried no information: a session named after a directory
 basename, work in flight is usually one task per repo, and the result was five sessions one window
 deep — the first status line and the second showing the same list at two granularities, with a
 session switch standing between you and every window. Naming sessions after the work restores the
@@ -95,7 +95,7 @@ status bar color the same way it owns `pane-border-format`.
 | `M-t` | New session |
 | `prefix K` | Kill the session, after confirming |
 | `prefix T` | Promote the focused window into its own session |
-| `prefix s` | sesh picker — open a session, or make one from a directory |
+| `prefix s` | Choose a session from tmux's tree (tmux default) |
 | `prefix w` | Find a window in any session |
 | `prefix .` | Move the focused window into another session (tmux default) |
 | `prefix p` | The `prs-board` session, or back to the session you left it from |
@@ -187,58 +187,87 @@ of tab bars at scale. The
 [CHI 2010 study of tabbed browsing](https://dubroy.com/blog/my-chi2010-talk-a-study-of-tabbed-browsing/)
 found heavy users' bars scrolling with titles too small to read.
 
-## Interaction with sesh
+## Surviving a Reboot
 
-sesh names a session after the **basename** of its path (`dir_length` defaults to 1), or after the
-explicit `name` in a `[[session]]` block in `~/.config/sesh/sesh.toml`, sanitizing the result by
-replacing `.`, `:`, and runs of whitespace with `_`.
+A reboot brings back every session, window name and layout, the programs in each pane, and each
+Claude conversation, and the cold start is a bare `tmux`. Three plugins and one script share the
+work:
 
-That naming is the one place sesh and the work-session model pull against each other, since a
-basename is a repo name and an initiative needs one you type. So the model splits sesh's job in
-two. Its **candidate discovery** — zoxide frecency, config entries, `fd` — is model-agnostic and
-still what `prefix s` is for; it emits paths, and what you do with a path is your choice. Its
-**session creation** is the model-bound half, and `M-t` is the road for a named initiative instead.
+- **tmux-resurrect** writes a snapshot of the layout and each pane's command line, and replays it.
+- **tmux-continuum** saves every minute from the status line, and restores when the server starts.
+  A bare `tmux` creates session `0`, which the restore kills once the saved sessions exist.
+- **tmux-restore** rewrites each pane's saved command into whatever restarts it: an agent's resume
+  command with that pane's own flags, a program `@resurrect-processes` names, or, for anything else,
+  the command typed on the zsh prompt and waiting for Enter. Its script saves at shutdown.
+- **`tmux-snapshots`** keeps `last` pointing at a whole snapshot, and thins the rest.
 
-`sesh.toml` therefore lists long-lived contexts rather than every repo — `sesh list -c` enumerates
-them. Declaring initiative templates would mean handing off to tmuxinator via `sesh connect -T`,
-which is heavier than typing a name for work that lasts a few days.
+**A program comes back only when a shell started it.** resurrect records the pane's child process,
+so a pane whose own process is the program saves an empty command and returns as a shell.
+`tmux-monitor-layout` starts abtop and btop under the shell for that reason. An agent is the
+exception, because tmux-restore checks the pane's own process for one too, so a Claude worker pane
+`tmuxctl` opens comes back.
 
-The exception is `monitor`, which is not an initiative: abtop over btop on the left, a full-height
-shell on the right. Its layout is fixed and rebuilt in a keystroke, which is exactly what a config
-block describes well. sesh has no pane key — `[[window]]` carries only `name`, `startup_script` and `path`, and
-issue #198 asking for panes was closed without them — so `startup_command` calls
-`tmux-monitor-layout`. The layout lives in that script rather than inline because `prefix W` runs it
-too, rebuilding one window without killing the session around it. A sesh startup command only runs
-when the session is created, so it can never repair a window that lost a pane. The sesh file lives
-in `configs/trust/fleet/`, so the coordinate keeps the session off nonfleet machines.
+**A conversation a board opens in its own terminal comes back through an adapter.** tmux-restore
+looks no deeper than the pane's child, where the board sits. An adapter in
+`~/.config/tmux-restore/agents/` saves such a pane as the conversation's resume command followed by
+the board's own, so quitting the conversation lands back in the board, as it did before.
 
-`prefix s` and `prefix w` are not two versions of the same picker. They sit at different levels,
-and the split mirrors the two status lines: `prefix s` is line 1, `prefix w` is line 2 for every
-session at once. sesh's own `sesh window` takes `-s` to target one session at a time, so it still
-cannot answer "which session is that window in" — the gap `prefix w` exists to fill. sesh in turn
-does something `prefix w` cannot: it creates sessions from zoxide directories, config entries, and
-`fd` results, so it reaches places that have no running session at all.
+**The save at shutdown runs before anything is stopped.** `tmux-shutdown-save.service` holds a
+logind delay lock and saves on `PrepareForShutdown`. logind waits up to `InhibitDelayMaxSec`, 5 s by
+default. A save of 14 panes, each holding 3,000 lines of scrollback, takes about a second. It is
+also the only save a detached server gets, since continuum's trigger is the status line a detached
+server does not draw.
 
-One pre-existing sesh behavior is worth knowing, because it shows up in the status line: since
-names come from the basename, two repos sharing one (`~/project` and `~/code/refs/project`)
-produce the same session name. Setting `dir_length = 2` in `sesh.toml` disambiguates them.
+**`last` is checked before every restore.** resurrect relinks `last` to each new save without
+looking at it, so one cut-off save hides every whole one before it. `tmux-snapshots repair-last`
+runs as the pre-restore hook and points `last` at the newest whole snapshot first, which covers a
+power cut in the middle of a save as well as a shutdown.
 
-Note also what `prefix s` lists. Most of its entries are not sessions: alongside the running ones it
-offers every `[[session]]` block in `sesh.toml` and every zoxide directory, which is why the picker
-runs to a couple of hundred rows while only a handful are live. Those are places sesh knows how to
-*make* a session from, created at the moment you pick one, and they never appear in the status bar.
+**Snapshots thin as they age**: every one for a day, the newest whole one in each hour for a week,
+and one a day after that, to 90 days. They are a few kilobytes each, so the thinning is for reading
+the list rather than for space. `tmux-snapshots list` and `tmux-snapshots restore <stamp>` reach an
+older one.
+
+**The resurrect fork runs one restore at a time.** Upstream starts a second restore when something
+runs a short-lived server first, and the two split the same windows and squash the panes. The fork
+is `andrewboldi/tmux-resurrect#fix-concurrent-restore`, proposed upstream as #600; upstream
+resurrect and continuum have had no commit since 2023 and 2024. TPM pins by branch, and dotfiles
+runs TPM's install and clean but never its update, so a box keeps the commit it first cloned until
+`prefix U` is pressed. TPM counts a plugin installed by its directory alone, so pluginsync removes a
+checkout cloned from another repository or branch than the line names, and TPM clones the fork
+in its place.
+
+*Rejected:* saving on `client-detached`. Ghostty exits at a reboot while systemd is stopping the
+session, so that save runs on a server being torn down. The snapshot it leaves holds pane lines and
+nothing else — no windows, no names, every pane a shell because Claude has already died — and
+resurrect points `last` at it, so the next restore brings back a fraction of the sessions.
+
+*Rejected:* writing the command rewriting and the shutdown save here. tmux-restore's tests take
+real agents through save, kill and restore, and its edge cases — two panes on one conversation, a
+program that renames itself, a Python venv — would all be relearned. If it goes unmaintained, its
+ideas move here.
+
+*Rejected:* a true snapshot of the processes. CRIU restores each process under its original PID,
+needs root, and cannot reopen a network connection, and hibernation resumes only under the kernel it
+left, which the update a reboot installs replaces.
+
+*Rejected:* sesh, which this layout used for a while. It names a session after a directory, where
+the model names it after the work, and in a month of snapshots one long-lived session came from it.
+Its other duty was a shell wrapper that ran the restore before attaching, which existed only because
+continuum's restore raced sesh's own attach, and which covered no other way of starting the server.
+`prefix s` is tmux's `choose-tree -Zs`, `prefix w` finds a window, and `monitor` comes back from the
+snapshot like any other session, with `prefix W` to rebuild its layout.
 
 ## Killing Sessions
 
 Kill them freely. An initiative genuinely ends, which is the sense in which this is truer now than
-it was under repo-sessions — a repo is never finished. The durable record is `sesh.toml` for the
-three configured contexts and zoxide for everything else, so `prefix s` rebuilds a session at the
-same path in a keystroke either way. Keep one alive only when it holds something that cannot be
-cheaply rebuilt — a running process, scrollback still being referenced, a pane layout that took
-setting up. A session sitting at an idle shell is pure clutter in the list.
+it was under repo-sessions — a repo is never finished. `M-t` and a name rebuild one in a
+keystroke. Keep one alive only when it holds something that cannot be cheaply rebuilt — a running
+process, scrollback still being referenced, a pane layout that took setting up. A session sitting at
+an idle shell is pure clutter in the list.
 
-One caveat: killing a session does not remove it from the last resurrect save, and restore is
-all-or-nothing, so anything killed inside the current 15-minute window returns on a cold start.
+One caveat: a killed session stays in the snapshots until the next save, within a minute, so a cold
+start inside that minute brings it back.
 
 This matters because the status line has no automatic answer to "which of these am I still using".
 Ordering and fading were both tried and reverted (see above), so pruning by hand with `prefix K` is
@@ -330,6 +359,11 @@ them with `terminal-features`.
 | --- | --- |
 | `apps/common/tmux-sessions` | Switching, creation, promotion, reordering, status relocation, boards |
 | `apps/common/tmux-rearrange` | Bulk regroup: scan, propose, render a script |
-| `apps/common/tmux-monitor-layout` | Lays a window out as the monitor, for sesh and `prefix W` |
-| `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call |
+| `apps/common/tmux-monitor-layout` | Lays a window out as the monitor, for `prefix W` |
+| `apps/common/tmux-snapshots` | Lists, restores, repairs and thins the resurrect snapshots |
+| `apps/common/claude-resurrect` | Resumes a Claude session here from the warehouse's copy |
+| `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call, plugins |
+| `configs/trust/fleet/.config/tmux/restored-programs.conf` | Programs to restart that only machines on that trust run |
+| `configs/trust/fleet/.config/tmux-restore/agents/fleet.sh` | Reopens a conversation a board opened, ahead of the board |
+| `configs/display/wayland/.config/systemd/user/tmux-shutdown-save.service` | The save at shutdown |
 | `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colors |
