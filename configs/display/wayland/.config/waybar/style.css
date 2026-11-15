@@ -82,6 +82,28 @@ window#waybar {
     color: @fg-dark;
 }
 
+/* Unread notifications. The class is the loudest unread level: red for high, yellow for
+   default, plain for low and passive, and dim with none unread. */
+#custom-fleet-notifications {
+    padding: 0 10px;
+    margin: 6px 2px;
+    background: @bg-highlight;
+    border-radius: 4px;
+    color: @fg;
+}
+
+#custom-fleet-notifications.none {
+    color: @fg-dark;
+}
+
+#custom-fleet-notifications.default {
+    color: @yellow;
+}
+
+#custom-fleet-notifications.high {
+    color: @red;
+}
+
 /* Right side modules */
 #clock,
 #cpu,
