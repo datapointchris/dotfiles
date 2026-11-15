@@ -1,5 +1,8 @@
 # The CLIs Chris publishes that every box with his checkouts carries. `fleet-clis`
 # composes this file, so a CLI added here also reaches a box that takes every one.
+#
+# The `fleet-run-image` manifest takes this file too, so each CLI here comes from a
+# public source, because the image build's token reads no private repo.
 
 go_tools:
   - ifiles  # the transport a bundle request and `bundle upload` use

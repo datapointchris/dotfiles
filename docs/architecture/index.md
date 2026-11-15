@@ -117,10 +117,14 @@ The container image agent runs start from is a machine too, and `fleet-run-image
 is its manifest. Its build holds a token that reads no private repo, and the image
 carries its own build of the `fleet` CLI. So it takes `fleet-run-image-clis`, the
 part of `fleet-member-clis` a public source installs, and `repo-checkouts-clis`.
-The build applies the packages alone. The image pins the Go and uv every install
-runs on, and `toolchains apply` would move both. Before it installs, `dotfiles
-packages resolve` names the version each install would take. That keys the image
-layer, so the layer rebuilds only when one of them moves.
+Each profile it takes holds only CLIs from a public source. The build fetches this
+repo at a commit the image pins, so a change here reaches the image only when that
+pin moves. It runs dotfiles from that checkout with `uv run --project`, so nothing
+of dotfiles stays in the image. The build applies the packages alone. The image
+pins the Go and uv every install runs on, and `toolchains apply` would move both.
+Before it installs, `dotfiles packages resolve` names the version each install
+would take. That keys the image layer, so the layer rebuilds only when one of them
+moves.
 
 A name is declared once. The load refuses a name that two files in one machine's
 composition both declare, and `dotfiles machines check` refuses a name that two
