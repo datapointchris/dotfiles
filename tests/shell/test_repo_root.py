@@ -9,7 +9,9 @@ so the scripts it calls do not have to guess. And relative navigation
 tree at every call site, so moving one file breaks a path that still parses.
 
 Globbed over the tracked scripts rather than listed, so a new installer is
-covered by existing.
+covered by existing. The test scripts are held to it too, because they resolve
+the checkout the same way. Only a fixture tree is left out: its scripts carry
+the wrong forms on purpose, as input for the checks that find them.
 """
 
 from __future__ import annotations
@@ -41,7 +43,7 @@ def shell_scripts() -> list[Path]:
         text=True,
         check=True,
     )
-    return [REPO / line for line in tracked.stdout.split() if not line.startswith('tests/')]
+    return [REPO / line for line in tracked.stdout.split() if '/fixtures/' not in line]
 
 
 def identifier(path: Path) -> str:
