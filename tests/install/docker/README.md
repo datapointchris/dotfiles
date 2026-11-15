@@ -19,7 +19,7 @@ half — `apt` — happens once, and every container reuses it.
 
 ```bash
 ./build-base.sh                    # one-time, minutes
-uv run pytest tests/e2e -m docker  # what uses it
+uv run pytest tests/e2e --docker   # what uses it
 ```
 
 `--no-cache` forces a rebuild.

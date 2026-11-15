@@ -88,7 +88,7 @@ if docker "${BUILD_ARGS[@]}"; then
 
   echo ""
   log_info "Image ready. It is what tests/e2e/ builds its containers from:"
-  echo "  uv run pytest tests/e2e -m docker"
+  echo "  uv run pytest tests/e2e --docker"
 else
   log_error "Failed to build base image"
   exit 1
