@@ -67,13 +67,17 @@ def locked(monkeypatch):
     revision reads as carrying no lock at all.
     """
 
-    def pin(pins: uv_lock.Pins | Exception) -> None:
-        def read(project: Path) -> uv_lock.Pins:
+    def pin(pins: uv_lock.Pins | Exception) -> list[str]:
+        members: list[str] = []
+
+        def read(project: Path, *, package: str = '') -> uv_lock.Pins:
+            members.append(package)
             if isinstance(pins, Exception):
                 raise pins
             return pins
 
         monkeypatch.setattr(uv_lock, 'read', read)
+        return members
 
     return pin
 
@@ -320,6 +324,18 @@ def test_a_locked_revision_hands_uv_its_constraints_and_overrides(uv, released, 
     assert (install[4], install[6]) == ('--constraints', '--overrides')
     assert install[-1] == 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0'
     assert result.ok
+
+
+def test_a_workspace_member_installs_from_its_subdirectory_held_to_its_own_closure(uv, released, locked) -> None:
+    released('v6.0.0')
+    members = locked(PINS)
+    reached = uv()
+
+    uvtool.install_git(dc.replace(SYNCER, subdirectory='cli'), offline=False)
+
+    [install] = installs(reached)
+    assert install[-1] == 'syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0#subdirectory=cli'
+    assert members == ['syncer']
 
 
 def test_a_revision_with_no_lock_installs_unconstrained_and_names_the_revision(uv, released, capsys) -> None:

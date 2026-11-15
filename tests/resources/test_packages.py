@@ -345,10 +345,11 @@ def test_a_uv_tool_installed_from_another_source_than_its_row_declares_is_stale(
     assert [(change.item, change.verdict) for change in changes(live)] == expected
 
 
-def test_a_git_installed_tool_reports_the_revision_uv_recorded(uv_tools: Path) -> None:
-    receipt(uv_tools, 'doit', '{ name = "doit", git = "https://github.com/datapointchris/doit.git?rev=v1.0.0" }')
+@pytest.mark.parametrize('query', ['?rev=v1.0.0', '?subdirectory=cli&rev=v1.0.0'], ids=['root', 'workspace-member'])
+def test_a_git_installed_tool_reports_the_revision_uv_recorded(uv_tools: Path, query: str) -> None:
+    receipt(uv_tools, 'pinned', f'{{ name = "pinned", git = "https://github.com/owner/pinned.git{query}" }}')
 
-    assert ev.uv_tool_pin('doit') == 'v1.0.0'
+    assert ev.uv_tool_pin('pinned') == 'v1.0.0'
 
 
 def test_a_tool_installed_from_its_default_branch_has_no_pin(uv_tools: Path) -> None:

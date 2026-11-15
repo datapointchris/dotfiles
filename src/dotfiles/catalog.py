@@ -847,6 +847,14 @@ class GitUvTool(Entry):
 
     repo: str
 
+    subdirectory: str = ''
+    """The uv workspace member the tool is, as a path from the repo root, or empty where the root is the project.
+
+    uv records it in the receipt beside the tag, so the tool's own `update`
+    rebuilds the same member. The lock sits at the workspace root, and only the
+    member's closure is read from it.
+    """
+
     supersedes: tuple[str, ...] = ()
     """What this tool took over from, as `GithubRelease.supersedes` reads it. A
     tool renamed in place names its former self with `uv:`."""

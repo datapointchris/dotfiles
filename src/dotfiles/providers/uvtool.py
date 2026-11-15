@@ -137,7 +137,7 @@ def install_git(entry: catalog.GitUvTool, *, offline: bool, again: bool = False)
 
     with tempfile.TemporaryDirectory(prefix=f'dotfiles-{entry.name}-') as scratch:
         try:
-            pins = locked_at(entry.name, entry.repo, tag, Path(scratch))
+            pins = locked_at(entry.name, entry.repo, tag, Path(scratch), member=bool(entry.subdirectory))
         except LockUnreadable as unreadable:
             return Result(False, f'{entry.name}: {unreadable}{stranded}', kind=unreadable.kind)
         held = pins.arguments(Path(scratch)) if pins is not None else []
@@ -164,7 +164,10 @@ def requirement(entry: catalog.GitUvTool, tag: str | None) -> str:
     record the requirement under the tool's own name, which is what makes the
     receipt readable afterwards.
     """
-    return f'{entry.name} @ git+{entry.repo}@{tag}' if tag else entry.repo
+    member = f'#subdirectory={entry.subdirectory}' if entry.subdirectory else ''
+    if tag:
+        return f'{entry.name} @ git+{entry.repo}@{tag}{member}'
+    return f'{entry.name} @ git+{entry.repo}{member}' if member else entry.repo
 
 
 class LockUnreadable(Exception):
@@ -175,8 +178,12 @@ class LockUnreadable(Exception):
         self.kind = kind
 
 
-def locked_at(name: str, repo: str, tag: str | None, scratch: Path) -> uv_lock.Pins | None:
-    """What the lock in the clone URL `repo` at `tag`, or at the branch head, pins. None where that revision has no lock."""
+def locked_at(name: str, repo: str, tag: str | None, scratch: Path, *, member: bool = False) -> uv_lock.Pins | None:
+    """What the lock in the clone URL `repo` at `tag`, or at the branch head, pins. None where that revision has no lock.
+
+    `member` reads only the closure of the workspace member `name`, because a
+    workspace root exports no project of its own to start from.
+    """
     revision = tag or 'the default branch'
     checkout = scratch / 'checkout'
     branch = ('--branch', tag) if tag else ()
@@ -185,7 +192,7 @@ def locked_at(name: str, repo: str, tag: str | None, scratch: Path) -> uv_lock.P
         raise LockUnreadable(f'could not clone {repo} at {revision} to read its uv.lock: {cloned.transcript.strip()}', Kind.DOWNLOAD_FAILED)
 
     try:
-        pins = uv_lock.read(checkout)
+        pins = uv_lock.read(checkout, package=name if member else '')
     except uv_lock.Unexportable as unexportable:
         raise LockUnreadable(f'uv export would not read the uv.lock at {revision}: {unexportable}', Kind.COMMAND_FAILED) from unexportable
     if pins is None:

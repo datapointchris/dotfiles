@@ -28,6 +28,7 @@ import os
 import re
 import shutil
 import tomllib
+import urllib.parse
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol
@@ -87,18 +88,21 @@ def uv_tool_pin(name: str) -> str | None:
     than silence because it parses.
 
     None means unpinned, which is not the same as absent. A repo publishing no
-    release installs from its default branch and records no `?rev=`, and nothing
+    release installs from its default branch and records no `rev=`, and nothing
     in the declaration says which repos those are — so the receipt is what
     decides whether a version can be compared at all.
+
+    `rev` is read as one query parameter among others, because a workspace
+    member's receipt records `?subdirectory=<member>&rev=<tag>`.
     """
     try:
         recorded = tomllib.loads((paths.uv_tool_dir() / name / 'uv-receipt.toml').read_text())
     except (OSError, tomllib.TOMLDecodeError):
         return None
     for requirement in recorded.get('tool', {}).get('requirements', ()):
-        _, pinned, revision = str(requirement.get('git', '')).partition('?rev=')
-        if pinned and requirement.get('name') == name:
-            return revision
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(str(requirement.get('git', ''))).query)
+        if (revision := query.get('rev')) and requirement.get('name') == name:
+            return revision[0]
     return None
 
 

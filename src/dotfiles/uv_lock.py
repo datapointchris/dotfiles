@@ -68,12 +68,16 @@ class Pins:
         return flags
 
 
-def read(project: Path) -> Pins | None:
-    """None where the project has no `uv.lock`. Raises `Unexportable` where it has one uv will not read."""
+def read(project: Path, *, package: str = '') -> Pins | None:
+    """None where the project has no `uv.lock`. Raises `Unexportable` where it has one uv will not read.
+
+    `package` names the workspace member whose closure to export.
+    """
     lock = project / LOCK_FILE
     if not lock.is_file():
         return None
-    exported = effects.run(EXPORT, cwd=project, output=Output.QUIET)
+    member = ('--package', package) if package else ()
+    exported = effects.run((*EXPORT, *member), cwd=project, output=Output.QUIET)
     if not exported.ok:
         raise Unexportable(exported.transcript.strip())
     return parse(exported.stdout, requested_extras(tomllib.loads(lock.read_text())))
