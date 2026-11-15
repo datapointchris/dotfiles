@@ -1766,6 +1766,7 @@ git_uv_tools:
 
   - name: homelab
     repo: https://github.com/datapointchris/homelab.git
+    subdirectory: cli
     requires_github_auth: true
     description: Control CLI for the homelab — one front door onto the containers, the deploys and the homelab's condition
 
