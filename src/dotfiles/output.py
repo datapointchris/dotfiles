@@ -607,8 +607,10 @@ def render_row(label: str, subject: str, detail: str, color: str = '', width: in
     # Padded only where a third field follows it. A row with nothing to say would
     # otherwise end in a column of blanks, and the trailing space is what a copied
     # filename carries into the next command.
-    written = f'{subject:<{width}} {detail}' if detail else subject
-    err_console.print(f'{EVIDENCE_INDENT}{marked} {written}')
+    if not detail:
+        err_console.print(f'{EVIDENCE_INDENT}{marked} {subject}')
+        return
+    hang(Text.from_markup(f'{EVIDENCE_INDENT}{marked} {subject:<{width}} '), Text.from_markup(detail))
 
 
 def render_advice(line: str, width: int = SUBJECT_COLUMN) -> None:
@@ -619,7 +621,25 @@ def render_advice(line: str, width: int = SUBJECT_COLUMN) -> None:
     """
     if not showing_evidence():
         return
-    err_console.print(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{width}} [blue]→[/] {line}')
+    hang(Text.from_markup(f'{EVIDENCE_INDENT}{"":<{VERDICT_COLUMN}} {"":<{width}} [blue]→[/] '), Text.from_markup(line))
+
+
+DETAIL_FLOOR = 20
+"""The fewest columns a detail wraps into, where a long subject leaves less."""
+
+
+def hang(lead: Text, detail: Text) -> None:
+    """Print `lead`, then `detail` wrapped to the terminal inside the column it starts in.
+
+    A long path left to the terminal wraps back to column 0 and lands under the
+    verdict and subject columns, so a list of rows stops reading as columns. Each
+    continuation is padded to where the detail began instead.
+    """
+    column = lead.cell_len
+    room = max(err_console.width - column, DETAIL_FLOOR)
+    for index, wrapped in enumerate(detail.wrap(err_console, room)):
+        wrapped.rstrip()
+        err_console.print(Text.assemble(lead if index == 0 else ' ' * column, wrapped), soft_wrap=True, highlight=False)
 
 
 def render_note(text: str) -> None:

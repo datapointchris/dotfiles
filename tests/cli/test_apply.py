@@ -753,9 +753,9 @@ class TestWhatApplyDeclinedToTouch:
 
         reconcile.apply_machine(engine.Selection.everything())
 
-        # Newlines stripped: Rich wraps the detail column at the terminal width, and
-        # the assertion is about what the row says rather than where it breaks.
-        said = capsys.readouterr().err.replace('\n', '')
+        # Whitespace collapsed: the detail wraps inside its column at the terminal
+        # width, and the assertion is about what the row says rather than where it breaks.
+        said = ' '.join(capsys.readouterr().err.split())
         assert 'doit' in said
         assert 'staged bundle carries no version' in said
 

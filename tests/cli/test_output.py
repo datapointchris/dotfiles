@@ -165,7 +165,9 @@ def test_a_backslash_in_an_observed_value_is_printed_once(capsys: pytest.Capture
     unreadable exactly when someone is reading it to count them."""
     output.render_change(a_change(observed=r'/mnt/c/Program\ Files/Git/gcm.exe'))
 
-    assert r"'/mnt/c/Program\ Files/Git/gcm.exe'" in capsys.readouterr().err
+    # Whitespace collapsed: the detail wraps inside its column at the terminal's
+    # width, and the assertion is about the value rather than where it breaks.
+    assert r"'/mnt/c/Program\ Files/Git/gcm.exe'" in ' '.join(capsys.readouterr().err.split())
 
 
 def test_a_control_character_still_renders_escaped() -> None:
