@@ -190,7 +190,7 @@ found heavy users' bars scrolling with titles too small to read.
 ## Surviving a Reboot
 
 A reboot brings back every session, window name and layout, the programs in each pane, and each
-Claude conversation, and the cold start is a bare `tmux`. Three plugins and one script share the
+Claude conversation, and the cold start is a bare `tmux`. Three plugins and two scripts share the
 work:
 
 - **tmux-resurrect** writes a snapshot of the layout and each pane's command line, and replays it.
@@ -198,7 +198,9 @@ work:
   A bare `tmux` creates session `0`, which the restore kills once the saved sessions exist.
 - **tmux-restore** rewrites each pane's saved command into whatever restarts it: an agent's resume
   command with that pane's own flags, a program `@resurrect-processes` names, or, for anything else,
-  the command typed on the zsh prompt and waiting for Enter. Its script saves at shutdown.
+  the command typed on the zsh prompt and waiting for Enter. ssh comes back typed, because a saved
+  `ssh host command` would run its command again.
+- **`tmux-shutdown-save`** saves at shutdown.
 - **`tmux-snapshots`** keeps `last` pointing at a whole snapshot, and thins the rest.
 
 **A program comes back only when a shell started it.** resurrect records the pane's child process,
@@ -212,11 +214,13 @@ looks no deeper than the pane's child, where the board sits. An adapter in
 `~/.config/tmux-restore/agents/` saves such a pane as the conversation's resume command followed by
 the board's own, so quitting the conversation lands back in the board, as it did before.
 
-**The save at shutdown runs before anything is stopped.** `tmux-shutdown-save.service` holds a
-logind delay lock and saves on `PrepareForShutdown`. logind waits up to `InhibitDelayMaxSec`, 5 s by
-default. A save of 14 panes, each holding 3,000 lines of scrollback, takes about a second. It is
-also the only save a detached server gets, since continuum's trigger is the status line a detached
-server does not draw.
+**The save at shutdown runs before anything is stopped.** `tmux-shutdown-save`, run by its user
+unit, holds a logind delay lock and saves on `PrepareForShutdown`. logind waits up to
+`InhibitDelayMaxSec`, 5 s by default. The save, its hooks and the prune after it have to finish
+inside that delay. One that does not leaves a cut-off snapshot, which `tmux-snapshots list` shows.
+It is also the only save a detached server gets, since continuum's trigger is the status line a
+detached server does not draw. The unit is on Wayland boxes only, so a Mac relies on continuum's
+minute.
 
 **`last` is checked before every restore.** resurrect relinks `last` to each new save without
 looking at it, so one cut-off save hides every whole one before it. `tmux-snapshots repair-last`
@@ -224,18 +228,21 @@ runs as the pre-restore hook and points `last` at the newest whole snapshot firs
 power cut in the middle of a save as well as a shutdown.
 
 **Snapshots thin as they age**: every one for a day, the newest whole one in each hour for a week,
-and one a day after that, to 90 days. They are a few kilobytes each, so the thinning is for reading
-the list rather than for space. `tmux-snapshots list` and `tmux-snapshots restore <stamp>` reach an
-older one.
+and one a day after that, until resurrect deletes it at `@resurrect-delete-backup-after`. The
+thinning is for reading the list rather than for space. `tmux-snapshots list` and
+`tmux-snapshots restore <stamp>` reach an older one.
 
 **The resurrect fork runs one restore at a time.** Upstream starts a second restore when something
 runs a short-lived server first, and the two split the same windows and squash the panes. The fork
-is `andrewboldi/tmux-resurrect#fix-concurrent-restore`, proposed upstream as #600; upstream
-resurrect and continuum have had no commit since 2023 and 2024. TPM pins by branch, and dotfiles
-runs TPM's install and clean but never its update, so a box keeps the commit it first cloned until
-`prefix U` is pressed. TPM counts a plugin installed by its directory alone, so pluginsync removes a
-checkout cloned from another repository or branch than the line names, and TPM clones the fork
-in its place.
+is `andrewboldi/tmux-resurrect` on its `fix-concurrent-restore` branch, proposed upstream as #600.
+
+**The two young plugins are pinned to a commit.** Each `@plugin` line carries the commit that was
+tested after `#`. TPM hands that text to `git clone -b`, which takes a branch or a tag and no
+commit. So pluginsync clones a pinned plugin at its commit before TPM runs, and TPM then finds it
+installed. `dotfiles check` reports a checkout at another commit, and `dotfiles plugins apply` moves
+it. TPM also counts a plugin installed by its directory alone. So pluginsync sets aside a checkout
+cloned from another repository or branch than the line names, and puts it back if the new clone
+does not arrive.
 
 *Rejected:* saving on `client-detached`. Ghostty exits at a reboot while systemd is stopping the
 session, so that save runs on a server being torn down. The snapshot it leaves holds pane lines and
@@ -251,8 +258,7 @@ ideas move here.
 needs root, and cannot reopen a network connection, and hibernation resumes only under the kernel it
 left, which the update a reboot installs replaces.
 
-*Rejected:* sesh, which this layout used for a while. It names a session after a directory, where
-the model names it after the work, and in a month of snapshots one long-lived session came from it.
+*Rejected:* sesh. It names a session after a directory, where the model names it after the work.
 Its other duty was a shell wrapper that ran the restore before attaching, which existed only because
 continuum's restore raced sesh's own attach, and which covered no other way of starting the server.
 `prefix s` is tmux's `choose-tree -Zs`, `prefix w` finds a window, and `monitor` comes back from the
@@ -277,8 +283,8 @@ Killing scales with case: `prefix x` a pane, `prefix k` a window, `prefix K` the
 and session both confirm first and name their target in the prompt, since each takes something that
 cannot be reconstructed from a name — a window carries its scrollback and whatever its panes are
 running. `detach-on-destroy` is off, so killing the session you are in drops you into another rather
-than ending the client. `prefix s` also kills the highlighted session with `Ctrl-d` without leaving
-the picker, which is better for pruning several at once.
+than ending the client. In `prefix s`'s tree, `x` kills the highlighted session, and `t` then `X`
+kills every tagged one, which is better for pruning several at once.
 
 ## Moving Windows Between Sessions
 
@@ -365,5 +371,6 @@ them with `terminal-features`.
 | `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call, plugins |
 | `configs/trust/fleet/.config/tmux/restored-programs.conf` | Programs to restart that only machines on that trust run |
 | `configs/trust/fleet/.config/tmux-restore/agents/fleet.sh` | Reopens a conversation a board opened, ahead of the board |
-| `configs/display/wayland/.config/systemd/user/tmux-shutdown-save.service` | The save at shutdown |
+| `apps/display/wayland/tmux-shutdown-save` | Holds a shutdown delay lock and saves when logind announces one |
+| `configs/display/wayland/.config/systemd/user/tmux-shutdown-save.service` | Runs it from login on |
 | `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colors |
