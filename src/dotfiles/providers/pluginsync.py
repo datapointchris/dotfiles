@@ -47,6 +47,9 @@ patterns are `tpm_plugins_list_helper` and `_sourced_files` in
 lines, so the two readers cannot disagree about what the config declares.
 """
 
+COMMIT = re.compile(r'[0-9a-f]{40}')
+"""A full commit, the only ref after `#` that pins rather than names a branch."""
+
 LAZY_LOCK = Path('.config/nvim/lazy-lock.json')
 LAZY_STATE = Path('.local/share/nvim/lazy')
 """lazy's own two paths: what it recorded installing, and where it put it."""
@@ -154,7 +157,7 @@ def replaced(home: Path, plugins_dir: Path) -> tuple[str, ...]:
     TPM decides a plugin is installed by its directory alone, so a line moved to a
     fork of the same name finds the old checkout and installs nothing: a
     `user/tmux-resurrect#branch` line in place of `tmux-plugins/tmux-resurrect`
-    leaves upstream running. `sync_tmux` removes each of these before TPM runs, so
+    leaves upstream running. `sync_tmux` sets each of these aside before TPM runs, so
     TPM clones the declared one. TPM itself is dotfiles' clone, never TPM's.
     """
     found: list[str] = []
@@ -168,9 +171,133 @@ def replaced(home: Path, plugins_dir: Path) -> tuple[str, ...]:
             if not url:
                 continue
             source, _, wanted = plugin.partition('#')
-            if repository(url) != repository(source) or (wanted and branch is not None and branch != wanted):
+            other_branch = wanted and not COMMIT.fullmatch(wanted) and branch is not None and branch != wanted
+            if repository(url) != repository(source) or other_branch:
                 found.append(name)
     return tuple(found)
+
+
+def pinned(home: Path) -> dict[str, tuple[str, str]]:
+    """Plugins the config pins to a commit, by TPM's directory name: the source and
+    the commit.
+
+    TPM's `#` takes a branch or a tag, which `git clone -b` accepts, and a commit it
+    cannot. So a full commit after `#` is a pin `hold_pins` keeps, and TPM, finding
+    the checkout already there, never tries to clone it.
+    """
+    found: dict[str, tuple[str, str]] = {}
+    for path in configs(home):
+        for plugin in matches(PLUGIN_LINE, path):
+            source, _, ref = plugin.partition('#')
+            name = name_of(plugin)
+            if COMMIT.fullmatch(ref) and name not in found:
+                found[name] = (source, ref)
+    return found
+
+
+def held_commit(checkout: Path) -> str:
+    """The commit a detached checkout has out, read out of `.git` for the reason
+    `uninstalled` gives. A branch checkout reads as '', since a pin is held detached.
+    """
+    try:
+        head = (checkout / '.git' / 'HEAD').read_text().strip()
+    except OSError:
+        return ''
+    return head if COMMIT.fullmatch(head) else ''
+
+
+def off_pin(home: Path, plugins_dir: Path) -> tuple[str, ...]:
+    """Pinned plugins whose checkout has another commit out than the config pins."""
+    return tuple(
+        name
+        for name, (_, commit) in pinned(home).items()
+        if (plugins_dir / name / '.git').exists() and held_commit(plugins_dir / name) != commit
+    )
+
+
+def clone_url(source: str) -> str:
+    """Where TPM would clone a plugin line from: the line itself where it is a URL,
+    and GitHub's anonymous form of `owner/repo` otherwise, which `clone_plugin`
+    falls back to so a clone never stops to ask for a password."""
+    return source if '://' in source or source.startswith('git@') else f'https://git::@github.com/{source}'
+
+
+def hold_pins(home: Path, plugins_dir: Path) -> list[str]:
+    """Put every pinned plugin at its commit, cloning it first where it is missing.
+
+    A fetch by commit rather than by branch, because TPM's clone holds one branch
+    and the pin may sit on another. Submodules follow, as TPM's `--recursive` clone
+    has them. Returns a sentence per plugin it could not put there. A clone that
+    failed is removed, so TPM's own attempt, and the next run, start clean.
+    """
+    quiet = {'GIT_TERMINAL_PROMPT': '0'}
+    failed: list[str] = []
+    for name, (source, commit) in pinned(home).items():
+        checkout = plugins_dir / name
+        if held_commit(checkout) == commit:
+            continue
+        fresh = not (checkout / '.git').exists()
+        if fresh:
+            got = run(['git', 'clone', '--quiet', '--no-checkout', clone_url(source), str(checkout)], env=quiet, output=Output.QUIET)
+        else:
+            got = run(['git', '-C', str(checkout), 'fetch', '--quiet', 'origin', commit], env=quiet, output=Output.QUIET)
+        if got.ok:
+            got = run(
+                ['git', '-C', str(checkout), '-c', 'advice.detachedHead=false', 'checkout', '--quiet', '--detach', commit],
+                env=quiet,
+                output=Output.QUIET,
+            )
+        if got.ok and (checkout / '.gitmodules').is_file():
+            got = run(
+                ['git', '-C', str(checkout), 'submodule', 'update', '--init', '--recursive', '--quiet'], env=quiet, output=Output.QUIET
+            )
+        if not got.ok:
+            failed.append(f'{name} could not be put at {commit[:12]}: {got.transcript.strip() or f"git exited {got.returncode}"}')
+            if fresh:
+                shutil.rmtree(checkout, ignore_errors=True)
+    return failed
+
+
+def set_aside(names: tuple[str, ...], plugins_dir: Path) -> Path | None:
+    """Move each checkout `replaced` names out of TPM's sight, so TPM clones the
+    declared one in its place and `settle` can put the old one back.
+
+    Beside the plugins directory rather than in it, where `clean_plugins` would
+    remove it as undeclared.
+    """
+    if not names:
+        return None
+    aside = Path(tempfile.mkdtemp(prefix='.dotfiles-replaced-', dir=plugins_dir.parent))
+    try:
+        for name in names:
+            (plugins_dir / name).rename(aside / name)
+    except OSError:
+        settle(aside, plugins_dir)
+        raise
+    return aside
+
+
+def settle(aside: Path | None, plugins_dir: Path) -> tuple[str, ...]:
+    """Drop each set-aside checkout whose replacement arrived, and put back the
+    ones whose replacement did not. Returns the names put back.
+
+    A network outage or a deleted branch would otherwise leave tmux with no plugin
+    at all where it had a working one.
+    """
+    if aside is None:
+        return ()
+    restored: list[str] = []
+    for old in sorted(aside.iterdir()):
+        new = plugins_dir / old.name
+        if (new / '.git').exists():
+            shutil.rmtree(old)
+            continue
+        if new.exists():
+            shutil.rmtree(new)
+        old.rename(new)
+        restored.append(old.name)
+    aside.rmdir()
+    return tuple(restored)
 
 
 def uninstalled(names: tuple[str, ...], plugins_dir: Path) -> tuple[str, ...]:
@@ -278,17 +405,44 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
     sessions. `$TMUX` has to be *unset* rather than overridden — it names the live
     server, it outranks `TMUX_TMPDIR`, and with it set a fresh `TMUX_TMPDIR` still
     lists the live server's sessions.
+
+    A checkout from another source than the config names is set aside rather than
+    deleted, and put back if its replacement does not arrive, so a clone that fails
+    leaves the plugin that worked.
     """
     config = user_config(home)
     if reason := blocked(home, plugins_dir):
         return Result(False, f'{reason}. {diagnostics(config, plugins_dir)}', kind=Kind.PREREQUISITE_MISSING)
 
+    swapped = replaced(home, plugins_dir)
+    try:
+        aside = set_aside(swapped, plugins_dir)
+    except OSError as error:
+        return Result(
+            False,
+            f'could not set {listed(swapped)} aside to clone again from the source {config.name} names: {error}',
+            kind=Kind.COMMAND_FAILED,
+        )
+    try:
+        result = install_declared(home, plugins_dir, config, swapped)
+    finally:
+        restored = settle(aside, plugins_dir)
+    if restored:
+        back = f'{listed(restored)} could not be cloned from the source {config.name} names, so the checkout it replaced is back'
+        return Result(False, f'{back}. {result.detail}', kind=Kind.COMMAND_FAILED)
+    return result
+
+
+def install_declared(home: Path, plugins_dir: Path, config: Path, swapped: tuple[str, ...]) -> Result:
+    """Hold the pinned plugins at their commits, then run TPM's install and clean."""
+    moved = off_pin(home, plugins_dir)
+    unheld = hold_pins(home, plugins_dir)
+    if unheld:
+        return Result(False, f'{"; ".join(unheld)}. {diagnostics(config, plugins_dir)}', kind=Kind.COMMAND_FAILED)
+
     installer = plugins_dir / 'tpm' / 'bin' / 'install_plugins'
     cleaner = plugins_dir / 'tpm' / 'bin' / 'clean_plugins'
     cleaned = None
-    swapped = replaced(home, plugins_dir)
-    for name in swapped:
-        shutil.rmtree(plugins_dir / name)
     with tempfile.TemporaryDirectory(prefix='dotfiles-tpm-') as scratch:
         socket = Path(scratch) / f'tmux-{os.getuid()}' / 'default'
         socket.parent.mkdir(mode=0o700)
@@ -343,7 +497,8 @@ def sync_tmux(home: Path, plugins_dir: Path) -> Result:
         )
     removed = ' and removed the ones it no longer does' if cleaned is not None else ''
     recloned = f', cloning {listed(swapped)} again from the source it now names' if swapped else ''
-    return Result(True, f'TPM installed the plugins {config.name} declares{recloned}{removed}', kind=Kind.APPLIED)
+    held = f', with {listed(moved)} moved to the commit it pins' if moved else ''
+    return Result(True, f'TPM installed the plugins {config.name} declares{recloned}{held}{removed}', kind=Kind.APPLIED)
 
 
 def diagnostics(config: Path, plugins_dir: Path) -> str:
