@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Save tmux when logind announces a shutdown or reboot, before anything stops.
+#
+# It holds a logind "delay" lock for as long as it runs. On PrepareForShutdown
+# logind waits for the lock's release, up to InhibitDelayMaxSec, before it
+# stops the session, so the server it saves is still whole. The save is
+# resurrect's own script, as the running server names it, so it runs with every
+# hook the config sets. Run by tmux-shutdown-save.service.
+set -euo pipefail
+
+if [[ ${1:-} != --locked ]]; then
+  exec systemd-inhibit --what=shutdown --mode=delay --who=tmux-shutdown-save \
+    --why='Saving tmux sessions' "$0" --locked
+fi
+
+while IFS= read -r line; do
+  [[ $line == *'.PrepareForShutdown (true,)'* ]] || continue
+  save=$(tmux show-option -gqv @resurrect-save-script-path 2>/dev/null) || save=''
+  if [[ -x $save ]]; then
+    "$save" quiet && echo 'tmux-shutdown-save: saved tmux before shutdown'
+  else
+    echo 'tmux-shutdown-save: no tmux server with tmux-resurrect loaded, so nothing was saved' >&2
+  fi
+  exit 0
+done < <(gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1)
+
+echo 'tmux-shutdown-save: the logind monitor ended before any shutdown' >&2
+exit 1

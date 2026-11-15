@@ -1,13 +1,17 @@
 [Unit]
 Description=Save tmux sessions when a shutdown or reboot is announced
+# A watcher that keeps failing stops here and shows as failed, where
+# `dotfiles check` reports it, rather than restarting every few seconds.
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
-# tmux-restore's script holds a logind "delay" lock and waits for
+# tmux-shutdown-save holds a logind "delay" lock and waits for
 # PrepareForShutdown. logind then waits for the save, up to InhibitDelayMaxSec,
 # before it stops anything, so the server it saves is still whole. A hook inside
-# tmux fires only as the server is torn down, and saved a cut-off snapshot.
-# gdbus is glib2's, which the desktop's GTK already brings.
+# tmux fires only as the server is torn down, too late to save it whole. gdbus
+# is glib2's, which the desktop's GTK already brings.
 [Service]
-ExecStart=%h/.config/tmux/plugins/tmux-restore/scripts/shutdown-save.sh
+ExecStart=%h/.local/bin/tmux-shutdown-save
 Restart=on-failure
 RestartSec=5
 
