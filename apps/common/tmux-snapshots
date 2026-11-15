@@ -11,6 +11,11 @@
 # Snapshots thin as they age: every one from the last day, the newest whole one
 # in each hour of the last week, and the newest whole one in each day before
 # that. resurrect deletes what is older than @resurrect-delete-backup-after.
+#
+# Where the snapshots live and what they are called is resurrect's to say, so
+# both come from the helpers.sh beside the save script the running server names.
+# A stamp is resurrect's `date +%Y%m%dT%H%M%S`, which sorts as text in time
+# order.
 
 set -euo pipefail
 shopt -s nullglob
@@ -20,8 +25,11 @@ usage() {
 Usage: tmux-snapshots <command> [args]
 
 Commands:
-  list [count]      The newest snapshots, 20 unless a count is given, with the
-                    sessions, windows and panes each holds and whether it is whole
+  list [count] [--json]
+                    The newest snapshots, 20 unless a count is given, with the
+                    sessions, windows and panes each holds and whether it is
+                    whole. --json prints an array of {stamp, taken, whole,
+                    sessions, windows, panes, last}
   restore <stamp>   Point `last` at the snapshot <stamp> names, as list prints it,
                     and restore it into the running server, which keeps what it
                     has and gains what the snapshot holds. With no server, the
@@ -33,23 +41,36 @@ Commands:
 EOF
 }
 
-# resurrect's own order: the option, then ~/.tmux/resurrect where it exists, then
-# the XDG data directory. The option may spell the home directory as ~ or $HOME.
-snapshot_dir() {
-  local dir=''
-  dir=$(tmux show-option -gqv @resurrect-dir 2>/dev/null) || true
-  if [[ -z $dir ]]; then
-    dir="$HOME/.tmux/resurrect"
-    [[ -d $dir ]] || dir="${XDG_DATA_HOME:-$HOME/.local/share}/tmux/resurrect"
+# resurrect's snapshot directory, file prefix and extension, one per line. With
+# no server to name the save script there is no @resurrect-dir to read either,
+# so resurrect's defaults apply.
+resurrect_layout() {
+  local save
+  save=$(tmux show-option -gqv @resurrect-save-script-path 2>/dev/null) || save=''
+  if [[ -n $save && -r ${save%/*}/helpers.sh ]]; then
+    (
+      set +eu
+      source "${save%/*}/helpers.sh" >/dev/null 2>&1
+      printf '%s\n%s\n%s\n' "$(resurrect_dir)" "$RESURRECT_FILE_PREFIX" "$RESURRECT_FILE_EXTENSION"
+    )
+  elif [[ -d $HOME/.tmux/resurrect ]]; then
+    printf '%s\n%s\n%s\n' "$HOME/.tmux/resurrect" tmux_resurrect txt
+  else
+    printf '%s\n%s\n%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/tmux/resurrect" tmux_resurrect txt
   fi
-  dir=${dir/#\~/$HOME}
-  printf '%s\n' "${dir//\$HOME/$HOME}"
 }
+
+DIR='' PREFIX='' EXT=''
+{
+  IFS= read -r DIR
+  IFS= read -r PREFIX
+  IFS= read -r EXT
+} < <(resurrect_layout)
 
 stamp_of() {
   local name=${1##*/}
-  name=${name#tmux_resurrect_}
-  printf '%s\n' "${name%.txt}"
+  name=${name#"$PREFIX"_}
+  printf '%s\n' "${name%."$EXT"}"
 }
 
 # One line per file, in the order given: path, whole (1 or 0), sessions,
@@ -83,59 +104,77 @@ measure() {
   ' "$@"
 }
 
+# A dangling `last` names a file that is gone, which is no more whole than a cut
+# one.
 is_whole() {
-  [[ $(measure "$1" | cut -f2) == 1 ]]
+  [[ -f $1 && $(measure "$1" | cut -f2) == 1 ]]
 }
 
 newest_first() {
-  local dir=$1 files
-  files=("$dir"/tmux_resurrect_*.txt)
+  local files=("$DIR/$PREFIX"_*."$EXT")
   ((${#files[@]})) || return 0
   printf '%s\n' "${files[@]}" | sort -r
 }
 
 list_snapshots() {
-  local count=${1:-20} dir last path whole sessions windows panes stamp marker
-  [[ $count =~ ^[0-9]+$ ]] || {
-    echo "tmux-snapshots: list takes a count, not $count" >&2
-    exit 2
-  }
-  dir=$(snapshot_dir)
-  last=$(readlink "$dir/last" 2>/dev/null) || last=''
+  local count=20 json='' arg last path whole sessions windows panes stamp taken marker first=1
+  for arg in "$@"; do
+    case $arg in
+      --json) json=1 ;;
+      '' | *[!0-9]*)
+        echo "tmux-snapshots: list takes a count and --json, not $arg" >&2
+        exit 2
+        ;;
+      *) count=$arg ;;
+    esac
+  done
+  last=$(readlink "$DIR/last" 2>/dev/null) || last=''
   local -a paths=()
-  while IFS= read -r path; do paths+=("$path"); done < <(newest_first "$dir" | head -n "$count")
+  while IFS= read -r path; do paths+=("$path"); done < <(newest_first | head -n "$count")
   if ((${#paths[@]} == 0)); then
-    echo "tmux-snapshots: no snapshots in $dir" >&2
-    exit 1
+    if [[ -n $json ]]; then echo '[]'; else echo "tmux-snapshots: no snapshots in $DIR" >&2; fi
+    return 0
   fi
-  printf '%-16s  %-19s  %8s  %7s  %5s  %s\n' STAMP TAKEN SESSIONS WINDOWS PANES STATE
+  if [[ -n $json ]]; then
+    printf '['
+  else
+    printf '%-16s  %-19s  %8s  %7s  %5s  %s\n' STAMP TAKEN SESSIONS WINDOWS PANES STATE
+  fi
   while IFS=$'\t' read -r path whole sessions windows panes; do
     stamp=$(stamp_of "$path")
+    taken="${stamp:0:4}-${stamp:4:2}-${stamp:6:2}T${stamp:9:2}:${stamp:11:2}:${stamp:13:2}"
+    if [[ -n $json ]]; then
+      ((first)) || printf ','
+      first=0
+      printf '{"stamp":"%s","taken":"%s","whole":%s,"sessions":%s,"windows":%s,"panes":%s,"last":%s}' \
+        "$stamp" "$taken" "$([[ $whole == 1 ]] && echo true || echo false)" "$sessions" "$windows" "$panes" \
+        "$([[ ${path##*/} == "$last" ]] && echo true || echo false)"
+      continue
+    fi
     marker=''
     [[ ${path##*/} == "$last" ]] && marker='  <- last'
-    printf '%-16s  %s-%s-%s %s:%s:%s  %8s  %7s  %5s  %s%s\n' "$stamp" \
-      "${stamp:0:4}" "${stamp:4:2}" "${stamp:6:2}" "${stamp:9:2}" "${stamp:11:2}" "${stamp:13:2}" \
+    printf '%-16s  %-19s  %8s  %7s  %5s  %s%s\n' "$stamp" "${taken/T/ }" \
       "$sessions" "$windows" "$panes" "$([[ $whole == 1 ]] && echo whole || echo 'cut off')" "$marker"
   done < <(measure "${paths[@]}")
+  [[ -z $json ]] || printf ']\n'
 }
 
 restore_snapshot() {
-  local stamp=${1:-} dir name script
+  local stamp=${1:-} name script
   [[ -n $stamp ]] || {
     echo "tmux-snapshots: restore needs a stamp, as \`tmux-snapshots list\` prints it" >&2
     exit 2
   }
-  dir=$(snapshot_dir)
-  name="tmux_resurrect_$stamp.txt"
-  if [[ ! -f $dir/$name ]]; then
-    echo "tmux-snapshots: no snapshot $stamp in $dir; \`tmux-snapshots list\` prints the stamps" >&2
+  name="${PREFIX}_$stamp.$EXT"
+  if [[ ! -f $DIR/$name ]]; then
+    echo "tmux-snapshots: no snapshot $stamp in $DIR; \`tmux-snapshots list\` prints the stamps" >&2
     exit 1
   fi
-  if ! is_whole "$dir/$name"; then
+  if ! is_whole "$DIR/$name"; then
     echo "tmux-snapshots: $stamp is cut off, so a restore would read the newest whole snapshot instead" >&2
     exit 1
   fi
-  ln -sfn "$name" "$dir/last"
+  ln -sfn "$name" "$DIR/last"
   if ! tmux info >/dev/null 2>&1; then
     echo "last points at $stamp; the next tmux start restores it"
     return 0
@@ -148,36 +187,41 @@ restore_snapshot() {
   tmux run-shell "$script"
 }
 
+# Run as a hook, whose output nobody reads, so what it did or could not do is
+# also shown on the tmux status line.
+say() {
+  tmux display-message "tmux-snapshots: $1" 2>/dev/null || true
+  echo "tmux-snapshots: $1" >&2
+}
+
 repair_last() {
-  local dir target path
-  dir=$(snapshot_dir)
-  target=$(readlink "$dir/last" 2>/dev/null) || return 0
-  is_whole "$dir/$target" && return 0
+  local target path
+  target=$(readlink "$DIR/last" 2>/dev/null) || return 0
+  is_whole "$DIR/$target" && return 0
   while IFS= read -r path; do
     is_whole "$path" || continue
-    ln -sfn "${path##*/}" "$dir/last"
-    tmux display-message "tmux-snapshots: $(stamp_of "$target") was cut off, so this restores $(stamp_of "$path")" 2>/dev/null || true
-    echo "tmux-snapshots: $(stamp_of "$target") was cut off; last now points at $(stamp_of "$path")" >&2
+    ln -sfn "${path##*/}" "$DIR/last"
+    say "$(stamp_of "$target") was cut off, so this restores $(stamp_of "$path")"
     return 0
-  done < <(newest_first "$dir")
-  echo "tmux-snapshots: $(stamp_of "$target") is cut off and no snapshot in $dir is whole" >&2
+  done < <(newest_first)
+  say "$(stamp_of "$target") is cut off and no snapshot in $DIR is whole, so this restore is partial"
+  return 1
 }
 
 # Stamps sort as text in time order, so the age cutoffs are compared as stamps,
 # and an hour or a day is a stamp prefix. This runs after every save, so a stamp
 # is cut out of the name in place rather than by a subshell per file.
 prune_snapshots() {
-  local dir last day_ago week_ago path name whole stamp bucket
-  dir=$(snapshot_dir)
-  last=$(readlink "$dir/last" 2>/dev/null) || last=''
+  local last day_ago week_ago path name whole stamp bucket
+  last=$(readlink "$DIR/last" 2>/dev/null) || last=''
   day_ago=$(date -d '1 day ago' +%Y%m%dT%H%M%S)
   week_ago=$(date -d '7 days ago' +%Y%m%dT%H%M%S)
 
   local -a old=()
-  for path in "$dir"/tmux_resurrect_*.txt; do
+  for path in "$DIR/$PREFIX"_*."$EXT"; do
     name=${path##*/}
-    stamp=${name#tmux_resurrect_}
-    [[ ${stamp%.txt} < $day_ago ]] && old+=("$path")
+    stamp=${name#"$PREFIX"_}
+    [[ ${stamp%."$EXT"} < $day_ago ]] && old+=("$path")
   done
   ((${#old[@]})) || return 0
 
@@ -189,8 +233,8 @@ prune_snapshots() {
   while IFS=$'\t' read -r path whole _; do
     name=${path##*/}
     [[ $name == "$last" ]] && continue
-    stamp=${name#tmux_resurrect_}
-    stamp=${stamp%.txt}
+    stamp=${name#"$PREFIX"_}
+    stamp=${stamp%."$EXT"}
     if [[ $stamp < $week_ago ]]; then bucket=${stamp:0:8}; else bucket=${stamp:0:11}; fi
     if [[ $whole == 1 && $bucket != "$held" ]]; then
       held=$bucket
@@ -202,11 +246,14 @@ prune_snapshots() {
 }
 
 case "${1:-}" in
-  list) list_snapshots "${2:-20}" ;;
+  list)
+    shift
+    list_snapshots "$@"
+    ;;
   restore) restore_snapshot "${2:-}" ;;
   repair-last) repair_last ;;
   prune) prune_snapshots ;;
-  -h | --help | help) usage ;;
+  '' | -h | --help | help) usage ;;
   *)
     usage >&2
     exit 2
