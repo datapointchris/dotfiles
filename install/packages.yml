@@ -676,6 +676,10 @@ system_packages:
     pacman: pipewire-pulse
     description: PipeWire PulseAudio replacement
 
+  - name: sound-theme-freedesktop
+    pacman: sound-theme-freedesktop
+    description: Freedesktop event sounds, which dunst plays on a critical notification
+
   # Builds the zram swap device at boot from the zram-generator.conf that
   # install/system.yml declares.
   - name: zram-generator
