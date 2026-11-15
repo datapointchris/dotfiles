@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -euo pipefail
 
 # Documentation site operations, driven by `task docs:*`.
 # mkdocs is a project dependency rather than an installed binary, so it must run
