@@ -325,7 +325,7 @@ class TestPaneCap:
 
     def test_nothing_the_cap_produces_exceeds_the_cap(self, tmux_rearrange):
         cap = tmux_rearrange.MAX_PANES_PER_WINDOW
-        grouping = {
+        grouping: dict[str, Any] = {
             'sessions': [
                 {'name': 'wide', 'windows': [{'panes': [f'%{n}' for n in range(20)]}]},
                 {'name': 'narrow', 'windows': [{'panes': ['%90', '%91']}]},

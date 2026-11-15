@@ -13,6 +13,7 @@ import tarfile
 import tomllib
 import zipfile
 from itertools import product
+from typing import Any
 
 import pytest
 
@@ -302,7 +303,9 @@ class TestArchives:
         assert not zip_path.exists()
         with tarfile.open(tmp_path / name) as tar:
             assert tar.getnames() == ['fnm']
-            assert tar.extractfile('fnm').read() == b'FLAT-ZIP-BINARY'
+            member = tar.extractfile('fnm')
+            assert member is not None
+            assert member.read() == b'FLAT-ZIP-BINARY'
 
     def test_a_fat_zip_yields_the_requested_platform_not_another(self, tmp_path):
         zip_path = tmp_path / 'broot.zip'
@@ -313,7 +316,9 @@ class TestArchives:
         name = create_bundle.repackage_zip_as_tarball(zip_path, 'broot', 'x86_64-unknown-linux-gnu', '1.56.2')
 
         with tarfile.open(tmp_path / name) as tar:
-            assert tar.extractfile('broot').read() == b'WANTED'
+            member = tar.extractfile('broot')
+            assert member is not None
+            assert member.read() == b'WANTED'
 
     def test_a_zip_without_the_binary_fails_rather_than_bundling_nothing(self, tmp_path):
         zip_path = tmp_path / 'fnm.zip'
@@ -599,7 +604,9 @@ class TestWingetBundling:
 
         assert (staging / winget.BUNDLE_BINARIES / 'rg.exe').is_file()
         assert not list((staging / winget.BUNDLE_BINARIES).glob('*.zip'))
-        assert bundle_manifest.staged(entry.name, 'winget').filename == 'rg.exe'
+        staged = bundle_manifest.staged(entry.name, 'winget')
+        assert staged is not None
+        assert staged.filename == 'rg.exe'
 
     def test_an_exe_nested_under_a_versioned_directory_is_found(self, tmp_path, monkeypatch):
         """These publishers disagree about whether the binary sits at the archive
@@ -647,7 +654,7 @@ class TestTheSparseDecisionReachesEveryStagingLoop:
 
     VERSION = 'v10.4.2'
 
-    DECLARED = {
+    DECLARED: dict[str, tuple[type[catalog.Entry], dict[str, Any]]] = {
         'cargo_packages': (
             catalog.CargoPackage,
             {'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd', 'binary_pattern': 'fd-{version}-{target}.tar.gz'},

@@ -222,7 +222,7 @@ class TestCorpus:
         daemon; `supersedes` is what stops a second copy of that daemon running
         beside it out of Homebrew or pacman — and a machine carrying both shares one
         config directory and one port between them."""
-        declared = {entry.name: entry for entry in declaration().section('github_releases')}
+        declared = {entry.name: entry for entry in declaration().section('github_releases') if isinstance(entry, catalog.GithubRelease)}
 
         assert all(declared[name].supersedes for name in providers.AGENTS)
 
@@ -715,7 +715,7 @@ class TestBundledCorpus:
         without this being widened."""
         declared = declaration()
         for section in sorted(sections_declaring_a_checksum()):
-            row = declared.section(section)[0]
+            row: Any = declared.section(section)[0]
             broken = dc.replace(row, checksum='maybe')
             assert any('not one of' in problem for problem in broken.problems()), f'{section} validates nothing'
 
@@ -787,7 +787,7 @@ def test_a_bundled_asset_verifies_exactly_as_its_entry_declares(section, name, p
     publishing checksums stops being an exception here, and one that stops is
     caught before a bundle stages its bytes with nothing said.
     """
-    entry = declaration().find(section, name)
+    entry: Any = declaration().find(section, name)
     repo, tag, staged = staged_asset(section, name)
 
     expected = STATE_FOR_DECLARATION[entry.checksum]

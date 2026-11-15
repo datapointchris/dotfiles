@@ -421,8 +421,9 @@ def test_the_recorded_digest_is_the_value_a_checksums_file_carries(cache_home, w
 
     cache.fetch(ASSET, destination, '  fd')
 
-    assert cache.recorded_digest(ASSET) == github_release.sha256_of(destination)
-    assert cache.recorded_digest(ASSET).strip() == cache.recorded_digest(ASSET)
+    recorded = cache.recorded_digest(ASSET)
+    assert recorded == github_release.sha256_of(destination)
+    assert recorded.strip() == recorded
 
 
 def test_an_enabled_cache_makes_its_root_and_a_disabled_one_makes_nothing(cache_home):

@@ -238,7 +238,9 @@ class TestSidecarChecksums:
     def test_every_sidecar_suffix_is_recognized_as_one(self):
         for suffix in github_release.CHECKSUM_SIDECAR_SUFFIXES:
             names = ['tool.tar.gz', f'tool.tar.gz{suffix}']
-            assert github_release.select_checksum_asset(names, 'tool.tar.gz').endswith(suffix)
+            selected = github_release.select_checksum_asset(names, 'tool.tar.gz')
+            assert selected is not None
+            assert selected.endswith(suffix)
 
 
 class TestChecksumStaging:

@@ -144,7 +144,7 @@ layers = [
 [tool.mypy]
 pretty = true
 ignore_missing_imports = true
-check_untyped_defs = false
+check_untyped_defs = true
 warn_return_any = false
 # `mypy .` sees two files named conftest.py and, with no __init__.py anywhere
 # under tests/, maps both to the module `conftest`. Deriving the name from the

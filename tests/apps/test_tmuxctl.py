@@ -711,12 +711,15 @@ def recorded(tmuxctl, monkeypatch):
     monkeypatch.setattr(tmuxctl.subprocess, 'run', record)
     monkeypatch.setattr(tmuxctl.shutil, 'which', lambda name: f'/usr/bin/{name}')
 
-    def run(placement, command=('claude', 'go'), cwd='/tmp/work'):
-        tmuxctl.execute(placement, command, cwd)
-        return calls
+    class Recorded:
+        def __init__(self) -> None:
+            self.calls = calls
 
-    run.calls = calls
-    return run
+        def __call__(self, placement, command=('claude', 'go'), cwd='/tmp/work'):
+            tmuxctl.execute(placement, command, cwd)
+            return calls
+
+    return Recorded()
 
 
 def joining(build, columns=None, name=''):
@@ -1566,8 +1569,17 @@ def test_close_drops_the_marks_before_it_kills_the_pane(tmuxctl, server, monkeyp
 
     order: list[str] = []
     released, killed = tmuxctl.release, tmuxctl.tmux_soft
-    monkeypatch.setattr(tmuxctl, 'release', lambda panes: (order.append('release'), released(panes))[1])
-    monkeypatch.setattr(tmuxctl, 'tmux_soft', lambda *args: (order.append(args[0]), killed(*args))[1])
+
+    def release(panes):
+        order.append('release')
+        return released(panes)
+
+    def tmux_soft(*args):
+        order.append(args[0])
+        return killed(*args)
+
+    monkeypatch.setattr(tmuxctl, 'release', release)
+    monkeypatch.setattr(tmuxctl, 'tmux_soft', tmux_soft)
 
     assert tmuxctl.cmd_close('phase-3-worker', False) == 0
     assert 'kill-pane' in order, 'the pane was never killed'
