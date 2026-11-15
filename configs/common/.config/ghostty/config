@@ -37,8 +37,11 @@ confirm-close-surface = false
 
 keybind = shift+enter=text:\x1b\r
 
-# tmux resizes panes on ctrl+shift+arrow, and Ghostty's defaults bind the left
-# and right of those to tab switching. Unbound rather than remapped: sessions
-# are the tabs here, so nothing is lost. Up and down were never bound.
+# tmux resizes panes on ctrl+shift+arrow, and Ghostty's defaults take all four:
+# left and right switch tabs, up and down jump between shell prompts. Unbound
+# rather than remapped. Sessions are the tabs here, and tmux owns the scrollback
+# that prompt jumping would walk, so nothing is lost.
 keybind = ctrl+shift+arrow_left=unbind
 keybind = ctrl+shift+arrow_right=unbind
+keybind = ctrl+shift+arrow_up=unbind
+keybind = ctrl+shift+arrow_down=unbind
