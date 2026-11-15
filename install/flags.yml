@@ -89,6 +89,21 @@ required:
     consumers:
       - provisioning code outside this repo
 
+  # The token and private-key shapes every mask reads, kept beside the
+  # inventory above and narrowed on the same two axes. This one dotfiles reads
+  # itself: the run log's scrub masks each command's argv, answer and transcript
+  # with its rows. A machine that names no file masks with the copy compiled
+  # into `effects.SECRET_SHAPES`, so a machine keeping no such file needs no
+  # answer here.
+  - name: SECRET_SHAPES_JSON
+    description: Absolute path to the shared secret-shapes.json every mask reads
+    network_trust: fleet
+    capacity: workstation
+    file_must_exist: true
+    consumers:
+      - src/dotfiles/effects.py
+      - deploy code outside this repo
+
   # The repo registry every machine keeps, in either trust domain, so no axis
   # narrows it. `repos-registry` resolves it for a shell; this entry is what lets
   # a template carry the same answer into a config read without one. No

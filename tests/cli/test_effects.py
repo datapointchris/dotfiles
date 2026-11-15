@@ -8,15 +8,18 @@ a command that cannot be executed is an exit code, not an exception.
 from __future__ import annotations
 
 import errno
+import json
 import shutil as sh
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 from dotfiles import effects
+from dotfiles import settings
 from dotfiles.effects import NOT_FOUND
 from dotfiles.effects import TIMED_OUT
 from dotfiles.effects import Output
@@ -337,11 +340,48 @@ class TestNoCredentialReachesTheRunLog:
         ('AKI' + 'A', 'IOSFODNN7EXAMPLE'),
     )
 
+    @pytest.fixture(autouse=True)
+    def masks_read_afresh(self) -> Iterator[None]:
+        """`secret_masks` reads its file once per process, and a suite is one process."""
+        effects.secret_masks.cache_clear()
+        yield
+        effects.secret_masks.cache_clear()
+
+    @pytest.fixture
+    def named_shapes(self) -> dict:
+        """The shapes file this machine names, read the way `secret_masks` reads it."""
+        found = settings.resolve(effects.SECRET_SHAPES_FILE, settings.read_config())
+        if not found or not Path(found.expanded).is_file():
+            pytest.skip('this machine names no secret-shapes.json')
+        return json.loads(Path(found.expanded).read_text())
+
     @pytest.mark.parametrize('prefix, body', SHAPES)
     def test_a_token_shape_is_scrubbed(self, prefix: str, body: str) -> None:
         secret = prefix + body
         assert secret not in effects.redacted(f'the answer is {secret} today')
         assert '[redacted]' in effects.redacted(secret)
+
+    def test_with_no_shapes_file_named_the_compiled_rows_mask_and_keep_their_groups(self, no_ambient_answer: Path) -> None:
+        url = 'https://deploy:' + 'EXAMPLE-password' + '@git.example.com/repo.git'
+        assert effects.redacted(url) == 'https://deploy:[redacted]@git.example.com/repo.git'
+
+    def test_a_named_shapes_file_is_what_masks(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        row = {'id': 'widget', 'regex': r'(serial=)\d+', 'keep_before': [1], 'keep_after': [], 'example': '', 'near_miss': ''}
+        shapes = tmp_path / 'secret-shapes.json'
+        shapes.write_text(json.dumps({'purpose': '', 'mask': '<gone>', 'shapes': [row]}))
+        monkeypatch.setenv('DOTFILES_SECRET_SHAPES_JSON', str(shapes))
+        assert effects.redacted('serial=12345') == 'serial=<gone>'
+
+    def test_every_row_of_the_named_shapes_file_is_compiled_in(self, named_shapes: dict) -> None:
+        """A machine with no file masks with the compiled rows, so a row added to the file and missing here leaks there."""
+        assert named_shapes['mask'] == effects.SECRET_MASK
+        assert effects.shapes_in(named_shapes) == effects.SECRET_SHAPES
+
+    def test_every_example_in_the_named_shapes_file_is_masked(self, named_shapes: dict) -> None:
+        for row in named_shapes['shapes']:
+            masked = effects.redacted(row['example'])
+            assert named_shapes['mask'] in masked, row['id']
+            assert masked != row['example'], row['id']
 
     def test_ordinary_output_is_untouched(self) -> None:
         """A version string and a path must survive, or the record loses the

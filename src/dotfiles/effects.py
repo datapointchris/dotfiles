@@ -18,7 +18,9 @@ second format.
 
 from __future__ import annotations
 
+import functools
 import gzip
+import json
 import os
 import re
 import shutil
@@ -81,21 +83,81 @@ A credential is short, so the length cut is exactly what lets one through.
 `redacted` and `yields_credential` are the gates that stop it.
 """
 
+
+@dataclass(frozen=True)
+class SecretShape:
+    """One row of a `secret-shapes.json`, in the fields a mask reads.
+
+    A match is replaced by its `keep_before` groups, then the mask, then its
+    `keep_after` groups. So a URL keeps its scheme, user and host, and a JSON Web
+    Key member keeps its name and quotes, while the secret between them goes.
+    """
+
+    id: str
+    regex: str
+    keep_before: tuple[int, ...] = ()
+    keep_after: tuple[int, ...] = ()
+
+    def substitution(self, mask: str) -> tuple[re.Pattern[str], str]:
+        """The compiled pattern, and the replacement writing the kept groups around `mask`.
+
+        `re.ASCII` because the rows are written for RE2, whose `\\b` and `\\s` are ASCII.
+        """
+
+        def kept(groups: tuple[int, ...]) -> str:
+            return ''.join(f'\\g<{group}>' for group in groups)
+
+        return re.compile(self.regex, re.ASCII), kept(self.keep_before) + mask + kept(self.keep_after)
+
+
+SECRET_MASK = '[redacted]'
+"""What a masked secret reads as when the compiled rows below do the masking."""
+
 SECRET_SHAPES = (
-    re.compile(r'-----BEGIN [A-Z ]*PRIVATE KEY-----(?:.*?-----END [A-Z ]*PRIVATE KEY-----)?', re.DOTALL),
-    re.compile(r'\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}'),
-    re.compile(r'\bxox[abposr]-[A-Za-z0-9-]{10,}'),
-    re.compile(r'\bsk-ant-[A-Za-z0-9_-]{20,}'),
-    re.compile(r'\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}'),
-    re.compile(r'\b(?:sk|rk)-[A-Za-z0-9]{20,}'),
-    re.compile(r'\b(?:AKIA|ASIA)[0-9A-Z]{16}\b'),
-    re.compile(r'\bey[JI][A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+'),
-    re.compile(r'\bAIza[0-9A-Za-z_-]{35}'),
-    re.compile(r'\b[rs]k_live_[0-9A-Za-z]{24,}'),
-    re.compile(r'\bnpm_[A-Za-z0-9]{36}\b'),
-    re.compile(r'"d"\s*:\s*"[A-Za-z0-9_-]{20,}"'),
+    SecretShape(
+        'private-key',
+        r'-----BEGIN [A-Z ]*PRIVATE KEY-----'
+        r'(?:(?:Proc-Type|DEK-Info):[^\r\n"\\]*|[A-Za-z0-9+/=]|(?:\r?\n|\\+[nr])[ \t]*)*'
+        r'(?:-----END [A-Z ]*PRIVATE KEY-----)?',
+    ),
+    SecretShape('github-token', r'\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}'),
+    SecretShape('aws-access-key-id', r'\b(?:AKIA|ASIA)[0-9A-Z]{16}\b'),
+    SecretShape('slack-token', r'\bxox[abposr]-[A-Za-z0-9-]{10,}'),
+    SecretShape('anthropic-api-key', r'\bsk-ant-[A-Za-z0-9_-]{20,}'),
+    SecretShape('openai-project-key', r'\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}'),
+    SecretShape('openai-legacy-key', r'\b(?:sk|rk)-[A-Za-z0-9]{20,}'),
+    SecretShape('jwt', r'\bey[JI][A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+'),
+    SecretShape('google-api-key', r'\bAIza[0-9A-Za-z_-]{35}'),
+    SecretShape('stripe-live-key', r'\b[rs]k_live_[0-9A-Za-z]{24,}'),
+    SecretShape('npm-token', r'\bnpm_[A-Za-z0-9]{36}\b'),
+    SecretShape('ntfy-token', r'\btk_[A-Za-z0-9_-]{29}'),
+    SecretShape(
+        'jwk-private-member',
+        r'(\\*"(?:d|p|q|dp|dq|qi|k)\\*"\s*:\s*\\*")'
+        r'[A-Za-z0-9_-]*(?:[A-Za-z0-9_-]{20}[A-Z]|[A-Z][A-Za-z0-9_-]{20})[A-Za-z0-9_-]*'
+        r'(\\*")',
+        keep_before=(1,),
+        keep_after=(2,),
+    ),
+    SecretShape(
+        'url-password',
+        r'(\b[A-Za-z][A-Za-z0-9+.-]{0,31}://[^\s:/?#@"\\]*:)[^\s/?#"\\\[\]]+(@)',
+        keep_before=(1,),
+        keep_after=(2,),
+    ),
+    SecretShape('url-query-token', r'((?:[?&#]|\\+u0026)(?:access_|refresh_)?token=)[A-Za-z0-9._~+/%=-]+', keep_before=(1,)),
+    SecretShape('bearer-token', r'(\b(?i:bearer)\s+)[A-Za-z0-9._~+/-]{20,}=*', keep_before=(1,)),
 )
-"""Token shapes scrubbed from anything a command said before it is recorded.
+"""Token shapes scrubbed from anything a command said before it is recorded, where no shared file is named.
+
+These rows are a copy. Their owner is a `secret-shapes.json` that other tools'
+masks read as well, and `SECRET_SHAPES_JSON` names it through the rungs in
+`settings.SHARED_PATHS`. Where it names a file, `secret_masks` takes that file's
+rows instead, so a shape added there reaches this tool with no release. These are
+the default for a machine that keeps no such file. A test walks every row of the
+named file against them where one is present, so a row added there and missing
+here fails it. Order matters: a row sits above any row that would match part of
+what it matches.
 
 The run log leaves the machine, so a credential written here does not stay on the
 box that minted it. `gh auth token` is on the default `check` path, so an unredacted
@@ -111,6 +173,39 @@ command's transcript, or in the argv itself — a token passed as an argument is
 recorded whatever the command did with it. All three are scrubbed.
 """
 
+SECRET_SHAPES_FILE = 'SECRET_SHAPES_JSON'
+"""The `settings.SHARED_PATHS` name a machine answers with the shared shapes file."""
+
+
+def shapes_in(document: dict) -> tuple[SecretShape, ...]:
+    """The rows of a parsed `secret-shapes.json`, in file order."""
+    return tuple(SecretShape(row['id'], row['regex'], tuple(row['keep_before']), tuple(row['keep_after'])) for row in document['shapes'])
+
+
+@functools.cache
+def secret_masks() -> tuple[tuple[re.Pattern[str], str], ...]:
+    """Every pattern `redacted` substitutes, and its replacement, read once per process.
+
+    The shared file's rows where `SECRET_SHAPES_JSON` names one, otherwise
+    `SECRET_SHAPES`. A named file that cannot be read or parsed falls back too, with
+    a warning, because a raise here would stop every command this tool runs.
+    """
+    # Imported here because `settings` reaches `paths`, which a test suite pins before importing it.
+    from dotfiles import settings
+
+    found = settings.resolve(SECRET_SHAPES_FILE, settings.read_config())
+    if found and Path(found.expanded).is_file():
+        try:
+            document = json.loads(Path(found.expanded).read_text())
+            masks = tuple(shape.substitution(document['mask']) for shape in shapes_in(document))
+        except (OSError, ValueError, KeyError, TypeError, re.error) as problem:
+            log.warning('secret shapes unreadable, masking with the compiled rows', path=found.expanded, problem=str(problem))
+        else:
+            log.debug('secret shapes', path=found.expanded, source=found.source, rows=len(masks))
+            return masks
+    return tuple(shape.substitution(SECRET_MASK) for shape in SECRET_SHAPES)
+
+
 CREDENTIAL_WORDS = ('token', 'secret', 'password', 'credential', 'apikey', 'api-key')
 """Argv words whose command's output is never recorded, whatever it looks like.
 
@@ -121,8 +216,8 @@ by name is one whose answer has no diagnostic value worth the risk.
 
 def redacted(text: str) -> str:
     """Replace anything token-shaped, so a record can be read anywhere."""
-    for shape in SECRET_SHAPES:
-        text = shape.sub('[redacted]', text)
+    for pattern, replacement in secret_masks():
+        text = pattern.sub(replacement, text)
     return text
 
 

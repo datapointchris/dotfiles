@@ -94,6 +94,7 @@ SHARED_PATHS: dict[str, Shared] = {
     'REPOS_REGISTRY': Shared('DOTFILES_REPOS_REGISTRY', 'repos_registry'),
     'HOMELAB_HOSTS_JSON': Shared('DOTFILES_HOMELAB_HOSTS_JSON', 'homelab_hosts_json'),
     'WORKSTATIONS_JSON': Shared('DOTFILES_WORKSTATIONS_JSON', 'workstations_json'),
+    'SECRET_SHAPES_JSON': Shared('DOTFILES_SECRET_SHAPES_JSON', 'secret_shapes_json'),
 }
 """Files this tool reads and does not own, keyed by what the file is.
 
