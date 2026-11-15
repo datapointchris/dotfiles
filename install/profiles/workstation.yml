@@ -8,6 +8,7 @@ go_tools:
   - terraform-docs
   - gum
   - lazydocker
+  - mermaid-ascii
   - jactionlint
   - gowall
   - triangle

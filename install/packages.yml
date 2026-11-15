@@ -1816,6 +1816,12 @@ go_tools:
     binary_pattern: "lazydocker_{version_num}_{Os}_{Arch}.tar.gz"
     description: Terminal UI for Docker with compose support
 
+  - name: mermaid-ascii
+    package: github.com/AlexanderGrooff/mermaid-ascii
+    github_repo: AlexanderGrooff/mermaid-ascii
+    binary_pattern: "mermaid-ascii_{Os}_{Arch}.tar.gz"
+    description: Renders Mermaid flowcharts and sequence diagrams as terminal box-drawing text
+
   # Pinned to the rev the repos' pre-commit hook runs, so a local lint answers
   # what the hook will. v2 renames every flag, so it moves with that hook.
   # `supersedes` deletes the rhysd/actionlint binary this replaced, which a
