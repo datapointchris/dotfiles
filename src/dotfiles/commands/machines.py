@@ -20,6 +20,7 @@ from dotfiles import machine as machines
 from dotfiles import paths
 from dotfiles import plan as planning
 from dotfiles import resolve as resolver
+from dotfiles import session
 from dotfiles import validate
 from dotfiles.commands import QuietOption
 from dotfiles.commands import VerboseOption
@@ -28,7 +29,6 @@ from dotfiles.output import EVIDENCE_INDENT
 from dotfiles.output import console
 from dotfiles.output import emit_json
 from dotfiles.output import emit_text
-from dotfiles.output import error
 from dotfiles.output import hint
 from dotfiles.output import section_line
 from dotfiles.resources import env
@@ -65,17 +65,6 @@ def manifest_names() -> list[str]:
     if not paths.MANIFESTS_DIR.is_dir():
         return []
     return sorted(path.stem for path in paths.MANIFESTS_DIR.glob('*.yml'))
-
-
-def resolve_machine(name: str | None) -> str:
-    """Fall back to $MACHINE, which `~/.env` sets and every install path reads."""
-    resolved = name or os.environ.get('MACHINE')
-    if resolved:
-        return resolved
-
-    error('no machine given and MACHINE is unset in the environment')
-    hint(f'name one of: {", ".join(manifest_names())}')
-    raise typer.Exit(ExitCode.USAGE)
 
 
 def manifest_path(name: str) -> Path:
@@ -140,7 +129,7 @@ def show_machine(
     is a different question: the manifest says `system_packages: core` and the
     resolution says which 25 packages that is on this machine's package manager.
     """
-    resolved = resolve_machine(name)
+    resolved = session.resolve_machine(name)
     # Before resolving, so a typo stays a usage error naming the machines that do
     # exist rather than a report that this one's declaration cannot be read.
     path = manifest_path(resolved)
@@ -252,7 +241,7 @@ def machine_requirements(
     if as_json and as_safekeep:
         raise typer.BadParameter('--json and --safekeep are two formats of one answer; pick one')
 
-    machine = loaded(resolve_machine(name))
+    machine = loaded(session.resolve_machine(name))
 
     if as_json:
         emit_json([requirement_dict(entry) for entry in machine.requirements])
@@ -422,5 +411,5 @@ def render_findings(findings: tuple[validate.Finding, ...]) -> None:
 )
 def edit_machine(name: str = typer.Argument(None, help='Machine name (default: $MACHINE)')) -> None:
     """Open a machine's manifest in $EDITOR."""
-    path = manifest_path(resolve_machine(name))
+    path = manifest_path(session.resolve_machine(name))
     os.execvp(editor := os.environ.get('EDITOR', 'nvim'), [editor, str(path)])

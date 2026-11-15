@@ -744,17 +744,30 @@ def test_an_unset_editor_falls_back_to_nvim(
 
 @pytest.mark.parametrize('verb', ['show', 'requirements', 'edit'], ids=['show', 'requirements', 'edit'])
 def test_a_leaf_with_no_machine_and_no_environment_says_which_machines_exist(
-    verb: str, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch
+    verb: str, sandbox: Sandbox, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Exit 2 rather than 3: nothing is wrong with the machine, the invocation did
     not say which one it meant."""
     monkeypatch.delenv('MACHINE')
+    sandbox.env_file.unlink(missing_ok=True)
 
     ran = cli('machines', verb, catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert 'no machine given and MACHINE is unset' in ran.stderr
-    assert 'name one of: box' in ran.stderr
+    assert 'box' in ran.stderr
+
+
+def test_a_leaf_reads_the_machine_from_the_env_file_when_the_environment_has_none(
+    sandbox: Sandbox, cli: Callable[..., Invocation], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A systemd timer, launchd and `docker exec` inherit no `~/.env`, so `$MACHINE`
+    is unset there while the file still says which machine this is."""
+    monkeypatch.delenv('MACHINE')
+
+    ran = cli('machines', 'show', '--json')
+
+    assert ran.exit_code == ExitCode.CONVERGED
+    assert ran.document['machine'] == sandbox.machine
 
 
 @pytest.mark.parametrize(
