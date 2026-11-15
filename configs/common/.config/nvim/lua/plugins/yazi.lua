@@ -2,6 +2,9 @@
 return {
   'mikavilpas/yazi.nvim',
   version = '*', -- use the latest stable version
+  -- Its one submodule is development-only type info, and lazy's update cannot add a submodule a
+  -- newer commit introduces: the checkout fails half-done and the plugin never updates again.
+  submodules = false,
   event = 'VeryLazy',
   dependencies = {
     { 'nvim-lua/plenary.nvim', lazy = true },
