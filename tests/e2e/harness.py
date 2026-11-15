@@ -818,7 +818,7 @@ def recorded_as(item: DesiredItem) -> str:
 def refusals(machine: Machine) -> dict[str, str]:
     """The same set, keyed by address and carrying the reason each gave.
 
-    Addressed as the record writes them — `packages/go/sesh`, which is
+    Addressed as the record writes them — `packages/go/gum`, which is
     `f'{item.resource}/{item.address}'` — so a caller matches an item exactly
     rather than on its last segment. Keyed on the segment alone, anything named
     `awscli` excuses every absent `aws`, whichever provider had

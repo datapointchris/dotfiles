@@ -86,15 +86,92 @@ def test_every_spelling_of_a_plugin_line_is_read(tmux: Tmux) -> None:
 
 
 def test_a_plugin_named_by_url_lands_under_the_name_tpm_gives_it(tmux: Tmux) -> None:
-    """`plugin_name_helper` is basename minus `.git`, so the three spellings of one
-    plugin are one directory and must not read as three."""
+    """`plugin_name_helper` is basename minus `.git`, after `install_plugins` splits
+    off a `#branch`, so the four spellings of one plugin are one directory and must
+    not read as four."""
     tmux.config.write_text(
         "set -g @plugin 'git://github.com/tmux-plugins/tmux-yank.git'\n"
         "set -g @plugin 'tmux-plugins/tmux-yank.git'\n"
         "set -g @plugin 'tmux-plugins/tmux-yank'\n"
+        "set -g @plugin 'someone/tmux-yank#a-branch'\n"
     )
 
     assert pluginsync.declared(tmux.home) == ('tmux-yank',)
+
+
+def test_a_checkout_from_another_repository_or_branch_is_replaced(tmux: Tmux) -> None:
+    """TPM counts a plugin installed by its directory alone, so moving a line to a
+    fork of the same name would leave upstream running. A checkout pinned by hand to
+    a detached HEAD is left as it is."""
+
+    def checkout(name: str, url: str, head: str) -> None:
+        git = tmux.plugins / name / '.git'
+        git.mkdir(parents=True)
+        (git / 'config').write_text(f'[core]\n\tbare = false\n[remote "origin"]\n\turl = {url}\n')
+        (git / 'HEAD').write_text(f'{head}\n')
+
+    tmux.config.write_text(
+        "set -g @plugin 'someone/tmux-resurrect#fix-restore'\n"
+        "set -g @plugin 'tmux-plugins/tmux-yank'\n"
+        "set -g @plugin 'someone/tmux-cpu#pinned-branch'\n"
+        "set -g @plugin 'someone/tmux-sidebar#wanted'\n"
+        "set -g @plugin 'someone/tmux-open#0123456789abcdef0123456789abcdef01234567'\n"
+    )
+    checkout('tmux-resurrect', 'https://git::@github.com/tmux-plugins/tmux-resurrect', 'ref: refs/heads/master')
+    checkout('tmux-yank', 'https://git::@github.com/tmux-plugins/tmux-yank', 'ref: refs/heads/master')
+    checkout('tmux-cpu', 'https://git::@github.com/someone/tmux-cpu', '0123456789abcdef0123456789abcdef01234567')
+    checkout('tmux-sidebar', 'git@github.com:someone/tmux-sidebar.git', 'ref: refs/heads/other')
+    checkout('tmux-open', 'https://git::@github.com/someone/tmux-open', 'ref: refs/heads/master')
+
+    assert pluginsync.replaced(tmux.home, tmux.plugins) == ('tmux-resurrect', 'tmux-sidebar')
+
+
+def upstream(path: Path, count: int) -> list[str]:
+    """A plugin repository with `count` commits, oldest first."""
+    subprocess.run(['git', 'init', '--quiet', str(path)], check=True)
+    for number in range(count):
+        subprocess.run(
+            ['git', '-C', str(path), '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false']
+            + ['commit', '--quiet', '--allow-empty', '-m', str(number)],
+            check=True,
+        )
+    log = subprocess.run(['git', '-C', str(path), 'rev-list', '--reverse', 'HEAD'], capture_output=True, text=True, check=True)
+    return log.stdout.split()
+
+
+def test_a_pinned_plugin_is_cloned_at_its_commit_and_follows_the_pin(tmux: Tmux, tmp_path: Path) -> None:
+    """TPM passes what follows `#` to `git clone -b`, which takes no commit, so the
+    pin is dotfiles' to hold."""
+    source = tmp_path / 'tmux-pinned'
+    first, second = upstream(source, 2)
+    checkout = tmux.plugins / 'tmux-pinned'
+
+    tmux.config.write_text(f"set -g @plugin 'file://{source}#{first}'\n")
+    assert pluginsync.hold_pins(tmux.home, tmux.plugins) == []
+    assert pluginsync.held_commit(checkout) == first
+
+    tmux.config.write_text(f"set -g @plugin 'file://{source}#{second}'\n")
+    assert pluginsync.off_pin(tmux.home, tmux.plugins) == ('tmux-pinned',)
+    assert pluginsync.hold_pins(tmux.home, tmux.plugins) == []
+    assert pluginsync.held_commit(checkout) == second
+
+
+@needs_tmux
+def test_a_replaced_checkout_comes_back_when_its_replacement_never_arrives(tmux: Tmux) -> None:
+    """A clone that fails would otherwise leave tmux with no plugin where it had a
+    working one."""
+    git = tmux.plugins / 'tmux-yank' / '.git'
+    git.mkdir(parents=True)
+    (git / 'config').write_text('[remote "origin"]\n\turl = https://git::@github.com/someone/tmux-yank\n')
+    (git / 'HEAD').write_text('ref: refs/heads/master\n')
+    tmux.stub_tpm('exit 1\n')
+
+    result = tmux.sync()
+
+    assert not result.ok
+    assert 'tmux-yank could not be cloned' in result.detail
+    assert pluginsync.origin(tmux.plugins / 'tmux-yank')[0].endswith('someone/tmux-yank')
+    assert [entry.name for entry in tmux.plugins.parent.iterdir() if entry.name.startswith('.dotfiles-replaced-')] == []
 
 
 def test_a_sourced_file_contributes_its_plugins(tmux: Tmux) -> None:

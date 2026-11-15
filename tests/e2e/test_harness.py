@@ -583,13 +583,13 @@ def test_a_path_that_is_not_home_relative_is_quoted_whole() -> None:
 def test_the_sweep_asks_after_every_item_it_can_and_no_others() -> None:
     """One `docker exec` for the lot. Two hundred of them is half a minute per
     environment spent starting processes, before the first assertion runs."""
-    items = [desired(name='task'), desired(name='sesh', executable='sesh'), desired(name='xcode', executable='', evidence_path='')]
+    items = [desired(name='task'), desired(name='gum', executable='gum'), desired(name='xcode', executable='', evidence_path='')]
 
     lines = probe_script(items).splitlines()
 
     assert len(lines) == 2
     assert all(line.startswith('printf ') for line in lines)
-    assert ' go/task ' in lines[0] and ' go/sesh ' in lines[1]
+    assert ' go/task ' in lines[0] and ' go/gum ' in lines[1]
 
 
 def test_the_copies_sweep_asks_once_per_binary() -> None:
@@ -598,7 +598,7 @@ def test_the_copies_sweep_asks_once_per_binary() -> None:
     items = [
         desired(name='ripgrep', executable='rg'),
         desired(name='ripgrep-all', executable='rg'),
-        desired(name='sesh', executable='sesh'),
+        desired(name='gum', executable='gum'),
     ]
 
     assert len(copies_script(items).splitlines()) == 2

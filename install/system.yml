@@ -96,6 +96,18 @@ systemd_units:
     enabled: true
     active: true
 
+  # The save tmux needs at a shutdown, taken before anything is stopped. Continuum
+  # saves only while a client draws the status line, so this is also the one save
+  # a detached server gets. `display_stack: wayland` matches the directory that
+  # deploys the unit file.
+  - name: tmux-shutdown-save.service
+    description: Save tmux sessions when a shutdown or reboot is announced
+    display_stack: wayland
+    scope: user
+    needs_root: false
+    enabled: true
+    active: true
+
   # systemd ships this user timer disabled, so no user-tmpfiles.d rule is ever
   # cleaned until something enables it. `display_stack: wayland` matches the
   # directory deploying claude-sessions.conf, the one rule that needs it.

@@ -9,7 +9,6 @@ go_tools:
   - gum
   - lazydocker
   - jactionlint
-  - sesh
   - gowall
   - triangle
   - ascii-image-converter

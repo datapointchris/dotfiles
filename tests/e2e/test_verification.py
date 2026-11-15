@@ -5,7 +5,7 @@ Two properties are what make this readable, and both are easy to lose:
 **One node per tool.** A single check counting its own assertions returns one exit
 code, so a failure is `returncode == 0` and four thousand characters of transcript.
 A missing tool is a named red line here —
-`test_the_machine_carries_what_it_declares[wsl-…-go/sesh]` — and the tools that
+`test_the_machine_carries_what_it_declares[wsl-…-go/gum]` — and the tools that
 *are* fine stay quiet.
 
 **The declaration decides what is checked.** A hand-written list at the bottom of

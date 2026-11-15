@@ -1850,12 +1850,6 @@ go_tools:
     checksum: unlisted
     description: Fast disk usage analyzer with interactive TUI
 
-  - name: sesh
-    package: github.com/joshmedeski/sesh/v2
-    github_repo: joshmedeski/sesh
-    binary_pattern: "sesh_{Os}_{Arch}.tar.gz"
-    description: Smart tmux session manager with zoxide integration
-
   # `supersedes` deletes the binary this was installed as under its former name.
   # One run of that binary after the data moves creates an empty database at the
   # old path, and this tool then stops until the file is gone.
