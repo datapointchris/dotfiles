@@ -8,7 +8,6 @@ and left alone.
 
 from __future__ import annotations
 
-import os
 import shlex
 from collections.abc import Callable
 from pathlib import Path
@@ -106,7 +105,7 @@ def remove(removal: Removal, privilege: Escalates) -> Result:
     """
     syspkg.stop_service(removal.mechanism, removal.package, unit='')
     removed = uninstall(removal, privilege)
-    if removed.ok and os.path.lexists(removal.path):
+    if removed.ok and Path(removal.path).exists(follow_symlinks=False):
         return Result(False, f'{command_line(removal)} exited 0 and left {removal.path} in place', kind=Kind.COMMAND_FAILED)
     return removed
 

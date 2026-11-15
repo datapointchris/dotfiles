@@ -560,7 +560,7 @@ def clone_hooks_holding(contents: set[bytes], root: Path) -> tuple[list[Path], i
     pays it. A worktree's `.git` is a file, and its hooks are its primary's.
     """
     sizes = {len(content) for content in contents}
-    skipped = {os.path.join(root, name) for name in SWEEP_SKIPS}
+    skipped = {str(root / name) for name in SWEEP_SKIPS}
     found: list[Path] = []
     unreadable = 0
     pending = [str(root)]

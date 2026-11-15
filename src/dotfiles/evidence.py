@@ -237,7 +237,7 @@ def executables_on_path(checkout: Path, search: str | None = None, wanted: froze
                     continue
             except OSError:
                 continue
-            real = os.path.realpath(entry.path)
+            real = str(Path(entry.path).resolve())
             if real in seen.setdefault(entry.name, set()):
                 continue
             seen[entry.name].add(real)

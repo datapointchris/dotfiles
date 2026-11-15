@@ -25,9 +25,9 @@ row, with the other pieces that have no shared mechanism behind them.
 from __future__ import annotations
 
 import dataclasses as dc
-import os
 import plistlib
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
 from dotfiles import catalog
@@ -117,7 +117,7 @@ def written_value(entry: catalog.MacosDefault) -> str:
     form and the expansion happens on both sides here, so writing and comparing
     cannot disagree about it.
     """
-    return os.path.expanduser(entry.value) if entry.value.startswith('~/') else entry.value
+    return str(Path(entry.value).expanduser()) if entry.value.startswith('~/') else entry.value
 
 
 def spelled(value: object) -> str:

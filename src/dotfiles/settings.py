@@ -121,7 +121,7 @@ class Resolution:
     @property
     def expanded(self) -> str:
         """The path a consumer can open, for a filesystem call or for a screen."""
-        return os.path.expanduser(self.value)
+        return str(Path(self.value).expanduser())
 
     @property
     def exported(self) -> str:
@@ -217,11 +217,11 @@ class Resolved:
         def substitute(match: re.Match[str]) -> str:
             name = match.group(1) or match.group(2)
             if name == 'HOME':
-                return os.path.expanduser('~')
+                return str(Path.home())
             found = self.of(name)
             return found.value if found else match.group(0)
 
-        return os.path.expanduser(VARIABLE.sub(substitute, text))
+        return str(Path(VARIABLE.sub(substitute, text)).expanduser())
 
     def unresolved(self, text: str) -> tuple[str, ...]:
         """The variables in a declaration that no rung answered."""
