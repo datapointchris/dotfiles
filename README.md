@@ -53,7 +53,7 @@ The core rule: a deployed path lives in exactly one directory. `declared()` in `
 
 This setup follows some opinionated principles that make maintenance easier:
 
-**Nothing Is Detected**: a manifest declares where a machine sits on each of the six axes in `src/dotfiles/coordinates.py`, and `dotfiles env apply` writes them into `~/.env` for every shell and layer to read. OS detection was the earlier design and it could not answer the questions that actually decide a config — whether a box is on a trusted network, or whether it is meant to be a workstation or a server.
+**Nothing Is Detected**: a manifest declares where a machine sits on each of the six axes in `src/dotfiles/coordinates.py`, and `dotfiles symlinks apply` deploys only the directories those coordinates select. A shell reads the answer from what is deployed, so no coordinate is written to `~/.env`. OS detection was the earlier design and it could not answer the questions that actually decide a config — whether a box is on a trusted network, or whether it is meant to be a workstation or a server.
 
 **Fail Fast in the Provider, Keep Going in the Engine**: a provider returns a result rather than raising, so one blocked download costs that row and nothing else. `src/dotfiles/engine.py` turns a provider that does raise into a refusal and finishes the plan. You get the full error context for what broke AND a working system with just a few missing pieces.
 
