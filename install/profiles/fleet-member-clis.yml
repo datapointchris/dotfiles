@@ -9,3 +9,4 @@ go_tools:
 git_uv_tools:
   - homelab
   - claude-code-metrics  # `ccm`
+  - claude-profile
