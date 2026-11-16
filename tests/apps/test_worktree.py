@@ -3,9 +3,9 @@
 The tool exists because a working tree is shared state: two sessions in one
 checkout share the index, the untracked files, and the tree pre-commit assembles
 to run hooks against. So the invariants worth asserting are the ones about
-*isolation* and about *not destroying work* — that a landed worktree leaves main
-linear, that a stale one rebases itself rather than failing, and that no refusal
-path ever discards commits the session has not landed anywhere else.
+*isolation* and about *not destroying work* — that no refusal path ever discards
+commits the session has not landed anywhere else. How `land` puts them on main,
+scenario by scenario, is `test_worktree_land.py`.
 
 The git history is asserted directly rather than through the tool's own output,
 because a tool reporting that it landed something is not evidence that origin
@@ -608,36 +608,6 @@ class TestIsolation:
 
 
 class TestLanding:
-    def test_landing_leaves_main_linear(self, fleet, run):
-        run(fleet['primary'], 'new', 'alpha')
-        alpha = fleet['roots'] / 'primary' / 'alpha'
-        commit_in(alpha, 'x')
-
-        result = run(alpha, 'land')
-
-        assert result.returncode == 0, result.stderr
-        assert git(fleet['primary'], 'log', '--merges', '--oneline', 'origin/main') == '', (
-            'a single commit must stay a single commit — the merge commit is what a PR would have cost'
-        )
-        assert 'feat: x' in git(fleet['primary'], 'log', '--oneline', 'origin/main')
-
-    def test_a_stale_worktree_rebases_itself_and_still_lands(self, fleet, run):
-        """Two sessions landing in sequence is the normal case, not the edge one."""
-        run(fleet['primary'], 'new', 'alpha')
-        run(fleet['primary'], 'new', 'beta')
-        alpha = fleet['roots'] / 'primary' / 'alpha'
-        beta = fleet['roots'] / 'primary' / 'beta'
-        commit_in(alpha, 'x')
-        commit_in(beta, 'y')
-
-        run(alpha, 'land')
-        result = run(beta, 'land')
-
-        assert result.returncode == 0, result.stderr
-        landed = git(fleet['primary'], 'log', '--oneline', 'origin/main')
-        assert 'feat: x' in landed and 'feat: y' in landed
-        assert git(fleet['primary'], 'log', '--merges', '--oneline', 'origin/main') == ''
-
     def test_landing_from_a_subdirectory_lands(self, fleet, run):
         """A session in a repo's nested module runs `land` from there."""
         run(fleet['primary'], 'new', 'alpha')
@@ -649,16 +619,6 @@ class TestLanding:
 
         assert result.returncode == 0, result.stderr
         assert 'feat: sub/x' in git(fleet['primary'], 'log', '--oneline', 'origin/main')
-
-    def test_landing_cleans_up_after_itself(self, fleet, run):
-        run(fleet['primary'], 'new', 'alpha')
-        alpha = fleet['roots'] / 'primary' / 'alpha'
-        commit_in(alpha, 'x')
-
-        run(alpha, 'land')
-
-        assert not alpha.exists()
-        assert 'alpha' not in git(fleet['primary'], 'branch', '--list')
 
     def test_the_last_worktree_leaving_takes_the_repo_directory_with_it(self, fleet, run):
         """`git worktree remove` takes the leaf only, so the root would otherwise
@@ -682,38 +642,8 @@ class TestLanding:
 
         assert (fleet['roots'] / 'primary' / 'beta').is_dir()
 
-    def test_the_primary_checkout_catches_up(self, fleet, run):
-        """In dotfiles the checkout is deployed machine state, so a stale primary
-        is not cosmetic."""
-        run(fleet['primary'], 'new', 'alpha')
-        alpha = fleet['roots'] / 'primary' / 'alpha'
-        commit_in(alpha, 'x')
-
-        run(alpha, 'land')
-
-        assert (fleet['primary'] / 'x').exists()
-
 
 class TestNothingIsDestroyed:
-    def test_a_conflicted_rebase_keeps_the_work_and_stops(self, fleet, run):
-        """A conflict is resolved inside the commit that caused it, so the tool
-        must never abort a rebase on its own initiative."""
-        run(fleet['primary'], 'new', 'alpha')
-        run(fleet['primary'], 'new', 'beta')
-        alpha = fleet['roots'] / 'primary' / 'alpha'
-        beta = fleet['roots'] / 'primary' / 'beta'
-        (alpha / 'f.txt').write_text('alpha wins\n')
-        git(alpha, 'commit', '-qam', 'feat: alpha edits f')
-        (beta / 'f.txt').write_text('beta wins\n')
-        git(beta, 'commit', '-qam', 'feat: beta edits f')
-
-        run(alpha, 'land')
-        result = run(beta, 'land')
-
-        assert result.returncode != 0
-        assert (beta / 'f.txt').exists(), 'the conflicted tree is the only copy of the resolution in progress'
-        assert git(beta, 'rev-list', '--count', 'beta') != '0'
-
     def test_a_dirty_worktree_is_refused(self, fleet, run):
         run(fleet['primary'], 'new', 'alpha')
         alpha = fleet['roots'] / 'primary' / 'alpha'
@@ -784,22 +714,6 @@ class TestNothingIsDestroyed:
         assert 'worktree sweep <repo>' in result.stderr
         assert alpha.exists()
 
-    def test_landing_work_that_is_already_on_the_base_branch_is_refused(self, fleet, run):
-        """The rebase would replay patches whose content main already carries, and the
-        push would put a second copy of merged work on it.
-
-        Asserted against origin rather than the exit code alone: a refusal that still
-        moved the base branch is the failure this is about.
-        """
-        alpha = rewritten_worktree(fleet['primary'], fleet['roots'], run, 'alpha')
-        before = git(fleet['primary'], 'rev-parse', 'origin/main')
-
-        result = run(alpha, 'land')
-
-        assert result.returncode != 0
-        assert 'already on origin/main' in plain(result.stderr)
-        assert git(fleet['primary'], 'rev-parse', 'origin/main') == before
-
     def test_a_removal_that_failed_is_said_rather_than_announced_as_cleaned_up(self, fleet, run):
         """A removal git refuses leaves the worktree standing after the landing has
         already announced success, and $WORKTREE_ROOT then holds a tree whose work is
@@ -836,18 +750,6 @@ class TestNothingIsDestroyed:
         assert outcome is worktree_app.Disposal.BRANCH_KEPT
         assert not alpha.exists(), 'the removal half succeeded, so the path is gone'
         assert detail
-
-    def test_a_busy_primary_checkout_is_left_alone(self, fleet, run):
-        """Another session may be working there, and its tree is not ours to move."""
-        run(fleet['primary'], 'new', 'alpha')
-        alpha = fleet['roots'] / 'primary' / 'alpha'
-        commit_in(alpha, 'x')
-        (fleet['primary'] / 'f.txt').write_text('someone is editing this\n')
-
-        result = run(alpha, 'land')
-
-        assert result.returncode == 0, 'the landing still happens; only the catch-up is skipped'
-        assert (fleet['primary'] / 'f.txt').read_text() == 'someone is editing this\n'
 
 
 class TestLanded:
@@ -1530,7 +1432,7 @@ esac""",
 class TestEcho:
     """Every subprocess a write runs is announced before it runs.
 
-    `land` fetches, rebases and pushes onto the default branch, and the branch it
+    `land` fetches, merges and pushes onto the default branch, and the branch it
     moved is not recoverable from the one line it prints afterwards. The echo is
     asserted as text a shell would take, not as a message: what makes it worth
     having is that a stopped run is replayed by pasting a line back.
@@ -1546,7 +1448,7 @@ class TestEcho:
 
         result = run(alpha, 'land')
 
-        assert f'git -C {alpha} rebase --quiet origin/main' in self.commands(result)
+        assert f'git -C {alpha} fetch --quiet origin' in self.commands(result)
         assert f'git -C {alpha} push --quiet origin HEAD:main' in self.commands(result)
 
     def test_an_echoed_line_runs_as_it_stands(self, fleet, run):

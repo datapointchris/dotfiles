@@ -18,8 +18,6 @@ tool that deploys it, and nothing announces it.
   venv, which has the dependency, and the update rebuilds the tool with the lock's pins.
 - **`EnterWorktree(path=…)` refuses when the session's directory is outside this repo.** From `~/dev`,
   drive the worktree by absolute path instead.
-- **One worktree per stack, at its top.** `rebase.updateRefs` silently skips a stacked branch checked
-  out in a second worktree, leaving that ref on pre-rebase commits.
 - **Run `dotfiles` from `~/dotfiles`, never from inside a worktree** — `cd ~/dotfiles &&` is the
   prefix. A shell without the exported `DOTFILES_DIR` resolves the repo root by walking up from the
   CWD and deploys the worktree's config over the machine's.
