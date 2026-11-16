@@ -385,21 +385,31 @@ def sections_named(args: argparse.Namespace) -> list[str]:
     return named
 
 
-def listing(named: list[str]) -> str:
-    """The command that lists what this invocation was narrowed to, as typed.
+LIST_EVERY_PACKAGE = 'dotfiles packages list'
+"""The command that lists the whole declaration, as the front door accepts it."""
 
-    `--section` is this bridge's own flag and the front door spells it `--source`,
-    so advice built from the internal name named a command the CLI rejects with
-    exit 2. Help audited from outside the source catches that as the Paste fault,
-    an example that does not run as written.
 
-    One section or none, because `--source` takes a value rather than a list and a
-    repeated flag would keep only the last. Where a noun owns several the narrowing
-    is dropped rather than half-applied: the refusal above already names the scope
-    in prose, and a command that runs and lists too much beats one that does not
-    run.
+def scope_of(named: list[str]) -> str:
+    """The ` in <sections>` a refusal adds where the lookup was narrowed."""
+    return f' in {", ".join(named)}' if named else ''
+
+
+def show_advice(name_lower: str, named: list[str], within: list[dict[str, Any]]) -> str:
+    """What a `show` that found nothing tells the reader to try instead.
+
+    Names containing the one typed come first. Failing that, a narrowed lookup
+    prints the names it looked through, because a noun's sections hold few and
+    the reader came through that noun, so a command outside it is a detour.
+    Unnarrowed, the whole declaration is too long to print, so the advice is the
+    command that lists it.
     """
-    return f'dotfiles packages list --source {named[0]}' if len(named) == 1 else 'dotfiles packages list'
+    near = [pkg['name'] for pkg in within if name_lower in pkg.get('name', '').lower()]
+    if near:
+        return f'did you mean: {", ".join(near[:5])}'
+    if named:
+        declared = ', '.join(sorted(pkg['name'] for pkg in within)) or 'none'
+        return f'declared{scope_of(named)}: {declared}'
+    return f'list them with: {LIST_EVERY_PACKAGE}'
 
 
 PLATFORM_FIELDS = ('apt', 'brew', 'pacman', 'aur')
@@ -514,14 +524,7 @@ def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
     matches = [p for p in within if p.get('name', '').lower() == name_lower]
 
     if not matches:
-        similar = [p for p in within if name_lower in p.get('name', '').lower()]
-        near = ', '.join(pkg['name'] for pkg in similar[:5])
-        scope = f' in {", ".join(named)}' if named else ''
-        raise Refusal(
-            f'no package named {args.name}{scope}',
-            code=ExitCode.USAGE,
-            advice=f'did you mean: {near}' if near else f'list them with: {listing(named)}',
-        )
+        raise Refusal(f'no package named {args.name}{scope_of(named)}', code=ExitCode.USAGE, advice=show_advice(name_lower, named, within))
 
     # Sort with available-on-this-platform first
     matches.sort(key=lambda p: 0 if is_available_on_platform(p) else 1)

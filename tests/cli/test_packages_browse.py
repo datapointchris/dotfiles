@@ -574,31 +574,18 @@ def test_a_name_declared_twice_is_shown_with_this_platforms_section_first(
     assert shown == expected
 
 
-LISTING_ADVICE = (
-    (('show', 'nothing-declares-this'), 'dotfiles packages list'),
-    (('show', 'lazygit', '--section', 'tmux_plugins'), 'dotfiles packages list --source tmux_plugins'),
-    (('show', 'lazygit', '--section', 'tmux_plugins', '--section', 'macos_casks'), 'dotfiles packages list'),
-)
-"""No narrowing, one, and two — the three cases `listing` distinguishes."""
-
-
-@pytest.mark.parametrize(('argv', 'command'), LISTING_ADVICE, ids=[' '.join(argv) for argv, _ in LISTING_ADVICE])
-def test_the_command_a_refusal_advises_is_one_the_front_door_actually_accepts(declared: Path, argv: tuple[str, ...], command: str) -> None:
-    """`--section` is this module's own flag and the CLI spells it `--source`, so
-    advice built from the internal name named a command that exits 2 — the Paste
-    fault. Running the advised command is the only assertion that catches it;
+def test_the_command_a_refusal_advises_is_one_the_front_door_actually_accepts(declared: Path) -> None:
+    """The advice is a command typed into the CLI, not into this module, so
+    running it is the only assertion that catches one the front door rejects;
     comparing the string to itself does not.
-
-    Two sections drop the narrowing rather than half-applying it, because
-    `--source` takes one value and a repeated flag would keep only the last.
     """
     with pytest.raises(Refusal) as refused:
-        declaration.main(list(argv))
+        declaration.main(['show', 'nothing-declares-this'])
 
     assert refused.value.code is ExitCode.USAGE
-    assert refused.value.advice == f'list them with: {command}'
+    assert refused.value.advice == f'list them with: {declaration.LIST_EVERY_PACKAGE}'
 
-    ran = CliRunner().invoke(app, command.split()[1:], catch_exceptions=False)
+    ran = CliRunner().invoke(app, declaration.LIST_EVERY_PACKAGE.split()[1:], catch_exceptions=False)
     assert ran.exit_code == ExitCode.CONVERGED, ran.stderr
 
 
