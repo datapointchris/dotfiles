@@ -811,7 +811,27 @@ cc() {
     name=(--name "$1")
     shift
   fi
-  claude --permission-mode bypassPermissions "${name[@]}" "$@"
+  claude_with_profile_stamp --permission-mode bypassPermissions "${name[@]}" "$@"
+}
+
+# Every launcher stamps its session with the profile applied to its config dir,
+# appended to the inherited OTEL_RESOURCE_ATTRIBUTES after dropping any pair with
+# the same key. A config dir no apply has reached holds no record and gets no stamp.
+claude_with_profile_stamp() {
+  local applied="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claude-profile.applied.json" attributes=''
+  if [[ -f $applied ]]; then
+    attributes=$(jq -r --arg inherited "${OTEL_RESOURCE_ATTRIBUTES-}" '
+      select((.label | type) == "string" and .label != "" and (.digest | type) == "string" and .digest != "")
+      | {"fleet.session.profile": .label, "fleet.session.profile.digest": .digest} as $ours
+      | [($inherited | split(",")[] | select(. != "" and (split("=")[0] as $key | $ours | has($key) | not))),
+         ($ours | to_entries[] | "\(.key)=\(.value)")]
+      | join(",")' "$applied" 2>/dev/null)
+  fi
+  if [[ -n $attributes ]]; then
+    OTEL_RESOURCE_ATTRIBUTES=$attributes claude "$@"
+  else
+    claude "$@"
+  fi
 }
 
 # Resume derives a fresh address rather than restoring the old one, so a session
@@ -826,7 +846,25 @@ ccr() {
     name=(--name "$1")
     shift
   fi
-  claude --permission-mode bypassPermissions --resume "${name[@]}" "$@"
+  claude_with_profile_stamp --permission-mode bypassPermissions --resume "${name[@]}" "$@"
+}
+
+# The second argument takes cc's name rule. claude-profile launch does the rest:
+# it applies the artifact to the label's target, logs in with the desk's access
+# token, passes bypass and stamps the session, and prints why when it refuses.
+#@ccp
+#--> ccp <label> [name] — start claude under a profile's applied artifact; `ccp <label> --resume` resumes under it
+ccp() {
+  local -a label=() name=()
+  if (($#)); then
+    label=("$1")
+    shift
+  fi
+  if [[ -n ${1-} && $1 != -* ]]; then
+    name=(--name "$1")
+    shift
+  fi
+  claude-profile launch "${label[@]}" -- "${name[@]}" "$@"
 }
 
 #@find-commit
