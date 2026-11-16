@@ -2,9 +2,10 @@
 
 `land` needs `git merge-tree --write-tree`, which arrived in git 2.38, and every
 other command it runs has to mean the same on the oldest git a machine carries.
-Debian 12's 2.39 is that floor, and Arch tracks the newest release. So each of
-those two containers runs `tests/apps/test_worktree_land.py` from its copy of the
-repo, on the git its image installed.
+Debian 12's 2.39 is that floor, Arch tracks the newest release, and the WSL image
+carries Ubuntu's own apt git. So each of those three containers runs
+`tests/apps/test_worktree_land.py` from its copy of the repo, on the git its image
+installed.
 
 The images carry git and no uv, and `worktree` starts under `uv run --script`. The
 host's uv binary is copied in rather than added to the images, because the images
@@ -12,10 +13,11 @@ model a machine before anything installs. Everything the run downloads lands in 
 directory of the container's home, removed afterwards, so the session's other tests
 find the container as they would have.
 
-`wsl` runs nothing here, because CI on ubuntu-26.04 already runs the suite on that
-apt git, and `offline` and `restricted` share its image.
+CI's ubuntu runner is no stand-in for the WSL image, because the runner installs
+git from its own package source rather than from Ubuntu's archive. `offline` and
+`restricted` run nothing here, because they carry the same Ubuntu 26.04 apt git.
 
-    uv run pytest tests/e2e/test_worktree_land_on_each_git.py --docker --level empty-container --environment archlinux,server
+    uv run pytest tests/e2e/test_worktree_land_on_each_git.py --docker --level empty-container --environment archlinux,wsl,server
 """
 
 from __future__ import annotations
@@ -27,12 +29,13 @@ import pytest
 from harness import ARCHLINUX
 from harness import SERVER
 from harness import UNDER_TEST
+from harness import WSL
 from harness import Machine
 from harness import docker
 
 pytestmark = pytest.mark.docker
 
-ON_THEIR_OWN_GIT = (ARCHLINUX.name, SERVER.name)
+ON_THEIR_OWN_GIT = (ARCHLINUX.name, WSL.name, SERVER.name)
 SUITE = 'tests/apps/test_worktree_land.py'
 SCRATCH = 'worktree-land-run'
 
@@ -46,7 +49,7 @@ def locked_pytest() -> str:
 
 def test_the_landing_suite_passes_on_the_containers_own_git(container: Machine) -> None:
     if container.environment.name not in ON_THEIR_OWN_GIT:
-        pytest.skip(f'{container.environment.name} shares the git CI already runs the suite on')
+        pytest.skip(f'{container.environment.name} carries the same apt git as wsl')
     uv = shutil.which('uv')
     assert uv, 'the host has no uv to copy in'
 
