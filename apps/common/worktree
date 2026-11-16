@@ -7,7 +7,7 @@
 
     worktree new <slug>    isolate before touching a repo another session is in
     worktree spawn [slug]  start a Claude session in a pane; a slug gives it a worktree
-    worktree land          rebase, push onto the default branch, then clean up
+    worktree land          fast-forward or merge onto the default branch, then clean up
     worktree sweep         dispose of every worktree whose work already merged
     worktree list          every worktree on this machine, or one repo's
     worktree show          what one worktree carries, and who is in it
@@ -19,9 +19,11 @@ a second session commits the first one's staged work, and whole-repo hooks lint 
 tree that neither session ever had. A worktree of its own is what isolates a
 concurrent session from all three.
 
-The branch `new` creates is not a proposal. `land` pushes it straight onto main
-as a fast-forward, so a single commit stays a single commit and the resulting
-history is identical to having committed on main directly. A PR is still there
+The branch `new` creates is not a proposal. `land` pushes it straight onto main:
+as a fast-forward where main has not moved since the branch left it, and as a
+merge commit with main as its first parent where it has. Either way every commit
+reaches main under the sha it was made with, which is the sha its hooks recorded,
+and `git log --first-parent main` reads one entry per landing. A PR is still there
 for work that grew into a large feature — push the branch and open one — which is
 why the landing decision is made at the end rather than guessed at the start.
 
@@ -68,7 +70,7 @@ written for a human to read goes to stderr, so `cd "$(worktree choose)"` cannot
 pick up a warning instead of a path.
 
 Every subprocess a write runs is echoed to stderr before it runs, indented and
-green, exactly as it could be re-typed. A fetch, a rebase and a push onto the
+green, exactly as it could be re-typed. A fetch, a merge and a push onto the
 default branch are what `land` is, and a tool that moves branches on your behalf
 should say which ones it moved. `-q` hides them; the verdict keeps its channel.
 `list`, `show` and `choose` move nothing, so they echo nothing: a listing's dozens
@@ -88,6 +90,7 @@ import datetime as dt
 import difflib
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -138,6 +141,26 @@ whole reason a caller runs this rather than opening a pane itself.
 
 POLL_SECONDS = 1.0
 
+GIT_FLOOR = (2, 38)
+"""The oldest git `land` runs on, because `git merge-tree --write-tree` arrived there."""
+
+PUSH_TRIES = 2
+"""The first push and one more after losing a race to another landing.
+
+A push with no force is the lock: it lands only where the new commit descends from
+what origin holds. A landing that loses fetches, makes its merge again on the new
+main and pushes again. Losing every try means main is busy enough that a person
+should look, rather than a loop."""
+
+LANDING_RECORD = 'worktree-landing'
+"""The file in a worktree's own git directory that says a landing is under way.
+
+`land` makes its merge on a detached HEAD, so a run stopped by a conflict or killed
+mid-way leaves HEAD naming no branch. The record names the branch, which kind of
+merge HEAD holds and the main it was made on, the way a rebase's `head-name` and
+`onto` do. `git worktree remove` deletes the directory it sits in, so a landing that
+finished leaves nothing behind."""
+
 MUXCTL = 'muxctl'
 """The multiplexer, reached by the one name that is not a multiplexer's.
 
@@ -182,11 +205,12 @@ class Kept(StrEnum):
     DIRTY = 'uncommitted changes'
     SESSION = 'a session is standing in it'
     SESSIONS_UNREADABLE = 'claude-sessions could not say whether anyone is in it'
+    LANDING_STOPPED = "a landing stopped here, and 'worktree land' finishes it"
     DETACHED = 'a detached HEAD, so it has no branch to have merged'
     UNFETCHED_REMOTE = 'its origin could not be reached, so nothing about the remote is known'
     UNFETCHED_BASE = 'its base branch has never been fetched, so nothing can be counted'
     UNREADABLE_LANDING = 'git could not say whether its changes are on the base branch'
-    UNLANDED = 'the base branch does not match it at the paths it touched'
+    UNLANDED = 'merging it would still change the base branch'
     UNPUBLISHED = 'never pushed under its own name'
     REMOTE_LIVE = 'its remote branch still exists'
     REMOTE_UNREADABLE = "git could not list origin's branches"
@@ -301,6 +325,8 @@ class Worktree:
     sessions: tuple[Session, ...] | None
     # A detached HEAD has no branch, so nothing can be asked about where its commits are.
     detached: bool = False
+    # HEAD is detached by a landing that stopped, and `branch` is the one its record names.
+    landing: bool = False
     # What a peer about to edit the same files collides with. None where origin/<base> is
     # unreadable, the same split `ahead` makes.
     changed_paths: tuple[str, ...] | None = None
@@ -319,6 +345,7 @@ class Worktree:
             'behind': self.behind,
             'state': str(self.state),
             'detached': self.detached,
+            'landing': self.landing,
             'changed_paths': None if self.changed_paths is None else list(self.changed_paths),
             'agent_session': self.agent_session,
             'sessions': None
@@ -719,7 +746,7 @@ def say_miss(miss: Sequence[str]) -> None:
 def describe(repo: str, path: Path, checkout: bool, sessions: Sequence[Session] | None) -> Worktree:
     base = default_branch(path)
     behind, ahead = divergence(path, base)
-    branch = git(path, 'rev-parse', '--abbrev-ref', 'HEAD')
+    branch, landing = held_branch(path)
     return Worktree(
         repo=repo,
         path=path,
@@ -730,9 +757,10 @@ def describe(repo: str, path: Path, checkout: bool, sessions: Sequence[Session] 
         behind=behind,
         state=State.DIRTY if git(path, 'status', '--porcelain') else State.CLEAN,
         sessions=sessions_at(sessions, path),
-        # What --abbrev-ref answers for a HEAD pointing at a commit rather than a ref. There is no
-        # branch behind it, so `published` and the ahead count are answers about nothing.
+        # A HEAD pointing at a commit that no landing record names. There is no branch
+        # behind it, so `published` and the ahead count are answers about nothing.
         detached=branch == 'HEAD',
+        landing=landing is not None,
         changed_paths=changed_paths(path, base),
         agent_session=commit_session(path, ahead),
     )
@@ -746,6 +774,8 @@ def describe_all(rows: Sequence[tuple[str, bool, Path]], sessions: Sequence[Sess
             found.append(describe(repo, path, checkout, sessions))
         except subprocess.CalledProcessError as error:
             say_warning(f'skipping {display_path(path)}: git refused ({error.stderr.strip() or error})')
+        except Refused as refusal:
+            say_warning(f'skipping {display_path(path)}: {refusal.reason}')
     return found
 
 
@@ -804,8 +834,11 @@ def published(path: Path, branch: str) -> bool:
     return merge == f'refs/heads/{branch}'
 
 
-def landed(path: Path, base: str) -> bool | None:
-    """Whether this branch's work is already on origin/<base>, by ancestry or by content.
+def landed(path: Path, base: str, tip: str = 'HEAD') -> bool | None:
+    """Whether tip's work is already on origin/<base>, by ancestry or by content.
+
+    `land`, `drop` and `sweep` all ask this, so the one that refuses as nothing to land
+    and the one that refuses to delete unlanded work never disagree about a branch.
 
     Ancestry is asked first and is the whole answer whenever it holds: a tip reachable
     from origin/<base> is the same history, so nothing here is anywhere else. That is
@@ -819,61 +852,38 @@ def landed(path: Path, base: str) -> bool | None:
     branch exists, so work merged months ago cannot be told apart from work that never
     left the machine.
 
-    Content is what tells them apart. The paths come from the merge base, so work the
-    base branch gained elsewhere is not counted against this branch, and the comparison
-    is against origin/<base> as it stands, so a path the base has since moved on from
-    reads as unlanded. Both of those err toward keeping the worktree, which is the
-    direction a deletion has to err in.
-
-    `--no-renames` for the same reason. A detected rename is reported as the new path
-    alone, and the old one then never enters the comparison — so a base branch that
-    took the addition without the deletion reads as having the whole change. Turning
-    detection off lists both halves and asks about both.
-
-    The listing is read `-z` and split on NUL, because git's default output is not the
-    names. It C-quotes any path holding a non-ASCII byte, a quote, a backslash or a
-    control character, so a name carrying an accent comes back wrapped in quotes with
-    that character spelled as two backslash escapes. A leading or trailing space is lost
-    separately, to the strip that reads a normal git answer. A name that no longer
-    selects its own file selects nothing, the comparison finds no difference, and the
-    worktree is deleted holding the only copy of the work.
-
-    `:(top)` on each path because the listing names paths from the top of the
-    repository and git reads a pathspec from the directory it runs in. `land` runs
-    from wherever the session stands, so from a nested module every name would select
-    a path under that module, match nothing, and read as landed.
-
-    `:(literal)` on each path so a name is never read as a pattern. Nothing measured
-    turns on it: a `*` or a `[` in a filename widens the pathspec rather than missing
-    the file, and widening errs toward keeping. It is here because the pathspec is data
-    and the default is to interpret it, not because a case was found.
+    Content is what tells them apart, asked as the merge itself. `merge-tree
+    --write-tree` merges tip into origin/<base> without moving a ref, an index or a
+    file, and a merge whose tree is origin/<base>'s own adds nothing to it. That holds
+    however the work arrived: squashed, replayed, cherry-picked, or alongside later edits
+    to the same file. A deletion, a rename's missing half and a mode change each leave
+    the tree different, and a conflict is work the base does not hold, so each reads as
+    unlanded. No path list is read, so no name git quotes and no directory the caller
+    stands in can change the answer.
 
     A branch whose commits net out to no change has nothing to lose, so it has landed.
     The commits go with the directory and what they carried is nothing. None wherever
     git could not be asked, which is a third answer rather than a false one: both
-    `--is-ancestor` and `--quiet` exit 1 for *no* and above that for a failure, and
-    reading a failure as a *no* would keep a worktree on a question nobody answered —
-    while reading it as a *yes* would delete one on the same.
+    `--is-ancestor` and `merge-tree` exit 1 for *no* and above that for a failure, a
+    git older than `GIT_FLOOR` among them. Reading a failure as a *no* would keep a
+    worktree on a question nobody answered, while reading it as a *yes* would delete
+    one on the same.
     """
-    ancestry = git_effect(path, 'merge-base', '--is-ancestor', 'HEAD', f'origin/{base}')
+    ancestry = git_effect(path, 'merge-base', '--is-ancestor', tip, f'origin/{base}')
     if ancestry.returncode == 0:
         return True
     if ancestry.returncode > 1:
         return None
 
-    fork = git_optional(path, 'merge-base', f'origin/{base}', 'HEAD')
-    if fork is None:
+    merged = git_effect(path, 'merge-tree', '--write-tree', f'origin/{base}', tip)
+    if merged.returncode == 1:
+        return False
+    if merged.returncode != 0:
         return None
-    listing = git_effect(path, 'diff', '-z', '--no-renames', '--name-only', fork, 'HEAD')
-    if listing.returncode != 0:
+    unchanged = git_optional(path, 'rev-parse', f'origin/{base}^{{tree}}')
+    if unchanged is None:
         return None
-    paths = [name for name in listing.stdout.split('\0') if name]
-    if not paths:
-        return True
-    comparison = git_effect(path, 'diff', '--quiet', f'origin/{base}', 'HEAD', '--', *(f':(top,literal){name}' for name in paths))
-    if comparison.returncode > 1:
-        return None
-    return comparison.returncode == 0
+    return merged.stdout.split('\n', 1)[0].strip() == unchanged
 
 
 @dataclass(frozen=True)
@@ -914,6 +924,8 @@ def held_by(worktree: Worktree, evidence: Evidence) -> Kept | None:
         return Kept.SESSIONS_UNREADABLE
     if worktree.sessions:
         return Kept.SESSION
+    if worktree.landing:
+        return Kept.LANDING_STOPPED
     if worktree.detached:
         return Kept.DETACHED
     if not evidence.fetched:
@@ -1359,7 +1371,7 @@ def resolve_destination(cwd: Path, checkout: Path, slug: str | None) -> Destinat
             f'{display_path(path)} exists but is not a worktree', 'Remove it, or spawn under a different slug', fault=Fault.NOT_A_WORKTREE
         )
     require_unoccupied(path)
-    return Destination(path, git(path, 'rev-parse', '--abbrev-ref', 'HEAD'), worktree=True)
+    return Destination(path, held_branch(path)[0], worktree=True)
 
 
 def unwind(checkout: Path, where: Destination) -> None:
@@ -1681,39 +1693,16 @@ def cmd_land() -> int:
             "Not in a worktree — 'land' is what hands one back to the primary checkout",
             "Run 'worktree new <slug>' first, or commit directly if no other session is here",
         )
-    require_clean(cwd)
+    require_git_floor(cwd)
 
     base = default_branch(cwd)
-    branch = git(cwd, 'rev-parse', '--abbrev-ref', 'HEAD')
     path = Path(git(cwd, 'rev-parse', '--show-toplevel'))
+    branch = resume_landing(cwd, base)
+    require_clean(cwd)
 
-    git_effect(cwd, 'fetch', '--quiet', 'origin')
-    ahead = int(git(cwd, 'rev-list', '--count', f'origin/{base}..HEAD'))
-    # Not `ahead == 0`, which a branch rewritten on its way onto the base branch never
-    # reaches. The rebase below would replay patches whose content is already there,
-    # and the push would put a second copy of merged work on the base branch.
-    #
-    # True refuses and both False and None proceed, which is the opposite of what the
-    # other two callers do with None. They decide a deletion off the measurement; this
-    # one does not. `dispose` runs after a push that returned zero, so what proves the
-    # commits are elsewhere is the push rather than anything measured here. A landing
-    # git could not read costs a rebase that finds nothing to replay.
-    if landed(cwd, base) is True:
-        raise Refused(f'Nothing to land: the work here is already on origin/{base}')
-
-    # Never abort on our own initiative: a conflicted rebase holds the only copy of
-    # the resolution in progress, and the standard resolves a conflict inside the
-    # commit that caused it rather than by discarding and retrying.
-    if git_effect(cwd, 'rebase', '--quiet', f'origin/{base}').returncode != 0:
-        raise Refused(
-            "Rebase stopped on a conflict — resolve it here, then run 'worktree land' again",
-            'Repair everything the commit broke before `git rebase --continue`',
-        )
-
-    if git_effect(cwd, 'push', '--quiet', 'origin', f'HEAD:{base}').returncode != 0:
-        raise Refused(f"Push rejected — origin/{base} moved again; run 'worktree land' to retry")
-
-    say_ok(f'Landed {ahead} commit(s) on {base}')
+    landed = land_branch(cwd, branch, base)
+    how = f'merged as {landed.sha}' if landed.merge else f'at {landed.sha}'
+    say_ok(f'Landed {landed.commits} commit(s) on {base}, {how}')
     outcome, detail = dispose(checkout, path, branch, force=False)
     if outcome is Disposal.NOT_REMOVED:
         say_warning(f'{display_path(path)} is still here: {detail}')
@@ -1725,23 +1714,325 @@ def cmd_land() -> int:
     return 0
 
 
+class Merging(StrEnum):
+    """Which merge a landing's detached HEAD holds, and so whether it may be made again."""
+
+    CLEAN = 'clean'
+    """`land` made it with nothing to resolve. A clean merge fires no `post-commit`
+    hook, so nothing recorded its sha, and the next run drops it and merges again."""
+
+    CONFLICT = 'conflict'
+    """It stopped for the session to resolve. Committing the resolution fires
+    `post-commit`, which records its sha, so it is kept and never made again."""
+
+
+@dataclass(frozen=True)
+class Landing:
+    branch: str
+    merging: Merging
+    onto: str
+
+
+@dataclass(frozen=True)
+class Landed:
+    commits: int
+    sha: str
+    merge: bool
+
+
+def git_said(result: subprocess.CompletedProcess[str]) -> str:
+    """What git printed about a failure, which it writes to either stream."""
+    return result.stderr.strip() or result.stdout.strip()
+
+
+def require_git_floor(cwd: Path) -> None:
+    said = git(cwd, '--version')
+    found = re.search(r'(\d+)\.(\d+)', said)
+    if found and (int(found[1]), int(found[2])) >= GIT_FLOOR:
+        return
+    floor = '.'.join(map(str, GIT_FLOOR))
+    raise Refused(
+        f"{said} is older than {floor}, the first git with 'merge-tree --write-tree', which land needs",
+        f"Install git {floor} or newer, then run 'worktree land' again",
+    )
+
+
+def landing_record(cwd: Path) -> Path:
+    return Path(git(cwd, 'rev-parse', '--path-format=absolute', '--git-path', LANDING_RECORD))
+
+
+def record_landing(cwd: Path, landing: Landing) -> None:
+    """Written beside the record and renamed over it, so a run killed mid-write leaves the old one."""
+    record = landing_record(cwd)
+    staged = record.with_name(f'{record.name}.new')
+    staged.write_text(json.dumps({'branch': landing.branch, 'merging': landing.merging.value, 'onto': landing.onto}) + '\n')
+    staged.replace(record)
+
+
+def read_landing(cwd: Path) -> Landing | None:
+    record = landing_record(cwd)
+    if not record.exists():
+        return None
+    try:
+        fields = json.loads(record.read_text())
+        return Landing(branch=fields['branch'], merging=Merging(fields['merging']), onto=fields['onto'])
+    except (ValueError, KeyError, TypeError) as unreadable:
+        raise Refused(
+            f'{record} does not say which landing is under way ({unreadable})',
+            "Delete it, put HEAD back with 'git switch <branch>' if it is detached, then run 'worktree land' again",
+        ) from unreadable
+
+
+def held_branch(path: Path) -> tuple[str, Landing | None]:
+    """The branch this worktree holds, and the landing that detached HEAD from it, if one did.
+
+    HEAD names the branch, except while a stopped landing has it detached, when the
+    record does. `HEAD` where neither does: a worktree someone detached by hand.
+    """
+    on = git_optional(path, 'symbolic-ref', '--quiet', '--short', 'HEAD')
+    if on is not None:
+        return on, None
+    landing = read_landing(path)
+    return (landing.branch if landing else 'HEAD'), landing
+
+
+def is_ancestor(cwd: Path, older: str, newer: str) -> bool:
+    """`--is-ancestor` exits 1 for *no* and above that for a failure, which is no answer."""
+    asked = git_effect(cwd, 'merge-base', '--is-ancestor', older, newer)
+    if asked.returncode > 1:
+        raise Refused(f'git could not say whether {older} is part of {newer}\n{git_said(asked)}')
+    return asked.returncode == 0
+
+
+def merge_in_progress(cwd: Path) -> bool:
+    return git_optional(cwd, 'rev-parse', '--quiet', '--verify', 'MERGE_HEAD') is not None
+
+
+def unmerged_paths(cwd: Path) -> tuple[str, ...]:
+    """A listing git could not make refuses, because an empty one means nothing is left to resolve."""
+    listing = git_effect(cwd, 'diff', '--name-only', '-z', '--diff-filter=U')
+    if listing.returncode != 0:
+        raise Refused(f'git could not list the paths the merge left unresolved\n{git_said(listing)}')
+    return tuple(sorted({name for name in listing.stdout.split('\0') if name}))
+
+
+def conflict_refusal(branch: str, base: str, paths: Sequence[str]) -> Refused:
+    return Refused(
+        f'Merging {branch} into origin/{base} stopped on a conflict in {", ".join(paths)}',
+        "Resolve it here and stage it with 'git add'; 'worktree land' then commits the merge and lands it",
+        "'git merge --abort' gives the merge up, and 'worktree land' then starts again from the branch",
+    )
+
+
+def resume_landing(cwd: Path, base: str) -> str:
+    """The branch to land, once whatever an earlier `land` left on HEAD is settled.
+
+    A worktree on its branch is the ordinary case, and a record beside it is stale:
+    the session put HEAD back itself. A resolution it committed before switching is
+    taken onto the branch first, because its sha is already recorded. A detached HEAD
+    with no record is not a landing, so it is refused rather than guessed at.
+
+    A clean merge is dropped, because the branch ref is what every merge starts from.
+    A conflicted one is finished. The resolution is committed through the hooks unless
+    the session committed it already, and the branch fast-forwards onto it. A lost race
+    after that merges the new main onto the resolution rather than resolving it again.
+    """
+    branch, landing = held_branch(cwd)
+    if landing is None and branch != 'HEAD':
+        adopt_committed_resolution(cwd, branch)
+        landing_record(cwd).unlink(missing_ok=True)
+        return branch
+    if landing is None:
+        raise Refused(
+            'HEAD is detached here, and no landing is under way',
+            "Switch to the branch to land with 'git switch <branch>', then run 'worktree land' again",
+        )
+    if landing.merging is Merging.CONFLICT:
+        finish_resolved_merge(cwd, landing.branch, base)
+    elif merge_in_progress(cwd):
+        git_effect(cwd, 'merge', '--abort')
+    return_to_branch(cwd, landing.branch)
+    return landing.branch
+
+
+def finish_resolved_merge(cwd: Path, branch: str, base: str) -> None:
+    """Commit a staged resolution, then move the branch onto the merge that holds it.
+
+    A HEAD the branch is not part of is a merge the session gave up with `--abort`,
+    which leaves the branch where it was.
+    """
+    if merge_in_progress(cwd):
+        if paths := unmerged_paths(cwd):
+            raise conflict_refusal(branch, base, paths)
+        if git_effect(cwd, 'diff', '--quiet').returncode != 0:
+            raise Refused('The resolution is not all staged', "Stage it with 'git add', then run 'worktree land' again")
+        committed = git_effect(cwd, 'commit', '--quiet', '--no-edit')
+        if committed.returncode != 0:
+            raise Refused(
+                f'git commit refused the resolved merge\n{git_said(committed)}', "Fix what it says, then run 'worktree land' again"
+            )
+
+    tip = git(cwd, 'rev-parse', f'refs/heads/{branch}')
+    head = git(cwd, 'rev-parse', 'HEAD')
+    if head != tip and is_ancestor(cwd, tip, head):
+        git(cwd, 'update-ref', f'refs/heads/{branch}', head, tip)
+
+
+def adopt_committed_resolution(cwd: Path, branch: str) -> None:
+    """Fast-forward the branch onto a resolved merge the session committed, then switched away from.
+
+    The stopped landing's record names the main it merged onto, and HEAD's own reflog
+    still holds the commit: the newest one whose parents are that main and the branch
+    tip. A merge the session gave up left no such commit, so the branch stays put.
+    """
+    stopped = read_landing(cwd)
+    if stopped is None or stopped.merging is not Merging.CONFLICT or stopped.branch != branch:
+        return
+    tip = git(cwd, 'rev-parse', f'refs/heads/{branch}')
+    visited = git_effect(cwd, 'log', '--walk-reflogs', '--format=%H %P', 'HEAD')
+    for line in visited.stdout.splitlines():
+        resolved, *parents = line.split()
+        if parents == [stopped.onto, tip]:
+            moved = git_effect(cwd, 'merge', '--ff-only', '--quiet', resolved)
+            if moved.returncode != 0:
+                raise Refused(
+                    f'Could not move {branch} onto the merge resolved here, {resolved}\n{git_said(moved)}',
+                    f"Put HEAD on it with 'git switch --detach {resolved}', then run 'worktree land' again",
+                )
+            return
+
+
+def return_to_branch(cwd: Path, branch: str) -> None:
+    switched = git_effect(cwd, 'switch', '--quiet', branch)
+    if switched.returncode != 0:
+        raise Refused(f'Could not put this worktree back on {branch}\n{git_said(switched)}')
+    landing_record(cwd).unlink(missing_ok=True)
+
+
+def fetch_base(cwd: Path, base: str) -> str:
+    """origin/<base> as origin holds it now.
+
+    A fetch that fails refuses, because a merge made against a stale base is a
+    merge the next push throws away.
+    """
+    fetched = git_effect(cwd, 'fetch', '--quiet', 'origin')
+    if fetched.returncode != 0:
+        raise Refused(f'Could not fetch origin, so nothing was pushed\n{git_said(fetched)}')
+    return git(cwd, 'rev-parse', f'refs/remotes/origin/{base}')
+
+
+def leads_with(cwd: Path, main: str, tip: str) -> bool:
+    """Whether main sits on tip's first-parent line, so a fast-forward keeps main's own line first.
+
+    A branch that merged main in holds it as a second parent. A fast-forward onto that
+    puts the branch's commits on main's first-parent line and moves every landing since
+    the branch was cut off it, as a foxtrot merge does. The first-parent walk from tip
+    stops at what main already holds, so the oldest commit it reaches has main as its
+    first parent exactly when main leads.
+    """
+    line = git(cwd, 'rev-list', '--first-parent', '--reverse', f'{main}..{tip}').split('\n', 1)[0]
+    return bool(line) and git(cwd, 'rev-parse', f'{line}^') == main
+
+
+def land_branch(cwd: Path, branch: str, base: str) -> Landed:
+    """Push the branch onto origin/<base>, by fast-forward or by a merge with main first.
+
+    The branch ref, never HEAD, is what lands, since HEAD may hold a merge from a run
+    that stopped. A push with no force is the lock. One refused while origin/<base>
+    moved lost a race, so the next pass merges onto the new main. One refused while it
+    stood still failed for another reason, and that is git's to explain.
+    """
+    main = fetch_base(cwd, base)
+    for _ in range(PUSH_TRIES):
+        tip = git(cwd, 'rev-parse', f'refs/heads/{branch}')
+        merging = not leads_with(cwd, main, tip)
+        if merging:
+            held = landed(cwd, base, tip)
+            if held is None:
+                raise Refused(f'git could not say whether the work here is already on origin/{base}', "Run 'worktree land' again")
+            if held:
+                raise nothing_to_land(base)
+        commits = int(git(cwd, 'rev-list', '--count', f'{main}..{tip}'))
+        if merging:
+            merge_onto(cwd, branch, base, main)
+
+        pushed = git_effect(cwd, 'push', '--quiet', 'origin', f'HEAD:{base}')
+        if pushed.returncode == 0:
+            return Landed(commits=commits, sha=git(cwd, 'rev-parse', 'HEAD'), merge=merging)
+        if merging:
+            return_to_branch(cwd, branch)
+        moved = fetch_base(cwd, base)
+        if moved == main:
+            raise Refused(
+                f'Pushing to origin/{base} failed, and origin/{base} has not moved\n{git_said(pushed)}',
+                "Nothing was pushed. Fix what git says above, then run 'worktree land' again",
+            )
+        main = moved
+    raise Refused(f'origin/{base} moved again during each of {PUSH_TRIES} pushes, so nothing was pushed', "Run 'worktree land' again")
+
+
+def nothing_to_land(base: str) -> Refused:
+    return Refused(f'Nothing to land: the work here is already on origin/{base}')
+
+
+def merge_onto(cwd: Path, branch: str, base: str, main: str) -> None:
+    """Make the landing merge on a detached `main`, so main is its first parent.
+
+    Porcelain `git merge`, so the hooks run on it as on any commit a session makes:
+    `prepare-commit-msg` stamps the agent trailers and `commit-msg` checks the
+    subject. That check runs conventional commits `--strict`, which refuses git's own
+    `Merge branch` line, hence the `chore:` subject.
+
+    A conflict stops inside git's merge state, which holds the only copy of the
+    resolution in progress, so nothing here aborts one.
+    """
+    record_landing(cwd, Landing(branch, Merging.CLEAN, main))
+    detached = git_effect(cwd, 'switch', '--quiet', '--detach', main)
+    if detached.returncode != 0:
+        landing_record(cwd).unlink(missing_ok=True)
+        raise Refused(f'Could not detach at origin/{base} to merge onto it\n{git_said(detached)}')
+
+    merged = git_effect(cwd, 'merge', '--no-ff', '--no-edit', '--log', '-m', f'chore: merge {branch} into {base}', branch)
+    if merged.returncode == 0:
+        return
+    if merge_in_progress(cwd):
+        # Recorded before the paths are listed, so a listing that fails leaves a run
+        # that finishes the merge rather than one that aborts it.
+        record_landing(cwd, Landing(branch, Merging.CONFLICT, main))
+        if paths := unmerged_paths(cwd):
+            raise conflict_refusal(branch, base, paths)
+        git_effect(cwd, 'merge', '--abort')
+    return_to_branch(cwd, branch)
+    raise Refused(
+        f'git merge refused to merge {branch} into origin/{base}\n{git_said(merged)}',
+        "Nothing was pushed. Fix what git says above, then run 'worktree land' again",
+    )
+
+
 def catch_up_checkout(checkout: Path, base: str) -> None:
     """The checkout is now behind, and in dotfiles a checkout is deployed machine
     state — so leaving it stale is not cosmetic.
 
     Fast-forward it only when it is clean and on the branch we landed on: another
-    session may be working there, and its tree is not ours to move.
+    session may be working there, and its tree is not ours to move. `--ff-only`
+    makes no commit, so a checkout holding commits of its own on <base> is refused
+    rather than merged into, and says so. The command it prints is the same catch-up
+    as a pull, which a session's Bash hook lets through.
     """
+    catch_up = 'git pull --ff-only'
     head = git(checkout, 'rev-parse', '--abbrev-ref', 'HEAD')
     if head != base:
-        say_warning(f'{checkout} is on {head}, not {base} — catch it up yourself')
+        say_warning(f'{checkout} is on {head}, not {base} — run `{catch_up}` there once it is back on {base}')
         return
     if git(checkout, 'status', '--porcelain'):
-        say_warning(f'{checkout} has local changes — run `git fetch origin && git rebase origin/{base}` there when free')
+        say_warning(f'{checkout} has local changes — run `{catch_up}` there when free')
         return
 
     git_effect(checkout, 'fetch', '--quiet', 'origin')
-    git_effect(checkout, 'rebase', '--quiet', f'origin/{base}')
+    merged = git_effect(checkout, 'merge', '--ff-only', '--quiet', f'origin/{base}')
+    if merged.returncode != 0:
+        say_warning(f'{checkout} is left as it was, because it cannot fast-forward to origin/{base}: {git_said(merged)}')
+        return
     say_ok(f'Caught up {checkout}')
 
 
@@ -1752,26 +2043,27 @@ def cmd_drop(force: bool) -> int:
         raise Refused('Not in a worktree')
 
     base = default_branch(cwd)
-    branch = git(cwd, 'rev-parse', '--abbrev-ref', 'HEAD')
+    branch, _ = held_branch(cwd)
+    tip = 'HEAD' if branch == 'HEAD' else f'refs/heads/{branch}'
     path = Path(git(cwd, 'rev-parse', '--show-toplevel'))
 
     if not force:
         require_clean(cwd)
-        # The same question `sweep` asks, for the same reason: a count above zero is a
-        # rewritten history as often as it is unlanded work, and the two need opposite
-        # answers. This one runs on local refs alone, so a base branch nobody has
-        # fetched since the merge reads as unlanded — which refuses, and refusing is
-        # the half of this that costs nothing to be wrong about.
-        elsewhere = landed(cwd, base)
+        # The same question `land` and `sweep` ask, for the same reason: a count above
+        # zero is a rewritten history as often as it is unlanded work, and the two need
+        # opposite answers. This one runs on local refs alone, so a base branch nobody
+        # has fetched since the merge reads as unlanded — which refuses, and refusing
+        # is the half of this that costs nothing to be wrong about.
+        elsewhere = landed(cwd, base, tip)
         if elsewhere is None:
             raise Refused(
                 f'Cannot tell whether the work here is already on origin/{base}',
                 "Fetch and look; 'worktree drop --force' drops it either way",
             )
         if not elsewhere:
-            unlanded = int(git(cwd, 'rev-list', '--count', f'origin/{base}..HEAD'))
+            unlanded = int(git(cwd, 'rev-list', '--count', f'origin/{base}..{tip}'))
             raise Refused(
-                f'{unlanded} commit(s) here, and origin/{base} does not match them at the paths they touch',
+                f'{unlanded} commit(s) here, and merging them would still change origin/{base}',
                 f"'git cherry origin/{base} HEAD' if they landed under new shas; "
                 "'worktree land' to keep them, 'worktree drop --force' to lose them",
             )
@@ -1915,7 +2207,7 @@ def build_parser() -> argparse.ArgumentParser:
             '  worktree spawn parser-fix --brief b.md   a session in its own worktree\n'
             '  worktree spawn --brief review.md         a reviewer, in the checkout\n'
             '  worktree spawn --brief r.md -- --model sonnet   claude gets what follows --\n'
-            '  worktree land                            rebase, land on main, clean up\n'
+            '  worktree land                            land on main by merge or fast-forward, clean up\n'
             '  worktree drop                            remove it without landing\n'
             '  worktree sweep dotfiles --yes            remove finished worktrees\n'
             '\n'
@@ -2007,14 +2299,19 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser(
         'land',
         parents=[quiet],
-        help='rebase, push onto the default branch, then clean up',
+        help='fast-forward or merge onto the default branch, then clean up',
         description=(
             'Put the worktree you are standing in onto the default branch, with no pull request. '
-            'It refuses outside a worktree, on a dirty tree, and when the work is already on origin/<base>. '
-            'It fetches, rebases onto origin/<base> and pushes HEAD to <base>. '
-            'A rebase conflict stops it there: resolve it, then run land again. '
+            f'It refuses outside a worktree, on a dirty tree, on a git older than {".".join(map(str, GIT_FLOOR))}, '
+            'and when the work is already on origin/<base>. '
+            'It fetches, then pushes the branch to <base> as a fast-forward where origin/<base> has not moved. '
+            'Where it has, it pushes a merge whose first parent is origin/<base>, with the subject '
+            '`chore: merge <branch> into <base>`, so no commit changes its sha. '
+            'A conflict stops it inside that merge: resolve and stage it, then run land again, which commits '
+            'the merge and lands it. '
+            f'A push that loses a race to another landing fetches and merges again, {PUSH_TRIES} pushes in all. '
             'It then removes the worktree and deletes its branch. '
-            'Last, it fetches and rebases the primary checkout, but only when that checkout is clean and on '
+            'Last, it fast-forwards the primary checkout, but only when that checkout is clean and on '
             '<base>; otherwise it says so and leaves the checkout alone.'
         ),
     )
