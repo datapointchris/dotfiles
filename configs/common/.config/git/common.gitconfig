@@ -39,7 +39,7 @@ prune = true
 # deleted upstream on purpose.
 pruneTags = true
 
-# A pull that cannot fast-forward stops and asks for --no-rebase or --rebase,
+# A pull that cannot fast-forward stops and leaves the branch as it was,
 # rather than rewriting local commits whose shas a hook may already have
 # recorded. Branches catch up by merging the base in.
 [pull]
