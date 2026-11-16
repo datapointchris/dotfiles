@@ -31,7 +31,7 @@ otelcol.receiver.filelog "budget_readings" {
 }
 
 // What each Claude Code hook decided and each skill Chris typed, one event a line.
-// A hook cannot wait on a socket, so builder.hook_run_recorder appends here. Nothing
+// A hook cannot wait on a socket, so session_runtime.hook_run_recorder appends here. Nothing
 // syncs this directory, so its glob names no host, and the `*` follows a file the
 // recorder has rotated. Each line already says its record's name and resource.
 otelcol.receiver.filelog "hook_runs" {
