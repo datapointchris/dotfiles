@@ -298,6 +298,7 @@ def held_by_cases(app: Any) -> list[tuple[Any, dict[str, Any], dict[str, Any]]]:
         (app.Kept.DIRTY, {'state': app.State.DIRTY}, {}),
         (app.Kept.SESSIONS_UNREADABLE, {'sessions': None}, {}),
         (app.Kept.SESSION, {'sessions': (occupant,)}, {}),
+        (app.Kept.LANDING_STOPPED, {'landing': True}, {}),
         (app.Kept.DETACHED, {'branch': 'HEAD', 'detached': True}, {}),
         (app.Kept.UNFETCHED_REMOTE, {}, {'fetched': False}),
         (app.Kept.UNFETCHED_BASE, {'ahead': None}, {}),
@@ -785,17 +786,6 @@ class TestLanded:
 
         assert worktree_app.landed(alpha, 'main') is False
 
-    def test_work_read_from_a_subdirectory_that_never_landed_has_not_landed(self, worktree_app, fleet, run):
-        """git names the changed paths from the top of the repository and reads a
-        pathspec from the directory it runs in. Asked from `sub/`, `sub/only-copy.txt`
-        would select `sub/sub/only-copy.txt`, match nothing, and read as landed."""
-        alpha = fleet['roots'] / 'primary' / 'alpha'
-        run(fleet['primary'], 'new', 'alpha')
-        (alpha / 'sub').mkdir()
-        commit_in(alpha, 'sub/only-copy.txt')
-
-        assert worktree_app.landed(alpha / 'sub', 'main') is False
-
     def test_a_rename_whose_deletion_never_landed_has_not_landed(self, worktree_app, fleet, run):
         """Rename detection reports a rename as the new path alone, so the old path
         never enters the comparison and a base branch that took only the addition reads
@@ -843,63 +833,30 @@ class TestLanded:
         assert blobs[0] == blobs[1], 'one blob on both sides, so the mode is the only thing left to differ'
         assert worktree_app.landed(alpha, 'main') is False
 
-    def test_each_path_git_cannot_print_plainly_is_still_compared(self, worktree_app, fleet, run):
-        """git's default listing is not the names. It C-quotes any path holding a
-        non-ASCII byte, a quote, a backslash or a control character, and the strip that
-        reads an ordinary git answer takes a leading or trailing space off the rest.
+    def test_a_squashed_branch_has_landed_after_main_edits_the_same_file_again(self, worktree_app, fleet, run):
+        """A squash lands the branch's edit, and main later edits another line of that file.
 
-        A name that arrives in any of those forms selects no file as a pathspec, so the
-        comparison finds no difference and the branch reads as landed. Each of these is
-        its own worktree, so a failure names the character that got through rather than
-        reporting that one of five did.
-        """
-        awkward = {
-            'leading-space': ' leading.txt',
-            'non-ascii': 'café.txt',
-            'double-quote': 'say "hi".txt',
-            'backslash': 'back\\slash.txt',
-            'pathspec-magic': 'star*.txt',
-        }
-
-        for slug, name in awkward.items():
-            run(fleet['primary'], 'new', slug)
-            worktree = fleet['roots'] / 'primary' / slug
-            (worktree / name).write_text('only copy\n')
-            git(worktree, 'add', name)
-            git(worktree, 'commit', '-qm', f'feat: {slug}')
-
-            assert worktree_app.landed(worktree, 'main') is False, name
-
-    def test_a_rename_across_names_git_quotes_needs_both_guards_at_once(self, worktree_app, fleet, run):
-        """The one shape where dropping either guard on its own loses the work.
-
-        Rename detection alone would report the new path and the base branch has that
-        path, so the branch reads as landed while its deletion of the old one is on no
-        other branch. Reading the listing as text alone would hand back two quoted names
-        that select nothing, which reads as landed for the same reason by another route.
-
-        The two other tests each hold one guard and would stay green without the other:
-        the rename case uses ASCII names, and the quoted-names case adds files rather
-        than renaming them.
-        """
-        body = 'a body long enough for rename detection to latch onto\nand more of it\n'
-        (fleet['primary'] / 'æ file.txt').write_text(body)
-        git(fleet['primary'], 'add', 'æ file.txt')
-        git(fleet['primary'], 'commit', '-qm', 'feat: add a non-ascii name')
+        Compared file by file this read as unlanded, so `sweep` kept the worktree for good
+        and `drop` sent the user to `land`, which said nothing was left to land."""
+        lines = [f'line {n}\n' for n in range(1, 9)]
+        (fleet['primary'] / 'eight.txt').write_text(''.join(lines))
+        git(fleet['primary'], 'add', 'eight.txt')
+        git(fleet['primary'], 'commit', '-qm', 'feat: add eight lines')
         git(fleet['primary'], 'push', '-q', 'origin', 'main')
 
         run(fleet['primary'], 'new', 'alpha')
         alpha = fleet['roots'] / 'primary' / 'alpha'
-        git(alpha, 'mv', 'æ file.txt', 'ø other.txt')
-        git(alpha, 'commit', '-qm', 'refactor: rename it')
+        lines[1] = 'line two\n'
+        (alpha / 'eight.txt').write_text(''.join(lines))
+        git(alpha, 'commit', '-qam', 'feat: name line two')
 
-        (fleet['primary'] / 'ø other.txt').write_text(body)
-        git(fleet['primary'], 'add', 'ø other.txt')
-        git(fleet['primary'], 'commit', '-qm', 'feat: take the addition and keep the original (#1)')
+        lines[6] = 'line seven\n'
+        (fleet['primary'] / 'eight.txt').write_text(''.join(lines))
+        git(fleet['primary'], 'commit', '-qam', 'feat: name lines two and seven (#1)')
         git(fleet['primary'], 'push', '-q', 'origin', 'main')
         git(alpha, 'fetch', '-q', 'origin')
 
-        assert worktree_app.landed(alpha, 'main') is False
+        assert worktree_app.landed(alpha, 'main') is True
 
     def test_a_branch_whose_commits_net_out_to_nothing_has_landed(self, worktree_app, fleet, run):
         """Decided rather than left to whichever way the code happens to fall.
@@ -1212,28 +1169,7 @@ class TestSweep:
 
         assert alpha.exists()
         assert (alpha / 'only-copy.txt').exists()
-        assert 'does not match it at the paths it touched' in plain(result.stderr)
-
-    def test_a_branch_deleted_without_merging_is_kept_whatever_its_files_are_called(self, fleet, run):
-        """The same shape as the test above, with one file whose name git does not print
-        plainly. Reading the listing as text turned that name into something that
-        selects nothing, and the sweep removed the directory and force-deleted the
-        branch with the only copy of the work in it.
-        """
-        run(fleet['primary'], 'new', 'alpha')
-        alpha = fleet['roots'] / 'primary' / 'alpha'
-        (alpha / 'café.txt').write_text('only copy\n')
-        git(alpha, 'add', 'café.txt')
-        git(alpha, 'commit', '-qm', 'feat: only copy')
-        publish(fleet['primary'], alpha, 'alpha')
-        delete_on_origin(fleet['primary'], 'alpha')
-
-        result = run(fleet['primary'], 'sweep', '--yes')
-
-        assert alpha.exists()
-        assert (alpha / 'café.txt').exists()
-        assert 'alpha' in git(fleet['primary'], 'branch', '--format=%(refname:short)').splitlines()
-        assert 'does not match it at the paths it touched' in plain(result.stderr)
+        assert 'merging it would still change the base branch' in plain(result.stderr)
 
     def test_ignored_build_output_does_not_block_removal(self, fleet, run):
         """`new` runs `task setup`, so a real worktree carries a .venv or a

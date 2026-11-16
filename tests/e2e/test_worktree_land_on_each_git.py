@@ -1,11 +1,9 @@
 """The landing suite, run inside a container against that image's own git.
 
-`land` needs `git merge-tree --write-tree`, which arrived in git 2.38, and every
-other command it runs has to mean the same on the oldest git a machine carries.
-Debian 12's 2.39 is that floor, Arch tracks the newest release, and the WSL image
-carries Ubuntu's own apt git. So each of those three containers runs
-`tests/apps/test_worktree_land.py` from its copy of the repo, on the git its image
-installed.
+`land` needs `git merge-tree --write-tree`, and every other command it runs has to
+mean the same on the oldest git a machine carries as on the newest. Each container
+whose image installs a git no other image carries runs
+`tests/apps/test_worktree_land.py` from its copy of the repo, on that git.
 
 The images carry git and no uv, and `worktree` starts under `uv run --script`. The
 host's uv binary is copied in rather than added to the images, because the images
@@ -14,8 +12,8 @@ directory of the container's home, removed afterwards, so the session's other te
 find the container as they would have.
 
 CI's ubuntu runner is no stand-in for the WSL image, because the runner installs
-git from its own package source rather than from Ubuntu's archive. `offline` and
-`restricted` run nothing here, because they carry the same Ubuntu 26.04 apt git.
+git from its own package source rather than from Ubuntu's archive. An image whose
+git another image already carries runs nothing here.
 
     uv run pytest tests/e2e/test_worktree_land_on_each_git.py --docker --level empty-container --environment archlinux,wsl,server
 """
