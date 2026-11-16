@@ -60,12 +60,15 @@ def resolve_machine(machine: str | None = None) -> str:
     """The machine this run is about, from the argument, the environment or `~/.env`.
 
     One function raising one error, so every front door says the same thing about
-    the same failure.
+    the same failure. The advice names both spellings a command takes a machine
+    in, because the `machines` verbs take it as an argument and the rest as
+    `--machine`.
     """
     name = machine or os.environ.get('MACHINE') or declared_machine()
     if not name:
         raise NoMachine(
-            f'no machine named, and neither MACHINE nor ~/.env says what this is. Known: {", ".join(machines.names()) or "none"}'
+            f'no machine named, and neither MACHINE nor ~/.env says what this is. Known: {", ".join(machines.names()) or "none"}',
+            advice='name one with --machine NAME (an argument to `dotfiles machines`), or set MACHINE=NAME in the environment or ~/.env',
         )
     return name
 
