@@ -225,16 +225,19 @@ test_cmd "fzf installed" "command -v fzf"
 # ================================================================
 # 7. COORDINATE-SPECIFIC APPS
 # ================================================================
-if [[ "$(layer_value trust)" == fleet ]]; then
+# Gated on the file the fleet trust variant ships, as the git identity is above.
+if [[ -f "$HOME/.config/git/fleet.gitconfig" ]]; then
   echo ""
   echo "Fleet:"
   # --help only: a bare run watches and never returns, which the 5s timeout
   # would report as a failure rather than the success it actually is.
   test_cmd "watch-ci help" "watch-ci --help"
   # The git config skips each hook while its script is absent, so nothing else
-  # would notice it missing.
-  test_cmd "agent-commit-trailers deployed" "test -x \"\$HOME/.local/bin/agent-commit-trailers\""
-  test_cmd "link-commit-to-slate-worklog deployed" "test -x \"\$HOME/.local/bin/link-commit-to-slate-worklog\""
+  # would notice it missing. Every script a deployed hook runs is checked, read
+  # from the deployed config, so a hook is covered once its config deploys.
+  while read -r script; do
+    test_cmd "$script deployed" "test -x \"\$HOME/.local/bin/$script\""
+  done < <(git config --global --includes --get-regexp '^hook\..*\.command$' | grep -o '/\.local/bin/[^ ]*' | sed 's|.*/||' | sort -u)
 fi
 
 if deploys_layer os/darwin; then
