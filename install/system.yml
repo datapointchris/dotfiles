@@ -1098,7 +1098,7 @@ user_timers:
     excludes_os_family: windows
   - name: worker-health
     description: Whether each headless Claude worker on this machine is still producing
-    argv: [uv, run, --project, ~/.claude, python, ~/.claude/hooks/worker-health, --save, --json]
+    argv: [uv, run, --script, ~/.claude/hooks/worker-health, --save, --json]
     every: 1d
     network_trust: fleet
     feature: primary_workstation
