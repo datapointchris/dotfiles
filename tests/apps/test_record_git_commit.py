@@ -110,3 +110,16 @@ def test_a_persons_commit_names_no_session_or_flow_and_a_fixture_repo_records_no
     (typed,) = records(repo)
     assert typed['resource'] == 'service.name=git'
     assert {'session.id', 'fleet.agent.name', 'fleet.run.id', 'fleet.flow.id', 'trace_id'}.isdisjoint(typed)
+
+
+def test_a_commit_past_the_size_bound_moves_the_file_to_its_old_generation(repo: Path) -> None:
+    git(repo, 'commit', '-q', '--allow-empty', '-m', 'chore: base')
+    current = repo.parent / 'state' / 'telemetry' / 'git-commits.jsonl'
+    past_the_bound = 8 * 1024 * 1024 + 1
+    with current.open('r+b') as grown:
+        grown.truncate(past_the_bound)
+    git(repo, 'commit', '-q', '--allow-empty', '-m', 'feat: past the bound')
+
+    assert current.with_name('git-commits.jsonl.1').stat().st_size == past_the_bound
+    (record,) = records(repo)
+    assert record['vcs.ref.head.revision'] == sha(repo)

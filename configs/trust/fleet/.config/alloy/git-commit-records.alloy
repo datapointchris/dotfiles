@@ -1,9 +1,9 @@
 // The git.commit_made records the commit hook writes on this machine, one commit a
-// line. Nothing syncs this directory, so its glob names no host. Each line already
-// says its record's name and resource, and carries a trace context where the commit
-// was made under one.
+// line. Nothing syncs this directory, so its glob names no host, and the `*` follows
+// a file the hook has rotated. Each line already says its record's name and resource,
+// and carries a trace context where the commit was made under one.
 otelcol.receiver.filelog "git_commit_records" {
-  include          = [string.format("%s/telemetry/git-commits.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  include          = [string.format("%s/telemetry/git-commits.jsonl*", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
   start_at         = "beginning"
   storage          = otelcol.storage.file.offsets.handler
   fingerprint_size = "1KiB"

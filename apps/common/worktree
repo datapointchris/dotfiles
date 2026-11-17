@@ -630,10 +630,15 @@ def divergence(path: Path, base: str) -> tuple[int | None, int | None]:
     return int(behind), int(ahead)
 
 
-def commit_records() -> Path:
-    """Where record-git-commit appends a git.commit_made record for each commit made here."""
+def commit_records() -> tuple[Path, Path]:
+    """Where record-git-commit keeps a git.commit_made record for each commit made here, oldest first.
+
+    The hook renames the file to `.1` past a size bound, so a commit made before that
+    rotation is in `.1`.
+    """
     state = Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local' / 'state')
-    return state / 'telemetry' / 'git-commits.jsonl'
+    current = state / 'telemetry' / 'git-commits.jsonl'
+    return current.with_name(f'{current.name}.1'), current
 
 
 @functools.cache
@@ -643,19 +648,20 @@ def sessions_by_commit() -> dict[str, str]:
     Read once a run, because `list` asks for every tree. A line that does not parse is
     skipped, as a half-written last line from a commit landing now would be.
     """
-    try:
-        lines = commit_records().read_text(encoding='utf-8').splitlines()
-    except OSError:
-        return {}
     found: dict[str, str] = {}
-    for line in lines:
+    for records in commit_records():
         try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
+            lines = records.read_text(encoding='utf-8').splitlines()
+        except OSError:
             continue
-        sha, session = record.get('vcs.ref.head.revision'), record.get('session.id')
-        if sha and session:
-            found[sha] = session
+        for line in lines:
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            sha, session = record.get('vcs.ref.head.revision'), record.get('session.id')
+            if sha and session:
+                found[sha] = session
     return found
 
 

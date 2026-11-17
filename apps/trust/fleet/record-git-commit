@@ -7,12 +7,20 @@
 # held, so the record names no worklog and this hook calls no service.
 # git-commit-record.schema.json beside it is the record's shape.
 #
+# Past ROTATE_BYTES the file is renamed to git-commits.jsonl.1 before the append,
+# replacing the generation before it. Alloy follows the rename, so nothing ships
+# twice, and worktree reads .1 before the current file.
+#
 # A repo whose origin has no host, such as a test's fixture, records nothing, and
 # neither does a post-merge that made no commit. git-commit-hooks.sh decides both.
 #
 # It never refuses a commit. A record it cannot write is left out, with a line on
 # stderr saying so.
 set -uo pipefail
+
+# worktree reads both generations whole on every run, so the bound keeps that read
+# short. Alloy has shipped a line within seconds, so one old generation is enough.
+ROTATE_BYTES=$((8 * 1024 * 1024))
 
 # jq rather than date, because BSD date has no %N.
 made=$(jq -nr 'now | (floor | strftime("%Y-%m-%dT%H:%M:%S")) + "." + ("00" + ((. * 1000 | floor) % 1000 | tostring))[-3:] + "Z"' 2>/dev/null)
@@ -85,6 +93,11 @@ record=$(jq -cn \
 }
 
 records=${XDG_STATE_HOME:-$HOME/.local/state}/telemetry/git-commits.jsonl
+# wc rather than stat, because BSD stat spells the size -f %z.
+if size=$(wc -c 2>/dev/null <"$records") && ((size > ROTATE_BYTES)); then
+  mv -f "$records" "$records.1" 2>/dev/null \
+    || echo "record-git-commit: could not rotate $records to $records.1, so it keeps growing" >&2
+fi
 if ! { mkdir -p "${records%/*}" && printf '%s\n' "$record" >>"$records"; } 2>/dev/null; then
   echo "record-git-commit: could not append to $records, so $sha has no git.commit_made record" >&2
 fi
