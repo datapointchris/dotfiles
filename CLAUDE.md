@@ -203,8 +203,11 @@ formula still has an Intel bottle — the bare macOS keys are Intel:
 curl -sf https://formulae.brew.sh/api/formula/<name>.json | jq -r '.bottle.stable.files | keys | join(" ")'
 ```
 
-**macOS**: GNU coreutils are prepended to PATH unprefixed, for scripts as well as shells. Development
-uses uv-managed Python; Homebrew Python stays only where `brew uses --installed python@X.XX` needs it.
+**macOS**: `.zshrc` prepends the GNU tools unprefixed, so an interactive shell and what it starts get
+them. `.zshenv` does not. So a process started outside an interactive shell, such as a launchd job, a
+GUI app's git or the `claude` a tmux pane starts, finds the BSD tools first. A script that may run there
+keeps to flags both accept. Development uses uv-managed Python; Homebrew Python stays only where `brew uses
+--installed python@X.XX` needs it.
 
 ## Documentation
 
