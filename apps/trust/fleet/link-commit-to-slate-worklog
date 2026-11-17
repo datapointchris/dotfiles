@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# post-commit hook, run from git config rather than .git/hooks. A session's commit
-# carrying a Worklog trailer is recorded on that slate worklog, under its full sha
-# and the repo its origin names. A commit with no session, no trailer or no origin
-# with a host starts no slate.
+# post-commit and post-merge hook, run from git config rather than .git/hooks. A
+# session's commit is recorded on the slate worklog the session is in as the commit
+# is made, under its full sha and the repo its origin names. A commit outside a
+# session, or in a repo whose origin has no host, starts no slate. A session in no
+# worklog links nothing.
 #
-# It reads the commit rather than asking slate which worklog the session is in. A
-# rebase keeps each commit's trailers and fires this hook per pick, so the new sha
-# links to the worklog and session that wrote the commit, whichever session rebased.
+# A post-merge that made no commit, a fast-forward or a squash, links nothing, as in
+# record-git-commit.
 #
 # It never fails a commit. A link it cannot make is left out, with a line on stderr
 # saying so.
@@ -18,23 +18,34 @@ set -uo pipefail
 origin=$(git remote get-url origin 2>/dev/null) || exit 0
 [[ $origin == *:* && $origin != file:* ]] || exit 0
 
-worklog=$(git log -1 --format='%(trailers:key=Worklog,valueonly)' HEAD | head -n 1)
-[[ -n $worklog ]] || exit 0
+if (($# > 0)); then
+  [[ $1 == 0 ]] || exit 0
+  [[ $(git reflog -1 --format=%gs HEAD 2>/dev/null) != *': Fast-forward'* ]] || exit 0
+fi
 
 commit=$(git rev-parse HEAD)
-link=(slate worklogs link "$worklog" --commit "$commit" --repo "$(basename "$origin" .git)")
-wrote_it=$(git log -1 --format='%(trailers:key=Agent-Session,valueonly)' HEAD | head -n 1)
-[[ -z $wrote_it ]] || link+=(--session "$wrote_it")
 
-# The bound keeps a slate that cannot answer from holding the commit up.
+# Each bound keeps a slate that cannot answer from holding the commit up.
 bound_seconds=3
 failure=$(mktemp)
-timeout "$bound_seconds" "${link[@]}" >/dev/null 2>"$failure"
-status=$?
-if ((status != 0)); then
+trap 'rm -f "$failure"' EXIT
+
+report_slate_failure() {
+  local status=$1 what=$2 reason
   reason=$(head -n 1 "$failure")
   ((status != 124)) || reason="slate did not answer within $bound_seconds seconds"
-  echo "link-commit-to-slate-worklog: ${reason:-slate exited $status}, so worklog $worklog does not link $commit" >&2
+  echo "link-commit-to-slate-worklog: ${reason:-slate exited $status}, so $what" >&2
+}
+
+worklog=$(timeout "$bound_seconds" slate worklogs current 2>"$failure")
+status=$?
+if ((status != 0)); then
+  report_slate_failure "$status" "no worklog links $commit"
+  exit 0
 fi
-rm -f "$failure"
+[[ -n $worklog ]] || exit 0
+
+timeout "$bound_seconds" slate worklogs link "$worklog" --commit "$commit" --repo "$(basename "$origin" .git)" >/dev/null 2>"$failure"
+status=$?
+((status == 0)) || report_slate_failure "$status" "worklog $worklog does not link $commit"
 exit 0

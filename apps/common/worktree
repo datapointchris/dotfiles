@@ -1718,12 +1718,13 @@ class Merging(StrEnum):
     """Which merge a landing's detached HEAD holds, and so whether it may be made again."""
 
     CLEAN = 'clean'
-    """`land` made it with nothing to resolve. A clean merge fires no `post-commit`
-    hook, so nothing recorded its sha, and the next run drops it and merges again."""
+    """`land` made it with nothing to resolve, so it holds nothing the branch does
+    not, and the next run drops it and merges again. The `post-merge` hooks already
+    recorded its sha, so a dropped one leaves a record of a commit that never landed."""
 
     CONFLICT = 'conflict'
-    """It stopped for the session to resolve. Committing the resolution fires
-    `post-commit`, which records its sha, so it is kept and never made again."""
+    """It stopped for the session to resolve. The resolution exists only in this
+    merge, so it is kept and never made again."""
 
 
 @dataclass(frozen=True)

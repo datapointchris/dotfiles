@@ -50,7 +50,7 @@ def git(repo: Path, *args: str, **variables: str) -> subprocess.CompletedProcess
     return subprocess.run(
         ['git', '-c', 'user.name=t', '-c', 'user.email=t@example.com',
          '-c', 'hook.trailers.event=prepare-commit-msg', '-c', f'hook.trailers.command={TRAILER_HOOK}',
-         '-c', 'hook.link.event=post-commit', '-c', f'hook.link.command={LINK_HOOK}', *args],
+         '-c', 'hook.link.event=post-commit', '-c', 'hook.link.event=post-merge', '-c', f'hook.link.command={LINK_HOOK}', *args],
         cwd=repo, env=env, check=True, capture_output=True, text=True,
     )  # fmt: skip
 
@@ -87,21 +87,19 @@ def test_a_session_commit_is_stamped_once_and_a_persons_commit_never(repo: Path)
     assert links(repo) == []
 
 
-def test_a_second_session_rebasing_leaves_each_commit_with_the_worklog_and_session_that_wrote_it(repo: Path) -> None:
+def test_a_landings_merge_links_to_the_worklog_the_session_is_in_and_a_fast_forward_links_nothing(repo: Path) -> None:
+    session = {'CLAUDE_CODE_SESSION_ID': 's-1', 'WORKLOG': '2083.1'}
     commit(repo, '-m', 'chore: base')
     git(repo, 'switch', '-q', '-c', 'work')
-    commit(repo, '-m', 'chore: typed by a person')
-    commit(repo, '-m', 'feat: first go', CLAUDE_CODE_SESSION_ID='s-1', WORKLOG='2083.1')
+    commit(repo, '-m', 'feat: work', **session)
+    work = head(repo)
+    git(repo, 'switch', '-q', '--detach', 'main')
+    git(repo, 'merge', '-q', '--no-ff', '--no-edit', '-m', 'chore: merge work into main', 'work', **session)
+    merge = head(repo)
     git(repo, 'switch', '-q', 'main')
-    commit(repo, '-m', 'chore: main moves')
+    git(repo, 'merge', '-q', '--ff-only', merge, **session)
 
-    git(repo, 'rebase', '-q', 'main', 'work', CLAUDE_CODE_SESSION_ID='s-2', WORKLOG='2099.4')
-
-    written, typed, *_ = trailers(repo)
-    assert written.strip().splitlines()[-2:] == ['Agent-Session: s-1', 'Worklog: 2083.1']
-    assert typed.strip() == ''
-    assert len(links(repo)) == 2
-    assert links(repo)[-1] == f'worklogs link 2083.1 --commit {head(repo)} --repo some-repo --session s-1'
+    assert links(repo) == [f'worklogs link 2083.1 --commit {made} --repo some-repo' for made in (work, merge)]
 
 
 @pytest.mark.parametrize('fixture_origin', [None, '/elsewhere/fixture.git', 'file:///elsewhere/fixture.git'])
@@ -117,17 +115,20 @@ def test_a_session_committing_in_a_tests_fixture_repo_reaches_no_worklog(repo: P
 
 
 @pytest.mark.parametrize(
-    ('failing', 'reason', 'stamped'),
+    ('failing', 'reason', 'lost'),
     [
-        ({'CURRENT_FAILS': '1'}, 'error: not logged in', False),
-        ({'LINK_FAILS': '1'}, 'error: no such worklog', True),
+        ({'CURRENT_FAILS': '1'}, 'error: not logged in', ('carries no Worklog trailer', 'no worklog links')),
+        ({'LINK_FAILS': '1'}, 'error: no such worklog', ('does not link',)),
     ],
 )
-def test_a_slate_that_fails_leaves_the_commit_and_says_so_once(repo: Path, failing: dict[str, str], reason: str, stamped: bool) -> None:
+def test_a_slate_that_fails_leaves_the_commit_and_each_hook_says_what_it_lost(
+    repo: Path, failing: dict[str, str], reason: str, lost: tuple[str, ...]
+) -> None:
     done = commit(repo, '-m', 'fix: still lands', CLAUDE_CODE_SESSION_ID='s-1', WORKLOG='2083.1', **failing)
 
-    assert len(done.stderr.splitlines()) == 1
-    assert reason in done.stderr
+    said = done.stderr.splitlines()
+    assert len(said) == len(lost)
+    assert all(reason in line and what in line for line, what in zip(said, lost, strict=True))
     assert 'Agent-Session: s-1' in trailers(repo)[0]
-    assert ('Worklog: 2083.1' in trailers(repo)[0]) is stamped
+    assert ('Worklog: 2083.1' in trailers(repo)[0]) is ('CURRENT_FAILS' not in failing)
     assert links(repo) == []

@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# post-commit and post-merge hook, run from git config rather than .git/hooks. Each
+# commit made here appends one git.commit_made record to
+# $XDG_STATE_HOME/telemetry/git-commits.jsonl, which Alloy ships. The record names
+# the commit by its sha, and the session that made it with the time to the
+# millisecond. The warehouse joins that session and time to the worklog the session
+# held, so the record names no worklog and this hook calls no service.
+# git-commit-record.schema.json beside it is the record's shape.
+#
+# A repo whose origin has no host, such as a test's fixture, records nothing. A
+# post-merge that made no commit, a fast-forward or a squash, records nothing too.
+#
+# It never refuses a commit. A record it cannot write is left out, with a line on
+# stderr saying so.
+set -uo pipefail
+
+made=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+
+origin=$(git remote get-url origin 2>/dev/null) || exit 0
+[[ $origin == *:* && $origin != file:* ]] || exit 0
+
+# post-merge passes 1 for a squash, which commits nothing, and post-commit passes no
+# argument. A fast-forward moves HEAD onto a commit that already existed, and git's
+# reflog subject for it is untranslated in every locale.
+if (($# > 0)); then
+  [[ $1 == 0 ]] || exit 0
+  [[ $(git reflog -1 --format=%gs HEAD 2>/dev/null) != *': Fast-forward'* ]] || exit 0
+fi
+
+read -r sha parents < <(git log -1 --format='%H %P' HEAD 2>/dev/null)
+if [[ -z ${sha:-} ]]; then
+  echo "record-git-commit: git could not read HEAD, so this commit has no git.commit_made record" >&2
+  exit 0
+fi
+branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || branch=
+
+# The same name agent-commit-trailers stamps in the Agent-Name trailer.
+agent_name() {
+  if [[ -n ${SLATE_ACTOR:-} ]]; then
+    # The scheduler sets <job>@<machine>, and the host is already the record's resource.
+    echo "claude-code-unattended/${SLATE_ACTOR%@*}"
+  elif [[ ${CLAUDE_CODE_SESSION_ATTENDED:-} == 0 ]]; then
+    echo claude-code-unattended
+  else
+    local handle=
+    [[ -z ${TMUX_PANE:-} ]] || handle=$(tmux display-message -p -t "$TMUX_PANE" '#{@place_handle}' 2>/dev/null)
+    echo "claude-code${handle:+/$handle}"
+  fi
+}
+
+session=${CLAUDE_CODE_SESSION_ID:-}
+agent=
+[[ -z $session ]] || agent=$(agent_name)
+
+# W3C baggage is comma-separated key=value members, each with optional ;properties.
+# A flow id is a W3C trace id, and any other value reads as no flow.
+flow=
+IFS=, read -ra members <<<"${BAGGAGE:-}"
+for member in "${members[@]}"; do
+  member=${member%%;*}
+  member=${member//[[:space:]]/}
+  [[ $member != fleet.flow.id=* ]] || flow=${member#fleet.flow.id=}
+done
+[[ $flow =~ ^[0-9a-f]{32}$ && $flow != 00000000000000000000000000000000 ]] || flow=
+
+# The trace context puts the record under the span that made the commit.
+trace_id=''
+span_id=''
+if [[ ${TRACEPARENT:-} =~ ^00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$ ]]; then
+  trace_id=${BASH_REMATCH[1]}
+  span_id=${BASH_REMATCH[2]}
+fi
+
+record=$(jq -cn \
+  --arg timestamp "$made" --arg sha "$sha" --arg parents "${parents:-}" \
+  --arg repo "$(basename "$origin" .git)" --arg branch "$branch" \
+  --arg session "$session" --arg agent "$agent" --arg run "${FLEET_RUN_ID:-}" --arg flow "$flow" \
+  --arg trace_id "$trace_id" --arg span_id "$span_id" \
+  '{
+    timestamp: $timestamp,
+    name: "git.commit_made",
+    resource: "service.name=git",
+    "fleet.schema_version": 1,
+    trace_id: $trace_id,
+    span_id: $span_id,
+    "vcs.ref.head.revision": $sha,
+    "vcs.repository.name": $repo,
+    "vcs.ref.head.name": $branch,
+    "session.id": $session,
+    "fleet.commit.parents": ($parents | split(" ") | map(select(. != ""))),
+    "fleet.agent.name": $agent,
+    "fleet.run.id": $run,
+    "fleet.flow.id": $flow
+  } | with_entries(select(.value != ""))') || {
+  echo "record-git-commit: jq could not build the record, so $sha has no git.commit_made record" >&2
+  exit 0
+}
+
+records=${XDG_STATE_HOME:-$HOME/.local/state}/telemetry/git-commits.jsonl
+if ! { mkdir -p "${records%/*}" && printf '%s\n' "$record" >>"$records"; } 2>/dev/null; then
+  echo "record-git-commit: could not append to $records, so $sha has no git.commit_made record" >&2
+fi
+exit 0

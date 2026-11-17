@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "git.commit_made record",
+  "description": "One commit, as the program that made it saw it at that moment: one JSON object a line in git-commits.jsonl. The commit is named by its sha, so a reader joins the record to the commit on vcs.ref.head.revision. A key with no value is left out rather than written empty.",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "name",
+    "resource",
+    "fleet.schema_version",
+    "vcs.ref.head.revision",
+    "vcs.repository.name",
+    "fleet.commit.parents"
+  ],
+  "dependentRequired": {
+    "trace_id": [
+      "span_id"
+    ],
+    "span_id": [
+      "trace_id"
+    ]
+  },
+  "additionalProperties": false,
+  "properties": {
+    "timestamp": {
+      "description": "When the writer recorded the commit, by its own clock, in UTC to the millisecond. git's own dates are whole seconds.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "name": {
+      "description": "The event's name, which a log pipeline moves to the record's body.",
+      "const": "git.commit_made"
+    },
+    "resource": {
+      "description": "The record's OpenTelemetry resource as comma-separated key=value pairs, naming git as its service.",
+      "type": "string",
+      "pattern": "^([^,=]+=[^,]*,)*service\\.name=git(,[^,=]+=[^,]*)*$"
+    },
+    "fleet.schema_version": {
+      "description": "This shape's version. A change to a key's name or meaning raises it.",
+      "const": 1
+    },
+    "trace_id": {
+      "description": "The W3C trace id of the span the commit was made under, from the writer's TRACEPARENT.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "span_id": {
+      "description": "The W3C span id of the span the commit was made under, from the writer's TRACEPARENT.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    },
+    "vcs.ref.head.revision": {
+      "description": "The commit's full sha.",
+      "type": "string",
+      "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "vcs.repository.name": {
+      "description": "The repo's short name: the last segment of its origin URL, without .git.",
+      "type": "string",
+      "minLength": 1
+    },
+    "vcs.ref.head.name": {
+      "description": "The branch HEAD was on. Left out where HEAD was detached, as it is during a rebase or a merge made onto a detached base.",
+      "type": "string",
+      "minLength": 1
+    },
+    "session.id": {
+      "description": "The Claude Code session that made the commit. Left out for a commit made outside one.",
+      "type": "string",
+      "minLength": 1
+    },
+    "fleet.commit.parents": {
+      "description": "The commit's parent shas in git's order, so a merge's first parent is the branch it was made on. Empty for a root commit.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+      }
+    },
+    "fleet.agent.name": {
+      "description": "Which kind of agent made the commit, such as claude-code, claude-code/<pane handle>, claude-code-unattended or claude-code-unattended/<scheduled job>.",
+      "type": "string",
+      "minLength": 1
+    },
+    "fleet.run.id": {
+      "description": "The scheduled run that started the session, from FLEET_RUN_ID.",
+      "type": "string",
+      "minLength": 1
+    },
+    "fleet.flow.id": {
+      "description": "The flow the writer's BAGGAGE carried as fleet.flow.id: a W3C trace id, never all zeros. Left out where BAGGAGE carried none or a malformed one, and a reader resolves the flow from the session's worklog at the record's time.",
+      "type": "string",
+      "pattern": "^(?!0{32}$)[0-9a-f]{32}$"
+    }
+  }
+}
