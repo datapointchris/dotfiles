@@ -3,19 +3,14 @@
 [include]
 path = ~/.config/git/personal.gitconfig
 
-# Stamps the agent trailers on a commit made inside a Claude Code session. Set in
-# config, so it runs in every repo and leaves .git/hooks to the repo's own hook
-# manager. git appends the hook's arguments to the command. The test skips the
-# hook until `dotfiles symlinks apply` deploys the script, because a command that
-# is not there aborts the commit. A git too old to run a hook set in config skips
-# it silently, which `dotfiles check` reports.
-[hook "agent-trailers"]
-event = prepare-commit-msg
-command = [ ! -x ~/.local/bin/agent-commit-trailers ] || exec ~/.local/bin/agent-commit-trailers
+# Each hook is set in config, so it runs in every repo and leaves .git/hooks to the
+# repo's own hook manager. git appends the hook's arguments to the command. The
+# test skips a hook until `dotfiles symlinks apply` deploys its script, because a
+# command that is not there prints the shell's error on every commit. A git too old
+# to run a hook set in config skips it silently, which `dotfiles check` reports.
 
 # Records a session's commit on the slate worklog the session is in. A merge commit
-# runs post-merge rather than post-commit, so it listens on both. The test skips it
-# until the script is deployed, as above.
+# runs post-merge rather than post-commit, so it listens on both.
 [hook "slate-worklog-link"]
 event = post-commit
 event = post-merge

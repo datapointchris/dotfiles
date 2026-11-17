@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # What the commit hooks git runs from fleet.gitconfig ask about the commit just
-# made, answered once. Sourced by agent-commit-trailers, record-git-commit and
-# link-commit-to-slate-worklog.
+# made, answered once. Sourced by record-git-commit and link-commit-to-slate-worklog.
 
 # The short name of the repo origin names, where origin has a host. A test's
 # fixture repo, with no origin or a file: one, has none, so a hook asking it acts
@@ -26,12 +25,11 @@ made_a_commit() {
   [[ $(git reflog -1 --format=%gs HEAD 2>/dev/null) != *': Fast-forward'* ]]
 }
 
-# The kind of agent the session is, as the Agent-Name trailer and the
-# git.commit_made record name it.
+# The kind of agent the session is, as the git.commit_made record names it.
 agent_name() {
   if [[ -n ${SLATE_ACTOR:-} ]]; then
-    # The scheduler sets <job>@<machine>. The name leaves the machine out: a
-    # project repo's history names none, and a record's shipper adds host.name.
+    # The scheduler sets <job>@<machine>. The name leaves the machine out, because
+    # the record's shipper adds host.name.
     echo "claude-code-unattended/${SLATE_ACTOR%@*}"
   elif [[ ${CLAUDE_CODE_SESSION_ATTENDED:-} == 0 ]]; then
     echo claude-code-unattended

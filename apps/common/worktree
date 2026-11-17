@@ -88,6 +88,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import difflib
+import functools
 import json
 import os
 import re
@@ -339,8 +340,9 @@ class Worktree:
     # What a peer about to edit the same files collides with. None where origin/<base> is
     # unreadable, the same split `ahead` makes.
     changed_paths: tuple[str, ...] | None = None
-    # Who wrote the newest commit ahead of the base, from its `Agent-Session` trailer. A reader
-    # joins it to whoever holds the work when nobody stands in the tree.
+    # Who wrote the newest commit ahead of the base, from the git.commit_made record this
+    # machine wrote for it. A reader joins it to whoever holds the work when nobody stands
+    # in the tree.
     agent_session: str | None = None
 
     def as_json(self) -> dict[str, Any]:
@@ -628,14 +630,44 @@ def divergence(path: Path, base: str) -> tuple[int | None, int | None]:
     return int(behind), int(ahead)
 
 
+def commit_records() -> Path:
+    """Where record-git-commit appends a git.commit_made record for each commit made here."""
+    state = Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local' / 'state')
+    return state / 'telemetry' / 'git-commits.jsonl'
+
+
+@functools.cache
+def sessions_by_commit() -> dict[str, str]:
+    """The session each commit recorded on this machine was made in, by its sha.
+
+    Read once a run, because `list` asks for every tree. A line that does not parse is
+    skipped, as a half-written last line from a commit landing now would be.
+    """
+    try:
+        lines = commit_records().read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return {}
+    found: dict[str, str] = {}
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        sha, session = record.get('vcs.ref.head.revision'), record.get('session.id')
+        if sha and session:
+            found[sha] = session
+    return found
+
+
 def commit_session(path: Path, ahead: int | None) -> str | None:
-    """The session HEAD's `Agent-Session` trailer names, where HEAD is ahead of the base.
+    """The session HEAD's git.commit_made record names, where HEAD is ahead of the base.
 
     A commit already on the base says nothing about who holds this tree, so none is read.
+    A commit made on another machine, or outside a session, has no session here.
     """
     if not ahead:
         return None
-    return git_optional(path, 'log', '-1', '--format=%(trailers:key=Agent-Session,valueonly)') or None
+    return sessions_by_commit().get(git(path, 'rev-parse', 'HEAD'))
 
 
 def changed_paths(path: Path, base: str) -> tuple[str, ...] | None:
@@ -2060,9 +2092,9 @@ def merge_onto(cwd: Path, branch: str, base: str, main: str) -> None:
     """Make the landing merge on a detached `main`, so main is its first parent.
 
     Porcelain `git merge`, so the hooks run on it as on any commit a session makes:
-    `prepare-commit-msg` stamps the agent trailers and `commit-msg` checks the
-    subject. That check runs conventional commits `--strict`, which refuses git's own
-    `Merge branch` line, hence the `chore:` subject.
+    `commit-msg` checks the subject, and `post-merge` records the merge. That check
+    runs conventional commits `--strict`, which refuses git's own `Merge branch` line,
+    hence the `chore:` subject.
 
     A lost race drops this merge, so it is made with `dotfiles.postMergeAfterPush`
     set, and `land_branch` runs `post-merge` once the push lands. A `post-merge`

@@ -34,7 +34,6 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 WORKTREE = REPO / 'apps' / 'common' / 'worktree'
-TRAILER_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'agent-commit-trailers'
 LINK_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'link-commit-to-slate-worklog'
 RECORD_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'record-git-commit'
 HOOK_LIBRARY = REPO / 'configs' / 'trust' / 'fleet' / '.local' / 'shell'
@@ -92,17 +91,6 @@ git -C "$PEER" push -q origin HEAD:main
 """
 
 
-def runs_hooks_set_in_config() -> bool:
-    """Whether this git runs a hook declared as `hook.<name>.event`, asked with one that exits 3."""
-    probe = subprocess.run(
-        ['git', '-c', 'core.hooksPath=/dev/null', '-c', 'hook.probe.event=pre-commit', '-c', 'hook.probe.command=exit 3',
-         'hook', 'run', '--ignore-missing', 'pre-commit'],
-        env={**os.environ, 'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1'},
-        capture_output=True,
-    )  # fmt: skip
-    return probe.returncode == 3
-
-
 def write_executable(path: Path, text: str) -> None:
     path.write_text(text)
     path.chmod(0o755)
@@ -117,7 +105,6 @@ def hooks_into(hooks: Path) -> None:
     and it notes each subject it was handed in $CHECKED.
     """
     hooks.mkdir()
-    write_executable(hooks / 'prepare-commit-msg', f'#!/bin/sh\nexec {shlex.quote(str(TRAILER_HOOK))} "$@"\n')
     after_a_commit = f'#!/bin/sh\n{shlex.quote(str(LINK_HOOK))} "$@"\nexec {shlex.quote(str(RECORD_HOOK))} "$@"\n'
     write_executable(hooks / 'post-commit', after_a_commit)
     write_executable(hooks / 'post-merge', after_a_commit)
@@ -222,11 +209,14 @@ class Rig:
         lines = links.read_text().splitlines() if links.exists() else []
         return [line.split('--commit ', 1)[1].split()[0] for line in lines]
 
+    def records(self) -> list[dict[str, object]]:
+        """Each git.commit_made record the record hook wrote, in order."""
+        written = Path(self.env['XDG_STATE_HOME']) / 'telemetry' / 'git-commits.jsonl'
+        return [json.loads(line) for line in written.read_text().splitlines()] if written.exists() else []
+
     def recorded(self) -> list[str]:
         """Each sha the record hook wrote a git.commit_made line for, in order."""
-        records = Path(self.env['XDG_STATE_HOME']) / 'telemetry' / 'git-commits.jsonl'
-        lines = records.read_text().splitlines() if records.exists() else []
-        return [json.loads(line)['vcs.ref.head.revision'] for line in lines]
+        return [str(record['vcs.ref.head.revision']) for record in self.records()]
 
     def checked_subjects(self) -> list[str]:
         checked = Path(self.env['CHECKED'])
@@ -346,8 +336,7 @@ class TestLandingKeepsEveryRecordedSha:
         rig.commit(alpha, 'a.txt')
         moved = rig.main_moves('elsewhere.txt')
         rig.git(alpha, 'fetch', '-q', 'origin')
-        # A body keeps the subject a paragraph of its own: 2.39 stamps a lone merge subject's trailers onto it.
-        rig.git(alpha, 'merge', '-q', '--no-ff', '-m', 'chore: merge main into alpha', '-m', 'Catch alpha up.', 'origin/main')
+        rig.git(alpha, 'merge', '-q', '--no-ff', '-m', 'chore: merge main into alpha', 'origin/main')
         caught_up = rig.git(alpha, 'rev-parse', 'HEAD')
 
         result = rig.land(alpha)
@@ -496,15 +485,8 @@ class TestLandingKeepsEveryRecordedSha:
 
 
 class TestTheMergeRunsTheCommitHooks:
-    def test_a_clean_merge_is_stamped_checked_and_linked_and_recorded_once_it_lands(self, rig):
-        """A clean `git merge` fires prepare-commit-msg and commit-msg, and post-merge once pushed.
-
-        Whether the stamp reads back as a trailer depends on the git that wrote it.
-        2.39's interpret-trailers takes the `--log` list for a trailer block and
-        appends to it, where 2.53 starts a paragraph of its own. Every
-        machine declares the trailer hook in config, which no git that old runs, so
-        the read-back is asserted only where such a git would run it.
-        """
+    def test_a_clean_merge_is_checked_and_linked_and_recorded_once_it_lands(self, rig):
+        """A clean `git merge` fires commit-msg, and post-merge once pushed."""
         alpha = rig.new('alpha')
         rig.commit(alpha, 'a.txt')
         rig.main_moves('elsewhere.txt')
@@ -512,11 +494,7 @@ class TestTheMergeRunsTheCommitHooks:
         assert_landed(rig.land(alpha))
 
         merge = rig.main()
-        assert f'Agent-Session: {SESSION}' in rig.git(rig.origin, 'log', '-1', '--format=%B', merge)
-        if runs_hooks_set_in_config():
-            trailers = rig.git(rig.origin, 'log', '-1', '--format=%(trailers:only)', merge)
-            assert f'Agent-Session: {SESSION}' in trailers
-            assert f'Worklog: {WORKLOG}' in trailers
+        assert rig.records()[-1]['session.id'] == SESSION
         assert rig.checked_subjects()[-1] == 'chore: merge alpha into main'
         assert (rig.linked()[-1], rig.recorded()[-1]) == (merge, merge)
         assert rig.linked().count(merge) == rig.recorded().count(merge) == 1
