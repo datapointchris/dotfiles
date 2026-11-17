@@ -2,12 +2,16 @@ machine: fleet-run-image
 platform: linux
 
 # The image fleet's agent runs start from. Its build fetches this repo at the
-# commit the image pins, and runs it from that checkout with `uv run --project`,
-# so none of it stays in the image. It applies only the packages, as the
-# unprivileged user the pods run as:
+# commit the image pins, and runs it from that checkout with `uv run --project`.
+# It applies only the packages, as the unprivileged user the pods run as:
 #
 #   dotfiles packages resolve --machine fleet-run-image --json   # keys the layer
 #   dotfiles packages apply --machine fleet-run-image
+#
+# The image's build also copies record-git-commit, git-commit-hooks.sh and the
+# git-commit-record declaration out of the same checkout, so each commit a pod
+# makes leaves its git.commit_made record. Moving or renaming one of them fails
+# that build at its next pin move.
 #
 # The build skips install.sh, which would install dotfiles itself as a uv tool.
 #

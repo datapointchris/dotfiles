@@ -119,8 +119,10 @@ carries its own build of the `fleet` CLI. So it takes `fleet-run-image-clis`, th
 part of `fleet-member-clis` a public source installs, and `repo-checkouts-clis`.
 Each profile it takes holds only CLIs from a public source. The build fetches this
 repo at a commit the image pins, so a change here reaches the image only when that
-pin moves. It runs dotfiles from that checkout with `uv run --project`, so nothing
-of dotfiles stays in the image. The build applies the packages alone. The image
+pin moves. It runs dotfiles from that checkout with `uv run --project`, and applies
+the packages alone. The image's build also copies the `git-commit-record` hook,
+its library and its declaration out of the same checkout, so a pod's commits are
+recorded as a desk's are. The image
 pins the Go and uv every install runs on, and `toolchains apply` would move both.
 Before it installs, `dotfiles packages resolve` names the version each install
 would take. That keys the image layer, so the layer rebuilds only when one of them
