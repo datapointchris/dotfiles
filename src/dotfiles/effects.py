@@ -120,17 +120,23 @@ SECRET_SHAPES = (
         r'(?:(?:Proc-Type|DEK-Info):[^\r\n"\\]*|[A-Za-z0-9+/=]|(?:\r?\n|\\+[nr])[ \t]*)*'
         r'(?:-----END [A-Z ]*PRIVATE KEY-----)?',
     ),
-    SecretShape('github-token', r'\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}'),
-    SecretShape('aws-access-key-id', r'\b(?:AKIA|ASIA)[0-9A-Z]{16}\b'),
-    SecretShape('slack-token', r'\bxox[abposr]-[A-Za-z0-9-]{10,}'),
-    SecretShape('anthropic-api-key', r'\bsk-ant-[A-Za-z0-9_-]{20,}'),
-    SecretShape('openai-project-key', r'\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}'),
-    SecretShape('openai-legacy-key', r'\b(?:sk|rk)-[A-Za-z0-9]{20,}'),
-    SecretShape('jwt', r'\bey[JI][A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+'),
-    SecretShape('google-api-key', r'\bAIza[0-9A-Za-z_-]{35}'),
-    SecretShape('stripe-live-key', r'\b[rs]k_live_[0-9A-Za-z]{24,}'),
-    SecretShape('npm-token', r'\bnpm_[A-Za-z0-9]{36}\b'),
-    SecretShape('ntfy-token', r'\btk_[A-Za-z0-9_-]{29}'),
+    SecretShape('github-token', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}', keep_before=(1,)),
+    SecretShape('aws-access-key-id', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:AKIA|ASIA)[0-9A-Z]{16}\b', keep_before=(1,)),
+    SecretShape(
+        'aws-secret-access-key',
+        r"""((?:secret_access_key|SECRET_ACCESS_KEY|SecretAccessKey|secretAccessKey)\\*["']?\s*[:=]\s*\\*["']?)[A-Za-z0-9/+]{40,}""",
+        keep_before=(1,),
+    ),
+    SecretShape('aws-session-token', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)IQoJb3JpZ2lu[A-Za-z0-9/+=%]{100,}', keep_before=(1,)),
+    SecretShape('slack-token', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:xox[abposr]|xapp-[0-9]+)-[A-Za-z0-9-]{10,}', keep_before=(1,)),
+    SecretShape('anthropic-api-key', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)sk-ant-[A-Za-z0-9_-]{20,}', keep_before=(1,)),
+    SecretShape('openai-project-key', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)sk-(?:proj-)?[A-Za-z0-9_-]{32,}', keep_before=(1,)),
+    SecretShape('openai-legacy-key', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:sk|rk)-[A-Za-z0-9]{20,}', keep_before=(1,)),
+    SecretShape('jwt', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)ey[JI][A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+', keep_before=(1,)),
+    SecretShape('google-api-key', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)AIza[0-9A-Za-z_-]{35}', keep_before=(1,)),
+    SecretShape('stripe-live-key', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)[rs]k_live_[0-9A-Za-z]{24,}', keep_before=(1,)),
+    SecretShape('npm-token', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)npm_[A-Za-z0-9]{36}\b', keep_before=(1,)),
+    SecretShape('ntfy-token', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)tk_[A-Za-z0-9_-]{29}', keep_before=(1,)),
     SecretShape(
         'jwk-private-member',
         r'(\\*"(?:d|p|q|dp|dq|qi|k)\\*"\s*:\s*\\*")'
@@ -140,13 +146,28 @@ SECRET_SHAPES = (
         keep_after=(2,),
     ),
     SecretShape(
+        'credential-named-value',
+        r'((?:\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:[A-Z0-9_]*_|PG)?(?:PASSWORD|PASSWD|TOKEN|SECRET|API_KEY)'
+        r"""(?:=|:[ \t]+|\\*["'][ \t]*:[ \t]*)\\*")[^"\\$<{\[`\r\n][^"\\`\r\n]{7,}|"""
+        r'((?:\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:[A-Z0-9_]*_|PG)?(?:PASSWORD|PASSWD|TOKEN|SECRET|API_KEY)'
+        r"""(?:=|:[ \t]+|\\*["'][ \t]*:[ \t]*)\\*')[^'\\$<{\[`\r\n][^'\\`\r\n]{7,}|"""
+        r'((?:\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:[A-Z0-9_]*_|PG)?(?:PASSWORD|PASSWD|TOKEN|SECRET|API_KEY)'
+        r"""(?:=|:[ \t]+))[^\s"'\\$<{\[`][^\s"'\\`]{7,}""",
+        keep_before=(1, 2, 3),
+    ),
+    SecretShape(
+        'url-signature',
+        r'((?:[?&#]|\\+u0026)(?:sig|Signature|X-Amz-Signature|X-Goog-Signature)=)[A-Za-z0-9%+/=_.-]+',
+        keep_before=(1,),
+    ),
+    SecretShape(
         'url-password',
         r'(\b[A-Za-z][A-Za-z0-9+.-]{0,31}://[^\s:/?#@"\\]*:)[^\s/?#"\\\[\]]+(@)',
         keep_before=(1,),
         keep_after=(2,),
     ),
     SecretShape('url-query-token', r'((?:[?&#]|\\+u0026)(?:access_|refresh_)?token=)[A-Za-z0-9._~+/%=-]+', keep_before=(1,)),
-    SecretShape('bearer-token', r'(\b(?i:bearer)\s+)[A-Za-z0-9._~+/-]{20,}=*', keep_before=(1,)),
+    SecretShape('bearer-token', r'((?:\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?i:bearer)\s+)[A-Za-z0-9._~+/-]{20,}=*', keep_before=(1,)),
 )
 """Token shapes scrubbed from anything a command said before it is recorded, where no shared file is named.
 
