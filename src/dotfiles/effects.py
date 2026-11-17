@@ -136,7 +136,7 @@ SECRET_SHAPES = (
     SecretShape('google-api-key', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)AIza[0-9A-Za-z_-]{35}', keep_before=(1,)),
     SecretShape('stripe-live-key', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)[rs]k_live_[0-9A-Za-z]{24,}', keep_before=(1,)),
     SecretShape('npm-token', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)npm_[A-Za-z0-9]{36}\b', keep_before=(1,)),
-    SecretShape('ntfy-token', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)tk_[A-Za-z0-9_-]{29}', keep_before=(1,)),
+    SecretShape('ntfy-token', r'(\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)tk_[A-Za-z0-9_-]{29,}', keep_before=(1,)),
     SecretShape(
         'jwk-private-member',
         r'(\\*"(?:d|p|q|dp|dq|qi|k)\\*"\s*:\s*\\*")'
@@ -150,7 +150,7 @@ SECRET_SHAPES = (
         r'((?:\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:[A-Z0-9_]*_|PG)?(?:PASSWORD|PASSWD|TOKEN|SECRET|API_KEY)'
         r"""(?:=|:[ \t]+|\\*["'][ \t]*:[ \t]*)\\*")[^"\\$<{\[`\r\n][^"\\`\r\n]{7,}|"""
         r'((?:\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:[A-Z0-9_]*_|PG)?(?:PASSWORD|PASSWD|TOKEN|SECRET|API_KEY)'
-        r"""(?:=|:[ \t]+|\\*["'][ \t]*:[ \t]*)\\*')[^'\\$<{\[`\r\n][^'\\`\r\n]{7,}|"""
+        r"""(?:=|:[ \t]+|\\*["'][ \t]*:[ \t]*)\\*')[^'"\\$<{\[`\r\n][^'"\\`\r\n]{7,}|"""
         r'((?:\\(?:[nrt]|u[0-9a-fA-F]{4})|\b)(?:[A-Z0-9_]*_|PG)?(?:PASSWORD|PASSWD|TOKEN|SECRET|API_KEY)'
         r"""(?:=|:[ \t]+))[^\s"'\\$<{\[`][^\s"'\\`]{7,}""",
         keep_before=(1, 2, 3),
