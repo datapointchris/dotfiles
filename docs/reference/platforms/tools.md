@@ -1,7 +1,7 @@
 # Tool Availability
 
 What is installed on a machine is `howto list`, or
-`packages list --source <section>` for one install method. This page covers
+`dotfiles packages list --source <section>` for one install method. This page covers
 only the tools where the *choice* of method needed a decision, and the
 per-platform quirks that decision produced.
 

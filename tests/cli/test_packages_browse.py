@@ -1,30 +1,23 @@
-"""Browsing the declaration: `packages list`, `show`, `search`, `sections`, `stats`, `tags`.
+"""Browsing the declaration: `dotfiles packages list`, `show`, `search` and `stats`.
 
 The module is read-only and deliberately untyped — it walks `packages.yml` *as
 written* rather than as validated, so a declaration that will not load is still
 listable while it is being fixed. `MALFORMED` below is what measures that claim.
 
-Two doors, both real. `dotfiles packages list|show|search` goes through
-`CliRunner` into the typer app, which reaches `declaration.main` in process via
-`bridge.declaration` — so a `Refusal` travels to `boundary.Boundary` and becomes
-an exit code. `declaration.main(argv)` is the same door with the click group
-taken off, and it is the only way to reach `sections`, `stats` and `tags`, which
-the `dotfiles` CLI does not expose at all.
-
-**In process rather than in a subprocess.** `tests/apps/test_packages_list.py`
-drives `python -m dotfiles.declaration`, which measures the same behavior and
-reports no coverage for any of it — so every branch here read as unexecuted
-while three tests were passing over it.
+`dotfiles packages` goes through `CliRunner` into the typer app, which reaches
+`declaration.main` in process via `bridge.declaration`, so a `Refusal` travels
+to `boundary.Boundary` and becomes an exit code. Most tests call
+`declaration.main(argv)` directly, which is the same function with the click
+group taken off.
 
 `$DOTFILES_DIR` names the synthetic tree and `paths`' own derivation is re-run
 over it, because `paths` reads that variable once at import. Same two-step, and
 the same reasoning, as `tests/matrix/harness.rebind`.
 
-**Three values exist only inside a rendered sentence**, so they are parsed back
 **Every read verb here speaks `--json`**, so a count or a field is asked for
 rather than recovered from the table it was printed in. `answered` is that one
-call. The rendered form is asserted only where the rendering *is* the claim — a
-truncated column, or the guidance an empty tally prints instead of a table.
+call. The rendered form is asserted only where the rendering *is* the claim,
+such as a truncated column.
 """
 
 from __future__ import annotations
@@ -34,7 +27,6 @@ import json
 import platform
 import re
 import stat
-import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -44,7 +36,6 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-import dotfiles
 from dotfiles import catalog
 from dotfiles import declaration
 from dotfiles import paths
@@ -228,14 +219,14 @@ def test_a_section_spelled_wrong_is_skipped_and_the_rest_of_the_file_still_lists
 def test_a_bare_string_entry_is_skipped_by_every_reader_that_needs_a_name(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """`list` filters non-mappings itself; `search`, `show` and `tags` reach them
+    """`list` filters non-mappings itself; `search`, `show` and `stats` reach them
     through `get_all_packages`, which has to filter again. Without that second
     filter a half-written entry — the name typed and the fields not yet —
     crashes `pkg.get` for every one of them."""
     entries = ['lazygit', {'name': 'lazydocker', 'description': LONG_DESCRIPTION, 'tags': ['tui']}]
     point_at(tmp_path / 'repo', {'github_releases': entries}, monkeypatch)
 
-    tags = answered(capsys, 'tags')
+    tags = answered(capsys, 'stats')['tags']
     declaration.main(['search', 'lazy'])
     found = capsys.readouterr().out
 
@@ -316,49 +307,25 @@ def test_a_filter_matching_nothing_says_so_and_lists_no_package(declared: Path, 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_sections_and_stats_agree_with_each_other_and_with_the_declaration(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Two readers over one file, asserted against the same table.
+def test_stats_counts_every_section_and_every_tag_the_declaration_holds(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Asserted against the fixture's own tables.
 
-    They shared a helper that inferred a section's structure from its runtime
-    type, so a mapping-of-mappings section returned nothing: `tmux_plugins` was
-    absent from the listing and the total was simply wrong. Either reader
-    disagreeing with `COUNTS` catches that class again.
+    A helper once inferred a section's structure from its runtime type, so a
+    mapping-of-mappings section returned nothing: `tmux_plugins` was absent and
+    the total was wrong. `tui` is carried by two entries in one section and
+    `lsp` by one in another, so a per-section tag tally would differ here.
     """
-    sections = answered(capsys, 'sections')
-    stats = answered(capsys, 'stats')
-
-    assert sections == COUNTS
-    assert stats == {'sections': COUNTS, 'total': sum(COUNTS.values())}
+    assert answered(capsys, 'stats') == {'sections': COUNTS, 'tags': TAGS, 'total': sum(COUNTS.values())}
 
 
-def test_a_section_declaring_nothing_is_left_out_of_both_counts(
+def test_a_section_or_tag_declaring_nothing_is_left_out_of_stats(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Every section the catalog spells is walked; only the ones with rows are
-    printed. A zero row per unused section is most of the file."""
-    point_at(tmp_path / 'repo', {'go_tools': [{'name': 'task'}]}, monkeypatch)
-
-    assert answered(capsys, 'sections') == {'go_tools': 1}
-
-
-def test_tags_are_counted_across_every_section_rather_than_within_one(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """`tui` is carried by two entries in one section and `lsp` by one in
-    another, so a per-section tally and a whole-file tally differ here."""
-    assert answered(capsys, 'tags') == TAGS
-
-
-def test_a_declaration_with_no_tags_at_all_tallies_nothing_and_still_answers(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """The empty branch prints guidance instead of a table. Paired with the
-    positive that something was printed, because an empty tally is also what a
-    crash before the first row would leave."""
+    counted. A zero row per unused section is most of the file."""
     point_at(tmp_path / 'repo', {'go_tools': [{'name': 'task', 'description': 'a task runner'}]}, monkeypatch)
 
-    assert answered(capsys, 'tags') == {}
-
-    declaration.main(['tags'])
-    assert capsys.readouterr().out.strip(), 'the rendered form says what to do instead of printing nothing'
+    assert answered(capsys, 'stats') == {'sections': {'go_tools': 1}, 'tags': {}, 'total': 1}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -717,10 +684,10 @@ def test_the_front_door_answers_on_stdout_and_refuses_on_stderr(declared: Path, 
         assert ran.stderr.strip()
 
 
-def test_the_front_door_and_the_console_script_list_the_same_declaration(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Two doors onto one function, and the only difference is the click group
-    around it. A divergence here means the bridge is translating rather than
-    calling."""
+def test_the_front_door_lists_what_the_declaration_lists(declared: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """The leaf forwards to one function, and the only difference is the click
+    group around it. A divergence here means the bridge is translating rather
+    than calling."""
     declaration.main(['list', '--json'])
     direct = json.loads(capsys.readouterr().out)
 
@@ -733,9 +700,9 @@ def test_the_front_door_shows_one_package_as_json(declared: Path, capsys: pytest
     """`show` is a read verb, so the flag `list` beside it carries reaches it too:
     `--json` is on every read.
 
-    Both doors, because the leaf only forwards: the declaration renders the
-    document either way, so a difference between the two is the bridge
-    translating rather than calling.
+    Against the function it forwards to, because the declaration renders the
+    document, so a difference between the two is the bridge translating rather
+    than calling.
     """
     declaration.main(['show', 'lazygit', '--json'])
     direct = json.loads(capsys.readouterr().out)
@@ -745,37 +712,6 @@ def test_the_front_door_shows_one_package_as_json(declared: Path, capsys: pytest
     assert ran.exit_code == ExitCode.CONVERGED
     assert json.loads(ran.stdout) == direct
     assert [record['name'] for record in direct] == ['lazygit']
-
-
-def test_the_console_script_reports_a_refusal_rather_than_raising_it(declared: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`main` raises so the typer boundary can carry the code; `cli` is the other
-    door and has no boundary, so it reports through the same `boundary.report`.
-    Without it a misspelt name printed a traceback and exited 1."""
-    monkeypatch.setattr(sys, 'argv', ['packages', 'show', 'nothing-declares-this'])
-
-    with pytest.raises(SystemExit) as exited:
-        declaration.cli()
-
-    assert exited.value.code == ExitCode.USAGE
-
-
-def test_version_and_the_bare_invocation_answer_without_reading_the_declaration(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """Both return before `load_packages`, which a checkout with no declaration
-    at all is the way to prove — the refusal on `list` is what shows the tree
-    really is empty rather than the assertion being vacuous."""
-    point_at(tmp_path / 'repo', None, monkeypatch)
-
-    declaration.main(['--version'])
-    printed = capsys.readouterr().out.split()
-    declaration.main([])
-    usage = capsys.readouterr().out
-
-    assert printed == ['packages', dotfiles.__version__]
-    assert usage.strip()
-    with pytest.raises(Refusal):
-        declaration.main(['list'])
 
 
 def test_the_declaration_read_is_the_one_the_resolved_checkout_holds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

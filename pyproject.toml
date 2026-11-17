@@ -21,7 +21,6 @@ dependencies = [
 
 [project.scripts]
 dotfiles = "dotfiles.main:app"
-packages = "dotfiles.declaration:cli"
 
 
 # ---------- Tool Configurations ---------- #

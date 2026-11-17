@@ -20,7 +20,7 @@ macos_taps:
 # Installed via OS package managers: apt (Ubuntu), pacman (Arch), brew (macOS)
 # Omit a platform if the tool is installed via other methods
 # A tool absent here is installed by the section it does appear in:
-#   packages list --section=<x>
+#   dotfiles packages list --source <x>
 
 system_packages:
   # Tier convention (one list, no parallel core/workstation lists to drift):

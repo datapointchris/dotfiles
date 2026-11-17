@@ -629,6 +629,20 @@ def packages_search(query: str = typer.Argument(..., help='Substring to match'))
     raise typer.Exit(ExitCode.CONVERGED)
 
 
+@packages_app.command(
+    'stats',
+    epilog=(
+        'Examples:\n\n'
+        'dotfiles packages stats — the count per section and per tag, and the total\n\n'
+        'dotfiles packages stats --json — the same, for a script'
+    ),
+)
+def packages_stats(as_json: bool = JsonOption) -> None:
+    """Count the declared packages per section and per tag, with the total."""
+    bridge.declaration('stats', *(('--json',) if as_json else ()))
+    raise typer.Exit(ExitCode.CONVERGED)
+
+
 toolchains_app = typer.Typer(
     no_args_is_help=True,
     help='Language runtimes and their version managers',

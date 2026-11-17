@@ -64,7 +64,7 @@ EXCEPTION_VERBS: dict[str, str] = {
     'serve': 'bundle: answers the requests other machines left on the remote, which is an exchange with them, not a write here',
     'latest': 'report: the common read, worth one word rather than `show $(… list)`',
     'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles upload "$(dotfiles report path)"`',
-    'stats': 'report: an aggregate across runs, which `show` on one run cannot be',
+    'stats': 'report, packages: an aggregate, across runs or across the declaration, which `show` on one item cannot be',
     'update': 'self-update, as everywhere in the fleet — here the checkout is the installation',
     'run': 'timers: runs one declared command now and records its outcome, which measures nothing about the machine',
     'set': 'remote hook-secret: stores a value a person carries in, from a pipe or a prompt, which no reconcile verb can produce',

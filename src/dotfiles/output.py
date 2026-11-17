@@ -683,17 +683,10 @@ CONTINUATION = '  '
 
 
 def report(refused: Refusal) -> ExitCode:
-    """Print a refusal the way every door prints it, and answer with its code.
+    """Print a refusal the way every caller prints it, and answer with its code.
 
-    A function rather than a method on `boundary.Boundary`, because there are two
-    console scripts onto this package and only one of them is a Typer app.
-    `packages` enters at `declaration.cli` and never touches a click group, so a
-    handler living inside `Boundary.invoke` would leave that door printing a
-    traceback for a misspelt name — losing the sentence, losing the `did you
-    mean:` advice, and exiting 1, which this tool spends on DRIFT.
-
-    Here rather than beside `Boundary`, so the door that has no click group can
-    reach it without importing typer. `tests/test_dependencies.py` pins that.
+    A function rather than a method on `boundary.Boundary`, because a reconcile
+    closes its run through it as well as the click group does.
     """
     first, *rest = str(refused).splitlines() or ['']
     error(first)

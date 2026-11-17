@@ -37,20 +37,18 @@ def git(*args: str, output: Output = Output.QUIET) -> Completed:
 def declaration(*args: str, output: Output = Output.DATA) -> None:
     """Query the declaration, in-process, letting its refusals travel.
 
-    A call rather than a subprocess because it is already part of this package.
-    A subprocess would have to reach it as `uv run packages`, which needs a uv
-    project on disk — true in the repo, false for the installed tool this CLI is
-    becoming.
+    A call rather than a subprocess because it is already part of this package,
+    and `dotfiles packages` is the only door onto it.
 
     It raises a `Refusal`, which carries whether it is a typo or a broken
     declaration and travels to the boundary untouched. Handing argparse's status
     to `typer.Exit` instead lands on 1, which is this tool's `DRIFT`, so a
     misspelt package name would report the machine as having changes pending.
 
-    Only browsing is left behind this — `list`, `show`, `search`. Validation was
-    the caller that made the SystemExit conversion load-bearing, because a finding
-    must not kill a walk part-way through; it is a function returning findings
-    now, in `validate.py`, and reaches nothing through here.
+    Only browsing is left behind this — `list`, `show`, `search` and `stats`.
+    Validation was the caller that made the SystemExit conversion load-bearing,
+    because a finding must not kill a walk part-way through; it is a function
+    returning findings now, in `validate.py`, and reaches nothing through here.
 
     Running in-process means it prints to *our* stdout, so the same stream
     discipline `effects.run` applies to a subprocess has to be applied here by

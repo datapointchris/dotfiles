@@ -49,8 +49,7 @@ def test_the_declaration_is_not_empty() -> None:
     """Guards the parametrization below: a table that collects nothing reports
     `1 skipped` rather than a failure, so an emptied `[project.scripts]` would
     delete this policy and leave the suite green."""
-    assert len(SCRIPTS) >= 2, SCRIPTS
-    assert 'dotfiles' in SCRIPTS
+    assert 'dotfiles' in SCRIPTS, SCRIPTS
 
 
 def test_the_table_read_here_holds_the_names_the_symlink_manager_reserves() -> None:

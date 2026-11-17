@@ -1,13 +1,7 @@
 """The click group that turns a `Refusal` into an exit status.
 
-Only the typer door needs this. `packages` enters at `declaration.cli`, has no
-click group to carry a failure, and reports through `output.report` instead — so
-that function lives in `output` and this module holds the group alone.
-
-Keeping them apart is what lets the `packages` console script import neither
-typer nor click. `docs/learnings/undeclared-transitive-dependency.md` is why that
-is worth a module boundary: a click import in this package once stopped the
-installed binary from starting, and every local gate passed.
+It prints a refusal through `output.report`, which a reconcile also calls to close
+a run, so that function lives in `output` and this module holds the group alone.
 """
 
 from __future__ import annotations

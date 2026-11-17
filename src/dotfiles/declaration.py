@@ -1,4 +1,4 @@
-"""Browsing the declaration: `packages list`, `show`, `search`, `stats`, `tags`.
+"""Browsing the declaration: `dotfiles packages list`, `show`, `search` and `stats`.
 
 Reading, and nothing else. The schema left for `catalog.py`, where a section's
 shape is the section's dataclass, and `verify` left for `validate.py`, which asks
@@ -23,9 +23,7 @@ from typing import Any
 
 import yaml
 
-import dotfiles
 from dotfiles import catalog
-from dotfiles import output
 from dotfiles import paths
 from dotfiles.refusal import Refusal
 from dotfiles.vocabulary import ExitCode
@@ -296,8 +294,8 @@ def calculate_column_widths(items: list[dict[str, Any]], fields: list[str], max_
 def section_counts(data: dict[str, Any]) -> dict[str, int]:
     """How many entries each section declares, sections with none left out.
 
-    The value both `sections` and `stats` render, named once so a caller can ask
-    for it instead of counting the words in a printed row.
+    Named once so a caller can ask for it instead of counting the words in a
+    printed row.
     """
     counted = {section: sum(1 for _ in iter_section_entries(data, section)) for section in PACKAGE_SECTIONS}
     return {section: count for section, count in counted.items() if count}
@@ -311,24 +309,12 @@ def tag_counts(data: dict[str, Any]) -> dict[str, int]:
     return dict(counted.most_common())
 
 
-def cmd_sections(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """List all package sections with counts."""
-    counted = section_counts(data)
-    if args.json:
-        print(json.dumps(counted, indent=2))
-        return
-
-    print_section('Package Sections')
-    print()
-    for section, count in counted.items():
-        print(f'  {section:<20} {count:3d} packages')
-
-
 def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """Show package statistics by section."""
+    """Count the declared packages per section and per tag, with the total."""
     counted = section_counts(data)
+    tagged = tag_counts(data)
     if args.json:
-        print(json.dumps({'sections': counted, 'total': sum(counted.values())}, indent=2))
+        print(json.dumps({'sections': counted, 'tags': tagged, 'total': sum(counted.values())}, indent=2))
         return
 
     print_section('Package Statistics')
@@ -342,29 +328,15 @@ def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
     print('─' * 32)
     print(f'{"Total":<24} {sum(counted.values()):5d}')
-
-
-def cmd_tags(args: argparse.Namespace, data: dict[str, Any]) -> None:
-    """List all tags with package counts."""
-    counted = tag_counts(data)
-    if args.json:
-        print(json.dumps(counted, indent=2))
-        return
-
-    print_section('Available Tags')
     print()
 
-    if not counted:
-        print('  No tags defined yet.')
-        print()
-        print('  Add tags to packages.yml entries:')
-        print('    - name: ghostty')
-        print('      description: GPU-accelerated terminal')
-        print('      tags: [gui, terminal]')
+    if not tagged:
+        print('No tags declared. An entry carries them as `tags: [gui, terminal]`.')
         return
-
-    for tag, count in counted.items():
-        print(f'  {tag:<16} {count:3d} packages')
+    print(f'{"Tag":<24} {"Count":>5}')
+    print('─' * 32)
+    for tag, count in tagged.items():
+        print(f'{tag:<24} {count:5d}')
 
 
 def sections_named(args: argparse.Namespace) -> list[str]:
@@ -659,39 +631,17 @@ def iter_section_entries(data: dict[str, Any], section: str):
                 yield {'name': key, **entry}
 
 
-def cli() -> None:
-    """The `packages` console script, which is the other door onto `main`.
-
-    `main` raises `Refusal` and does not report it, because the `dotfiles` CLI
-    calls it in-process and wants the refusal to travel to `boundary.Boundary`.
-    This door has no click group to carry one, so it reports here — through the
-    same `output.report` the boundary uses, so a misspelt package name reads
-    identically whichever binary was typed.
-
-    Reaching `output.report` rather than `boundary` is what keeps this door free
-    of typer and click. `tests/test_dependencies.py` pins it.
-    """
-    try:
-        main()
-    except Refusal as refused:
-        sys.exit(output.report(refused))
-
-
 def main(argv: list[str] | None = None) -> None:
     """Parse arguments and run one query, raising rather than reporting.
 
-    `argv` defaults to `sys.argv[1:]` for the console script, and is passed
-    explicitly by the `dotfiles` CLI, which calls this in-process. The
-    alternative was shelling out to `uv run packages`, which needs a uv project
-    on disk — and the installed tool has none.
+    The `dotfiles packages` leaves call this in-process through `bridge.declaration`,
+    so a `Refusal` travels to `boundary.Boundary`, which reports it.
     """
     parser = argparse.ArgumentParser(
-        prog='packages',
+        prog='dotfiles packages',
         description='Query packages.yml for browsing and discovery',
     )
-    parser.add_argument('--version', '-V', action='store_true', help='Show version')
-
-    subparsers = parser.add_subparsers(dest='command')
+    subparsers = parser.add_subparsers(dest='command', required=True)
 
     def reading(name: str, help: str) -> argparse.ArgumentParser:
         """A read verb, which speaks `--json` as every read does."""
@@ -699,14 +649,8 @@ def main(argv: list[str] | None = None) -> None:
         added.add_argument('--json', action='store_true', help='Output as JSON')
         return added
 
-    sections_parser = reading('sections', 'List all sections')
-    sections_parser.set_defaults(func=cmd_sections)
-
-    stats_parser = reading('stats', 'Show package counts')
+    stats_parser = reading('stats', 'Count packages per section and per tag')
     stats_parser.set_defaults(func=cmd_stats)
-
-    tags_parser = reading('tags', 'List all tags')
-    tags_parser.set_defaults(func=cmd_tags)
 
     show_parser = reading('show', 'Show package details')
     show_parser.add_argument('name', help='Package name')
@@ -728,20 +672,5 @@ def main(argv: list[str] | None = None) -> None:
     list_parser.set_defaults(func=cmd_list)
 
     args = parser.parse_args(argv)
-
-    if args.version:
-        # One distribution, so one version — read from its metadata rather than a
-        # literal maintained separately here.
-        print(f'packages {dotfiles.__version__}')
-        return
-
-    if not args.command:
-        parser.print_help()
-        return
-
     data = load_packages()
     args.func(args, data)
-
-
-if __name__ == '__main__':
-    cli()
