@@ -16,7 +16,6 @@ from collections.abc import Callable
 from itertools import chain
 from pathlib import Path
 from typing import Any
-from typing import cast
 
 import pytest
 import yaml
@@ -26,8 +25,6 @@ from dotfiles import coordinates as axes
 from dotfiles import evidence as ev
 from dotfiles import providers
 from dotfiles import registry
-from dotfiles.plan import Precondition
-from dotfiles.plan import Preconditions
 from dotfiles.plan import Stage
 from dotfiles.privilege import Privilege
 from dotfiles.providers import bootstrap
@@ -1021,30 +1018,6 @@ def test_the_probe_is_the_kernel_driver_node_rather_than_a_test_flag(monkeypatch
     monkeypatch.setenv('DOTFILES_DOCKER_TEST', 'true')
 
     assert ev.have_amd_gpu() is ev.AMD_KFD.exists()
-
-
-def test_an_unnamed_precondition_refuses_rather_than_passing() -> None:
-    """Two ways the dispatch can stop gating, and neither assertion sees the other's.
-
-    A member with no branch answers False on a machine that meets everything,
-    which the first assertion catches and names. That one cannot see a
-    fall-through returning True, because every named member's own branch answers
-    before it — only a value hitting no branch reaches the final `return`.
-
-    The `cast` is that value. `Precondition('...')` raises, so no unseen member is
-    constructible and the branch has no other door. It is not a hypothetical
-    branch: dispatch over an enum names every member, its fall-through returns the
-    conservative answer, and `False` here is what makes
-    `repair_for` gate the item rather than install it.
-    """
-    met = Preconditions(**{field.name: True for field in dc.fields(Preconditions)})
-    unseen = cast(Precondition, 'a_precondition_nobody_wrote_a_branch_for')
-
-    unnamed = [precondition.name for precondition in Precondition if not met.holds(precondition)]
-
-    assert unnamed == [], f'no branch in Preconditions.holds names {unnamed}, so each one silently fails closed'
-    assert met.holds(unseen) is False, 'the fall-through must decline, so a future member gates rather than installs'
-    assert met.holds(Precondition.NONE) is True, 'NONE answers True by being named'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

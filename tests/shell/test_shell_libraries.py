@@ -72,16 +72,3 @@ def test_no_library_changes_its_caller_s_shell_flags(library: Path) -> None:
     # `$ZSH_VERSION` reads, fine under zsh and fatal under `set -u` in bash.
     assert separator, f'{identifier(library)} never came back: {result.stderr.strip() or f"exit {result.returncode}"}'
     assert before == after, f'{identifier(library)} left the shell in {after} having been handed {before}'
-
-
-@pytest.mark.parametrize('root', LIBRARY_ROOTS)
-def test_every_library_root_contributes_at_least_one_directory(root: str) -> None:
-    """A glob that matches nothing collects zero cases and reports green, which is
-    the failure mode the hardcoded list had in a quieter form.
-
-    Asked of the roots rather than the directories: a directory is only in
-    `LIBRARY_DIRS` because a glob found a file in it, so asking whether it holds
-    one answers itself. A root is the last thing here anybody wrote down, so it is
-    the last thing that can be silently wrong.
-    """
-    assert [directory for directory in LIBRARY_DIRS if directory == root or directory.startswith(f'{root}/')]

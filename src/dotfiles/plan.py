@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
+from typing import assert_never
 
 from dotfiles import catalog
 from dotfiles import coordinates as axes
@@ -175,22 +176,23 @@ class Preconditions:
     amd_gpu: bool = False
 
     def holds(self, precondition: Precondition) -> bool:
-        """Every member named, and an unnamed one refuses.
+        """Every member named, so mypy refuses a member added with no branch.
 
         `NONE` answers True by being written down rather than by falling off the
-        end. The difference is what a *new* member gets: adding one is a one-line
-        change in the enum above, and a dispatch that absorbed it silently would
-        answer "satisfied" — a declared precondition quietly no longer gating the
-        install it was declared to gate, which is failing open in the direction
-        that does the thing.
+        end. A dispatch that absorbed a new member would answer "satisfied", and a
+        declared precondition would quietly stop gating the install it was
+        declared to gate. `Precondition('...')` raises, so no value outside the
+        enum reaches the last case.
         """
-        if precondition is Precondition.NONE:
-            return True
-        if precondition is Precondition.GITHUB_AUTH:
-            return self.github_auth
-        if precondition is Precondition.AMD_GPU:
-            return self.amd_gpu
-        return False
+        match precondition:
+            case Precondition.NONE:
+                return True
+            case Precondition.GITHUB_AUTH:
+                return self.github_auth
+            case Precondition.AMD_GPU:
+                return self.amd_gpu
+            case _ as unreachable:
+                assert_never(unreachable)
 
 
 @dc.dataclass(frozen=True, slots=True)
