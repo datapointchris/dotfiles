@@ -185,7 +185,8 @@ should not be.
 part needs interactive sudo. Test a provider directly, or in a Docker container with passwordless
 sudo. `dotfiles apply --skip system`, `dotfiles apply --entry <name>` and a scoped `dotfiles
 packages apply --package <name>` need none, so a session may run them on a workstation, here or
-over SSH.
+over SSH. On an Intel Mac, a session runs only `dotfiles packages apply --package <name>`. A whole
+apply there builds every system package, for the reason the next paragraph gives.
 
 **Homebrew builds no new Intel bottles, and the macOS machines here are Intel.** Intel drops to Tier 3
 in September 2026 and is unsupported from September 2027. This is settled; the errors are the expected
