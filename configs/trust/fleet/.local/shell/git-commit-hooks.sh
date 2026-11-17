@@ -16,10 +16,13 @@ hosted_repo_name() {
 # Whether the hook run given these arguments follows a commit it made. post-commit
 # passes none. post-merge passes 1 for a squash, which commits nothing. A
 # fast-forward moves HEAD onto a commit that already existed, and git's reflog
-# subject for it is untranslated in every locale.
+# subject for it is untranslated in every locale. `worktree land` makes its merge
+# with dotfiles.postMergeAfterPush set and runs post-merge again once the merge is
+# pushed, so a merge a lost race drops is never recorded.
 made_a_commit() {
   (($# == 0)) && return 0
   [[ $1 == 0 ]] || return 1
+  [[ $(git config --type=bool --get dotfiles.postMergeAfterPush 2>/dev/null) != true ]] || return 1
   [[ $(git reflog -1 --format=%gs HEAD 2>/dev/null) != *': Fast-forward'* ]]
 }
 

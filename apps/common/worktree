@@ -1719,8 +1719,7 @@ class Merging(StrEnum):
 
     CLEAN = 'clean'
     """`land` made it with nothing to resolve, so it holds nothing the branch does
-    not, and the next run drops it and merges again. The `post-merge` hooks already
-    recorded its sha, so a dropped one leaves a record of a commit that never landed."""
+    not, and the next run drops it and merges again."""
 
     CONFLICT = 'conflict'
     """It stopped for the session to resolve. The resolution exists only in this
@@ -1959,6 +1958,8 @@ def land_branch(cwd: Path, branch: str, base: str) -> Landed:
 
         pushed = git_effect(cwd, 'push', '--quiet', 'origin', f'HEAD:{base}')
         if pushed.returncode == 0:
+            if merging:
+                run_post_merge_hooks(cwd)
             return Landed(commits=commits, sha=git(cwd, 'rev-parse', 'HEAD'), merge=merging)
         if merging:
             return_to_branch(cwd, branch)
@@ -1984,6 +1985,10 @@ def merge_onto(cwd: Path, branch: str, base: str, main: str) -> None:
     subject. That check runs conventional commits `--strict`, which refuses git's own
     `Merge branch` line, hence the `chore:` subject.
 
+    A lost race drops this merge, so it is made with `dotfiles.postMergeAfterPush`
+    set, and `land_branch` runs `post-merge` once the push lands. A `post-merge`
+    hook that skips while the key is set acts only on a merge that reached main.
+
     A conflict stops inside git's merge state, which holds the only copy of the
     resolution in progress, so nothing here aborts one.
     """
@@ -1993,7 +1998,8 @@ def merge_onto(cwd: Path, branch: str, base: str, main: str) -> None:
         landing_record(cwd).unlink(missing_ok=True)
         raise Refused(f'Could not detach at origin/{base} to merge onto it\n{git_said(detached)}')
 
-    merged = git_effect(cwd, 'merge', '--no-ff', '--no-edit', '--log', '-m', f'chore: merge {branch} into {base}', branch)
+    subject = f'chore: merge {branch} into {base}'
+    merged = git_effect(cwd, '-c', 'dotfiles.postMergeAfterPush=true', 'merge', '--no-ff', '--no-edit', '--log', '-m', subject, branch)
     if merged.returncode == 0:
         return
     if merge_in_progress(cwd):
@@ -2008,6 +2014,17 @@ def merge_onto(cwd: Path, branch: str, base: str, main: str) -> None:
         f'git merge refused to merge {branch} into origin/{base}\n{git_said(merged)}',
         "Nothing was pushed. Fix what git says above, then run 'worktree land' again",
     )
+
+
+def run_post_merge_hooks(cwd: Path) -> None:
+    """Run `post-merge` on the merge that just landed, as git runs it after a merge.
+
+    A hook that fails cannot undo a pushed merge, so what it said is printed and the
+    landing goes on.
+    """
+    ran = git_effect(cwd, 'hook', 'run', '--ignore-missing', 'post-merge', '--', '0')
+    if said := (ran.stderr + ran.stdout).strip():
+        ERR.print(escape(said), highlight=False)
 
 
 def catch_up_checkout(checkout: Path, base: str) -> None:

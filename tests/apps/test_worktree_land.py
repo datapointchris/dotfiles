@@ -21,6 +21,7 @@ and on a machine with none of this repo's environment:
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shlex
@@ -35,6 +36,7 @@ REPO = Path(__file__).resolve().parents[2]
 WORKTREE = REPO / 'apps' / 'common' / 'worktree'
 TRAILER_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'agent-commit-trailers'
 LINK_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'link-commit-to-slate-worklog'
+RECORD_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'record-git-commit'
 HOOK_LIBRARY = REPO / 'configs' / 'trust' / 'fleet' / '.local' / 'shell'
 
 for variable in subprocess.run(['git', 'rev-parse', '--local-env-vars'], capture_output=True, text=True, check=True).stdout.split():
@@ -116,7 +118,9 @@ def hooks_into(hooks: Path) -> None:
     """
     hooks.mkdir()
     write_executable(hooks / 'prepare-commit-msg', f'#!/bin/sh\nexec {shlex.quote(str(TRAILER_HOOK))} "$@"\n')
-    write_executable(hooks / 'post-commit', f'#!/bin/sh\nexec {shlex.quote(str(LINK_HOOK))} "$@"\n')
+    after_a_commit = f'#!/bin/sh\n{shlex.quote(str(LINK_HOOK))} "$@"\nexec {shlex.quote(str(RECORD_HOOK))} "$@"\n'
+    write_executable(hooks / 'post-commit', after_a_commit)
+    write_executable(hooks / 'post-merge', after_a_commit)
     release = conventional_commits_release()
     write_executable(
         hooks / 'commit-msg',
@@ -218,6 +222,12 @@ class Rig:
         lines = links.read_text().splitlines() if links.exists() else []
         return [line.split('--commit ', 1)[1].split()[0] for line in lines]
 
+    def recorded(self) -> list[str]:
+        """Each sha the record hook wrote a git.commit_made line for, in order."""
+        records = Path(self.env['XDG_STATE_HOME']) / 'telemetry' / 'git-commits.jsonl'
+        lines = records.read_text().splitlines() if records.exists() else []
+        return [json.loads(line)['vcs.ref.head.revision'] for line in lines]
+
     def checked_subjects(self) -> list[str]:
         checked = Path(self.env['CHECKED'])
         return checked.read_text().splitlines() if checked.exists() else []
@@ -288,10 +298,11 @@ def assert_landed(result: subprocess.CompletedProcess[str]) -> None:
     assert result.returncode == 0, f'{result.stdout}\n{result.stderr}'
 
 
-def assert_every_linked_commit_is_on_main(rig: Rig) -> None:
-    linked = rig.linked()
+def assert_every_linked_or_recorded_commit_is_on_main(rig: Rig) -> None:
+    linked, recorded = rig.linked(), rig.recorded()
     assert linked, 'the worklog hook linked nothing, so the claim was never exercised'
-    assert [sha for sha in linked if not rig.on_main(sha)] == []
+    assert recorded, 'the record hook wrote nothing, so the claim was never exercised'
+    assert [sha for sha in linked + recorded if not rig.on_main(sha)] == []
 
 
 class TestLandingKeepsEveryRecordedSha:
@@ -324,7 +335,7 @@ class TestLandingKeepsEveryRecordedSha:
         assert message.splitlines()[0] == 'chore: merge alpha into main'
         assert '* alpha:\n  feat: a.txt' in message, 'the body is the --log list of what the merge carries'
         assert f'merged as {merge}' in result.stderr
-        assert_every_linked_commit_is_on_main(rig)
+        assert_every_linked_or_recorded_commit_is_on_main(rig)
 
     def test_a_branch_that_merged_main_in_lands_with_main_as_its_first_parent(self, rig):
         """A session catches its branch up by merging main in, then lands it.
@@ -345,7 +356,7 @@ class TestLandingKeepsEveryRecordedSha:
         merge = rig.main()
         assert rig.parents(merge) == [moved, caught_up]
         assert rig.first_parent_line()[:2] == [merge, moved]
-        assert_every_linked_commit_is_on_main(rig)
+        assert_every_linked_or_recorded_commit_is_on_main(rig)
 
     def test_work_main_already_holds_is_refused_and_nothing_moves(self, rig):
         """A squash or a cherry-pick leaves main with the work under other shas."""
@@ -384,7 +395,7 @@ class TestLandingKeepsEveryRecordedSha:
         assert rig.parents(resolved) == [moved, made]
         assert rig.linked()[-1] == resolved, 'committing a resolution fires post-commit, which links it'
         assert rig.git(rig.origin, 'show', f'{resolved}:f.txt') == 'both'
-        assert_every_linked_commit_is_on_main(rig)
+        assert_every_linked_or_recorded_commit_is_on_main(rig)
 
     def test_a_lost_race_makes_the_merge_again_on_the_new_main(self, rig):
         alpha = rig.new('alpha')
@@ -399,7 +410,7 @@ class TestLandingKeepsEveryRecordedSha:
         assert rest[0] == moved
         assert rig.parents(merge) == [winner, made]
         assert rig.merges_on_main() == [merge], 'the merge that lost was never pushed'
-        assert_every_linked_commit_is_on_main(rig)
+        assert_every_linked_or_recorded_commit_is_on_main(rig)
 
     def test_a_lost_race_after_a_resolution_merges_the_new_main_onto_it(self, rig):
         alpha = rig.new('alpha')
@@ -413,11 +424,12 @@ class TestLandingKeepsEveryRecordedSha:
         result = rig.land(alpha)
 
         assert_landed(result)
-        resolved = rig.linked()[-1]
+        resolved, merge = rig.linked()[-2:]
         assert rig.parents(resolved) == [moved, made], 'the resolution is kept as committed'
-        merge, winner, *_ = rig.first_parent_line()
+        assert rig.first_parent_line()[0] == merge, 'the merge is linked once, after its push lands'
+        winner = rig.first_parent_line()[1]
         assert rig.parents(merge) == [winner, resolved]
-        assert_every_linked_commit_is_on_main(rig)
+        assert_every_linked_or_recorded_commit_is_on_main(rig)
 
     def test_main_moving_on_every_push_refuses_once_the_tries_run_out(self, rig):
         alpha = rig.new('alpha')
@@ -464,7 +476,7 @@ class TestLandingKeepsEveryRecordedSha:
 
         assert_landed(result)
         assert rig.parents(rig.main()) == [moved, made]
-        assert_every_linked_commit_is_on_main(rig)
+        assert_every_linked_or_recorded_commit_is_on_main(rig)
 
     def test_a_stacked_child_lands_after_its_parent_and_both_keep_their_shas(self, rig):
         parent = rig.new('parent')
@@ -484,8 +496,8 @@ class TestLandingKeepsEveryRecordedSha:
 
 
 class TestTheMergeRunsTheCommitHooks:
-    def test_a_clean_merge_is_stamped_checked_and_never_linked(self, rig):
-        """A clean `git merge` fires prepare-commit-msg and commit-msg, and no post-commit.
+    def test_a_clean_merge_is_stamped_checked_and_linked_and_recorded_once_it_lands(self, rig):
+        """A clean `git merge` fires prepare-commit-msg and commit-msg, and post-merge once pushed.
 
         Whether the stamp reads back as a trailer depends on the git that wrote it.
         2.39's interpret-trailers takes the `--log` list for a trailer block and
@@ -506,7 +518,8 @@ class TestTheMergeRunsTheCommitHooks:
             assert f'Agent-Session: {SESSION}' in trailers
             assert f'Worklog: {WORKLOG}' in trailers
         assert rig.checked_subjects()[-1] == 'chore: merge alpha into main'
-        assert merge not in rig.linked()
+        assert (rig.linked()[-1], rig.recorded()[-1]) == (merge, merge)
+        assert rig.linked().count(merge) == rig.recorded().count(merge) == 1
 
 
 class TestThePrimaryCheckoutCatchesUpByFastForward:
