@@ -13,8 +13,17 @@ path = ~/.config/git/personal.gitconfig
 event = prepare-commit-msg
 command = [ ! -x ~/.local/bin/agent-commit-trailers ] || exec ~/.local/bin/agent-commit-trailers
 
-# Records a session's commit on the slate worklog its Worklog trailer names. The
-# test skips it until the script is deployed, as above.
+# Records a session's commit on the slate worklog the session is in. A merge commit
+# runs post-merge rather than post-commit, so it listens on both. The test skips it
+# until the script is deployed, as above.
 [hook "slate-worklog-link"]
 event = post-commit
+event = post-merge
 command = [ ! -x ~/.local/bin/link-commit-to-slate-worklog ] || exec ~/.local/bin/link-commit-to-slate-worklog
+
+# Appends a git.commit_made record for each commit, which Alloy ships, on both
+# events as above.
+[hook "git-commit-record"]
+event = post-commit
+event = post-merge
+command = [ ! -x ~/.local/bin/record-git-commit ] || exec ~/.local/bin/record-git-commit
