@@ -172,7 +172,7 @@ def create(
     # Typed as the enum rather than narrowed by a `click.Choice`, which is what it
     # was: typer renders `<x86_64|arm64>` in the help and rejects anything else
     # with exit 2 from the enum alone, and importing click to say the same thing
-    # is a direct dependency on a package typer 0.27 stopped having.
+    # is a direct dependency on a package typer 0.26 stopped having.
     arch: axes.Arch = ArchOption,
     against: str = typer.Option(None, '--against', help="Build sparsely against a status document, or 'latest' to fetch one"),
     entry: list[str] = BundleEntryOption,

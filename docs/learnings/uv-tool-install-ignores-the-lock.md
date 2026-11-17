@@ -6,7 +6,7 @@ A git tool installed by dotfiles ran on dependency versions its own CI never tes
 `uv tool install '<name> @ git+<repo>@<tag>'` reads the tag's `pyproject.toml` and
 resolves every dependency afresh. It never reads the tag's `uv.lock`, and CI tests the
 lock. Every installed git tool on a workstation differed from its tag's lock. logsift
-v0.1.4 locks typer 0.20.0 and ran 0.27.2. From typer 0.27, `typer.Exit` is typer's own
+v0.1.4 locks typer 0.20.0 and ran 0.27.2. From typer 0.26, `typer.Exit` is typer's own
 class rather than click's. A tool catching click's class saw every clean finish as a
 crash and exited 3, while its CI passed.
 
