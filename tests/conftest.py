@@ -294,6 +294,21 @@ def logging_is_configured():
     dotfiles_logging.clear_run()
 
 
+CALLER_VARIABLES = ('TRACEPARENT', 'TRACESTATE', 'BAGGAGE', 'CLAUDE_CODE_SESSION_ID', 'OTEL_RESOURCE_ATTRIBUTES')
+
+
+@pytest.fixture(autouse=True)
+def no_caller_from_the_shell_running_the_suite(monkeypatch):
+    """Clear what a run record and a spawned brief read their caller from.
+
+    A suite started inside a Claude Code session inherits its session id and trace,
+    so a record or brief built in-process carried them there and not on CI. A test
+    that wants a caller sets one.
+    """
+    for name in CALLER_VARIABLES:
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.fixture(autouse=True)
 def a_token_lookup_that_forgot_the_last_test():
     """Clear the memoized `github_token`, which is per-process and a suite is one.

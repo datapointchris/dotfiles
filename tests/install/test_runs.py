@@ -165,6 +165,26 @@ class TestSpan:
         assert path.stem == '20260810T140000Z-box-a-apply'
 
 
+class TestCaller:
+    def test_a_run_a_session_started_carries_its_trace_session_and_flow(self, runs_dir, monkeypatch):
+        """The log shipper files the record under the `traceparent` it finds in the
+        file, and a reader joins on `flow_id` and `session_id` without parsing a
+        header."""
+        flow = '4bf92f3577b34da6a3ce929d0e0e4736'
+        monkeypatch.setenv('TRACEPARENT', f'00-{flow}-00f067aa0ba902b7-01')
+        monkeypatch.setenv('BAGGAGE', f'other=1, fleet.flow.id={flow};origin=queue')
+        monkeypatch.setenv('CLAUDE_CODE_SESSION_ID', 's-1')
+
+        payload = json.loads(runs.write(a_run(), runs_dir).read_text())
+
+        assert {key: payload[key] for key in ('traceparent', 'baggage', 'flow_id', 'session_id')} == {
+            'traceparent': f'00-{flow}-00f067aa0ba902b7-01',
+            'baggage': f'other=1, fleet.flow.id={flow};origin=queue',
+            'flow_id': flow,
+            'session_id': 's-1',
+        }
+
+
 class TestWhereRecordsLand:
     """The destination an unargued `write` resolves, which nothing else measures.
 

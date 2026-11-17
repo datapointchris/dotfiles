@@ -103,6 +103,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from typing import TextIO
+from urllib.parse import quote
 
 from rich.console import Console
 from rich.markup import escape
@@ -131,6 +132,14 @@ A brief is pages long and does not survive being quoted into a command line, so 
 prompt is a pointer and the file carries the work. The second sentence is what makes
 the session look for its reporting address rather than finishing in silence.
 """
+
+SPAWNED_BY_SESSION = 'fleet.spawned_by.session.id'
+"""The resource attribute naming the session that opened this one."""
+
+FLOW_MEMBER = 'fleet.flow.id'
+"""The baggage member, and the resource attribute, naming the flow a session works in."""
+
+TRACE_ID = re.compile(r'[0-9a-f]{32}')
 
 REGISTRATION_TIMEOUT = 60.0
 """How long a spawn waits to be told the name of the session it just started.
@@ -1406,6 +1415,8 @@ def keep_brief(source: Path, repo: str, slug: str | None) -> Path:
     dispatches several reviewers at once, none of them carries a slug, and they all name
     the same repo. The loser's brief is overwritten and the winner's session is launched
     against instructions written for somebody else.
+
+    The copy opens with `spawned_by_front_matter`, where the spawner is a session.
     """
     stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
     briefs_dir().mkdir(parents=True, exist_ok=True)
@@ -1413,8 +1424,76 @@ def keep_brief(source: Path, repo: str, slug: str | None) -> Path:
     os.close(handle)
 
     destination = Path(minted)
-    destination.write_text(source.read_text())
+    destination.write_text(spawned_by_front_matter() + source.read_text())
     return destination
+
+
+def spawned_by_front_matter() -> str:
+    """A YAML block naming who wrote the brief, or '' where no session or trace did.
+
+    A brief is read long after it is written, so it carries its writer's session id,
+    `traceparent` and `baggage`, and a reader links back to the span that spawned the
+    session. Each value is a JSON string, which YAML reads back as the same string
+    whatever punctuation a baggage header holds.
+    """
+    fields = {
+        'session_id': os.environ.get('CLAUDE_CODE_SESSION_ID', ''),
+        'traceparent': os.environ.get('TRACEPARENT', ''),
+        'baggage': os.environ.get('BAGGAGE', ''),
+    }
+    held = [f'  {key}: {json.dumps(value)}' for key, value in fields.items() if value]
+    return '\n'.join(['---', 'spawned_by:', *held, '---', '', '']) if held else ''
+
+
+def flow_in(baggage: str) -> str:
+    """The flow a W3C `baggage` header carries, or '' where it carries none.
+
+    Members are comma-separated `key=value`, each with optional `;properties`, and the
+    last of a repeated key wins. A value that is not a trace id, or is the all-zero one
+    W3C calls invalid, reads as no flow. The dotfiles run record parses it the same way,
+    and this script runs without that package, so it carries its own.
+    """
+    flow = ''
+    for member in baggage.split(','):
+        key, _, value = member.partition(';')[0].partition('=')
+        if key.strip() == FLOW_MEMBER:
+            flow = value.strip()
+    return flow if TRACE_ID.fullmatch(flow) and flow != '0' * 32 else ''
+
+
+def resource_attributes(inherited: str, added: dict[str, str]) -> str:
+    """`inherited`'s pairs less any whose key `added` sets, then `added`'s.
+
+    So a session spawned by one that was itself spawned names its own spawner, and
+    every other pair the machine set survives. Each value is percent-encoded, as the
+    variable's W3C baggage format asks.
+    """
+    kept = [pair for pair in inherited.split(',') if pair.strip() and pair.partition('=')[0].strip() not in added]
+    return ','.join([*kept, *(f'{key}={quote(value, safe="")}' for key, value in added.items())])
+
+
+def spawner_environment() -> list[str]:
+    """The `env` prefix joining a spawned session to the session that spawned it.
+
+    A tmux pane takes its environment from the tmux server rather than from the command
+    that opened it, so what the spawner holds reaches the pane only on the command line.
+    An interactive Claude Code session ignores an incoming `TRACEPARENT` and copies its
+    resource attributes onto every span, so the spawner's session id rides in
+    `OTEL_RESOURCE_ATTRIBUTES`. A flow rides there too, where the spawner's `BAGGAGE`
+    holds one, and `BAGGAGE` carries it on to the new session's Bash calls.
+
+    Empty where the spawner holds neither, so `claude` starts as it would without it.
+    """
+    baggage = os.environ.get('BAGGAGE', '')
+    flow = flow_in(baggage)
+    held = {SPAWNED_BY_SESSION: os.environ.get('CLAUDE_CODE_SESSION_ID', ''), FLOW_MEMBER: flow}
+    added = {key: value for key, value in held.items() if value}
+    if not added:
+        return []
+    assignments = [f'OTEL_RESOURCE_ATTRIBUTES={resource_attributes(os.environ.get("OTEL_RESOURCE_ATTRIBUTES", ""), added)}']
+    if flow:
+        assignments.append(f'BAGGAGE={baggage}')
+    return ['env', *assignments]
 
 
 def open_session_pane(
@@ -1443,7 +1522,7 @@ def open_session_pane(
     named = ['--window-name', window_name] if window_name and not below else []
     seats = ['--per-window', str(per_window)] if per_window is not None else []
     # The `--` before the prompt keeps a variadic flag such as --add-dir from taking it.
-    session = ['claude', '--permission-mode', 'bypassPermissions', *claude_args, '--', prompt]
+    session = [*spawner_environment(), 'claude', '--permission-mode', 'bypassPermissions', *claude_args, '--', prompt]
     made = ctl('pane', 'open', role, *partner, *named, *seats, '--cwd', str(workdir), '--', *session)
     if not made.get('readable', True):
         say_warning(f'{made["pane"]} is {made.get("width")}x{made.get("height")}, which is small to follow an agent in')

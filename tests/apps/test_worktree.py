@@ -330,6 +330,8 @@ __PREAMBLE__
 printf '%s' "$TMUX_PANE" > "__STATE__/pane"
 printf '%s' "$$" > "__STATE__/pid"
 pwd > "__STATE__/cwd"
+printf '%s' "${OTEL_RESOURCE_ATTRIBUTES-}" > "__STATE__/resource"
+printf '%s' "${BAGGAGE-}" > "__STATE__/baggage"
 printf '%s\n' "$@" > "__STATE__/argv"
 for last; do :; done
 printf '%s' "$last" > "__STATE__/prompt"
@@ -1940,6 +1942,34 @@ class TestSpawnCollision:
         assert result.returncode == 0, plain(result.stderr)
         assert 'already holds someone-else' in plain(result.stderr)
         assert (spawn_state / 'cwd').read_text().strip() == str(fleet['primary'])
+
+
+@pytest.mark.interpreter('tmux')
+class TestSpawnerTrace:
+    """A pane takes its environment from the tmux server, so what the spawner holds
+    reaches the session only on the command the pane runs."""
+
+    def test_the_session_names_its_spawner_and_joins_its_flow(self, fleet, run, rig, spawn_state, tmp_path):
+        flow = '4bf92f3577b34da6a3ce929d0e0e4736'
+        traceparent = f'00-{flow}-00f067aa0ba902b7-01'
+        spawner = {
+            'TMUX': str(rig.socket),
+            'TMUX_PANE': rig.caller,
+            'CLAUDE_CODE_SESSION_ID': 'spawner-1',
+            'TRACEPARENT': traceparent,
+            'BAGGAGE': f'fleet.flow.id={flow}',
+            'OTEL_RESOURCE_ATTRIBUTES': 'fleet.worker=desk,fleet.spawned_by.session.id=grandparent',
+        }
+
+        result = run(fleet['primary'], 'spawn', 'alpha', '--brief', str(brief_at(tmp_path / 'b.md', 'the brief\n')), env=spawner)
+
+        assert result.returncode == 0, plain(result.stderr)
+        assert (spawn_state / 'resource').read_text() == f'fleet.worker=desk,fleet.spawned_by.session.id=spawner-1,fleet.flow.id={flow}'
+        assert (spawn_state / 'baggage').read_text() == f'fleet.flow.id={flow}'
+        assert briefs_in(tmp_path)[0].read_text() == (
+            '---\nspawned_by:\n  session_id: "spawner-1"\n'
+            f'  traceparent: "{traceparent}"\n  baggage: "fleet.flow.id={flow}"\n---\n\nthe brief\n'
+        )
 
 
 @pytest.mark.interpreter('tmux')

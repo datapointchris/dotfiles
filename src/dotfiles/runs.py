@@ -32,6 +32,8 @@ import dataclasses as dc
 import datetime as dt
 import enum
 import json
+import os
+import re
 import time
 import uuid
 from collections.abc import Iterator
@@ -147,6 +149,54 @@ def stamp(moment: dt.datetime) -> str:
     return moment.isoformat().replace('+00:00', 'Z')
 
 
+FLOW_MEMBER = 'fleet.flow.id'
+"""The baggage member naming the flow a run serves: a W3C trace id that outlives any one trace."""
+
+TRACE_ID = re.compile(r'[0-9a-f]{32}')
+
+
+def flow_in(baggage: str) -> str:
+    """The flow a W3C `baggage` header carries, or '' where it carries none.
+
+    Members are comma-separated `key=value`, each with optional `;properties`, and
+    the last of a repeated key wins. A value that is not a trace id, or is the
+    all-zero one W3C calls invalid, reads as no flow rather than as one to join on.
+    """
+    flow = ''
+    for member in baggage.split(','):
+        key, _, value = member.partition(';')[0].partition('=')
+        if key.strip() == FLOW_MEMBER:
+            flow = value.strip()
+    return flow if TRACE_ID.fullmatch(flow) and flow != '0' * 32 else ''
+
+
+@dc.dataclass(frozen=True)
+class Caller:
+    """What started a run, as the environment it started in says.
+
+    A record read later carries its writer's `traceparent` and `baggage`, so a
+    reader can link back to the span that ran the verb. The session id is the
+    Claude Code session whose Bash call ran it, so a reader can find what that
+    session was working on at the run's time. Each field is empty where its
+    variable is unset, which is every run a person starts from a shell.
+    """
+
+    traceparent: str = ''
+    baggage: str = ''
+    flow_id: str = ''
+    session_id: str = ''
+
+    @classmethod
+    def from_environment(cls) -> Caller:
+        baggage = os.environ.get('BAGGAGE', '')
+        return cls(
+            traceparent=os.environ.get('TRACEPARENT', ''),
+            baggage=baggage,
+            flow_id=flow_in(baggage),
+            session_id=os.environ.get('CLAUDE_CODE_SESSION_ID', ''),
+        )
+
+
 @dc.dataclass(frozen=True)
 class Identity:
     """Who a run is, settled before it starts.
@@ -167,6 +217,7 @@ class Identity:
     standard's reason for keeping them apart is the same one that applies here:
     the platform prefix duplicated a separate field and drifted.
     """
+    caller: Caller = dc.field(default_factory=Caller)
 
     @property
     def box(self) -> str:
@@ -205,7 +256,8 @@ def begin(machine: str, verb: str, started: dt.datetime | None = None, host: str
 
     `host` defaults from `paths` rather than being threaded through the three
     callers: the box a run happens on is not something a verb decides, and every
-    one of them would have passed the same global.
+    one of them would have passed the same global. The caller is read here for
+    the same reason.
     """
     return Identity(
         id=uuid.uuid4().hex[:12],
@@ -213,6 +265,7 @@ def begin(machine: str, verb: str, started: dt.datetime | None = None, host: str
         verb=verb,
         started=started or now(),
         host=paths.MACHINE_ID if host is None else host,
+        caller=Caller.from_environment(),
     )
 
 
@@ -285,6 +338,13 @@ class RunRecord:
     """Empty on a record written before schema 3, which is why every reader takes
     `host or machine` rather than `host` — a bare `host` would pool the entire
     pre-3 history of every box into one nameless bucket."""
+    traceparent: str = ''
+    """The span that ran this, which a log shipper tailing the file reads to put
+    the record in that trace. The four fields from here are `Caller`'s, and each
+    is empty on a record no session or traced job started."""
+    baggage: str = ''
+    flow_id: str = ''
+    session_id: str = ''
     outcomes: list[RunOutcome] = dc.field(default_factory=list)
     issues: list[Issue] = dc.field(default_factory=list)
 
@@ -388,6 +448,10 @@ def start(identity: Identity, flags: dict | None = None) -> RunRecord:
         flags=flags or {},
         started_at=stamp(identity.started),
         host=identity.host,
+        traceparent=identity.caller.traceparent,
+        baggage=identity.caller.baggage,
+        flow_id=identity.caller.flow_id,
+        session_id=identity.caller.session_id,
     )
 
 
