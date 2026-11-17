@@ -318,6 +318,9 @@ dev = [
     # tests/install/test_layering.py spawns it.
     "import-linter>=2.14",
     "ruff==0.17.1",
+    # tests/apps/test_record_git_commit.py checks each record the commit hook
+    # writes against the JSON Schema it publishes.
+    "jsonschema>=4.23",
 ]
 
 # mkdocs is a repo concern, not a runtime one: `uv tool install` deploys this

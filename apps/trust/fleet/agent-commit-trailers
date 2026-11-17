@@ -17,28 +17,19 @@ for rewriting in rebase-merge rebase-apply; do
   [[ ! -d $(git rev-parse --git-path "$rewriting") ]] || exit 0
 done
 
-if [[ -n ${SLATE_ACTOR:-} ]]; then
-  # The scheduler sets <job>@<machine>. The machine stays out, because a project
-  # repo's history names no machine, and Agent-Run leads back to it.
-  agent="claude-code-unattended/${SLATE_ACTOR%@*}"
-elif [[ ${CLAUDE_CODE_SESSION_ATTENDED:-} == 0 ]]; then
-  agent=claude-code-unattended
-else
-  agent=claude-code
-  if [[ -n ${TMUX_PANE:-} ]]; then
-    handle=$(tmux display-message -p -t "$TMUX_PANE" '#{@place_handle}' 2>/dev/null) || handle=
-    [[ -z $handle ]] || agent="claude-code/$handle"
-  fi
+library=${SHELL_DIR:-$HOME/.local/shell}/git-commit-hooks.sh
+if ! source "$library" 2>/dev/null; then
+  echo "agent-commit-trailers: $library is missing, so this commit carries no agent trailers" >&2
+  exit 0
 fi
 
-trailers=(--trailer "Agent-Name: $agent" --trailer "Agent-Session: $session")
+trailers=(--trailer "Agent-Name: $(agent_name)" --trailer "Agent-Session: $session")
 [[ -z ${FLEET_RUN_ID:-} ]] || trailers+=(--trailer "Agent-Run: $FLEET_RUN_ID")
 
-# An origin with a host marks real work, so a test's fixture repo asks slate nothing.
-# An amend keeps the worklog its message names. The bound keeps a slate that cannot
-# answer from holding the commit up.
-origin=$(git remote get-url origin 2>/dev/null) || origin=
-if [[ $origin == *:* && $origin != file:* ]] && ! git interpret-trailers --parse "$message_file" | grep -q '^Worklog: '; then
+# A test's fixture repo, whose origin has no host, asks slate nothing. An amend keeps
+# the worklog its message names. The bound keeps a slate that cannot answer from
+# holding the commit up.
+if hosted_repo_name >/dev/null && ! git interpret-trailers --parse "$message_file" | grep -q '^Worklog: '; then
   bound_seconds=3
   failure=$(mktemp)
   worklog=$(timeout "$bound_seconds" slate worklogs current 2>"$failure")

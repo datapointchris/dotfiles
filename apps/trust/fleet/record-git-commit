@@ -7,61 +7,45 @@
 # held, so the record names no worklog and this hook calls no service.
 # git-commit-record.schema.json beside it is the record's shape.
 #
-# A repo whose origin has no host, such as a test's fixture, records nothing. A
-# post-merge that made no commit, a fast-forward or a squash, records nothing too.
+# A repo whose origin has no host, such as a test's fixture, records nothing, and
+# neither does a post-merge that made no commit. git-commit-hooks.sh decides both.
 #
 # It never refuses a commit. A record it cannot write is left out, with a line on
 # stderr saying so.
 set -uo pipefail
 
-made=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+# jq rather than date, because BSD date has no %N.
+made=$(jq -nr 'now | (floor | strftime("%Y-%m-%dT%H:%M:%S")) + "." + ("00" + ((. * 1000 | floor) % 1000 | tostring))[-3:] + "Z"' 2>/dev/null)
 
-origin=$(git remote get-url origin 2>/dev/null) || exit 0
-[[ $origin == *:* && $origin != file:* ]] || exit 0
-
-# post-merge passes 1 for a squash, which commits nothing, and post-commit passes no
-# argument. A fast-forward moves HEAD onto a commit that already existed, and git's
-# reflog subject for it is untranslated in every locale.
-if (($# > 0)); then
-  [[ $1 == 0 ]] || exit 0
-  [[ $(git reflog -1 --format=%gs HEAD 2>/dev/null) != *': Fast-forward'* ]] || exit 0
-fi
-
-read -r sha parents < <(git log -1 --format='%H %P' HEAD 2>/dev/null)
-if [[ -z ${sha:-} ]]; then
-  echo "record-git-commit: git could not read HEAD, so this commit has no git.commit_made record" >&2
+library=${SHELL_DIR:-$HOME/.local/shell}/git-commit-hooks.sh
+if ! source "$library" 2>/dev/null; then
+  echo "record-git-commit: $library is missing, so this commit has no git.commit_made record" >&2
   exit 0
 fi
-branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || branch=
+repo=$(hosted_repo_name) || exit 0
+made_a_commit "$@" || exit 0
 
-# The same name agent-commit-trailers stamps in the Agent-Name trailer.
-agent_name() {
-  if [[ -n ${SLATE_ACTOR:-} ]]; then
-    # The scheduler sets <job>@<machine>, and the host is already the record's resource.
-    echo "claude-code-unattended/${SLATE_ACTOR%@*}"
-  elif [[ ${CLAUDE_CODE_SESSION_ATTENDED:-} == 0 ]]; then
-    echo claude-code-unattended
-  else
-    local handle=
-    [[ -z ${TMUX_PANE:-} ]] || handle=$(tmux display-message -p -t "$TMUX_PANE" '#{@place_handle}' 2>/dev/null)
-    echo "claude-code${handle:+/$handle}"
-  fi
-}
+read -r sha parents < <(git log -1 --format='%H %P' HEAD 2>/dev/null)
+if [[ -z ${sha:-} || -z $made ]]; then
+  echo "record-git-commit: git could not read HEAD or jq could not read the clock, so this commit has no git.commit_made record" >&2
+  exit 0
+fi
+branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || branch=''
 
 session=${CLAUDE_CODE_SESSION_ID:-}
-agent=
+agent=''
 [[ -z $session ]] || agent=$(agent_name)
 
 # W3C baggage is comma-separated key=value members, each with optional ;properties.
 # A flow id is a W3C trace id, and any other value reads as no flow.
-flow=
+flow=''
 IFS=, read -ra members <<<"${BAGGAGE:-}"
 for member in "${members[@]}"; do
   member=${member%%;*}
   member=${member//[[:space:]]/}
   [[ $member != fleet.flow.id=* ]] || flow=${member#fleet.flow.id=}
 done
-[[ $flow =~ ^[0-9a-f]{32}$ && $flow != 00000000000000000000000000000000 ]] || flow=
+[[ $flow =~ ^[0-9a-f]{32}$ && $flow != 00000000000000000000000000000000 ]] || flow=''
 
 # The trace context puts the record under the span that made the commit.
 trace_id=''
@@ -71,15 +55,19 @@ if [[ ${TRACEPARENT:-} =~ ^00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$ ]]; the
   span_id=${BASH_REMATCH[2]}
 fi
 
+# The resource is what the spawner set, such as the run and the agent, then this
+# service last, so an inherited service.name cannot replace it.
+resource="${OTEL_RESOURCE_ATTRIBUTES:+$OTEL_RESOURCE_ATTRIBUTES,}service.name=git"
+
 record=$(jq -cn \
-  --arg timestamp "$made" --arg sha "$sha" --arg parents "${parents:-}" \
-  --arg repo "$(basename "$origin" .git)" --arg branch "$branch" \
+  --arg timestamp "$made" --arg resource "$resource" --arg sha "$sha" --arg parents "${parents:-}" \
+  --arg repo "$repo" --arg branch "$branch" \
   --arg session "$session" --arg agent "$agent" --arg run "${FLEET_RUN_ID:-}" --arg flow "$flow" \
   --arg trace_id "$trace_id" --arg span_id "$span_id" \
   '{
     timestamp: $timestamp,
     name: "git.commit_made",
-    resource: "service.name=git",
+    resource: $resource,
     "fleet.schema_version": 1,
     trace_id: $trace_id,
     span_id: $span_id,

@@ -5,8 +5,8 @@
 # session, or in a repo whose origin has no host, starts no slate. A session in no
 # worklog links nothing.
 #
-# A post-merge that made no commit, a fast-forward or a squash, links nothing, as in
-# record-git-commit.
+# A post-merge that made no commit links nothing. git-commit-hooks.sh decides that
+# and whether the origin has a host.
 #
 # It never fails a commit. A link it cannot make is left out, with a line on stderr
 # saying so.
@@ -14,14 +14,13 @@ set -uo pipefail
 
 [[ -n ${CLAUDE_CODE_SESSION_ID:-} ]] || exit 0
 
-# An origin with a host marks real work, so a test's fixture repo links nothing.
-origin=$(git remote get-url origin 2>/dev/null) || exit 0
-[[ $origin == *:* && $origin != file:* ]] || exit 0
-
-if (($# > 0)); then
-  [[ $1 == 0 ]] || exit 0
-  [[ $(git reflog -1 --format=%gs HEAD 2>/dev/null) != *': Fast-forward'* ]] || exit 0
+library=${SHELL_DIR:-$HOME/.local/shell}/git-commit-hooks.sh
+if ! source "$library" 2>/dev/null; then
+  echo "link-commit-to-slate-worklog: $library is missing, so no worklog links this commit" >&2
+  exit 0
 fi
+repo=$(hosted_repo_name) || exit 0
+made_a_commit "$@" || exit 0
 
 commit=$(git rev-parse HEAD)
 
@@ -45,7 +44,7 @@ if ((status != 0)); then
 fi
 [[ -n $worklog ]] || exit 0
 
-timeout "$bound_seconds" slate worklogs link "$worklog" --commit "$commit" --repo "$(basename "$origin" .git)" >/dev/null 2>"$failure"
+timeout "$bound_seconds" slate worklogs link "$worklog" --commit "$commit" --repo "$repo" >/dev/null 2>"$failure"
 status=$?
 ((status == 0)) || report_slate_failure "$status" "worklog $worklog does not link $commit"
 exit 0

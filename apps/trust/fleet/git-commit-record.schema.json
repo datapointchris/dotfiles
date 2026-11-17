@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/datapointchris/dotfiles/apps/trust/fleet/git-commit-record.schema.json",
   "title": "git.commit_made record",
   "description": "One commit, as the program that made it saw it at that moment: one JSON object a line in git-commits.jsonl. The commit is named by its sha, so a reader joins the record to the commit on vcs.ref.head.revision. A key with no value is left out rather than written empty.",
   "type": "object",
@@ -32,7 +33,7 @@
       "const": "git.commit_made"
     },
     "resource": {
-      "description": "The record's OpenTelemetry resource as comma-separated key=value pairs, naming git as its service.",
+      "description": "The record's OpenTelemetry resource as comma-separated key=value pairs: the writer's inherited OTEL_RESOURCE_ATTRIBUTES, such as the run and agent a spawner set, then service.name=git.",
       "type": "string",
       "pattern": "^([^,=]+=[^,]*,)*service\\.name=git(,[^,=]+=[^,]*)*$"
     },
@@ -79,7 +80,7 @@
       }
     },
     "fleet.agent.name": {
-      "description": "Which kind of agent made the commit, such as claude-code, claude-code/<pane handle>, claude-code-unattended or claude-code-unattended/<scheduled job>.",
+      "description": "Which kind of agent made the commit. The commit hook takes it from agent_name in configs/trust/fleet/.local/shell/git-commit-hooks.sh.",
       "type": "string",
       "minLength": 1
     },

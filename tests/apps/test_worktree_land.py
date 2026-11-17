@@ -35,6 +35,7 @@ REPO = Path(__file__).resolve().parents[2]
 WORKTREE = REPO / 'apps' / 'common' / 'worktree'
 TRAILER_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'agent-commit-trailers'
 LINK_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'link-commit-to-slate-worklog'
+HOOK_LIBRARY = REPO / 'configs' / 'trust' / 'fleet' / '.local' / 'shell'
 
 for variable in subprocess.run(['git', 'rev-parse', '--local-env-vars'], capture_output=True, text=True, check=True).stdout.split():
     os.environ.pop(variable, None)
@@ -259,6 +260,7 @@ def rig(tmp_path: Path) -> Rig:
         'CLAUDE_CODE_SESSION_ID': SESSION,
         'WORKLOG': WORKLOG,
         'LINKS': str(tmp_path / 'links'),
+        'SHELL_DIR': str(HOOK_LIBRARY),
         'CHECKED': str(tmp_path / 'checked'),
         'RACES': str(tmp_path / 'races'),
         'PEER': str(tmp_path / 'peer'),

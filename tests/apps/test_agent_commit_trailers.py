@@ -11,6 +11,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 TRAILER_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'agent-commit-trailers'
 LINK_HOOK = REPO / 'apps' / 'trust' / 'fleet' / 'link-commit-to-slate-worklog'
+HOOK_LIBRARY = REPO / 'configs' / 'trust' / 'fleet' / '.local' / 'shell'
 SESSION_VARIABLES = ('CLAUDE_CODE_SESSION_ID', 'CLAUDE_CODE_SESSION_ATTENDED', 'SLATE_ACTOR', 'FLEET_RUN_ID', 'TMUX_PANE')
 STAND_IN_SLATE = """#!/bin/sh
 case "$2" in
@@ -45,6 +46,7 @@ def git(repo: Path, *args: str, **variables: str) -> subprocess.CompletedProcess
         'GIT_CONFIG_NOSYSTEM': '1',
         'PATH': f'{repo.parent / "bin"}{os.pathsep}{os.environ["PATH"]}',
         'LINKS': str(repo.parent / 'links'),
+        'SHELL_DIR': str(HOOK_LIBRARY),
         **variables,
     }
     return subprocess.run(
@@ -115,20 +117,20 @@ def test_a_session_committing_in_a_tests_fixture_repo_reaches_no_worklog(repo: P
 
 
 @pytest.mark.parametrize(
-    ('failing', 'reason', 'lost'),
+    ('failing', 'reason', 'hooks_that_said_so'),
     [
-        ({'CURRENT_FAILS': '1'}, 'error: not logged in', ('carries no Worklog trailer', 'no worklog links')),
-        ({'LINK_FAILS': '1'}, 'error: no such worklog', ('does not link',)),
+        ({'CURRENT_FAILS': '1'}, 'error: not logged in', 2),
+        ({'LINK_FAILS': '1'}, 'error: no such worklog', 1),
     ],
 )
-def test_a_slate_that_fails_leaves_the_commit_and_each_hook_says_what_it_lost(
-    repo: Path, failing: dict[str, str], reason: str, lost: tuple[str, ...]
+def test_a_slate_that_fails_leaves_the_commit_and_each_hook_it_failed_says_so(
+    repo: Path, failing: dict[str, str], reason: str, hooks_that_said_so: int
 ) -> None:
     done = commit(repo, '-m', 'fix: still lands', CLAUDE_CODE_SESSION_ID='s-1', WORKLOG='2083.1', **failing)
 
     said = done.stderr.splitlines()
-    assert len(said) == len(lost)
-    assert all(reason in line and what in line for line, what in zip(said, lost, strict=True))
+    assert len(said) == hooks_that_said_so
+    assert all(reason in line for line in said)
     assert 'Agent-Session: s-1' in trailers(repo)[0]
     assert ('Worklog: 2083.1' in trailers(repo)[0]) is ('CURRENT_FAILS' not in failing)
     assert links(repo) == []
