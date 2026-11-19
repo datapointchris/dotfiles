@@ -111,10 +111,11 @@ def test_every_manager_can_generate_a_removal(manager: PackageManager) -> None:
 def test_a_go_binary_is_removed_with_rm_because_go_keeps_no_receipt(tmp_path: Path) -> None:
     """`go install` writes a binary and records nothing, so there is no uninstall
     subcommand to name and `rm` is the only true answer."""
-    removal = diagnose.removal_of(tmp_path / 'go' / 'bin' / 'fleet', PackageManager.BREW, tmp_path)
+    removal = diagnose.removal_of(tmp_path / 'go' / 'bin' / 'mytool', PackageManager.BREW, tmp_path)
 
     assert removal.mechanism == 'go'
-    assert removal.command == 'rm ~/go/bin/fleet'
+    assert removal.command == 'rm ~/go/bin/mytool'
+    assert removal.package == 'mytool', 'a `go:` supersedes row matches on the binary name'
 
 
 def test_a_cargo_binary_names_its_crate_rather_than_itself(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
