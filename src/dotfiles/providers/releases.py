@@ -337,6 +337,14 @@ def lazygit(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'lazygit_{bare(tag)}_{suffix}.tar.gz', Archive.TARBALL, path='lazygit')
 
 
+def mermaid_ascii(tag: str, target: Target) -> ReleaseArtifact:
+    """goreleaser's uname spellings, `Linux_x86_64` and `Darwin_arm64`, with no
+    version in the name and the binary at the tarball's root."""
+    system = 'Darwin' if target.is_darwin else 'Linux'
+    arch = 'arm64' if target.is_arm else 'x86_64'
+    return ReleaseArtifact(f'mermaid-ascii_{system}_{arch}.tar.gz', Archive.TARBALL, path='mermaid-ascii')
+
+
 def msg(tag: str, target: Target) -> ReleaseArtifact:
     """One GNU triple, x86_64 Linux alone, with the binary at the tarball's root."""
     return ReleaseArtifact(f'msg-{bare(tag)}-x86_64-unknown-linux-gnu.tar.gz', Archive.TARBALL, path='msg')
@@ -521,6 +529,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'lazygit': lazygit,
     'learning': go_release_cli('learning'),
     'life': go_release_cli('life'),
+    'mermaid-ascii': mermaid_ascii,
     'meso': go_release_cli('meso'),
     'msg': msg,
     'neovim': neovim,

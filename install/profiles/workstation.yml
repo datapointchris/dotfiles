@@ -8,7 +8,6 @@ go_tools:
   - terraform-docs
   - gum
   - lazydocker
-  - mermaid-ascii
   - jactionlint
   - gowall
   - triangle
@@ -25,6 +24,7 @@ github_releases:
   - just
   - tenv
   - duckdb
+  - mermaid-ascii
   # Chris publishes it, but it is an editor's server rather than a CLI, and it
   # runs on the node that npm_globals below brings.
   - asl-language-server

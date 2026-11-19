@@ -964,6 +964,18 @@ github_releases:
     tags: [cli, tui, development]
     supersedes: ['cargo:abtop']
 
+  # The datapointchris fork, which routes flowchart edges around each other and
+  # prints a `warning:` line for each place a layout cannot keep apart. A
+  # release rather than `go install`: the fork keeps upstream's module path so
+  # its commits stay offerable upstream, and `go install` refuses a module
+  # fetched from a path other than the one it declares. `supersedes` removes the
+  # upstream build `go install` left in ~/go/bin.
+  - name: mermaid-ascii
+    repo: datapointchris/mermaid-ascii
+    description: Renders Mermaid flowcharts and sequence diagrams as terminal box-drawing text
+    tags: [cli, development]
+    supersedes: ['go:mermaid-ascii']
+
   # One bundled JavaScript file that runs on the fnm-managed node. A release
   # rather than an npm global, because it is not published to npm, and a single
   # asset is something the offline bundle can carry to a restricted network.
@@ -1824,12 +1836,6 @@ go_tools:
     github_repo: jesseduffield/lazydocker
     binary_pattern: "lazydocker_{version_num}_{Os}_{Arch}.tar.gz"
     description: Terminal UI for Docker with compose support
-
-  - name: mermaid-ascii
-    package: github.com/AlexanderGrooff/mermaid-ascii
-    github_repo: AlexanderGrooff/mermaid-ascii
-    binary_pattern: "mermaid-ascii_{Os}_{Arch}.tar.gz"
-    description: Renders Mermaid flowcharts and sequence diagrams as terminal box-drawing text
 
   # Pinned to the rev the repos' pre-commit hook runs, so a local lint answers
   # what the hook will. v2 renames every flag, so it moves with that hook.
