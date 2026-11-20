@@ -1,0 +1,57 @@
+// This machine's filesystems, memory and swap, read by Alloy's embedded node_exporter
+// with its filesystem and meminfo collectors and no others. Swap is part of meminfo on
+// Linux and on macOS, so no third collector is named. A collector the OS lacks is
+// skipped rather than refused, so this one file loads on both.
+//
+// Every tmpfs is kept, /tmp and /dev/shm included, because each holds its files in
+// RAM and can fill it with nothing on disk to show for it. node_exporter's Linux
+// default drops every mount under /dev, which takes /dev/shm with it, so both filters
+// are set here. The types dropped hold no capacity of their own: kernel interfaces,
+// overlays, automounts and images that are always full on Linux, devfs and autofs on
+// macOS, and the desktop's FUSE portals. Docker's mounts sit under a directory only
+// root can enter, and this Alloy runs as the user.
+prometheus.exporter.unix "filesystem_and_memory" {
+  set_collectors = ["filesystem", "meminfo"]
+
+  filesystem {
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devfs|devpts|devtmpfs|efivarfs|fuse\\.gvfsd-fuse|fuse\\.portal|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+    mount_points_exclude = "^/(proc|sys|var/lib/docker/.+)($|/)"
+  }
+}
+
+prometheus.scrape "filesystem_and_memory" {
+  targets    = prometheus.exporter.unix.filesystem_and_memory.targets
+  forward_to = [otelcol.receiver.prometheus.filesystem_and_memory.receiver]
+}
+
+// Each sample becomes an OTLP metric point, with the target's job, integrations/unix,
+// as service.name. The scrape forwards no TYPE metadata below the experimental
+// stability level, so every point arrives as a gauge.
+otelcol.receiver.prometheus "filesystem_and_memory" {
+  output {
+    metrics = [otelcol.processor.transform.filesystem_and_memory_host_and_counters.input]
+  }
+}
+
+// A scrape sets no host.name, so the machine is added as the resource's, the way the
+// record files name it: the lowercased short hostname.
+//
+// Each counter becomes a cumulative monotonic sum again. Only macOS's meminfo serves
+// any, its pages swapped in and out, and node_exporter names each with `_total`.
+otelcol.processor.transform "filesystem_and_memory_host_and_counters" {
+  error_mode = "ignore"
+
+  metric_statements {
+    context    = "resource"
+    statements = [string.format("set(resource.attributes[\"host.name\"], %q)", string.to_lower(string.split(constants.hostname, ".")[0]))]
+  }
+
+  metric_statements {
+    context    = "metric"
+    statements = [`convert_gauge_to_sum("cumulative", true) where IsMatch(metric.name, "_total$")`]
+  }
+
+  output {
+    metrics = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
