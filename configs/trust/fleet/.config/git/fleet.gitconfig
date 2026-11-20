@@ -22,3 +22,10 @@ command = [ ! -x ~/.local/bin/link-commit-to-slate-worklog ] || exec ~/.local/bi
 event = post-commit
 event = post-merge
 command = [ ! -x ~/.local/bin/record-git-commit ] || exec ~/.local/bin/record-git-commit
+
+# Applies the Claude Code profile to ~/.claude once a merge moves its source
+# checkout, so landing a change there leaves it live before the land returns. The
+# script stands aside for a merge in any other repo, and ships with that checkout.
+[hook "claude-baseline-apply"]
+event = post-merge
+command = [ ! -x ~/tools/claude/scripts/pull-checkout-and-apply-baseline ] || exec ~/tools/claude/scripts/pull-checkout-and-apply-baseline --no-pull

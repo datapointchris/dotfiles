@@ -1068,6 +1068,16 @@ user_timers:
     network_trust: fleet
     excludes_os_family: windows
 
+  # The poll that carries a new commit on the Claude Code profile's source to every
+  # box but the one that landed it, whose post-merge hook applies at once. A run
+  # with nothing new is one fetch and builds nothing.
+  - name: claude-baseline-apply
+    description: Pull the Claude Code profile's source checkout and apply it to ~/.claude where main has moved
+    argv: [~/tools/claude/scripts/pull-checkout-and-apply-baseline]
+    every: 1m
+    network_trust: fleet
+    excludes_os_family: windows
+
   # A session leaves this desk a week after its last write, once the warehouse
   # rebuilds each of its files byte for byte, and a restore brings it back. A run
   # checks at most 2 GiB, so a desk's backlog leaves over several days.
