@@ -11,6 +11,7 @@
     tmuxctl pane open worker -- <cmd>     make the pane and run <cmd> in it
     tmuxctl pane release                  drop the marks this tool wrote
     tmuxctl pane focus %89                show that pane on this client
+    tmuxctl pane paste ph3 < answer.txt   type the text into ph3 as one paste, then Enter
     tmuxctl coordinator claim billing     name this pane's window billing-coordinator
 
 This is the tmux adapter for the port `muxctl` routes to. Callers name `muxctl`
@@ -73,6 +74,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 from collections.abc import Iterator
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -162,6 +164,13 @@ ceiling still applies on top: a client that holds one readable column seats one.
 PLACEHOLDER_COMMAND = 'tail -f /dev/null'
 """What a pane runs until it holds `remain-on-exit`. It cannot exit on its own."""
 
+ENTER_DELAY = 0.5
+"""Seconds between a paste and the Enter that submits it.
+
+With no gap, Claude Code could take the Enter before it had taken the text.
+Half a second was the gap a measurement needed for the Enter to land after it.
+"""
+
 WINDOW_NAME = 'agents'
 """What a window this opens for a worker is called when the caller gave no name, spelled once."""
 
@@ -202,6 +211,9 @@ class Refusal(StrEnum):
     BAD_SUBJECT = 'bad_subject'
     BAD_PER_WINDOW = 'bad_per_window'
     NO_CLIENT = 'no_client'
+    PANE_DEAD = 'pane_dead'
+    NOTHING_TO_PASTE = 'nothing_to_paste'
+    NO_BRACKETED_PASTE = 'no_bracketed_paste'
 
 
 REFUSALS: dict[Refusal, str] = {
@@ -222,6 +234,9 @@ REFUSALS: dict[Refusal, str] = {
     Refusal.BAD_SUBJECT: '{subject!r} is not a usable subject: letters, digits, dot, dash and underscore, starting with a letter or digit',
     Refusal.BAD_PER_WINDOW: '--per-window takes how many workers share a window, one or more, and {count} is not one',
     Refusal.NO_CLIENT: 'no tmux client is attached here, so nothing would show {pane}',
+    Refusal.PANE_DEAD: '{pane} has exited, so nothing would read what is pasted into it',
+    Refusal.NOTHING_TO_PASTE: 'stdin held no text, and pressing Enter on nothing is not a paste',
+    Refusal.NO_BRACKETED_PASTE: '{pane} has not turned on bracketed paste, so each line pasted would be read as a line typed and Enter',
 }
 
 
@@ -864,8 +879,8 @@ Read so a worker's name can be appended to it, and never to address a window.
 COLUMN_FIELDS = '#{pane_id}\t#{pane_left}'
 
 
-def tmux(*args: str) -> str:
-    """Run one tmux command, or raise.
+def tmux(*args: str, stdin: str | None = None) -> str:
+    """Run one tmux command, or raise. `stdin` is what a `-` path reads.
 
     The missing-binary guard is here rather than at the entry points because every
     path reaches this function and only some reach an entry point that checked.
@@ -878,7 +893,7 @@ def tmux(*args: str) -> str:
     """
     if shutil.which('tmux') is None:
         raise Usage(Refusal.NO_TMUX)
-    done = subprocess.run(['tmux', *args], capture_output=True, text=True)
+    done = subprocess.run(['tmux', *args], capture_output=True, text=True, input=stdin)
     if done.returncode != 0:
         raise TmuxFailed(f'tmux {args[0]}: {done.stderr.strip() or "failed with no message"}')
     return done.stdout
@@ -1685,6 +1700,49 @@ def cmd_focus(address: str, as_json: bool) -> int:
     return 0
 
 
+def cmd_paste(address: str, text: str, as_json: bool) -> int:
+    """Type text into a pane as one bracketed paste, then press Enter.
+
+    A newline sent as a key submits a Claude Code turn at the first line, so a
+    multi-line message has to arrive inside the paste markers. tmux writes them
+    only where the program turned bracketed paste on, and a pane that has not is
+    refused rather than fed line by line. A tmux too old to report the flag
+    reads it as empty, and that pane is pasted into.
+
+    tmux sanitizes control characters in a paste by default, so an escape in the
+    text arrives as a literal `^[` and cannot close the paste early. Each line
+    feed arrives as a carriage return. Trailing newlines are dropped, because
+    one inside the paste would add an empty last line to the message.
+    """
+    text = text.rstrip('\n')
+    if not text:
+        raise Usage(Refusal.NOTHING_TO_PASTE)
+    pane_id = resolve(address)
+    state, _ = pane_state(pane_id)
+    if state is PaneState.GONE:
+        raise Usage(Refusal.NO_SUCH_PANE, pane=address)
+    if state is PaneState.DEAD:
+        raise Usage(Refusal.PANE_DEAD, pane=address)
+    if (tmux_read('display-message', '-p', '-t', pane_id, '#{bracket_paste_flag}') or '').strip() == '0':
+        raise Usage(Refusal.NO_BRACKETED_PASTE, pane=address)
+
+    buffer = f'tmuxctl-paste-{os.getpid()}'
+    tmux('load-buffer', '-b', buffer, '-', stdin=text)
+    try:
+        tmux('paste-buffer', '-p', '-d', '-b', buffer, '-t', pane_id)
+    except TmuxFailed:
+        tmux_soft('delete-buffer', '-b', buffer)
+        raise
+    time.sleep(ENTER_DELAY)
+    tmux('send-keys', '-t', pane_id, 'Enter')
+
+    if as_json:
+        emit({'pane': pane_id, 'handle': handle_of(pane_id), 'characters': len(text), 'lines': text.count('\n') + 1})
+    else:
+        print(pane_id)
+    return 0
+
+
 def cmd_close(address: str, as_json: bool) -> int:
     """Destroy a pane, and drop the marks that would outlive it.
 
@@ -1717,6 +1775,7 @@ EXAMPLES = """examples:
   tmuxctl pane read ph3 --lines 40           the last 40 lines ph3 has on screen
   tmuxctl pane read ph3 --strip              all ph3 printed, blank lines dropped, once it has died
   tmuxctl pane focus ph3                     show ph3 on this client, wherever it is
+  tmuxctl pane paste ph3 < answer.txt        type the file into ph3 as one paste, then press Enter
   tmuxctl pane close ph3                     kill ph3 and its marks; a pane already gone is a success
   tmuxctl pane current                       the pane this runs in: its handle, or its %id
   tmuxctl pane release ph3                   stop treating ph3 as a pane this tool placed
@@ -1847,6 +1906,18 @@ def add_pane_verbs(pane: argparse.ArgumentParser) -> None:
     focusing.add_argument('address', metavar='ADDRESS', help=ADDRESS)
     focusing.add_argument('--json', action='store_true', help='machine-readable output on stdout')
 
+    pasting = command(
+        'paste',
+        'type text from stdin into a pane, then press Enter',
+        (
+            'Read text on stdin and paste it into a pane as one bracketed paste, so a newline in it does not submit '
+            'the first line on its own. Then wait half a second and press Enter. Trailing newlines are dropped. A '
+            'pane that is gone, has exited, or has not turned on bracketed paste is refused with exit 2.'
+        ),
+    )
+    pasting.add_argument('address', metavar='ADDRESS', help=ADDRESS)
+    pasting.add_argument('--json', action='store_true', help='machine-readable output on stdout')
+
     closing = command(
         'close',
         'destroy a pane',
@@ -1934,6 +2005,7 @@ PANE_VERBS = {
     'status': lambda args: cmd_status(args.address, args.json),
     'read': lambda args: cmd_read(args.address, args.lines, args.color, args.strip, args.json),
     'focus': lambda args: cmd_focus(args.address, args.json),
+    'paste': lambda args: cmd_paste(args.address, sys.stdin.read(), args.json),
     'close': lambda args: cmd_close(args.address, args.json),
     'release': lambda args: cmd_release(args.panes, args.json),
 }

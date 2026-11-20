@@ -26,7 +26,9 @@ Run with: pytest tests/apps/test_tmuxctl.py
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
+import sys
 import time
 from typing import Any
 
@@ -1603,3 +1605,69 @@ def test_release_clears_a_handle_as_well_as_a_role(tmuxctl, server):
     assert tmuxctl.release([caller]) == 1
     live = every_pane(tmuxctl)
     assert not any(pane.handle for pane in live)
+
+
+# --- paste: text typed into a pane the way a person pastes it ---
+
+
+RECORDER = """
+import os, sys, tty
+record = os.open(sys.argv[1], os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+tty.setraw(0)
+os.write(1, b'\\x1b[?2004h')
+while data := os.read(0, 4096):
+    os.write(record, data)
+"""
+"""A program that turns bracketed paste on, as Claude Code does, and keeps every byte it is sent.
+
+Raw mode, so the terminal hands over a carriage return as itself rather than
+translating it to a line feed.
+"""
+
+
+def until(check, seconds: float = 5.0):
+    """Poll `check` until it returns something truthy or the deadline passes, and return its last answer."""
+    deadline = time.monotonic() + seconds
+    while not (answer := check()) and time.monotonic() < deadline:
+        time.sleep(0.05)
+    return answer
+
+
+@needs_tmux
+def test_a_paste_arrives_inside_one_bracket_and_one_enter_follows_it(tmuxctl, server, tmp_path):
+    # Two lines that reached the program as keys would submit a Claude Code turn
+    # at the first. Inside the markers they are one message, and the Enter after
+    # the closing marker submits it.
+    recorder, received = tmp_path / 'recorder.py', tmp_path / 'received'
+    recorder.write_text(RECORDER)
+    command = shlex.join([sys.executable, str(recorder), str(received)])
+    pane = server.run('new-window', '-d', '-P', '-F', '#{pane_id}', command)
+
+    def bracketing() -> bool:
+        return server.run('display-message', '-p', '-t', pane, '#{bracket_paste_flag}') == '1'
+
+    assert until(bracketing), 'the recorder never turned bracketed paste on'
+
+    assert tmuxctl.cmd_paste(pane, 'first line\nsecond line\n', False) == 0
+
+    expected = b'\x1b[200~first line\rsecond line\x1b[201~\r'
+    assert until(lambda: received.exists() and received.read_bytes() == expected), received.read_bytes()
+
+
+@needs_tmux
+def test_a_paste_is_refused_where_no_program_would_read_it_as_one(tmuxctl, server):
+    # The caller pane runs a bash loop, which never turns bracketed paste on.
+    idle = tmuxctl.caller_pane()
+    dying = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=idle)
+    exited = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), dying), ('bash', '-c', 'exit 3'), '')
+    assert until(lambda: tmuxctl.pane_state(exited.pane)[0] is tmuxctl.PaneState.DEAD)
+
+    for address, text, why in (
+        ('%9999', 'hello', tmuxctl.Refusal.NO_SUCH_PANE),
+        (exited.pane, 'hello', tmuxctl.Refusal.PANE_DEAD),
+        (idle, 'hello', tmuxctl.Refusal.NO_BRACKETED_PASTE),
+        (idle, '\n\n', tmuxctl.Refusal.NOTHING_TO_PASTE),
+    ):
+        with pytest.raises(tmuxctl.Usage) as raised:
+            tmuxctl.cmd_paste(address, text, False)
+        assert refusal(tmuxctl, raised) is why

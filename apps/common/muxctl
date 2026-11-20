@@ -4,6 +4,7 @@
 #   muxctl coordinator claim billing   name this pane's window for billing
 #   muxctl pane open worker --name phase-3 --cwd DIR -- claude '...'
 #   muxctl pane status phase-3
+#   muxctl pane paste phase-3 < answer.txt
 #   muxctl --help                      the port's verbs, from the resolved adapter
 #
 # This is the whole abstraction. Callers name `muxctl` and never a multiplexer,
@@ -42,6 +43,7 @@ and every adapter answers the same ones.
   muxctl pane status ph3
   muxctl pane read ph3 --lines 40 --color
   muxctl pane focus %89               show that pane on this client
+  muxctl pane paste ph3 < answer.txt  type stdin into ph3 as one paste, then Enter
   muxctl pane close ph3
 
 Adapters, in the order they are tried:
