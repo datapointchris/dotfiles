@@ -139,6 +139,7 @@ test_cmd "muxctl help" "muxctl --help"
 test_cmd "tmuxctl help" "tmuxctl --help"
 test_cmd "tmux-rearrange help" "tmux-rearrange --help"
 test_cmd "worktree help" "worktree --help"
+test_cmd "wait-for help" "wait-for --help"
 
 # ================================================================
 # 2. SHELL LIBRARIES
