@@ -12,6 +12,7 @@ caller to know which kind of change they just made.
 
 from __future__ import annotations
 
+import json
 import os
 import signal
 import time
@@ -247,6 +248,10 @@ def restart_idle_daemon() -> None:
     time stands for its content, because git rewrites a file only when its content
     changes. hypridle prints no record of what it loaded to compare against.
 
+    Never while a monitor's DPMS is off. The `on-resume` dropped then is the one that
+    turns the display back on, and Hyprland does not wake it on input by itself.
+    The next apply with the display on restarts it.
+
     Hyprland's dispatcher starts the new one, so it inherits the compositor's
     environment, as the one autostart.lua started at login did.
     """
@@ -257,6 +262,13 @@ def restart_idle_daemon() -> None:
     stale = [int(pid) for pid, running_for in map(str.split, listed.stdout.splitlines()) if int(running_for) > written_ago]
     if not stale:
         return
+    dark = switched_off_monitors()
+    if dark is None:
+        err_console.print('  [red]✗[/] hypridle kept on its old config: Hyprland did not list its monitors')
+        return
+    if dark:
+        err_console.print(f'hypridle kept on its old config while {", ".join(dark)} is off, so input still wakes it')
+        return
     if not all(map(stopped, stale)):
         err_console.print('  [red]✗[/] hypridle ignored SIGTERM and keeps running the config it started with')
         return
@@ -264,6 +276,17 @@ def restart_idle_daemon() -> None:
         err_console.print('hypridle restarted on the deployed config')
     else:
         err_console.print('  [red]✗[/] hypridle stopped, and Hyprland refused to start it again')
+
+
+def switched_off_monitors() -> list[str] | None:
+    """The name of each monitor whose DPMS is off, or None where Hyprland answered
+    with no list to read."""
+    listed = run(['hyprctl', 'monitors', '-j'], output=Output.QUIET)
+    try:
+        monitors = json.loads(listed.stdout)
+    except json.JSONDecodeError:
+        return None
+    return [monitor['name'] for monitor in monitors if not monitor['dpmsStatus']]
 
 
 def stopped(pid: int) -> bool:

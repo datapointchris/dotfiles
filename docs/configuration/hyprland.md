@@ -20,7 +20,9 @@ hyprlang. Those are separate daemons with their own parsers, and none of them mo
 
 hypridle reads `hypridle.conf` once, when it starts. `dotfiles apply` restarts it
 through Hyprland's dispatcher when the file was written after the running one
-started, and leaves it running otherwise.
+started, and leaves it running otherwise. It also leaves it running while any
+monitor's DPMS is off. The running one's `on-resume` is what turns the display
+back on, and Hyprland does not wake it on input by itself.
 
 The package ships type stubs for the `hl` API at `/usr/share/hypr/stubs/`.
 `.luarc.json` points lua-language-server at them, so an editor completes and
