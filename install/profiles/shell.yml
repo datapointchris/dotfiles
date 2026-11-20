@@ -14,6 +14,7 @@ github_releases:
   - atuin       # shell history (zsh init expects it)
   - shellcheck  # debug shell scripts on the box
   - yq          # YAML through mikefarah's yq, which the bats suites also read through
+  - git-delta   # delta on Linux. A Mac takes the crate below, as each row's comment says
   # Not tree-sitter, which `workstation` carries. Every release nvim-treesitter
   # accepts links a newer glibc than Debian 12 has, so the loader refuses it there
   # and no parser builds. Neovim highlights with its own syntax files instead. To

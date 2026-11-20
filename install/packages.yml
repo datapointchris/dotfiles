@@ -898,6 +898,21 @@ github_releases:
     description: Terminal dashboard for GitHub pull requests and issues
     tags: [cli, git, github]
 
+  # A release rather than the crate on Linux, because the archive keeps `delta`
+  # under a directory named for the asset, and `cargo binstall` searches only
+  # paths built from the crate name. It missed the binary and compiled. A Mac keeps
+  # the crate: upstream publishes no x86_64 macOS build, and cargo-quickinstall's
+  # build is what binstall takes there. `supersedes` removes the crate's copy,
+  # which `~/.cargo/bin` puts ahead of this on PATH.
+  - name: git-delta
+    repo: dandavison/delta
+    command: delta
+    excludes_os_family: darwin
+    checksum: unpublished
+    description: syntax-highlighting git diff
+    tags: [cli, git]
+    supersedes: ['cargo:git-delta']
+
   - name: duf
     repo: muesli/duf
     description: Disk usage analyzer
@@ -1265,9 +1280,10 @@ custom_installers:
 # ================================================================
 # Installed by src/dotfiles/providers/cargo.py, which builds the argv.
 # binstall is handed the asset `binary_pattern` names, the one an offline bundle
-# stages. Where the target has none, or binstall cannot find the binary inside
-# it, binstall takes cargo-quickinstall's build or compiles from source — see
-# docs/learnings/cargo-binstall-falls-back-to-compiling.md
+# stages. Where the target has none, binstall takes cargo-quickinstall's build or
+# compiles from source. Where binstall cannot find the binary inside a published
+# asset, the tool is a `github_releases` row on that platform, as git-delta is on
+# Linux — see docs/learnings/cargo-binstall-falls-back-to-compiling.md
 #
 # `checksum:` is the declaration `github_releases` above carries, vocabulary and
 # all. Here its subject is the archive an offline bundle downloads, and nothing
@@ -1344,12 +1360,13 @@ cargo_packages:
     checksum: unpublished
     tags: [cli]
 
+  # A Mac's delta. Linux takes the release, whose `github_releases` row says why.
+  # No asset is named: the Mac's x86_64 build is cargo-quickinstall's, which
+  # binstall reaches with no `--pkg-url`.
   - name: git-delta
     command: delta
+    excludes_os_family: linux
     description: syntax-highlighting git diff
-    github_repo: dandavison/delta
-    binary_pattern: "delta-{version}-{target}.tar.gz"
-    checksum: unpublished
     tags: [cli, git]
 
   - name: oxker
@@ -2224,7 +2241,9 @@ macos_casks:
 #   - cargo_packages:  Rust CLI tools via cargo-binstall (prebuilt binaries). A Rust
 #                      tool stays in system_packages instead when upstream ships no
 #                      release binary (binstall would compile from source) or a native
-#                      package is required for a platform (e.g. Intel-macOS bottles).
+#                      package is required for a platform (e.g. Intel-macOS bottles),
+#                      and is a github_releases row where binstall cannot find the
+#                      binary inside a published asset.
 #   - github_releases: prebuilt binaries pinned to latest upstream (also the fallback
 #                      when a tool has its own downstream manager, e.g. yazi's `ya`)
 #   - runtimes:        rustup / uv / go, not system language packages. Node is

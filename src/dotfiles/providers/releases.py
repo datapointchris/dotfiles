@@ -311,6 +311,15 @@ def gh_dash(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'gh-dash_{tag}_{suffix}', Archive.RAW)
 
 
+def git_delta(tag: str, target: Target) -> ReleaseArtifact:
+    """GNU triples with no `v` anywhere, and the binary under the asset's stem,
+    which is where `cargo binstall` cannot find it. Linux only: no x86_64 macOS
+    build is published, so a Mac keeps the crate."""
+    triple = 'aarch64-unknown-linux-gnu' if target.is_arm else 'x86_64-unknown-linux-gnu'
+    stem = f'delta-{tag}-{triple}'
+    return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/delta')
+
+
 def hadolint(tag: str, target: Target) -> ReleaseArtifact:
     """Ships the binary itself, and is the one tool naming arm on Linux."""
     if target.is_darwin:
@@ -524,6 +533,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'fzf': fzf,
     'gh': gh,
     'gh-dash': gh_dash,
+    'git-delta': git_delta,
     'hadolint': hadolint,
     'just': just,
     'lazygit': lazygit,

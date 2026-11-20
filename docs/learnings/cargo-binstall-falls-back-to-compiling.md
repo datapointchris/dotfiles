@@ -9,10 +9,9 @@ deadlock. That was the whole fault, and `providers/cargo.py` streams the call so
 binstall's own `will be installed from source` and `Compiling` lines reach the
 screen.
 
-A compiled crate still converges the machine. Slow is not broken, and a tool does
-not change its install method for being slow — every Rust CLI comes from
-`cargo binstall` on every machine, and a second declaration for one platform costs
-more than the build does.
+A compiled crate still converges the machine. Slow is not broken. Where upstream
+publishes no binary for the target, the build is the price, and a second
+declaration for one platform costs more than the build does.
 
 **A compiled crate can be a different program.** StyLua's crate builds without the
 LuaJIT syntax its release binary carries, so a source-built StyLua refuses a `goto`
@@ -50,10 +49,20 @@ URL names one target, so `--targets` has to match it.
 
 **Naming the asset is not always enough.** binstall searches the archive at a few
 paths built from the crate name, and git-delta's `delta-<version>-<target>/delta`
-is in none of them, so delta takes cargo-quickinstall's build. A `--bin-dir` would
-fix that layout and break every root-level one: binstall searches nowhere else once
-given one, and a miss compiles. cargo-quickinstall also covers `eza`, `git-delta`,
-`oxker` and `broot` on x86_64 macOS, where upstream publishes nothing for it.
+is in none of them:
+
+```text
+ERROR resolve: When resolving git-delta bin delta is not found.
+ WARN The package git-delta v0.21.2 will be installed from source (with cargo)
+```
+
+A `--bin-dir` would fix that layout and break every root-level one: binstall
+searches nowhere else once given one, and a miss compiles. So on Linux git-delta is
+a `github_releases` row. Its function in `providers/releases.py` names the path
+inside the archive, and `supersedes: ['cargo:git-delta']` removes the crate's copy
+from `~/.cargo/bin`. A Mac keeps the crate, because upstream publishes no x86_64
+macOS build, and binstall takes cargo-quickinstall's. cargo-quickinstall covers
+`eza`, `oxker` and `broot` on x86_64 macOS too, where upstream publishes nothing.
 
 ## A binary restored from a bundle makes the source build fail
 
@@ -69,10 +78,12 @@ flag somebody forgot, and the two hosts that timed out are ten lines above it.
 
 ## Key Learnings
 
-- A source build is visible and acceptable. Do not move a tool to another package
-  manager to avoid one — that splits a declaration across two sections, leaves the
-  old binary on every machine that already installed it, and buys a shorter
-  install. Point binstall at the release asset instead.
+- A source build is visible and acceptable where upstream publishes no binary.
+  Do not move a tool to another package manager to avoid one, which splits a
+  declaration across two sections to buy a shorter install. Point binstall at the
+  release asset instead. A published binary binstall cannot find inside its
+  archive is the exception: a `github_releases` row names the path, and its
+  `supersedes` removes the crate's copy.
 - "Written in Rust" does not imply "installable via cargo binstall", and neither
   does a populated asset list. What decides it is whether a prebuilt binary exists
   for the target, from any of the three strategies, and whether binstall can find
