@@ -44,7 +44,7 @@ recaps:
       fleet ledger recap --since 90d --json
       | jq -r 'sort_by(.window.since) | reverse | .[].window | "\(.kind) \(.label)"'
   show: [fleet, ledger, recap, "--{kind}", "{label}"]
-  write: [fleet, agents, dispatch, recap, "--{kind}", "{label}"]
+  write: [fleet, agents, recap, dispatch, "--{kind}", "{label}"]
 
 # The fix menu's worktrees sit beside the ones `worktree new` adds, so `worktree
 # list` shows a merge prs left waiting, as <repo>/pr-<number>-catch-up.
