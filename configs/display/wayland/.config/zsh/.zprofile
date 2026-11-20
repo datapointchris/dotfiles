@@ -1,4 +1,3 @@
-#shellcheck disable=all
 # Arch Linux zprofile
 # Sourced on login shells
 

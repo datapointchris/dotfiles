@@ -1,4 +1,3 @@
-#shellcheck disable=all
 # ------------------------------------------------------------------ #
 # SHARED ZSH CONFIGURATION
 # Platform-agnostic configuration sourced by platform-specific configs
