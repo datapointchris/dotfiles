@@ -102,11 +102,12 @@ bind('XF86MonBrightnessUp', 'Brightness up', hl.dsp.exec_cmd('brightnessctl s 10
 bind('XF86MonBrightnessDown', 'Brightness down', hl.dsp.exec_cmd('brightnessctl s 10%-'), { repeating = true })
 
 -- Screenshot
-bind('Print', 'Screenshot a region to the clipboard', hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))
-bind(mainMod .. ' + Print', 'Screenshot the screen to the clipboard', hl.dsp.exec_cmd('grim - | wl-copy'))
+local screenshot = 'screenshot-to-file-and-clipboard'
+bind('Print', 'Screenshot a region to a file and the clipboard', hl.dsp.exec_cmd(screenshot .. ' region'))
+bind(mainMod .. ' + Print', 'Screenshot the screen to a file and the clipboard', hl.dsp.exec_cmd(screenshot .. ' screen'))
 -- P mirrors Print for keyboards without one, and matches AeroSpace
-bind(mainMod .. ' + SHIFT + P', 'Screenshot a region to the clipboard', hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))
-bind(mainMod .. ' + CTRL + P', 'Screenshot the screen to the clipboard', hl.dsp.exec_cmd('grim - | wl-copy'))
+bind(mainMod .. ' + SHIFT + P', 'Screenshot a region to a file and the clipboard', hl.dsp.exec_cmd(screenshot .. ' region'))
+bind(mainMod .. ' + CTRL + P', 'Screenshot the screen to a file and the clipboard', hl.dsp.exec_cmd(screenshot .. ' screen'))
 
 -- Clipboard history
 bind(mainMod .. ' + V', 'Clipboard history (select and paste)', hl.dsp.exec_cmd('rofi-clipboard'))

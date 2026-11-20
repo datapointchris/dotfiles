@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# screenshot-to-file-and-clipboard - Capture the screen or a region, save a PNG, copy it, and notify
+#
+# A keybind runs this with no terminal, so the notification is the only sign the
+# capture happened. The notification carries the saved path.
+#
+# Usage:
+#   screenshot-to-file-and-clipboard screen    Capture every output
+#   screenshot-to-file-and-clipboard region    Drag out a region; Escape cancels
+#
+# Files go to ${SCREENSHOT_DIR:-~/Pictures/screenshots}.
+
+set -euo pipefail
+
+dir="${SCREENSHOT_DIR:-$HOME/Pictures/screenshots}"
+mkdir -p "$dir"
+file="$dir/$(date +%Y%m%dT%H%M%S).png"
+
+case "${1:-}" in
+  screen) grim "$file" ;;
+  region)
+    geometry=$(slurp) || exit 0
+    grim -g "$geometry" "$file"
+    ;;
+  *)
+    echo "usage: ${0##*/} screen|region" >&2
+    exit 2
+    ;;
+esac
+
+wl-copy --type image/png <"$file"
+notify-send --icon "$file" "Screenshot saved and copied" "$file"
