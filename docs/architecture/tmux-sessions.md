@@ -97,6 +97,7 @@ status bar color the same way it owns `pane-border-format`.
 | `prefix T` | Promote the focused window into its own session |
 | `prefix s` | Choose a session from tmux's tree (tmux default) |
 | `prefix w` | Find a window in any session |
+| `prefix n` | The pane that has needed you longest, in any session |
 | `prefix .` | Move the focused window into another session (tmux default) |
 | `prefix p` | The `prs-board` session, or back to the session you left it from |
 
@@ -333,6 +334,39 @@ layout string encodes pane ids and the old geometry; only the per-pane fraction 
 where the group stays together. It sees content, never intent: it can tell that two conversations
 cite the same item, not that you want them apart.
 
+## A Pane That Needs You Lights Its Window, Its Session and a Count
+
+A Claude session that stops on a question or a permission prompt stamps its pane's
+`@claude_needs_you` with the epoch seconds, and typing in that pane clears it. The bar draws the
+stamp the way X11 draws an urgency hint, and the way i3 and sway draw an urgent workspace: a
+window holding a flagged pane, and a session holding one, draw in the theme's alert style, and
+`status-right` opens with `2 need you`. `prefix n` is i3's `[urgent=oldest] focus`.
+
+**`tmux.conf` says what counts, and the theme draws it.** `tmux.conf` sets four user options, each
+a format holding one character per flagged pane: `@window_needs_you`, `@session_needs_you`,
+`@needs_you_status` and `@window_needs_you_style`. The theme generator expands them with `E:` in
+the alert branches of line 1, the window format and `status-right`. The split follows ownership:
+the theme owns every status color, so a theme apply rewrites those three formats. An option it
+only reads survives that, and a theme loaded with no options set draws nothing extra.
+
+**The oldest stamp goes first, because its prompt cache expires first.** The windows do not sort
+by it. They keep their order and numbers so `prefix <n>` stays where it was, and the key gives the
+order instead. A flag lasts until you type, so `prefix n` passes over the pane you are on and
+pressing it again reaches the next.
+
+**The current session and window keep their current style.** Line 1 already does this for a
+bell alert. The count still includes them, and line 2 shows a flagged window beside the current
+one.
+
+**Only a terminal that draws blink gets it.** Windows Terminal has drawn SGR 5 since 1.4. Ghostty
+parses it and draws nothing, with [ghostty-org/ghostty#11875](https://github.com/ghostty-org/ghostty/pull/11875)
+open to change that, so `@window_needs_you_style` checks `client_termtype` and gives a Ghostty
+client none.
+
+*Rejected:* a `#(shell-command)` count. Setting a pane option redraws every client at once, so
+the formats change within a redraw of the hook firing. A shell command would wait out the
+15-second `status-interval`, for the reason line 1 stays a format.
+
 ## A Board Session Is Not an Initiative
 
 `prs-board` is a board: a session `prefix p` owns, holding the pull request board, `prs tui`. One
@@ -373,4 +407,4 @@ them with `terminal-features`.
 | `configs/trust/fleet/.config/tmux-restore/agents/fleet.sh` | Reopens a conversation a board opened, ahead of the board |
 | `apps/display/wayland/tmux-shutdown-save` | Holds a shutdown delay lock and saves when logind announces one |
 | `configs/display/wayland/.config/systemd/user/tmux-shutdown-save.service` | Runs it from login on |
-| `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colors |
+| `lib/generators/tmux.sh` in the `theme` CLI | Generates line 1's format, the colors, and how a pane that needs you draws |

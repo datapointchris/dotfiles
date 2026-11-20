@@ -23,6 +23,8 @@ Commands:
   new <name>        Open a session by name, or focus it if it exists
   promote [name]    Move the focused window out into a session of its own
   windows           Fuzzy-find a window across every session
+  focus-needs-you   Focus the pane that has needed you longest, in any session,
+                    passing over the one the client is on
   list              Print sessions in status-line order, current one marked
   move-left         Swap the focused session with the one to its left
   move-right        Swap the focused session with the one to its right
@@ -184,6 +186,28 @@ find_window() {
 
   focus_session "$(tmux display-message -p -t "$target" '#{session_name}')"
   tmux select-window -t "$target"
+}
+
+# The pane whose @claude_needs_you stamp is oldest, since its prompt cache
+# expires first. This is the order the windows deliberately do not take: they
+# keep their numbers, so prefix+<n> stays where it was. The stamp stays until
+# the user types there, so the pane the client is already on is passed over,
+# and pressing again from it reaches the next.
+focus_needs_you() {
+  local current target
+  current="$(tmux display-message -p '#{pane_id}')"
+  target="$(
+    tmux list-panes -a -f '#{@claude_needs_you}' -F '#{@claude_needs_you} #{pane_id}' \
+      | sort -n -k1,1 \
+      | awk -v current="$current" '$2 != current { print $2; exit }'
+  )"
+
+  if [[ -z $target ]]; then
+    tmux display-message "no other pane needs you"
+    return 0
+  fi
+  # A pane target moves the client to its session and window as well.
+  tmux switch-client -t "$target"
 }
 
 list_sessions() {
@@ -407,6 +431,10 @@ case "${1:-}" in
   windows)
     require_server
     find_window
+    ;;
+  focus-needs-you)
+    require_server
+    focus_needs_you
     ;;
   list)
     require_server
