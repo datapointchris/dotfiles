@@ -177,6 +177,12 @@ absorbs the following jobs and then duplicates them. And shell style lives in `.
 shfmt reads — a printer or parser flag on the shfmt hook replaces that file wholesale. The dies are
 fleet-wide by default; `--filter dotfiles` narrows one to this repo.
 
+**A commit runs the test suite, so running pytest before it spends the time twice.** The `pytest`
+hook runs all of `tests/` when a commit touches `src/`, `tests/`, `install/`, `apps/`, the
+dependency files or the zsh and shell trees under `configs/`. The `pytest-trees` hook runs
+`tests/symlinks`, `tests/shell` and `tests/configs` when it touches `configs/` or `shell/`. A
+commit of docs alone runs neither.
+
 **Zsh is XDG and correct as it is.** `ZDOTDIR` is set system-wide to `~/.config/zsh`, from
 `/etc/zshenv` or `/etc/zsh/zshenv` depending on distribution — `install/system.yml` declares both
 through `path` and `alternate_path`. There is no `.zprofile` or `.zshenv` in `$HOME`, and there
