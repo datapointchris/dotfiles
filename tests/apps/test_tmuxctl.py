@@ -1614,7 +1614,7 @@ RECORDER = """
 import os, sys, tty
 record = os.open(sys.argv[1], os.O_WRONLY | os.O_CREAT | os.O_APPEND)
 tty.setraw(0)
-os.write(1, b'\\x1b[?2004h')
+os.write(1, b'\\x1b[?2004hready')
 while data := os.read(0, 4096):
     os.write(record, data)
 """
@@ -1622,6 +1622,10 @@ while data := os.read(0, 4096):
 
 Raw mode, so the terminal hands over a carriage return as itself rather than
 translating it to a line feed.
+
+It prints `ready` after the mode sequence. tmux parses a pane's output in
+order, so `ready` on screen means the mode is on. `#{bracket_paste_flag}`
+would say so directly, and tmux before 3.7 prints it empty.
 """
 
 
@@ -1642,11 +1646,7 @@ def test_a_paste_arrives_inside_one_bracket_and_one_enter_follows_it(tmuxctl, se
     recorder.write_text(RECORDER)
     command = shlex.join([sys.executable, str(recorder), str(received)])
     pane = server.run('new-window', '-d', '-P', '-F', '#{pane_id}', command)
-
-    def bracketing() -> bool:
-        return server.run('display-message', '-p', '-t', pane, '#{bracket_paste_flag}') == '1'
-
-    assert until(bracketing), 'the recorder never turned bracketed paste on'
+    assert until(lambda: 'ready' in server.run('capture-pane', '-p', '-t', pane)), 'the recorder never started'
 
     assert tmuxctl.cmd_paste(pane, 'first line\nsecond line\n', False) == 0
 
@@ -1657,16 +1657,18 @@ def test_a_paste_arrives_inside_one_bracket_and_one_enter_follows_it(tmuxctl, se
 @needs_tmux
 def test_a_paste_is_refused_where_no_program_would_read_it_as_one(tmuxctl, server):
     # The caller pane runs a bash loop, which never turns bracketed paste on.
+    # Only tmux 3.7 and later report the flag, so only they refuse that pane.
     idle = tmuxctl.caller_pane()
     dying = tmuxctl.Request(role=tmuxctl.Role.WORKER, caller=idle)
     exited = tmuxctl.execute(tmuxctl.place(tmuxctl.read_workspace(), dying), ('bash', '-c', 'exit 3'), '')
     assert until(lambda: tmuxctl.pane_state(exited.pane)[0] is tmuxctl.PaneState.DEAD)
+    reports_flag = server.run('display-message', '-p', '-t', idle, '#{bracket_paste_flag}') == '0'
 
     for address, text, why in (
         ('%9999', 'hello', tmuxctl.Refusal.NO_SUCH_PANE),
         (exited.pane, 'hello', tmuxctl.Refusal.PANE_DEAD),
-        (idle, 'hello', tmuxctl.Refusal.NO_BRACKETED_PASTE),
         (idle, '\n\n', tmuxctl.Refusal.NOTHING_TO_PASTE),
+        *([(idle, 'hello', tmuxctl.Refusal.NO_BRACKETED_PASTE)] if reports_flag else []),
     ):
         with pytest.raises(tmuxctl.Usage) as raised:
             tmuxctl.cmd_paste(address, text, False)

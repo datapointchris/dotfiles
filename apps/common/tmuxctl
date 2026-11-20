@@ -1706,13 +1706,13 @@ def cmd_paste(address: str, text: str, as_json: bool) -> int:
     A newline sent as a key submits a Claude Code turn at the first line, so a
     multi-line message has to arrive inside the paste markers. tmux writes them
     only where the program turned bracketed paste on, and a pane that has not is
-    refused rather than fed line by line. A tmux too old to report the flag
-    reads it as empty, and that pane is pasted into.
+    refused rather than fed line by line. tmux before 3.7 prints the flag empty,
+    so a pane there is pasted into unchecked.
 
-    tmux sanitizes control characters in a paste by default, so an escape in the
-    text arrives as a literal `^[` and cannot close the paste early. Each line
-    feed arrives as a carriage return. Trailing newlines are dropped, because
-    one inside the paste would add an empty last line to the message.
+    tmux 3.7 and later sanitize control characters in a paste, so an escape in
+    the text arrives as a literal `^[` and cannot close the paste early. Each
+    line feed arrives as a carriage return. Trailing newlines are dropped,
+    because one inside the paste would add an empty last line to the message.
     """
     text = text.rstrip('\n')
     if not text:
