@@ -223,6 +223,10 @@ file", never "You should"), in paragraphs that keep the reasoning, factual rathe
 Add every new doc to `mkdocs.yml` navigation. Notes naming nothing in this repo belong on the hub
 (`~/docs`).
 
+**A commit or doc says what the thing is and what changed, never what work needed.** It names no
+employer, no employer VPN or network, and no incident at work that prompted the change. This repo
+may name the fleet, and still not the employer. "Individual to each computer" is a whole reason.
+
 **A doc earns its lines by explaining what the code cannot state** — a decision, a rejected
 alternative, a non-obvious constraint, a measured tradeoff. Never write a list a command produces:
 `task --list-all`, `dotfiles packages list --source <x>`, `eza -1 install/manifests/`, `<tool> --help`. If
