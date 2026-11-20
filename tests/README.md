@@ -168,8 +168,8 @@ github: ANONYMOUS — 60 API calls/hour, release failures are suspect (gh auth l
 ```
 
 Add `--environment <name>` for one — never `-k`, which matches test names too and
-quietly selects all four. `--keep` leaves containers up; `--reuse` and
-`--installed` imply it.
+quietly selects every environment in `ENVIRONMENTS` in `tests/e2e/harness.py`.
+`--keep` leaves containers up; `--reuse` and `--installed` imply it.
 
 **Two full installs at a time is free on this box; four is not.** Measured
 2026-08-10 on the Arch workstation: archlinux and wsl installed concurrently in
