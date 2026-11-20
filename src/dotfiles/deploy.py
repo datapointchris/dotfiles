@@ -1,9 +1,9 @@
-"""Deploying the repo into $HOME, and the two jobs that follow it.
+"""Deploying the repo into $HOME, and the jobs that follow it.
 
 The deciding is `resources/symlinks.py`. What lives here is the epilogue, which
 belongs with the deployment rather than at the end of a run: git needs somewhere
-to write that is not this repo, and Hyprland has to reload the files the pass
-just deployed.
+to write that is not this repo, and Hyprland, hypridle and Alloy have to load the
+files the pass just deployed.
 
 There is one deployment verb, because reconciling always prunes. A create-only
 pass leaves a broken link behind whenever a source is deleted, and asks the
@@ -12,6 +12,9 @@ caller to know which kind of change they just made.
 
 from __future__ import annotations
 
+import os
+import signal
+import time
 from pathlib import Path
 
 from rich.markup import escape
@@ -27,6 +30,9 @@ from dotfiles.symlinks import core
 
 GIT_CONFIG_ENTRY = Path.home() / '.config' / 'git' / 'config'
 HOME_GITCONFIG = Path.home() / '.gitconfig'
+
+IDLE_DAEMON_CONFIG = Path.home() / '.config' / 'hypr' / 'hypridle.conf'
+IDLE_DAEMON_EXIT_SECONDS = 5
 
 ALLOY_RELOAD_URL = 'http://127.0.0.1:12345/-/reload'
 ALLOY_RELOAD_SECONDS = 10
@@ -130,15 +136,19 @@ def epilogue(session: Session) -> None:
     """The jobs that follow a deployment, and belong with it rather than at the end
     of a run.
 
-    git needs somewhere to write that is not this repo, and Hyprland and Alloy each
-    have to reload the files the pass just deployed.
+    git needs somewhere to write that is not this repo, and Hyprland, hypridle and
+    Alloy each have to load the files the pass just deployed.
 
     The deploying itself belongs to the engine. What is left here is genuinely not
     the walk — carrying it would mean a second observe/diff/perform loop beside the
     resource's.
+
+    hypridle is restarted only where Hyprland answered the reload, because the
+    restart stops it before Hyprland's dispatcher starts the new one.
     """
     ensure_git_config_entry(session.machine.coordinates)
-    reload_compositor(session.machine.coordinates)
+    if reload_compositor(session.machine.coordinates):
+        restart_idle_daemon()
     reload_telemetry_agent()
 
 
@@ -214,15 +224,70 @@ def show(session: Session) -> None:
     err_console.print(f'\n{len(observed.links)} declared, {undeployed} not deployed as declared')
 
 
-def reload_compositor(coordinates: axes.Coordinates) -> None:
+def reload_compositor(coordinates: axes.Coordinates) -> bool:
     """Hyprland reads the config files the pass above just deployed, so the reload
     belongs with the deployment rather than at the end of a run.
 
     Keyed on the display stack, which is what put those files in the plan: the
-    compositor is a fact about Wayland, not about Arch.
+    compositor is a fact about Wayland, not about Arch. True when Hyprland answered.
     """
-    if coordinates.display_stack is axes.DisplayStack.WAYLAND and run(['hyprctl', 'reload'], output=Output.QUIET).ok:
+    reloaded = coordinates.display_stack is axes.DisplayStack.WAYLAND and run(['hyprctl', 'reload'], output=Output.QUIET).ok
+    if reloaded:
         err_console.print('Hyprland configuration reloaded')
+    return reloaded
+
+
+def restart_idle_daemon() -> None:
+    """hypridle reads its config once, at start, and holds no watch on it. So each
+    running hypridle that started before the deployed config's last write runs a
+    config the machine no longer holds, and is restarted.
+
+    Only that one. A restart while the desk is idle drops the pending `on-resume`,
+    which is what clears logind's idle hint and records the return. The file's write
+    time stands for its content, because git rewrites a file only when its content
+    changes. hypridle prints no record of what it loaded to compare against.
+
+    Hyprland's dispatcher starts the new one, so it inherits the compositor's
+    environment, as the one autostart.lua started at login did.
+    """
+    if not IDLE_DAEMON_CONFIG.exists():
+        return
+    written_ago = time.time() - IDLE_DAEMON_CONFIG.stat().st_mtime
+    listed = run(['ps', '-C', 'hypridle', '-o', 'pid=,etimes='], output=Output.QUIET)
+    stale = [int(pid) for pid, running_for in map(str.split, listed.stdout.splitlines()) if int(running_for) > written_ago]
+    if not stale:
+        return
+    if not all(map(stopped, stale)):
+        err_console.print('  [red]✗[/] hypridle ignored SIGTERM and keeps running the config it started with')
+        return
+    if run(['hyprctl', 'dispatch', 'hl.dsp.exec_cmd("hypridle")'], output=Output.QUIET).ok:
+        err_console.print('hypridle restarted on the deployed config')
+    else:
+        err_console.print('  [red]✗[/] hypridle stopped, and Hyprland refused to start it again')
+
+
+def stopped(pid: int) -> bool:
+    """SIGTERM, then wait for the exit.
+
+    The wait is what lets the new hypridle take the `org.freedesktop.ScreenSaver`
+    bus name, which the old one holds until it exits. Without the name, an
+    application's request to keep the screen awake reaches nobody. A zombie has
+    exited, and only waits for Hyprland to reap it. uv's Python builds carry no
+    `os.pidfd_open` to wait on instead.
+    """
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return True
+    deadline = time.monotonic() + IDLE_DAEMON_EXIT_SECONDS
+    while time.monotonic() < deadline:
+        try:
+            if Path(f'/proc/{pid}/stat').read_text().rpartition(')')[2].split()[0] == 'Z':
+                return True
+        except (FileNotFoundError, ProcessLookupError):
+            return True
+        time.sleep(0.05)
+    return False
 
 
 def reload_telemetry_agent() -> None:
