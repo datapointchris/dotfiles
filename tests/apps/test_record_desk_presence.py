@@ -14,10 +14,10 @@ SCRIPT = Path(__file__).resolve().parents[2] / 'apps' / 'display' / 'wayland' / 
 def test_each_change_appends_one_line(tmp_path: Path) -> None:
     env = {**os.environ, 'XDG_STATE_HOME': str(tmp_path)}
     for state in ('away', 'back'):
-        subprocess.run([SCRIPT, state], env=env, check=True)
+        subprocess.run([SCRIPT, state, '45'], env=env, check=True)
 
     lines = (tmp_path / 'desk-presence' / 'history.jsonl').read_text().splitlines()
     records = [json.loads(line) for line in lines]
-    assert [(record['state'], record['idle_after_seconds']) for record in records] == [('away', 600), ('back', 600)]
+    assert [(record['state'], record['idle_after_seconds']) for record in records] == [('away', 45), ('back', 45)]
     assert all(set(record) == {'ts', 'state', 'idle_after_seconds'} for record in records)
     assert all(dt.datetime.fromisoformat(record['ts']).tzinfo is dt.UTC for record in records)

@@ -1,22 +1,21 @@
 #!/usr/bin/env bash
-# record-desk-presence away|back - append one desk.presence record, run by hypridle's
-# idle listener when the desk goes idle and when it wakes.
+# record-desk-presence away|back SECONDS - append one desk.presence record, run by
+# hypridle's idle listener when the desk goes idle and when it wakes. SECONDS is that
+# listener's timeout, which hypridle.conf passes from the variable it sets it with.
 #
 # Each change is one line in $XDG_STATE_HOME/desk-presence/history.jsonl, which
 # desk-presence-records.alloy ships. An away record is written idle_after_seconds after
 # the last input, so the warehouse starts the away span that long before it.
 set -euo pipefail
 
-# The timeout of the hypridle.conf listener that runs this script.
-IDLE_AFTER_SECONDS=600
-
 state=${1:-}
-if [[ $state != away && $state != back ]]; then
-  echo "usage: record-desk-presence away|back" >&2
+idle_after_seconds=${2:-}
+if [[ ($state != away && $state != back) || ! $idle_after_seconds =~ ^[0-9]+$ ]]; then
+  echo "usage: record-desk-presence away|back SECONDS" >&2
   exit 2
 fi
 
 records=${XDG_STATE_HOME:-$HOME/.local/state}/desk-presence/history.jsonl
 mkdir -p "${records%/*}"
 printf '{"ts": "%s", "state": "%s", "idle_after_seconds": %d}\n' \
-  "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" "$state" "$IDLE_AFTER_SECONDS" >>"$records"
+  "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" "$state" "$idle_after_seconds" >>"$records"

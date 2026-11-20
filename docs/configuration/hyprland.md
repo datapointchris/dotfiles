@@ -18,6 +18,10 @@ change has one obvious home and an error names the area it broke.
 `hypridle.conf`, `hyprlock.conf` and `hyprpaper.conf` sit alongside and stay
 hyprlang. Those are separate daemons with their own parsers, and none of them moved.
 
+hypridle reads `hypridle.conf` once, when it starts. `dotfiles apply` restarts it
+through Hyprland's dispatcher when the file was written after the running one
+started, and leaves it running otherwise.
+
 The package ships type stubs for the `hl` API at `/usr/share/hypr/stubs/`.
 `.luarc.json` points lua-language-server at them, so an editor completes and
 type-checks every `hl.config` key and dispatcher.
