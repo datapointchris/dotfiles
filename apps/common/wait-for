@@ -5,13 +5,21 @@
 # ///
 """Poll a check until it reads ready or failed, cannot be read, or the deadline passes.
 
-    wait-for --timeout DURATION [--every DURATION] [--json] -- CHECK [ARG...]
+    wait-for --timeout DURATION [--every DURATION] [--stall DURATION] [--json] -- CHECK [ARG...]
 
 Each poll runs the check and reads the last line of its stdout:
 
-    ready     the condition holds, and the wait exits 0
-    failed    the condition can never hold, and the wait exits 1
-    pending   not yet, so the wait polls again after --every
+    ready       the condition holds, and the wait exits 0
+    failed      the condition can never hold, and the wait exits 1
+    pending     not yet, so the wait polls again after --every
+    pending N   not yet, and N is how far the work has got: rows copied, windows done, a cursor
+
+A number that drops below the highest one read exits 1 as regressed, because work that
+went back started over. --stall bounds the time between two rises of the number, as a
+Kubernetes Deployment's progressDeadlineSeconds does, and exits 1 as stalled once it
+passes. So a wait on a job of many hours ends within one stall bound of the job stopping,
+rather than at a deadline sized for the slowest healthy run. Under --stall, a pending
+line with no number is unreadable.
 
 A line the check prints before its reading is what the wait reports it saw. Anything else, an empty line, or a check that exits non-zero is unreadable. Three
 unreadable polls in a row exit 2, naming what the last one read, because a loop that
@@ -28,6 +36,7 @@ DURATION is seconds, or a number ending in s, m or h: 90, 90s, 45m, 1.5h.
 Examples:
     wait-for --timeout 45m -- sh -c 'test -f /tmp/done && echo ready || echo pending'
     wait-for --timeout 2h --every 1m -- ./release-holds v1.2.3
+    wait-for --timeout 16h --every 10m --stall 45m -- ./rebuild-progress
 """
 
 from __future__ import annotations
@@ -50,6 +59,7 @@ class Verdict:
     detail: str
     polls: int
     waited_seconds: float
+    progress: float | None = None
 
     def exit_code(self) -> int:
         return {'ready': 0, 'unreadable': 2}.get(self.outcome, 1)
@@ -69,8 +79,17 @@ def duration(text: str) -> float:
     return seconds
 
 
-def read_once(check: list[str], within: float) -> tuple[str, str]:
-    """One poll: the reading and what it saw. Raises TimeoutError where the deadline cut it."""
+def progress_of(words: list[str]) -> float | None:
+    """The number after `pending`, or None where the line carries none. Raises ValueError on a word that is not one."""
+    if len(words) == 1:
+        return None
+    if len(words) > 2:
+        raise ValueError
+    return float(words[1])
+
+
+def read_once(check: list[str], within: float, needs_progress: bool) -> tuple[str, float | None, str]:
+    """One poll: the reading, its progress and what it saw. Raises TimeoutError where the deadline cut it."""
     try:
         done = subprocess.run(check, capture_output=True, text=True, timeout=within, stdin=subprocess.DEVNULL)
     except subprocess.TimeoutExpired:
@@ -79,25 +98,37 @@ def read_once(check: list[str], within: float) -> tuple[str, str]:
     last = lines[-1].strip() if lines else ''
     if done.returncode != 0:
         said = (done.stderr.strip().splitlines() or [last or 'nothing'])[-1]
-        return 'unreadable', f'the check exited {done.returncode}: {said}'
-    if last not in READINGS:
-        return 'unreadable', f'the check printed {last!r}, which is not ready, pending or failed' if last else 'the check printed nothing'
+        return 'unreadable', None, f'the check exited {done.returncode}: {said}'
+    words = last.split()
+    reading, progress = (words[0] if words else ''), None
+    try:
+        if reading == 'pending':
+            progress = progress_of(words)
+        elif len(words) != 1:
+            raise ValueError
+    except ValueError:
+        reading = ''
+    if reading not in READINGS:
+        return 'unreadable', None, f'the check printed {last!r}, which is not ready, pending, pending N or failed' if last else 'the check printed nothing'
+    if reading == 'pending' and progress is None and needs_progress:
+        return 'unreadable', None, 'the check printed pending with no number, which --stall needs to see the work move'
     said = lines[-2].strip() if len(lines) > 1 else ''
-    return last, said or f'the check read {last}'
+    return reading, progress, said or f'the check read {last}'
 
 
-def wait(check: list[str], timeout: float, every: float) -> Verdict:
+def wait(check: list[str], timeout: float, every: float, stall: float | None = None) -> Verdict:
     began = time.monotonic()
     deadline = began + timeout
     polls, unread, detail, last = 0, 0, '', None
+    highest, rose_at = None, began
 
     def end(outcome: str) -> Verdict:
-        return Verdict(outcome, detail, polls, round(time.monotonic() - began, 1))
+        return Verdict(outcome, detail, polls, round(time.monotonic() - began, 1), highest)
 
     while True:
         polls += 1
         try:
-            reading, seen = read_once(check, max(deadline - time.monotonic(), 0.001))
+            reading, progress, seen = read_once(check, max(deadline - time.monotonic(), 0.001), stall is not None)
         except TimeoutError:
             detail = detail or 'the check was still running at the deadline'
             return end('deadline')
@@ -105,9 +136,10 @@ def wait(check: list[str], timeout: float, every: float) -> Verdict:
             detail = f'the check {check[0]!r} could not start: {error.strerror or error}'
             return end('unreadable')
         detail = seen
-        if (reading, seen) != last:
-            print(f'{time.strftime("%H:%M:%S", time.gmtime())}  {reading}: {seen}', file=sys.stderr, flush=True)
-            last = (reading, seen)
+        shown = reading if progress is None else f'{reading} {progress:g}'
+        if (shown, seen) != last:
+            print(f'{time.strftime("%H:%M:%S", time.gmtime())}  {shown}: {seen}', file=sys.stderr, flush=True)
+            last = (shown, seen)
         if reading == 'unreadable':
             unread += 1
             if unread >= UNREADABLE_IN_A_ROW:
@@ -116,6 +148,15 @@ def wait(check: list[str], timeout: float, every: float) -> Verdict:
             unread = 0
             if reading != 'pending':
                 return end(reading)
+        if progress is not None:
+            if highest is not None and progress < highest:
+                detail = f'progress went back from {highest:g} to {progress:g}, so the work started over: {seen}'
+                return end('regressed')
+            if highest is None or progress > highest:
+                highest, rose_at = progress, time.monotonic()
+        if stall is not None and highest is not None and time.monotonic() - rose_at > stall:
+            detail = f'no progress for {round(time.monotonic() - rose_at)}s, stuck at {highest:g}: {seen}'
+            return end('stalled')
         left = deadline - time.monotonic()
         if left <= every:
             time.sleep(max(left, 0))
@@ -130,14 +171,17 @@ def main() -> int:
     )
     parser.add_argument('--timeout', type=duration, required=True, help='how long to wait before ending at the deadline')
     parser.add_argument('--every', type=duration, default=30.0, help='how long between two polls (default 30s)')
+    parser.add_argument('--stall', type=duration, help='end as stalled once the number after pending has not risen for this long')
     parser.add_argument('--json', action='store_true', help='print the verdict as JSON to stdout')
     parser.add_argument('check', nargs=argparse.REMAINDER, help='the check to run, after --')
     args = parser.parse_args()
     check = args.check[1:] if args.check[:1] == ['--'] else args.check
     if not check:
         parser.error('name the check to run after --')
+    if args.stall is not None and args.stall <= args.every:
+        parser.error('--stall has to be longer than --every, or one poll with no rise would end the wait')
     try:
-        verdict = wait(check, args.timeout, args.every)
+        verdict = wait(check, args.timeout, args.every, args.stall)
     except KeyboardInterrupt:
         print('canceled', file=sys.stderr)
         return 130

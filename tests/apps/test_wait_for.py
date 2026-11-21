@@ -14,9 +14,9 @@ import pytest
 WAIT_FOR = Path(__file__).resolve().parents[2] / 'apps' / 'common' / 'wait-for'
 
 
-def waits(check: str, timeout: str = '5s') -> tuple[int, dict]:
+def waits(check: str, timeout: str = '5s', *flags: str) -> tuple[int, dict]:
     done = subprocess.run(
-        [WAIT_FOR, '--timeout', timeout, '--every', '0.05', '--json', '--', 'sh', '-c', check],
+        [WAIT_FOR, '--timeout', timeout, '--every', '0.05', *flags, '--json', '--', 'sh', '-c', check],
         capture_output=True,
         text=True,
         timeout=30,
@@ -45,3 +45,23 @@ def test_a_wait_ends_on_its_reading(tmp_path, monkeypatch, check, exit_code, out
 def test_a_check_still_pending_ends_at_the_deadline() -> None:
     got, verdict = waits('echo pending', timeout='0.4s')
     assert (got, verdict['outcome']) == (1, 'deadline')
+
+
+# The check counts its own polls in a file: n is 0 on the first.
+COUNTED = 'n=$(cat count 2>/dev/null || echo 0); echo $((n+1)) > count; '
+
+
+@pytest.mark.parametrize(
+    ('check', 'flags', 'exit_code', 'outcome'),
+    [
+        (COUNTED + '[ "$n" -ge 2 ] && echo "pending 1" || echo "pending $((n+5))"', (), 1, 'regressed'),
+        (COUNTED + '[ "$n" -ge 1 ] && echo "pending 7" || echo "pending 3"', ('--stall', '0.3s'), 1, 'stalled'),
+        (COUNTED + 'echo "pending $n"; [ "$n" -lt 3 ] || echo ready', ('--stall', '0.3s'), 0, 'ready'),
+        ('echo pending', ('--stall', '0.3s'), 2, 'unreadable'),
+    ],
+    ids=['went back', 'stopped rising', 'rising then ready', 'no number under --stall'],
+)
+def test_a_wait_ends_when_its_progress_stops_or_goes_back(tmp_path, monkeypatch, check, flags, exit_code, outcome) -> None:
+    monkeypatch.chdir(tmp_path)
+    got, verdict = waits(check, '10s', *flags)
+    assert (got, verdict['outcome']) == (exit_code, outcome)
