@@ -1,6 +1,6 @@
 -- Which kind of Neovim this is, and which plugins load in it. Two kinds load
 -- less than the whole set: one embedded in VSCode through vscode-neovim, and one
--- prs started to show a pull request's diff.
+-- started to show a diff with a document beside it.
 --
 -- An allowlist rather than a blocklist, because the spec list is not fully
 -- enumerable here: colorscheme-manager.lua synthesizes specs at startup by
@@ -30,10 +30,12 @@ local vscode_enabled = {
   ['typos'] = true,
 }
 
--- prs starts nvim in a repo's checkout to show one pull request's diff, with
--- PRS_DIFF_DOCUMENT naming the pull request's markdown document and
--- PRS_DIFF_THREADS its review threads. Both are read once and cleared, so an
--- nvim started from this one, such as lazygit's editor, is an ordinary nvim.
+-- Two programs start nvim in a repo's checkout to show a diff, both through
+-- gotermboard's NvimDiff handover: prs's d and i on a pull request, and
+-- fleet tui's d on a session or a chain, a Diffview tab per repo. Each names
+-- the markdown document in PRS_DIFF_DOCUMENT and the review threads in
+-- PRS_DIFF_THREADS. Both are read once and cleared, so an nvim started from this
+-- one, such as lazygit's editor, is an ordinary nvim.
 local function taken(name)
   local value = vim.env[name]
   vim.env[name] = nil

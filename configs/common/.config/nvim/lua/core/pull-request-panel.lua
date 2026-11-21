@@ -1,10 +1,11 @@
--- The pull request beside its diff, in an nvim prs started to show a pull
--- request's diff.
+-- The document beside a diff, in an nvim started to show one: a pull request's,
+-- from prs's d and i, or what sessions made, from fleet tui's d on a session or
+-- a chain.
 --
--- prs writes the pull request's markdown document and its review threads to two
--- files, and names them in PRS_DIFF_DOCUMENT and PRS_DIFF_THREADS, which
--- core.profiles reads. Where PRS_DIFF_DOCUMENT was unset, setup() does nothing, so
--- every other nvim is untouched.
+-- Both write the document and the review threads to two files through
+-- gotermboard's NvimDiff, and name them in PRS_DIFF_DOCUMENT and
+-- PRS_DIFF_THREADS, which core.profiles reads. Where PRS_DIFF_DOCUMENT was unset,
+-- setup() does nothing, so every other nvim is untouched.
 --
 -- - <leader>gr shows the document in a split at the right edge, and hides it.
 -- - <leader>gR shows it in a float, and hides it.
@@ -17,8 +18,10 @@
 --   the diff its `side` names: LEFT is the base's copy of the file, RIGHT the head's.
 --   octo.nvim's reviews.show_virtual_text is the model.
 --
--- The threads file is JSON. This reads its title, threads_read, and each thread's
--- path, line, side, resolved, comments and comment_count.
+-- The threads file is JSON in the shape gotermboard's nvim-diff-threads.schema.json
+-- gives, urn:gotermboard:nvim-diff-threads:v1. This reads its title, threads_read,
+-- and each thread's path, line, side, resolved, comments and comment_count. A
+-- session's diff has no pull request, so its file holds no thread.
 
 local profiles = require('core.profiles')
 
