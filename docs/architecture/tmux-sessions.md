@@ -104,10 +104,11 @@ status bar color the same way it owns `pane-border-format`.
 Both pairs repeat by holding Alt rather than re-arming a leader, and both are unprefixed because
 moving around is the most frequent action of the day.
 
-**Direction is physical, not semantic.** `n` sits left of `p` on the keyboard and `,` left of `.`,
-so each pair runs left-to-right where it is typed — which means `M-n` is *previous* even though `n`
-reads as "next", inverting tmux's own `prefix n` / `prefix p`. The keyboard direction is the one
-that gets used; the mnemonic is not.
+**Direction comes from where the keyboard's TMUX layer puts each key, not from the letter.** The
+layer places `M-n` left of `M-p` and `M-,` left of `M-.`, and the left key of each pair goes back.
+So `M-n` is *previous* even though `n` reads as "next", the reverse of tmux's own `prefix n` /
+`prefix p`. Where the letters sit on a base layout plays no part, which is why the pairs keep their
+direction across QWERTY and Colemak.
 
 Every switching key takes one modifier. An earlier arrangement put sessions on the shifted `M-<` /
 `M->` so the two axes were one gesture apart, and it was dropped because holding Alt and Shift
