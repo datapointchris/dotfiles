@@ -25,6 +25,7 @@ Commands:
   windows           Fuzzy-find a window across every session
   focus-needs-you   Focus the pane that has needed you longest, in any session,
                     passing over the one the client is on
+  dismiss-needs-you Clear the needs-you flag on every pane in the focused window
   list              Print sessions in status-line order, current one marked
   move-left         Swap the focused session with the one to its left
   move-right        Swap the focused session with the one to its right
@@ -208,6 +209,22 @@ focus_needs_you() {
   fi
   # A pane target moves the client to its session and window as well.
   tmux switch-client -t "$target"
+}
+
+# Clear @claude_needs_you on every pane in the client's window, so its dot goes
+# without typing into the session that raised it. The window rather than the
+# pane, because the dot belongs to the window and the client may be on a
+# neighboring pane.
+dismiss_needs_you() {
+  local pane cleared=0
+  while read -r pane; do
+    tmux set-option -p -u -t "$pane" @claude_needs_you
+    cleared=$((cleared + 1))
+  done < <(tmux list-panes -f '#{@claude_needs_you}' -F '#{pane_id}')
+
+  if ((cleared == 0)); then
+    tmux display-message "no pane in this window needs you"
+  fi
 }
 
 list_sessions() {
@@ -435,6 +452,10 @@ case "${1:-}" in
   focus-needs-you)
     require_server
     focus_needs_you
+    ;;
+  dismiss-needs-you)
+    require_server
+    dismiss_needs_you
     ;;
   list)
     require_server

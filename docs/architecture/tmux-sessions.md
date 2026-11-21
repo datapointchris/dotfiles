@@ -340,29 +340,34 @@ cite the same item, not that you want them apart.
 A Claude session that stops on a question or a permission prompt stamps its pane's
 `@claude_needs_you` with the epoch seconds, and typing in that pane clears it. The bar draws the
 stamp the way X11 draws an urgency hint, and the way i3 and sway draw an urgent workspace: a
-window holding a flagged pane, and a session holding one, draw in the theme's alert style, and
-`status-right` opens with `2 need you`. `prefix n` is i3's `[urgent=oldest] focus`.
+window holding a flagged pane, and a session holding one, carry a dot in the theme's error color
+before their names, and `status-right` opens with `2 need you`. `prefix n` is i3's
+`[urgent=oldest] focus`.
 
 **`tmux.conf` says what counts, and the theme draws it.** `tmux.conf` sets four user options, each
 a format holding one character per flagged pane: `@window_needs_you`, `@session_needs_you`,
 `@needs_you_status` and `@window_needs_you_style`. The theme generator expands them with `E:` in
-the alert branches of line 1, the window format and `status-right`. The split follows ownership:
-the theme owns every status color, so a theme apply rewrites those three formats. An option it
-only reads survives that, and a theme loaded with no options set draws nothing extra.
+both session entries of line 1, both window formats and `status-right`. The split follows
+ownership: the theme owns every status color, so a theme apply rewrites those formats. An option
+it only reads survives that, and a theme loaded with no options set draws nothing extra.
 
 **The oldest stamp goes first, because its prompt cache expires first.** The windows do not sort
 by it. They keep their order and numbers so `prefix <n>` stays where it was, and the key gives the
 order instead. A flag lasts until you type, so `prefix n` passes over the pane you are on and
 pressing it again reaches the next.
 
-**The current session and window keep their current style.** Line 1 already does this for a
-bell alert. The count still includes them, and line 2 shows a flagged window beside the current
-one.
+**The current session and window carry the dot too, and focus does not clear it.** i3 drops a
+workspace's urgency once it is focused. Here a dot left off the window you are in appeared only
+when you left it, and sent you back to find out why. So the flag works like an unread badge: it
+stays until you type in the pane, or until `prefix N` dismisses every flag in the focused window.
+Dismissing works on the window because the dot belongs to the window, and the flagged pane may
+not be the one you are on.
 
-**Only a terminal that draws blink gets it.** Windows Terminal has drawn SGR 5 since 1.4. Ghostty
-parses it and draws nothing, with [ghostty-org/ghostty#11875](https://github.com/ghostty-org/ghostty/pull/11875)
-open to change that, so `@window_needs_you_style` checks `client_termtype` and gives a Ghostty
-client none.
+**Only a terminal that draws blink gets it, and only off the current window.** Windows Terminal
+has drawn SGR 5 since 1.4. Ghostty parses it and draws nothing, with
+[ghostty-org/ghostty#11875](https://github.com/ghostty-org/ghostty/pull/11875) open to change
+that, so `@window_needs_you_style` checks `client_termtype` and gives a Ghostty client none. The
+current window's dot never blinks, since you are already there.
 
 *Rejected:* a `#(shell-command)` count. Setting a pane option redraws every client at once, so
 the formats change within a redraw of the hook firing. A shell command would wait out the
