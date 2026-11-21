@@ -378,6 +378,13 @@ def ntfy(tag: str, target: Target) -> ReleaseArtifact:
     return ReleaseArtifact(f'{stem}.tar.gz', Archive.TARBALL, path=f'{stem}/ntfy')
 
 
+def rill(tag: str, target: Target) -> ReleaseArtifact:
+    """A zip with no version in its name, holding the binary at its root."""
+    system = 'darwin' if target.is_darwin else 'linux'
+    arch = 'arm64' if target.is_arm else 'amd64'
+    return ReleaseArtifact(f'rill_{system}_{arch}.zip', Archive.ZIP, path='rill')
+
+
 def shellcheck(tag: str, target: Target) -> ReleaseArtifact:
     """`aarch64` where everything else says arm64, dots where everything else
     says dashes, and the only `.tar.xz` in the set."""
@@ -545,6 +552,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'neovim': neovim,
     'nomad': go_release_cli('nomad'),
     'ntfy': ntfy,
+    'rill': rill,
     'shellcheck': shellcheck,
     'slate': go_release_cli('slate'),
     'syncthing': syncthing,

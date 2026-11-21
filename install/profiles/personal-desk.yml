@@ -15,6 +15,7 @@ github_releases:
   - alloy
   - gh-dash
   - ntfy
+  - rill
   # Chris publishes it, but it opens the terminal before it parses an argument,
   # so a headless box cannot read its help.
   - abtop
