@@ -87,9 +87,17 @@ return {
       { '[L', 'goto_previous_end', '@loop.outer', nil, 'Prev loop end' },
     }
 
+    -- Inside a diff these run neovim's own next/previous change, as gitsigns'
+    -- README maps its ]c.
+    local native_in_diff = { [']c'] = true, ['[c'] = true }
+
     for _, map in ipairs(move_maps) do
       local lhs, fn_name, query, query_group, desc = map[1], map[2], map[3], map[4], map[5]
       vim.keymap.set({ 'n', 'x', 'o' }, lhs, function()
+        if native_in_diff[lhs] and vim.wo.diff then
+          vim.cmd.normal({ vim.v.count1 .. lhs, bang = true })
+          return
+        end
         ts_move[fn_name](query, query_group)
       end, { desc = desc })
     end

@@ -109,7 +109,8 @@ return {
     { '<leader>md', '<cmd>MoltenDelete<cr>', desc = 'Molten: delete cell' },
     { '<leader>mI', '<cmd>MoltenInfo<cr>', desc = 'Molten: kernel info' },
 
-    { ']m', '<cmd>MoltenNext<cr>', desc = 'Molten: next cell' },
-    { '[m', '<cmd>MoltenPrev<cr>', desc = 'Molten: previous cell' },
+    -- `j` for Jupyter. `]m`/`[m` belong to treesitter's function jumps.
+    { ']j', '<cmd>MoltenNext<cr>', desc = 'Molten: next cell' },
+    { '[j', '<cmd>MoltenPrev<cr>', desc = 'Molten: previous cell' },
   },
 }

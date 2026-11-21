@@ -12,9 +12,9 @@ return {
           vim.keymap.set(mode, l, r, opts)
         end
 
-        -- Hunk navigation on ]h/[h. Native ]c/[c stay free for vimdiff, and
-        -- treesitter-textobjects keeps ]c/[c for class navigation (a global
-        -- ]c/[c here would be shadowed buffer-locally in every git repo).
+        -- Hunk navigation on ]h/[h. ]c/[c are treesitter-textobjects' class
+        -- jumps, which run neovim's own change jump inside a diff. A ]c here
+        -- would be buffer-local in every git repo and shadow the class jump.
         map('n', ']h', function()
           gitsigns.nav_hunk('next')
         end, {
