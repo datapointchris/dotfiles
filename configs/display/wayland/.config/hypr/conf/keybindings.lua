@@ -42,6 +42,11 @@ bind(mainMod .. ' + CTRL + K', 'Join group up', hl.dsp.window.move({ into_group 
 bind(mainMod .. ' + CTRL + L', 'Join group right', hl.dsp.window.move({ into_group = 'right' }))
 bind(mainMod .. ' + CTRL + G', 'Toggle group', hl.dsp.group.toggle())
 
+-- Directional focus steps through a group's tabs before it leaves the group.
+-- Hyprland skips the hidden tabs by default, and no key cycles a group, so a
+-- joined window would be reachable only by the mouse.
+hl.config({ binds = { movefocus_cycles_groupfirst = true } })
+
 -- Named workspaces
 for _, name in ipairs({ 'A', 'D', 'E', 'M', 'S', 'X', 'Z' }) do
   bind(mainMod .. ' + ' .. name, 'Go to workspace ' .. name, hl.dsp.focus({ workspace = 'name:' .. name }))
