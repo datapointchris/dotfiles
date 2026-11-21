@@ -20,7 +20,9 @@ the one machine that needs it.
 
 from __future__ import annotations
 
+import filecmp
 import re
+import tempfile
 from pathlib import Path
 
 from dotfiles import catalog
@@ -286,14 +288,33 @@ def from_proxy(entry: catalog.GoTool) -> Result:
     # is reached by name.
     toolchain.put_on_path(toolchain.GO_ROOT / 'bin')
     query = module_query(entry)
-    completed = effects.run([go, 'install', query], output=Output.QUIET)
-    if completed.ok:
-        return Result(True, f'{entry.executable} installed from {entry.package}', kind=Kind.APPLIED)
+    # Go copies a cached build over its target in place, truncating a binary another
+    # process may be executing, so it writes into scratch and `place` renames it in.
+    with tempfile.TemporaryDirectory(prefix='dotfiles-gobin-') as scratch:
+        completed = effects.run([go, 'install', query], env={'GOBIN': scratch}, output=Output.QUIET)
+        if completed.ok:
+            return placed_from(Path(scratch), entry, query)
 
     # `go: downloading` lines are progress, and they are most of the transcript
     # for a tool with a large dependency tree.
     said = '\n'.join(line for line in completed.transcript.splitlines() if not line.startswith('go: downloading'))
     return Result(False, f'go install {query} exited {completed.returncode}: {said.strip()}', kind=Kind.COMMAND_FAILED)
+
+
+def placed_from(scratch: Path, entry: catalog.GoTool, query: str) -> Result:
+    """Move each binary `go install` wrote into `gobin()`, under the name Go gave it."""
+    built = sorted(path for path in scratch.iterdir() if path.is_file())
+    if not built:
+        return Result(False, f'go install {query} exited 0 and wrote no binary', kind=Kind.VERIFY_FAILED)
+    for binary in built:
+        destination = gobin() / binary.name
+        if destination.is_file() and filecmp.cmp(binary, destination, shallow=False):
+            continue
+        try:
+            place(binary, destination)
+        except OSError as refused:
+            return Result(False, f'could not install {binary.name} into {gobin()}: {refused}', kind=Kind.WRITE_FAILED)
+    return Result(True, f'{entry.executable} installed from {entry.package}', kind=Kind.APPLIED)
 
 
 def from_bundle(entry: catalog.GoTool, cached: Path) -> Result | None:

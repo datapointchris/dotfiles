@@ -46,9 +46,24 @@ def bundle(tmp_path, monkeypatch) -> Path:
 
 
 @pytest.fixture
-def proxy(upstream):
-    """`go install`, answering however this test says the module proxy behaved."""
-    return upstream
+def proxy(upstream, monkeypatch):
+    """`go install`, answering however this test says the module proxy behaved, and
+    writing the binary into the `GOBIN` it was handed when it answers."""
+
+    def install(**kwargs):
+        recorder = upstream(**kwargs)
+
+        def go_install(command, **passed):
+            completed = recorder(command, **passed)
+            if completed.ok:
+                module = str(command[-1]).split('@')[0]
+                (Path(passed['env']['GOBIN']) / module.rsplit('/', 1)[-1]).write_bytes(BINARY)
+            return completed
+
+        monkeypatch.setattr(effects, 'run', go_install)
+        return recorder
+
+    return install
 
 
 def stage(bundle: Path, name: str = 'task') -> Path:
@@ -94,6 +109,19 @@ def test_an_online_run_takes_the_proxy_even_when_a_bundle_is_present(home, bundl
     # thing that was wrong: a Mac has no `go` on it at all, and an Arch box reached
     # over ssh finds the distribution's rather than the one this repo unpacked.
     assert called[0].endswith('/go'), f'{called[0]} is a PATH lookup, not the toolchain this repo installed'
+
+
+def test_an_install_renames_the_new_binary_over_the_old_rather_than_writing_through_it(home, bundle, proxy) -> None:
+    """Writing through truncates a binary another process is executing, and an exec
+    racing the write fails with `text file busy`."""
+    installed = home / 'go' / 'bin' / 'task'
+    installed.write_bytes(b'#!/bin/sh\necho old task\n')
+    running = installed.stat().st_ino
+    proxy()
+
+    assert gotool.install(TASK, offline=False, floor='').ok
+    assert installed.read_bytes() == BINARY
+    assert installed.stat().st_ino != running
 
 
 def test_a_pinned_tool_asks_the_proxy_for_that_module_version(home, bundle, proxy) -> None:
