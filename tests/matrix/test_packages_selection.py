@@ -169,17 +169,13 @@ def test_a_selector_a_verb_does_not_take_is_refused_by_the_parser(verb: str, arg
     ran = cli('packages', verb, *argv)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert 'No such option' in ran.stderr
 
 
 def test_a_refused_selector_names_the_verbs_that_take_it(cli: Callable[..., Invocation]) -> None:
     ran = cli('packages', 'check', '--package', 'ruff')
 
     assert ran.exit_code == ExitCode.USAGE
-    assert (
-        'No such option: --package. `dotfiles packages apply`, `dotfiles packages plan` and `dotfiles packages resolve` take it.'
-        in ran.stderr
-    )
+    assert '`dotfiles packages apply`, `dotfiles packages plan` and `dotfiles packages resolve` take it.' in ran.stderr
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -28,6 +28,8 @@ from dotfiles import sinks
 from dotfiles import validate
 from dotfiles import vocabulary
 from dotfiles.commands import machines
+from dotfiles.commands import report
+from dotfiles.commands import resources
 from dotfiles.commands.machines import manifest_names
 from dotfiles.main import app
 from dotfiles.plan import Precondition
@@ -137,9 +139,12 @@ def test_unlink_refuses_without_force() -> None:
 
 
 def test_no_arguments_shows_help_rather_than_acting() -> None:
-    for argv in ([], ['packages'], ['report'], ['machines']):
+    """A bare group prints the help it declares, whose opening line is dotfiles' own text."""
+    for argv, group in (([], app), (['packages'], resources.packages_app), (['report'], report.app), (['machines'], machines.app)):
         result = runner.invoke(app, argv)
-        assert 'Usage:' in result.output, f'{argv} did not show usage'
+        declared = group.info.help
+        assert isinstance(declared, str), f'{argv} declares no help'
+        assert declared.split('\n')[0] in result.output, f'{argv} did not show its help'
 
 
 # ─────────────────────────────────────────────────────────────────────────────

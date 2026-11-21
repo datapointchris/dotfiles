@@ -592,27 +592,21 @@ def test_check_refuses_a_section_it_cannot_narrow_to(sandbox: Sandbox, cli: Call
     """`check` answers what is *wrong* with the whole resource, so a section-scoped
     one would report a converged machine by not having looked.
 
-    The `--offline` half of this case is gone rather than reversed. It asserted
-    that `plan` and `check` refuse the flag, which this branch deliberately
-    changes, and `tests/cli/test_conformance.py::test_check_takes_offline_wherever_apply_does`
-    is now where that policy lives — derived by walking the tree instead of listed
-    here. Two copies do not disagree while both are true, so nothing surfaces the
-    duplication until the policy moves, and then whichever copy the author knew
-    about is the one revised. That is exactly what happened: `SELECTORS` gained
-    `--offline` with the new argument while this docstring still stated the old one
-    as fact. A surface invariant is derived from the command tree, never listed in
-    a behavioral test.
+    Which verbs take `--offline` is not asserted here.
+    `tests/cli/test_conformance.py::test_check_takes_offline_wherever_apply_does`
+    derives that policy by walking the command tree. Two copies of a surface
+    invariant agree only until the policy moves, so it is derived from the tree
+    rather than listed in a behavioral test.
 
-    `--source` stays because nothing walks the tree for it. This literal is the
-    only thing asserting that rule, and the rule reaches a policy with a derived
-    home rather than every literal.
+    `--source` has no such walk, so this test is the only thing asserting it. It
+    checks the usage exit code dotfiles returns. The refusal's wording belongs to
+    the command-line parser.
     """
     machine(sandbox, CACHED[1])
 
     ran = cli('packages', 'check', '--source', 'github_releases', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
-    assert 'No such option: --source' in said(ran)
 
 
 def test_the_sections_source_will_take_are_this_machines_declaration(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
