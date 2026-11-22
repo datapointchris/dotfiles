@@ -15,12 +15,49 @@
 
 set -euo pipefail
 
-REGISTRY_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/sessions"
+CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+REGISTRY_DIR="$CONFIG_DIR/sessions"
+PROJECTS_DIR="$CONFIG_DIR/projects"
+
+# Claude Code writes a session's title lines again every few dozen lines, so the
+# newest sits well inside the last mebibyte of even a large transcript.
+readonly TITLE_TAIL_BYTES=1048576
+
+readonly PANE_FORMAT=$'#{pane_id}\t#{window_id}\t#{session_name}\t#{window_index}\t#{window_name}\t#{automatic-rename}'
+
+# A /rename or `claude -n` writes a `custom-title` line, and Claude Code writes an
+# `ai-title` line it generates from the first prompt. The newest of each is kept,
+# and a rename outranks the generated title, as in Claude Code's own session list.
+# The jq programs sit in quoted heredocs, which keep their `$` variables from the
+# shell. `read -d ''` reaches the end with no NUL, so it returns 1.
+IFS= read -r -d '' TITLES_BY_SESSION <<'JQ' || true
+reduce (inputs | fromjson? | select(type == "object" and (.sessionId | type) == "string")) as $line ({};
+  if $line.type == "custom-title" and ($line.customTitle | type) == "string" then .[$line.sessionId].custom = $line.customTitle
+  elif $line.type == "ai-title" and ($line.aiTitle | type) == "string" then .[$line.sessionId].ai = $line.aiTitle
+  else . end)
+| map_values([.custom, .ai] | map(select(. != null and . != "")) | first)
+JQ
+readonly TITLES_BY_SESSION
 
 # A live session's registry file can carry no `status`. It reads as `unknown`
-# rather than a null each reader would render its own way.
-readonly ROW_OBJECT='{name, sessionId, status: (.status // "unknown"), waiting: .waitingFor, cwd, tmux, pid, agent, kind, entrypoint, startedAt}'
-readonly ROW_TSV='[.name, (.status // "unknown"), (.waitingFor // "-"), .cwd, (.tmux // "-")] | @tsv'
+# rather than a null each reader would render its own way. `tmux` is the pane's
+# address when the session started, and `window` is the window holding that pane
+# now, because a pane moved to another window keeps its id.
+IFS= read -r -d '' ROWS <<'JQ' || true
+def pane_id: (.tmux // "") | (capture("\\.(?<pane>%[0-9]+)$").pane // null);
+($panes | split("\n") | map(split("\t") | select(length == 6)
+  | {key: .[0], value: {id: .[1], tmuxSession: .[2], index: (.[3] | tonumber? // null), name: .[4], automaticRename: (.[5] == "1")}})
+  | from_entries) as $windows
+| map({name, nameSource, title: (if (.sessionId | type) == "string" then $titles[.sessionId] else null end),
+       sessionId, status: (.status // "unknown"), waiting: .waitingFor, cwd, tmux,
+       window: (pane_id as $pane | if $pane then $windows[$pane] else null end),
+       pid, agent, kind, entrypoint, startedAt})
+| if $shape == "array" then .
+  elif $shape == "object" then .[0]
+  else .[] | [.name, .status, (.waiting // "-"), .cwd, (.tmux // "-")] | @tsv
+  end
+JQ
+readonly ROWS
 
 # formatting.sh is sourced here rather than at the top because the hot path
 # runs over ssh from another machine, and every file this needs is another
@@ -40,6 +77,8 @@ show_help() {
   help_section "Notes"
   help_row "" "" "NAME is the address peers message, as /list-agents shows it"
   help_row "" "" "STATUS is unknown where the session's registry file holds none"
+  help_row "" "" "--json adds title: the transcript's last /rename, else its generated title"
+  help_row "" "" "--json adds window: the tmux window holding the session's pane now"
   help_row "" "" "This machine only; a fleet-wide listing runs this on each box"
   help_row "" "" "--self exits 1 when no session owns the caller"
   help_end
@@ -91,8 +130,46 @@ owning_descriptor() {
   return 1
 }
 
+# A JSON object from session id to title, for the descriptors on stdin. Claude
+# Code keeps a transcript under its launch directory with every character other
+# than a letter or digit made a `-`. A session that moved into a worktree keeps
+# writing there, so a transcript missing from its `cwd` is found by its id.
+session_titles() {
+  local -a transcripts=()
+  local id cwd transcript
+  while IFS=$'\t' read -r id cwd; do
+    transcript=$PROJECTS_DIR/${cwd//[^A-Za-z0-9]/-}/$id.jsonl
+    if [[ ! -f $transcript ]]; then
+      transcript=$(compgen -G "$PROJECTS_DIR/*/$id.jsonl" | head -n 1) || true
+    fi
+    [[ -n $transcript && -f $transcript ]] && transcripts+=("$transcript")
+  done < <(jq -r 'select((.sessionId | type) == "string" and (.cwd | type) == "string") | [.sessionId, .cwd] | @tsv')
+  if ((${#transcripts[@]} == 0)); then
+    printf '{}\n'
+    return 0
+  fi
+  tail -q -c "$TITLE_TAIL_BYTES" -- "${transcripts[@]}" 2>/dev/null \
+    | rg --no-config --no-line-number '"type": ?"(custom|ai)-title"' \
+    | jq -R -n "$TITLES_BY_SESSION"
+}
+
+# The descriptors on stdin as the rows readers see, in the shape $1 names:
+# array, object or tsv. The table shows neither title nor window, so it reads
+# no transcript and asks no tmux server.
+rows() {
+  local shape=$1 descriptors titles='{}' panes=''
+  descriptors=$(cat)
+  if [[ $shape != tsv ]]; then
+    titles=$(session_titles <<<"$descriptors") || true
+    [[ -n $titles ]] || titles='{}'
+    # A box with no tmux server answers with no panes, and every window is null.
+    panes=$(tmux list-panes -a -F "$PANE_FORMAT" 2>/dev/null) || panes=''
+  fi
+  jq -r -s --arg shape "$shape" --argjson titles "$titles" --arg panes "$panes" "$ROWS" <<<"$descriptors"
+}
+
 main() {
-  local want_json=false want_self=false descriptor
+  local want_json=false want_self=false descriptor shape
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -115,11 +192,9 @@ main() {
       printf 'claude-sessions: no live session owns this process\n' >&2
       return 1
     fi
-    if [[ $want_json == true ]]; then
-      printf '%s\n' "$descriptor" | jq "$ROW_OBJECT"
-    else
-      printf '%s\n' "$descriptor" | jq -r "$ROW_TSV"
-    fi
+    shape=tsv
+    [[ $want_json == true ]] && shape=object
+    printf '%s\n' "$descriptor" | rows "$shape"
     return 0
   fi
 
@@ -128,12 +203,9 @@ main() {
     return 0
   fi
 
-  if [[ $want_json == true ]]; then
-    live_descriptors | jq -s "map($ROW_OBJECT)"
-    return 0
-  fi
-
-  live_descriptors | jq -r "$ROW_TSV"
+  shape=tsv
+  [[ $want_json == true ]] && shape=array
+  live_descriptors | rows "$shape"
 }
 
 main "$@"
