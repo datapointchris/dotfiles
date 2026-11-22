@@ -28,8 +28,10 @@ set -euo pipefail
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 
 # A commit made where dotfiles was never deployed, such as a fix in a pod, has no machine to test.
-if [[ ! -f "$HOME/.env" && ! -d "$SHELL_DIR" ]]; then
-  echo "Nothing is deployed here: no ~/.env and no $SHELL_DIR, so there is no machine to test."
+# A deployment always writes a pkg/ layer under $SHELL_DIR. A fix pod's image installs only
+# git-commit-hooks.sh there, so $SHELL_DIR existing proves nothing.
+if [[ ! -f "$HOME/.env" && ! -d "$SHELL_DIR/pkg" ]]; then
+  echo "Nothing is deployed here: no ~/.env and no $SHELL_DIR/pkg, so there is no machine to test."
   exit 0
 fi
 
