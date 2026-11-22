@@ -21,8 +21,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from dotfiles import catalog
 from dotfiles import paths
 from dotfiles.refusal import Refusal
@@ -120,8 +118,7 @@ def get_packages_file() -> Path:
 
 def load_packages() -> dict[str, Any]:
     """Load and parse packages.yml."""
-    with get_packages_file().open() as f:
-        return yaml.safe_load(f)
+    return catalog.parse_yaml(get_packages_file().read_text())
 
 
 def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:

@@ -489,7 +489,7 @@ def yaml_mapping(text: str) -> dict[str, Any]:
     An empty document parses to None and a list parses to a list; neither declares
     a key, and `.get` on either is an AttributeError rather than a finding.
     """
-    parsed = yaml.safe_load(text)
+    parsed = catalogs.parse_yaml(text)
     return parsed if isinstance(parsed, dict) else {}
 
 

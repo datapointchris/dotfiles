@@ -1394,12 +1394,27 @@ class Catalog:
             yield from self.entries[section]
 
 
+SAFE_LOADER = yaml.CSafeLoader if yaml.__with_libyaml__ else yaml.SafeLoader
+"""libyaml's safe loader where PyYAML was built with it, as its wheels are.
+
+Every plan, check and apply parses the whole declaration, and the pure-Python
+loader made that parse a large share of an offline `check`. Both loaders resolve
+the same safe tags and raise `yaml.YAMLError`; only the wording of a parse error
+differs.
+"""
+
+
+def parse_yaml(text: str) -> Any:
+    """One YAML document under the safe tags, as `yaml.safe_load` reads it."""
+    return yaml.load(text, Loader=SAFE_LOADER)
+
+
 def parsed(source: Path) -> dict[str, Any]:
     """One declaration file as a mapping, or a refusal naming where it broke.
 
     A file that will not parse as YAML is the same kind of answer as one that
     parses and declares something no reader can consume, and it has to arrive as
-    the same kind of exception. Untried, `yaml.safe_load` raised a `YAMLError`
+    the same kind of exception. Untried, the parse raised a `YAMLError`
     that no handler here catches: `validate.declaration` catches `CatalogError`
     alone, so the parser's own exception reached the boundary as a traceback and
     exit 1 — which is `DRIFT`, the code for a machine that merely differs from a
@@ -1409,7 +1424,7 @@ def parsed(source: Path) -> dict[str, Any]:
     than summarized. `problem_mark` is what makes it worth keeping.
     """
     try:
-        return yaml.safe_load(source.read_text()) or {}
+        return parse_yaml(source.read_text()) or {}
     except yaml.YAMLError as unparseable:
         raise CatalogError((DeclarationIssue(source.name, f'will not parse as YAML — {unparseable}'),)) from unparseable
 
@@ -1498,7 +1513,7 @@ def raw_sections(path: Path) -> dict[str, Any]:
     discards them: which sections the file names *including* the ones no
     dataclass claims, and what a manifest body holds when it is about to be
     rewritten into a fixture. Both need the file rather than the object, and both
-    would otherwise reach for a second `yaml.safe_load` — a second copy of the
+    would otherwise reach for a second YAML parse — a second copy of the
     grammar this module owns, invisible as a copy because it reads as opening a
     file.
 
@@ -1506,7 +1521,7 @@ def raw_sections(path: Path) -> dict[str, Any]:
     raises, for the same reason `load` lets one raise: nothing here can say what
     a caller meant by a path that is not there.
     """
-    return yaml.safe_load(path.read_text()) or {}
+    return parse_yaml(path.read_text()) or {}
 
 
 def file_for(cls: type[Entry], packages: Path, system: Path) -> Path:

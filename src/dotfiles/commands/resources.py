@@ -15,7 +15,6 @@ from collections.abc import Sequence
 from itertools import chain
 
 import typer
-import yaml
 
 from dotfiles import bridge
 from dotfiles import bundle_requests
@@ -230,7 +229,7 @@ def available_sources() -> list[str]:
     section added afterwards — which is the whole argument against writing one.
     A bare section holds no packages, so it is no source.
     """
-    declared = yaml.safe_load(paths.PACKAGES_FILE.read_text())
+    declared = catalog.parse_yaml(paths.PACKAGES_FILE.read_text())
     return sorted(set(declared) - catalog.BARE_SECTIONS)
 
 

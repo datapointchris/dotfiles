@@ -30,8 +30,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from dotfiles import catalog
 from dotfiles import coordinates as axes
 from dotfiles import paths
@@ -544,7 +542,7 @@ class Composer:
             )
             return
         self.reached.append(profile)
-        body = yaml.safe_load(source.read_text()) or {}
+        body = catalog.parse_yaml(source.read_text()) or {}
         if not isinstance(body, Mapping):
             self.refuse(f'profile {profile} is a {type(body).__name__} where a mapping is expected')
             return
@@ -643,9 +641,9 @@ def load(name: str, root: Path | None = None) -> Machine:
     install = (root / 'install') if root else paths.INSTALL_DIR
     source = manifest_path(name, root)
 
-    declared = yaml.safe_load(source.read_text()) or {}
+    declared = catalog.parse_yaml(source.read_text()) or {}
     flags_file = install / 'flags.yml'
-    flag_data = yaml.safe_load(flags_file.read_text()) if flags_file.is_file() else {}
+    flag_data = catalog.parse_yaml(flags_file.read_text()) if flags_file.is_file() else {}
 
     issues: list[DeclarationIssue] = []
     if not isinstance(declared, Mapping):
