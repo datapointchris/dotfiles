@@ -697,11 +697,14 @@ def stats(as_json: bool = JsonOption) -> None:
     which no single run can say — which is why `stats` is its own verb rather
     than a flag on `show`.
     """
+    # Folded while reading, since the history is never pruned; only applies are kept.
     durations: defaultdict[str, list[float]] = defaultdict(list)
-    records = [record for _, record in readable(runs.list_runs())]
-    for record in records:
+    applies: list[runs.RunRecord] = []
+    for _, record in readable(runs.list_runs()):
         for outcome in record.outcomes:
             durations[outcome.address].append(outcome.timing.duration_seconds)
+        if record.verb == 'apply':
+            applies.append(record)
 
     if not durations:
         error('no runs recorded yet')
@@ -717,7 +720,7 @@ def stats(as_json: bool = JsonOption) -> None:
         for address, seconds in sorted(durations.items(), key=lambda item: -sum(item[1]))
     }
 
-    unconverged = never_converged(records)
+    unconverged = never_converged(applies)
 
     if as_json:
         emit_json({'durations': summary, 'unconverged': [dc.asdict(entry) for entry in unconverged]})
