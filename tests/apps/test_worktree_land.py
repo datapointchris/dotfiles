@@ -450,6 +450,21 @@ class TestLandingKeepsEveryRecordedSha:
         assert_landed(rig.land(alpha))
         assert rig.parents(rig.main()) == [moved, made]
 
+    def test_a_tag_origin_moved_follows_origin_rather_than_refusing_the_land(self, rig):
+        # common.gitconfig sets it, and its refspec is what refuses a moved tag.
+        rig.git(rig.checkout, 'config', 'fetch.pruneTags', 'true')
+        rig.git(rig.checkout, 'tag', 'v1')
+        rig.git(rig.checkout, 'push', '-q', 'origin', 'v1')
+        alpha = rig.new('alpha')
+        made = rig.commit(alpha, 'a.txt')
+        moved = rig.main_moves('elsewhere.txt')
+        rig.git(rig.origin, 'tag', '-f', 'v1', moved)
+
+        assert_landed(rig.land(alpha))
+
+        assert rig.parents(rig.main()) == [moved, made]
+        assert rig.git(rig.checkout, 'rev-parse', 'v1') == moved
+
     def test_a_land_killed_before_its_push_lands_from_the_branch_next_time(self, rig):
         alpha = rig.new('alpha')
         made = rig.commit(alpha, 'a.txt')

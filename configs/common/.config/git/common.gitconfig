@@ -36,7 +36,9 @@ prune = true
 # Not implied by fetch.prune, and safe on this fleet: every tag is created
 # inside GitHub Actions, so it reaches the server before any clone, and no
 # active repo carries a second remote — the only local-only tag would be one
-# deleted upstream on purpose.
+# deleted upstream on purpose. Its refspec is unforced, so a tag origin moved,
+# such as a floating `v1`, makes a plain fetch exit 1. worktree fetches with
+# --force for that reason.
 pruneTags = true
 
 # A pull that cannot fast-forward stops and leaves the branch as it was,

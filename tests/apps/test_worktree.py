@@ -1386,7 +1386,7 @@ class TestEcho:
 
         result = run(alpha, 'land')
 
-        assert f'git -C {alpha} fetch --quiet origin' in self.commands(result)
+        assert f'git -C {alpha} fetch --quiet --force origin' in self.commands(result)
         assert f'git -C {alpha} push --quiet origin HEAD:main' in self.commands(result)
 
     def test_an_echoed_line_runs_as_it_stands(self, fleet, run):

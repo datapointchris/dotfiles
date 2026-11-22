@@ -569,6 +569,15 @@ def git_effect(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return run(['git', '-C', str(cwd), *args])
 
 
+def fetch_origin(cwd: Path, *flags: str) -> subprocess.CompletedProcess[str]:
+    """Fetch origin, letting a tag origin moved, such as a floating `v1`, move here too.
+
+    Under fetch.pruneTags, a fetch without `--force` refuses to clobber a local tag
+    and exits 1 though every branch updated.
+    """
+    return git_effect(cwd, 'fetch', '--quiet', '--force', *flags, 'origin')
+
+
 def worktree_root() -> Path:
     """Where every worktree this tool makes lives, and the only index of them."""
     return Path(os.environ.get('WORKTREE_ROOT') or Path.home() / '.worktrees')
@@ -850,7 +859,7 @@ def fetch_checkouts(rows: Sequence[tuple[str, bool, Path]]) -> set[Path]:
     """
     failed = set()
     for _, checkout, path in rows:
-        if checkout and git_effect(path, 'fetch', '--prune', '--quiet', 'origin').returncode != 0:
+        if checkout and fetch_origin(path, '--prune').returncode != 0:
             failed.add(path)
     return failed
 
@@ -1318,7 +1327,7 @@ def create_worktree(cwd: Path, checkout: Path, slug: str) -> Path:
         raise Refused(f'Already exists: {path}')
 
     base = default_branch(cwd)
-    git_effect(cwd, 'fetch', '--quiet', 'origin')
+    fetch_origin(cwd)
     created = git_effect(cwd, 'worktree', 'add', '--quiet', str(path), '-b', slug, f'origin/{base}')
     if created.returncode != 0:
         raise Refused(created.stderr.strip() or f'git could not create {path}')
@@ -2032,7 +2041,7 @@ def fetch_base(cwd: Path, base: str) -> str:
     A fetch that fails refuses, because a merge made against a stale base is a
     merge the next push throws away.
     """
-    fetched = git_effect(cwd, 'fetch', '--quiet', 'origin')
+    fetched = fetch_origin(cwd)
     if fetched.returncode != 0:
         raise Refused(f'Could not fetch origin, so nothing was pushed\n{git_said(fetched)}')
     return git(cwd, 'rev-parse', f'refs/remotes/origin/{base}')
@@ -2163,7 +2172,7 @@ def catch_up_checkout(checkout: Path, base: str) -> None:
         say_warning(f'{checkout} has local changes — run `{catch_up}` there when free')
         return
 
-    git_effect(checkout, 'fetch', '--quiet', 'origin')
+    fetch_origin(checkout)
     merged = git_effect(checkout, 'merge', '--ff-only', '--quiet', f'origin/{base}')
     if merged.returncode != 0:
         say_warning(f'{checkout} is left as it was, because it cannot fast-forward to origin/{base}: {git_said(merged)}')
