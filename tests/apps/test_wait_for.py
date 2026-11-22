@@ -43,7 +43,7 @@ def test_a_wait_ends_on_its_reading(tmp_path, monkeypatch, check, exit_code, out
 
 
 def test_a_check_still_pending_ends_at_the_deadline() -> None:
-    got, verdict = waits('echo pending', timeout='0.4s')
+    got, verdict = waits('echo pending', timeout='0m0.4s')
     assert (got, verdict['outcome']) == (1, 'deadline')
 
 

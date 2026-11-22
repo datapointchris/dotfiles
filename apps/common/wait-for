@@ -31,7 +31,7 @@ Each changed reading goes to stderr as it arrives. The verdict is the last line:
 stdout where ready, and on stderr otherwise, as kubectl wait does. --json prints it
 to stdout either way.
 
-DURATION is seconds, or a number ending in s, m or h: 90, 90s, 45m, 1.5h.
+DURATION is seconds, or numbers each ending in s, m or h: 90, 90s, 45m, 1.5h, 3h50m.
 
 Examples:
     wait-for --timeout 45m -- sh -c 'test -f /tmp/done && echo ready || echo pending'
@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import time
@@ -51,6 +52,7 @@ from dataclasses import asdict, dataclass
 READINGS = ('ready', 'pending', 'failed')
 UNREADABLE_IN_A_ROW = 3
 UNITS = {'s': 1, 'm': 60, 'h': 3600}
+DURATION_PART = re.compile(r'(\d+(?:\.\d+)?)([smh])')
 
 
 @dataclass
@@ -69,11 +71,13 @@ class Verdict:
 
 
 def duration(text: str) -> float:
-    number, unit = (text[:-1], text[-1]) if text[-1:] in UNITS else (text, 's')
     try:
-        seconds = float(number) * UNITS[unit]
+        seconds = float(text)
     except ValueError:
-        raise argparse.ArgumentTypeError(f'{text!r} is not seconds, or a number ending in s, m or h') from None
+        parts = DURATION_PART.findall(text)
+        if not parts or ''.join(number + unit for number, unit in parts) != text:
+            raise argparse.ArgumentTypeError(f'{text!r} is not seconds, or numbers each ending in s, m or h, as 3h50m') from None
+        seconds = sum(float(number) * UNITS[unit] for number, unit in parts)
     if seconds <= 0:
         raise argparse.ArgumentTypeError(f'{text!r} is not above zero')
     return seconds
