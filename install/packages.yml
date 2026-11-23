@@ -627,11 +627,11 @@ system_packages:
   # Reads a screenshot's text so it can be checked for secrets before it leaves
   # the machine. Arch's tesseract depends on the virtual `tessdata`, which pacman
   # resolves to the first provider alphabetically (`tesseract-data-afr`), so
-  # English is declared by name. brew's formula carries English itself, and has
-  # no Intel bottle, so an Intel Mac compiles it.
+  # English is declared by name. macOS is left out. brew has no Intel bottle for
+  # tesseract, and its source build needs an Intel Mac's pinned formulae unpinned
+  # and compiled. So a capture screenshot taken on that Mac ships withheld.
   - name: tesseract
     pacman: tesseract
-    brew: tesseract
     description: OCR engine
 
   - name: tesseract-data-eng
