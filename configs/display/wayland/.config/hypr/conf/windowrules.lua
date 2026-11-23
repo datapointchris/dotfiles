@@ -52,13 +52,18 @@ hl.window_rule({
   center = true,
 })
 
--- The note SUPER+C opens; fleet reads this class too, so a rename changes both
+-- The note SUPER+C opens, raised off the desktop: a wide border running light to
+-- dark reads as a bevel. A rule cannot size a window's shadow, so dimming what is
+-- behind it carries the depth.
 hl.window_rule({
   name = 'fleet-capture-window',
   match = { class = '^(fleet\\.inbox\\.capture)$' },
   float = true,
   center = true,
   size = 'monitor_w*0.33 monitor_h*0.33',
+  border_size = 6,
+  border_color = { colors = { 'rgba(ffffffcc)', 'rgba(000000cc)' }, angle = 45 },
+  dim_around = true,
 })
 
 -- Rofi already floats; this keeps keyboard focus on it
