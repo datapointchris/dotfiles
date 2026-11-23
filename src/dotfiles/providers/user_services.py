@@ -128,7 +128,9 @@ def apply(entry: catalogs.UserService) -> Result:
     """Write the unit, then start it, restarting it where it was already running.
 
     Reached only when `observe` found something wrong, so the restart is what makes
-    a rewritten unit run now rather than at the next login.
+    a rewritten unit run now rather than at the next login. A unit that was not
+    running is started once, by the enable, because a restart straight after it
+    stops the command it just started.
     """
     argv = command(entry)
     if argv is None:
@@ -143,12 +145,15 @@ def apply(entry: catalogs.UserService) -> Result:
             return Result(False, f'could not load {label(entry)}: {loaded.transcript.strip()}', kind=Kind.COMMAND_FAILED)
         return Result(True, f'{label(entry)} loaded', kind=Kind.APPLIED)
 
+    was_running = systemd.active(unit(entry))
     placed = systemd_file(entry)
     placed.parent.mkdir(parents=True, exist_ok=True)
     placed.write_text(service_content(entry, argv))
     enabled = systemd.enable(unit(entry))
     if not enabled.ok:
         return Result(False, f'could not enable {unit(entry)}: {enabled.transcript.strip()}', kind=Kind.COMMAND_FAILED)
+    if not was_running:
+        return Result(True, f'{unit(entry)} running', kind=Kind.APPLIED)
     restarted = systemd.restart(unit(entry))
     if not restarted.ok:
         return Result(False, f'could not restart {unit(entry)}: {restarted.transcript.strip()}', kind=Kind.COMMAND_FAILED)
