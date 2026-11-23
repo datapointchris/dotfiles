@@ -38,15 +38,22 @@ import pytest
 from dotfiles import paths
 
 PROBE = """\
-from dotfiles.session import Session
+from typing import TYPE_CHECKING
 
-reveal_type(Session)
-Session(no_such_parameter_exists=1)
+if TYPE_CHECKING:
+    from dotfiles.session import Session
+
+    reveal_type(Session)
+    Session(no_such_parameter_exists=1)
 """
 """One import across the package boundary, then a call that cannot be right.
 
 `no_such_parameter_exists` rather than a wrong type for a real parameter, so this
 keeps failing for the reason it was written for when `Session` changes shape.
+
+Under `TYPE_CHECKING`, which mypy reads as true, so importing the probe runs
+nothing. A test that imports every module of the package meets it while another
+worker holds it on disk, and a bare `reveal_type` raises `NameError` there.
 """
 
 WITHOUT_SRC = """\
