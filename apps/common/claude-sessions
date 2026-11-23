@@ -148,8 +148,11 @@ session_titles() {
     printf '{}\n'
     return 0
   fi
+  # grep rather than rg, so the script runs where only a base system is
+  # installed. -a because a tail cut mid-character reads as binary, and grep
+  # would then report a match instead of printing the lines.
   tail -q -c "$TITLE_TAIL_BYTES" -- "${transcripts[@]}" 2>/dev/null \
-    | rg --no-config --no-line-number '"type": ?"(custom|ai)-title"' \
+    | grep -a -E '"type": ?"(custom|ai)-title"' \
     | jq -R -n "$TITLES_BY_SESSION"
 }
 
