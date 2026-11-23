@@ -14,3 +14,6 @@ primary_workstation: true
 
 # Runs what this desk's own sessions queued, through a user unit.
 desk_runner: true
+
+# Counts present time at this desk and nudges at the interval, through a user unit.
+desk_nudge: true
