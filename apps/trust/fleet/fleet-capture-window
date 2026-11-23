@@ -1,33 +1,88 @@
 #!/usr/bin/env bash
 # fleet-capture-window - Open a floating Ghostty on a fleet inbox capture note
 #
-# SUPER+C runs this on Hyprland, whose window rule floats and centers the window by
-# its class. fleet reads the same class to record the window the key was pressed over.
+# SUPER+C runs this on Hyprland, and alt-c on macOS through AeroSpace. Each desk's
+# window rule floats the window: Hyprland matches its class, and AeroSpace its title,
+# because Ghostty on macOS ignores --class.
 #
 # Usage:
-#   fleet-capture-window                    Keep the screen, then open the window
-#   fleet-capture-window --write [SCREEN]   Inside it, write the note and report a failure
+#   fleet-capture-window                          Read the moment, then open the window
+#   fleet-capture-window --write SCREEN CONTEXT   Inside it, write the note and report a failure
 
 set -euo pipefail
+
+title=fleet.inbox.capture
+desk=$(uname -s)
+
+notify() {
+  if [[ "$desk" == Darwin ]]; then
+    osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title (item 1 of argv)' \
+      -e 'end run' "fleet inbox capture" "$1"
+  else
+    notify-send "fleet inbox capture" "$1"
+  fi
+}
 
 if [[ "${1:-}" != "--write" ]]; then
   screens="${XDG_STATE_HOME:-$HOME/.local/state}/fleet/capture-screens"
   mkdir -p "$screens"
   chmod 700 "$screens"
-  screen="$screens/$(date -u +%Y%m%dT%H%M%S%3NZ).jpg"
+  # BSD date has no milliseconds, so the pid keeps two presses in one second apart.
+  stamp="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+  screen="$screens/$stamp.jpg"
+  context="$screens/$stamp.json"
+
+  # Read before the window exists, so the context names the window and directory
+  # that had focus when the key was pressed. A failed read leaves the file empty,
+  # and the capture then reads its own and names the file on the row.
+  fleet inbox capture --print-context >"$context" 2>/dev/null || : >"$context" &
+  reading=$!
+
   # Taken before the window exists, so the note is not in the shot. A desk with
   # no screenshot still gets its note.
+  if [[ "$desk" == Darwin ]]; then
+    screencapture -x -m -t jpg "$screen" || screen=""
+    # AeroSpace floats the window but cannot size or place it, so Ghostty's flags
+    # put it on the middle third of the primary screen. Ghostty sizes in cells and
+    # places in points, so a cell is taken as 8 by 17 points.
+    place=()
+    frame=$(
+      osascript -l JavaScript 2>/dev/null <<'JS'
+ObjC.import("AppKit");
+const f = $.NSScreen.screens.objectAtIndex(0).visibleFrame.size;
+`${Math.round(f.width)} ${Math.round(f.height)}`
+JS
+    ) || frame=""
+    if [[ "$frame" =~ ^([0-9]+)\ ([0-9]+)$ ]]; then
+      width=${BASH_REMATCH[1]}
+      height=${BASH_REMATCH[2]}
+      place=(--window-width=$((width / 3 / 8)) --window-height=$((height / 3 / 17))
+        --window-position-x=$((width / 3)) --window-position-y=$((height / 3)))
+    fi
+    wait "$reading" || :
+    # The new Ghostty starts on launchd's PATH, so the note gets this one.
+    exec open -na Ghostty --args --title="$title" "${place[@]}" \
+      -e /usr/bin/env PATH="$PATH" "$0" --write "$screen" "$context"
+  fi
+
   grim -t jpeg -q 80 "$screen" || screen=""
-  exec ghostty --class=fleet.inbox.capture -e "$0" --write "$screen"
+  wait "$reading" || :
+  exec ghostty --class="$title" -e "$0" --write "$screen" "$context"
 fi
 
 failure=$(mktemp)
 screen="${2:-}"
+context="${3:-}"
 filed=""
 
-# A screenshot no row names is one nobody would find to remove, and it can show anything.
+# A screenshot that no row names is one that nobody would find to remove, and it
+# can show anything. The row carries what the context file held, so the file
+# always goes.
 leave() {
   rm -f "$failure"
+  if [[ -n "$context" ]]; then
+    rm -f "$context"
+  fi
   if [[ -z "$filed" && -n "$screen" ]]; then
     rm -f "$screen"
   fi
@@ -36,14 +91,21 @@ trap leave EXIT
 # Closing the window cancels the note, which is why this exits without a notification.
 trap 'exit 1' HUP TERM
 
-screen_flag=()
+flags=()
 if [[ -n "$screen" ]]; then
-  screen_flag=(--screen "$screen")
+  flags+=(--screen "$screen")
+fi
+if [[ -n "$context" ]]; then
+  flags+=(--context-file "$context")
 fi
 
 # The window closes when this exits, so a failure has to outlive it.
-if VISUAL="nvim +startinsert" fleet inbox capture note "${screen_flag[@]}" 2>"$failure"; then
+if VISUAL="nvim +startinsert" fleet inbox capture note "${flags[@]}" 2>"$failure"; then
   filed=yes
 else
-  notify-send "fleet inbox capture" "$(<"$failure")"
+  status=$?
+  # 130 is Esc in the intent picker, which files nothing on purpose.
+  if ((status != 130)); then
+    notify "$(<"$failure")"
+  fi
 fi

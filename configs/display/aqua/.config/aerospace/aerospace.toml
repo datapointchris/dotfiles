@@ -66,6 +66,10 @@ cmd-m = []     # disable minimize window
 # Terminal
 alt-enter = 'exec-and-forget open -na Ghostty'
 
+# Capture a note to the fleet inbox. zsh -c loads .zshenv, which puts ~/.local/bin
+# on the PATH that AeroSpace's launchd environment lacks.
+alt-c = 'exec-and-forget zsh -c fleet-capture-window'
+
 # Screenshot to the clipboard: region, then whole screen
 alt-shift-p = 'exec-and-forget screencapture -ic'
 alt-ctrl-p = 'exec-and-forget screencapture -c'
@@ -163,4 +167,11 @@ f = ['layout floating tiling', 'mode main']                # Toggle floating and
 [[on-window-detected]]
 if.app-id = 'com.mitchellh.ghostty'
 if.window-title-regex-substring = 'THEME PREVIEW:'
+run = 'layout floating'
+
+# The note alt-c opens. Ghostty on macOS ignores --class, so the rule matches the
+# title that fleet-capture-window sets, and Ghostty's own flags size and place it.
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = 'fleet\.inbox\.capture'
 run = 'layout floating'
