@@ -156,8 +156,8 @@ class Provider:
         """
         return routing.NONE
 
-    def needs_root(self, item: DesiredItem) -> bool:
-        """Whether repairing this item escalates, known before anything runs.
+    def needs_root(self, item: DesiredItem, machine: machines.Machine) -> bool:
+        """Whether repairing this item escalates on this machine, known before anything runs.
 
         A method rather than the flat field the design called for, because for
         half the registry the answer is per entry and already declared: macOS
@@ -165,6 +165,10 @@ class Provider:
         step whose *read* needs root. A field here plus that field on the entry
         would be two sources for one fact, which is the disease this module
         exists to cure.
+
+        The machine is an argument because a system package's answer is per
+        machine: the same entry is a pacman install on Arch and a brew install on
+        a Mac, and only the first runs through sudo.
         """
         return False
 
@@ -571,8 +575,13 @@ class SystemPackageProvider(RegistryProvider):
     manager.
     """
 
-    def needs_root(self, item: DesiredItem) -> bool:
-        return True
+    def needs_root(self, item: DesiredItem, machine: machines.Machine) -> bool:
+        """Whether the manager that installs it on this machine runs through sudo.
+
+        `by_manager` makes the same choice at apply and `syspkg.install` escalates
+        on the same set, so `plan`'s count and `apply`'s prompt read one answer.
+        """
+        return manager_for(item, machine.coordinates.installers) in syspkg.ESCALATES
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
         return self.install_all(session, [change], privilege)[0]
@@ -994,7 +1003,7 @@ class ManagerProvider(Provider):
         """
         return ev.by_currency(item, installed)
 
-    def needs_root(self, item: DesiredItem) -> bool:
+    def needs_root(self, item: DesiredItem, machine: machines.Machine) -> bool:
         return item.name in syspkg.ESCALATES
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:
@@ -1189,7 +1198,7 @@ class GoToolchain(ToolchainProvider):
     def converge(self, session: MachineContext, privilege: Escalates) -> providers.Result:
         return toolchain.install_go(coordinates.target_for(session.machine.coordinates), privilege, offline=self.routed(session).bundled)
 
-    def needs_root(self, item: DesiredItem) -> bool:
+    def needs_root(self, item: DesiredItem, machine: machines.Machine) -> bool:
         return True
 
 
@@ -1288,7 +1297,7 @@ class SystemConfigProvider(Provider):
             and planning.configures(entry, machine, installed)
         )
 
-    def needs_root(self, item: DesiredItem) -> bool:
+    def needs_root(self, item: DesiredItem, machine: machines.Machine) -> bool:
         return isinstance(item.entry, catalogs.SystemConfig) and item.entry.needs_root
 
     def states(self, items: Sequence[DesiredItem], session: MachineContext) -> dict[str, sysconfig.State]:
@@ -1600,9 +1609,15 @@ def toolchain_evidence(item: DesiredItem, session: MachineContext) -> ev.Evidenc
     return evidence_for(item, session.inventories)
 
 
-def needs_root(item: DesiredItem) -> bool:
+def needs_root(item: DesiredItem, machine: machines.Machine) -> bool:
     provider = named(item.provider)
-    return provider is not None and provider.needs_root(item)
+    return provider is not None and provider.needs_root(item, machine)
+
+
+def manager_for(item: DesiredItem, installers: Sequence[str]) -> str:
+    """Which manager installs a system package on this machine, or '' where none on it can."""
+    names = ev.declared_names(item)
+    return next((manager for manager in syspkg.PREFERENCE if manager in installers and manager in names), '')
 
 
 def by_manager(session: MachineContext, changes: Sequence[Change]) -> dict[str, list[tuple[Change, str]]]:
@@ -1620,10 +1635,8 @@ def by_manager(session: MachineContext, changes: Sequence[Change]) -> dict[str, 
     usable = session.machine.coordinates.installers
     grouped: dict[str, list[tuple[Change, str]]] = {}
     for change in changes:
-        names = ev.declared_names(change.desired) if change.desired else {}
-        chosen = next((manager for manager in syspkg.PREFERENCE if manager in usable and manager in names), '')
-        if chosen:
-            grouped.setdefault(chosen, []).append((change, names[chosen][0]))
+        if change.desired and (chosen := manager_for(change.desired, usable)):
+            grouped.setdefault(chosen, []).append((change, ev.declared_names(change.desired)[chosen][0]))
     return grouped
 
 

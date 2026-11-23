@@ -8,9 +8,12 @@ answers cannot be given by three files that disagree.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from dotfiles import catalog
+from dotfiles import coordinates
 from dotfiles import effects
 from dotfiles import evidence as ev
 from dotfiles import github_release
@@ -198,13 +201,38 @@ def test_an_item_whose_provider_was_retired_is_unknown_rather_than_a_crash() -> 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_installing_a_system_package_needs_root_whatever_the_entry_says() -> None:
-    """Root is a property of apt and pacman, and no entry declares otherwise —
-    which is why this provider answers with a constant rather than reading a field
-    that would not be there."""
-    entry = catalog.SystemPackage.from_mapping({'name': 'curl', 'apt': 'curl'})
+def on(platform: str) -> machines.Machine:
+    return machines.Machine(
+        name='box',
+        coordinates=coordinates.PLATFORM_BUNDLES[platform],
+        subscriptions={},
+        features=frozenset(),
+        flags={},
+        requirements=(),
+        source=Path('box.yml'),
+    )
 
-    assert registry.needs_root(item('system', 'curl', entry))
+
+@pytest.mark.parametrize(
+    ('platform', 'declared', 'escalates'),
+    [
+        ('archlinux', {'pacman': 'tesseract', 'brew': 'tesseract'}, True),
+        ('macos', {'pacman': 'tesseract', 'brew': 'tesseract'}, False),
+        ('archlinux', {'aur': 'tesseract-git'}, False),
+    ],
+)
+def test_a_system_package_needs_root_where_the_manager_that_installs_it_runs_through_sudo(
+    platform: str, declared: dict[str, str], escalates: bool
+) -> None:
+    """Root is a property of apt and pacman, so one entry needs it on Arch and not on a Mac.
+
+    brew refuses to run as root and yay escalates itself, so `syspkg.install` runs
+    neither through sudo. Counting either as needing a password stops a session
+    whose standing approval ends at a run that asks for sudo.
+    """
+    entry = catalog.SystemPackage.from_mapping({'name': 'tesseract', **declared})
+
+    assert registry.needs_root(item('system', 'tesseract', entry), on(platform)) is escalates
 
 
 def test_the_go_runtime_is_the_only_one_that_needs_root() -> None:
@@ -215,7 +243,7 @@ def test_the_go_runtime_is_the_only_one_that_needs_root() -> None:
     and to every machine already built.
     """
     runtimes = {provider.name: provider for provider in registry.for_resource('toolchains')}
-    needs_root = {name: provider.needs_root(None) for name, provider in runtimes.items()}  # type: ignore[arg-type]
+    needs_root = {name: provider.needs_root(None, on('archlinux')) for name, provider in runtimes.items()}  # type: ignore[arg-type]
 
     assert needs_root == {'go-toolchain': True, 'rust-toolchain': False, 'uv-toolchain': False, 'node-toolchain': False}
 
@@ -386,7 +414,7 @@ def test_a_macos_preference_does_not_need_root_and_the_entry_is_what_says_so() -
     for a fact the entry carries, which is the disease the registry cures."""
     entry = catalog.MacosDefault.from_mapping({'domain': 'com.apple.dock', 'key': 'tilesize', 'type': 'int', 'value': '90'})
 
-    assert not registry.needs_root(item('macos-default', 'com.apple.dock/tilesize', entry))
+    assert not registry.needs_root(item('macos-default', 'com.apple.dock/tilesize', entry), on('macos'))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

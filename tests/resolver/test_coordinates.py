@@ -39,7 +39,7 @@ def test_a_package_manager_selects_a_family_not_one_installer() -> None:
 
 
 def test_the_windows_point_selects_the_winget_family() -> None:
-    """`installers` is a total lookup and `registry._by_manager` performs it on
+    """`installers` is a total lookup and `registry.by_manager` performs it on
     every system change, so a manager with no `INSTALLER_FAMILIES` row raises
     `KeyError` the first time a machine declares it. Windows has no bundle to
     catch that, because it declares its coordinates directly."""

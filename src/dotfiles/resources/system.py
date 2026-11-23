@@ -28,6 +28,7 @@ from itertools import chain
 
 from dotfiles import catalog
 from dotfiles import evidence as ev
+from dotfiles import machine as machines
 from dotfiles import registry
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Plan
@@ -217,7 +218,7 @@ class SystemResource:
 
     def diff(self, plan: Plan, observed: Observed) -> tuple[Change, ...]:
         packages = tuple(
-            package_change(item, observed)
+            package_change(item, observed, plan.machine)
             for item in plan.for_resource(NAME)
             if item.stage is not Stage.SYSTEM_CONFIG and observed.evidence[item.address].verdict is not Verdict.MATCHED
         )
@@ -231,7 +232,7 @@ class SystemResource:
                 detail=observed.config[item.address].detail,
                 advice=observed.config[item.address].advice,
                 desired=item,
-                privileged=registry.needs_root(item),
+                privileged=registry.needs_root(item, plan.machine),
             )
             for item in config_items(plan)
             if observed.config[item.address].verdict is not Verdict.MATCHED
@@ -302,7 +303,7 @@ class SystemResource:
         return registry.install_all(session, changes, privilege)
 
 
-def package_change(item: DesiredItem, observed: Observed) -> Change:
+def package_change(item: DesiredItem, observed: Observed, machine: machines.Machine) -> Change:
     evidence = observed.evidence[item.address]
     repair = repair_for(item, evidence.verdict, observed.met, evidence.blocked_by)
     return Change(
@@ -314,7 +315,7 @@ def package_change(item: DesiredItem, observed: Observed) -> Change:
         detail=evidence.detail,
         advice=advice_for(item, repair, evidence.blocked_by),
         desired=item,
-        privileged=registry.needs_root(item),
+        privileged=registry.needs_root(item, machine),
     )
 
 

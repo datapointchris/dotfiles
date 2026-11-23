@@ -77,7 +77,7 @@ apps from macos-personal. Both machines would install and neither would say
 anything was missing.
 
 A family of one is still written out, `apt` and `winget` alike.
-`Coordinates.installers` is a total lookup and `registry._by_manager` performs it
+`Coordinates.installers` is a total lookup and `registry.by_manager` performs it
 on every system change, so a manager with no row here raises `KeyError` the first
 time a machine declares it — a crash where the missing thing is a table entry
 nobody can see from the traceback.

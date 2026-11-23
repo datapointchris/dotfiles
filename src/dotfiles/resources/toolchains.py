@@ -210,7 +210,7 @@ class ToolchainsResource:
                         repair=Repair.AUTOMATIC,
                         detail=observed.absent[item.name],
                         desired=item,
-                        privileged=registry.needs_root(item),
+                        privileged=registry.needs_root(item, plan.machine),
                         awaits_bundle=observed.uv_awaits_bundle if item.name == UV_RUNTIME else '',
                     )
                 )
@@ -250,7 +250,7 @@ class ToolchainsResource:
                         detail=f'below the declared floor of {floor}',
                         desired=item,
                         observed=reported,
-                        privileged=registry.needs_root(item),
+                        privileged=registry.needs_root(item, plan.machine),
                     )
                 )
 
