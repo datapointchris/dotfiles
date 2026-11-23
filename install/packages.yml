@@ -624,6 +624,20 @@ system_packages:
     pacman: grim
     description: Screenshot tool for Wayland
 
+  # Reads a screenshot's text so it can be checked for secrets before it leaves
+  # the machine. Arch's tesseract depends on the virtual `tessdata`, which pacman
+  # resolves to the first provider alphabetically (`tesseract-data-afr`), so
+  # English is declared by name. brew's formula carries English itself, and has
+  # no Intel bottle, so an Intel Mac compiles it.
+  - name: tesseract
+    pacman: tesseract
+    brew: tesseract
+    description: OCR engine
+
+  - name: tesseract-data-eng
+    pacman: tesseract-data-eng
+    description: English language data for tesseract
+
   - name: slurp
     pacman: slurp
     description: Region selector for Wayland
