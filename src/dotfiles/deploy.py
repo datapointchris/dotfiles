@@ -2,8 +2,8 @@
 
 The deciding is `resources/symlinks.py`. What lives here is the epilogue, which
 belongs with the deployment rather than at the end of a run: git needs somewhere
-to write that is not this repo, and Hyprland, hypridle and Alloy have to load the
-files the pass just deployed.
+to write that is not this repo, and Hyprland, hypridle, dunst and Alloy have to
+load the files the pass just deployed.
 
 There is one deployment verb, because reconciling always prunes. A create-only
 pass leaves a broken link behind whenever a source is deleted, and asks the
@@ -34,6 +34,8 @@ HOME_GITCONFIG = Path.home() / '.gitconfig'
 
 IDLE_DAEMON_CONFIG = Path.home() / '.config' / 'hypr' / 'hypridle.conf'
 IDLE_DAEMON_EXIT_SECONDS = 5
+
+NOTIFICATION_DAEMON_CONFIG = Path.home() / '.config' / 'dunst' / 'dunstrc'
 
 ALLOY_RELOAD_URL = 'http://127.0.0.1:12345/-/reload'
 ALLOY_RELOAD_SECONDS = 10
@@ -137,19 +139,21 @@ def epilogue(session: Session) -> None:
     """The jobs that follow a deployment, and belong with it rather than at the end
     of a run.
 
-    git needs somewhere to write that is not this repo, and Hyprland, hypridle and
-    Alloy each have to load the files the pass just deployed.
+    git needs somewhere to write that is not this repo, and Hyprland, hypridle,
+    dunst and Alloy each have to load the files the pass just deployed.
 
     The deploying itself belongs to the engine. What is left here is genuinely not
     the walk — carrying it would mean a second observe/diff/perform loop beside the
     resource's.
 
     hypridle is restarted only where Hyprland answered the reload, because the
-    restart stops it before Hyprland's dispatcher starts the new one.
+    restart stops it before Hyprland's dispatcher starts the new one. dunst is
+    reloaded only there too, because it runs inside that session.
     """
     ensure_git_config_entry(session.machine.coordinates)
     if reload_compositor(session.machine.coordinates):
         restart_idle_daemon()
+        reload_notification_daemon()
     reload_telemetry_agent()
 
 
@@ -276,6 +280,27 @@ def restart_idle_daemon() -> None:
         err_console.print('hypridle restarted on the deployed config')
     else:
         err_console.print('  [red]✗[/] hypridle stopped, and Hyprland refused to start it again')
+
+
+def reload_notification_daemon() -> None:
+    """dunst reads its config once, at start, and holds no watch on it. So a running
+    dunst that started before the deployed dunstrc's last write is told to read it
+    again, as hypridle is restarted for its own.
+
+    A reload leaves dunst's start time where it was, and dunst prints no record of
+    what it loaded. So each later deploy reloads it again until dunst next starts,
+    which re-reads the same files.
+    """
+    if not NOTIFICATION_DAEMON_CONFIG.exists():
+        return
+    written_ago = time.time() - NOTIFICATION_DAEMON_CONFIG.stat().st_mtime
+    listed = run(['ps', '-C', 'dunst', '-o', 'etimes='], output=Output.QUIET)
+    if not any(int(running_for) > written_ago for running_for in listed.stdout.split()):
+        return
+    if run(['dunstctl', 'reload'], output=Output.QUIET).ok:
+        err_console.print('dunst reloaded the deployed dunstrc')
+    else:
+        err_console.print('  [red]✗[/] dunst kept its old config: dunstctl reload failed')
 
 
 def switched_off_monitors() -> list[str] | None:

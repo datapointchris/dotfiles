@@ -104,6 +104,28 @@ window#waybar {
     color: @red;
 }
 
+/* Desk nudge. The class is the watch's phase, or stopped where no watch has ticked lately.
+   A ready nudge stands out, and a clock that is not counting is dim. */
+#custom-doit-desk-nudge {
+    padding: 0 10px;
+    margin: 6px 2px;
+    background: @bg-highlight;
+    border-radius: 4px;
+    color: @fg;
+}
+
+#custom-doit-desk-nudge.firing,
+#custom-doit-desk-nudge.ready {
+    color: @yellow;
+}
+
+#custom-doit-desk-nudge.away,
+#custom-doit-desk-nudge.paused,
+#custom-doit-desk-nudge.no_desk,
+#custom-doit-desk-nudge.stopped {
+    color: @fg-dark;
+}
+
 /* Right side modules */
 #clock,
 #cpu,

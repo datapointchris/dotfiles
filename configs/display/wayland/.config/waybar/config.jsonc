@@ -4,7 +4,7 @@
     "height": 40,
     "spacing": 4,
 
-    "modules-left": ["hyprland/workspaces", "custom/fleet-budget", "custom/fleet-notifications", "hyprland/submap", "mpris"],
+    "modules-left": ["hyprland/workspaces", "custom/fleet-budget", "custom/fleet-notifications", "custom/doit-desk-nudge", "hyprland/submap", "mpris"],
     "modules-center": [],
     "modules-right": ["tray", "pulseaudio", "temperature", "cpu", "memory", "network", "clock", "privacy", "custom/spacer"],
 
@@ -106,6 +106,15 @@
         "return-type": "json",
         "interval": 30,
         "on-click": "ghostty -e fleet tui --view notifications"
+    },
+
+    "custom/doit-desk-nudge": {
+        "exec": "~/.config/waybar/doit-desk-nudge.sh",
+        "exec-if": "command -v doit",
+        "return-type": "json",
+        "interval": 15,
+        "tooltip": false,
+        "on-click": "~/.config/waybar/doit-desk-nudge-panel.sh"
     },
 
     "custom/spacer": {

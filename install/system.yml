@@ -1137,3 +1137,12 @@ user_services:
     argv: [fleet, warehouse, file-versions, ship]
     network_trust: fleet
     excludes_os_family: windows
+
+  # The clock behind the waybar pill: it counts present time at this desk and
+  # nudges toward the next thing at the interval. Only a manifest setting
+  # `desk_nudge` runs it. `doit desk-nudge pause` holds the nudge, because apply
+  # starts a stopped unit again. It exits when an install replaces its binary.
+  - name: desk-nudge
+    description: Count present time at this desk and nudge toward the next thing at the interval
+    argv: [doit, desk-nudge, watch]
+    feature: desk_nudge
