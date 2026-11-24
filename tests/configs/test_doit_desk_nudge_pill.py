@@ -18,7 +18,6 @@ def test_the_pill_renders_each_phase_and_a_stale_file(tmp_path: Path) -> None:
     pills = [
         {'text': '⏲ 42m', 'class': 'counting', 'stale_after': fresh},
         {'text': 'ready · read', 'class': 'ready', 'stale_after': fresh},
-        {'text': 'away', 'class': 'away', 'stale_after': fresh},
         {'text': 'paused', 'class': 'paused', 'stale_after': fresh},
         {'text': 'no desk', 'class': 'no_desk', 'stale_after': fresh},
         {'text': '⏲ 42m', 'class': 'counting', 'stale_after': stale},
@@ -33,4 +32,4 @@ def test_the_pill_renders_each_phase_and_a_stale_file(tmp_path: Path) -> None:
         shown = subprocess.run(['bash', SCRIPT], env=env, capture_output=True, text=True, check=True)
         printed.append(json.loads(shown.stdout)['text'])
 
-    assert printed == ['⏲ 42m', 'ready · read', 'away', 'paused', 'no desk', 'nudge stopped']
+    assert printed == ['⏲ 42m', 'ready · read', 'paused', 'no desk', 'nudge stopped']

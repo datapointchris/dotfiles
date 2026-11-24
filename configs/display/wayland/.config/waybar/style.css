@@ -119,7 +119,6 @@ window#waybar {
     color: @yellow;
 }
 
-#custom-doit-desk-nudge.away,
 #custom-doit-desk-nudge.paused,
 #custom-doit-desk-nudge.no_desk,
 #custom-doit-desk-nudge.stopped {
