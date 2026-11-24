@@ -1231,8 +1231,8 @@ def link_for(session: Session, change: Change) -> Link | None:
 def deleted_index(session: Session, coordinates: axes.Coordinates) -> Mapping[str, Link]:
     """Deleted templates by address, derived once for the run for the reason `index` is.
 
-    `deleted_templates` runs a `git log` over the whole history, which per change
-    would run once per orphan the run prunes.
+    `deleted_templates` runs git and places every deleted template, which per
+    change would run once per orphan the run prunes.
     """
     return {link.address: link for link in deleted_templates(session, coordinates)}
 

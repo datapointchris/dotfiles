@@ -22,6 +22,7 @@ values come from the file that holds this machine's secrets.
 from __future__ import annotations
 
 import dataclasses as dc
+import json
 import os
 import re
 import string
@@ -31,6 +32,7 @@ from collections.abc import Iterator
 from collections.abc import Mapping
 from pathlib import Path
 
+from dotfiles import paths
 from dotfiles.effects import Output
 from dotfiles.effects import run
 
@@ -133,14 +135,85 @@ def deleted(repo: Path, trees: Iterable[str]) -> tuple[Path, ...]:
     shallow clone with only the deletions its history reaches.
     """
     pathspecs = [f'{tree}/*{SUFFIX}' for tree in trees]
+    head = run(['git', '-C', str(repo), 'rev-parse', '--verify', '-q', 'HEAD'], output=Output.QUIET)
+    if not head.ok:
+        return ()
+    names = deletions_up_to(repo, head.stdout.strip(), pathspecs)
+    return tuple(path for path in (Path(name) for name in names) if not (repo / path).exists())
+
+
+def deletions_up_to(repo: Path, commit: str, pathspecs: list[str]) -> list[str]:
+    """Each path under the pathspecs that any commit up to `commit` deleted, newest first.
+
+    A commit fixes the whole history behind it, so the answer for one never
+    changes, whichever checkout asks. It is cached keyed by the commit and the
+    pathspecs. A later commit descending from the cached one logs only the
+    commits between the two. Any other commit logs the whole history, which
+    grows with every commit.
+    """
+    cached = cached_deletions(pathspecs)
+    if cached is not None:
+        base, names = cached
+        if base == commit:
+            return names
+        descends = run(['git', '-C', str(repo), 'merge-base', '--is-ancestor', base, commit], output=Output.QUIET)
+        newer = logged_deletions(repo, f'{base}..{commit}', pathspecs) if descends.ok else None
+        if newer is not None:
+            return remember_deletions(commit, pathspecs, [*newer, *names])
+    logged = logged_deletions(repo, commit, pathspecs)
+    return [] if logged is None else remember_deletions(commit, pathspecs, logged)
+
+
+def logged_deletions(repo: Path, revisions: str, pathspecs: list[str]) -> list[str] | None:
+    """The paths the commits in `revisions` deleted, newest first, or None where git could not answer."""
     log = run(
-        ['git', '-C', str(repo), 'log', '-z', '--diff-filter=D', '--no-renames', '--name-only', '--format=', '--', *pathspecs],
+        ['git', '-C', str(repo), 'log', '-z', '--diff-filter=D', '--no-renames', '--name-only', '--format=', revisions, '--', *pathspecs],
         output=Output.QUIET,
     )
     if not log.ok:
-        return ()
-    named = (Path(name.strip('\n')) for name in log.stdout.split('\0') if name.strip('\n'))
-    return tuple(path for path in dict.fromkeys(named) if not (repo / path).exists())
+        return None
+    return [name.strip('\n') for name in log.stdout.split('\0') if name.strip('\n')]
+
+
+def deletions_cache() -> Path:
+    """Where the deleted paths are cached. A call rather than a constant, so `$XDG_CACHE_HOME` redirects it."""
+    return paths.cache_home() / 'deleted-templates.json'
+
+
+def cached_deletions(pathspecs: list[str]) -> tuple[str, list[str]] | None:
+    """The cached commit and the paths deleted up to it, where the cache was built for these pathspecs."""
+    try:
+        payload = json.loads(deletions_cache().read_text())
+    except (OSError, ValueError):
+        return None
+    if not isinstance(payload, dict) or payload.get('pathspecs') != pathspecs:
+        return None
+    commit, names = payload.get('commit'), payload.get('deleted')
+    if not isinstance(commit, str) or not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+        return None
+    return commit, names
+
+
+def remember_deletions(commit: str, pathspecs: list[str], names: list[str]) -> list[str]:
+    """Cache the paths deleted up to `commit`, and return them with repeats dropped.
+
+    A cache that cannot be written costs the next run a full log and nothing
+    else, so a failed write is passed over. The write is one rename, so two
+    runs writing at once leave one whole file.
+    """
+    unique = list(dict.fromkeys(names))
+    target = deletions_cache()
+    staged: str | None = None
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        handle, staged = tempfile.mkstemp(dir=str(target.parent), prefix=f'.{target.name}.')
+        with os.fdopen(handle, 'w') as staging:
+            json.dump({'commit': commit, 'pathspecs': pathspecs, 'deleted': unique}, staging)
+        os.replace(staged, target)
+    except OSError:
+        if staged is not None:
+            Path(staged).unlink(missing_ok=True)
+    return unique
 
 
 def was_rendering_of(repo: Path, path: Path, text: str) -> bool:
