@@ -67,6 +67,8 @@ General technical notes that name nothing in this repo live on the hub at
   volume slider is silent on a USB DAC, and waybar's percentage means nothing
 - [A USB Interface Keeps Its Own Master Volume](a-usb-interface-keeps-its-own-master-volume.md) —
   output to a USB mixer is barely audible with every control at full, and its meters do not light
+- [Desktop Audio Through a Mixer's Mic Channels](desktop-audio-through-bigsix-mic-channels.md) —
+  music clips on the BiG SiX's channel meters while the room stays quiet
 - [Finding Where a Slow Run Went](finding-where-a-slow-run-went.md) — `dotfiles check` and `apply`
   take five silent minutes, and nothing in the output or the run record says which part was slow
 - [A Conflicting Package Blocks an Install Forever](a-conflicting-package-blocks-an-install-forever.md)
