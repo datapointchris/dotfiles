@@ -929,11 +929,14 @@ def symlinks_apply(
 
 @symlinks_app.command(
     'show',
-    epilog='Examples:\n\ndotfiles symlinks show — every declared link and where it stands',
+    epilog=(
+        'Examples:\n\ndotfiles symlinks show — every declared link and where it stands'
+        '\n\ndotfiles symlinks show --json — each link, its target and its verdict, for a script'
+    ),
 )
-def symlinks_show(machine: str = MachineOption) -> None:
+def symlinks_show(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """List every symlink this repo declares, and where each one stands."""
-    deploy.show(Session.resolve(machine))
+    deploy.show(Session.resolve(machine), as_json=as_json)
 
 
 @symlinks_app.command(

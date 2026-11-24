@@ -449,8 +449,8 @@ def test_show_lists_the_named_machines_links_rather_than_this_ones(sandbox: Sand
 
     ran = cli('symlinks', 'show', '--machine', 'mac')
 
-    assert 'configs/pkg/brew/.config/brew.conf' in ran.stderr
-    assert 'configs/pkg/apt' not in ran.stderr
+    assert 'configs/pkg/brew/.config/brew.conf' in ran.stdout
+    assert 'configs/pkg/apt' not in ran.stdout
 
 
 def test_apply_reports_an_unknown_machine_as_a_usage_error(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
@@ -525,15 +525,11 @@ def test_the_read_verbs_emit_the_interchange_document_and_apply_emits_the_run_re
     assert cli('symlinks', 'apply', '--json').document['verb'] == 'apply'
 
 
-WITHOUT_JSON = [('show',), ('unlink', '--force')]
-
-
-@pytest.mark.parametrize('verb', WITHOUT_JSON, ids=[argv[0] for argv in WITHOUT_JSON])
-def test_the_two_leaves_that_are_not_reconcile_verbs_take_no_json(verb: tuple[str, ...], cli: Callable[..., Invocation]) -> None:
-    """Neither answers a verdict, so neither has a document to emit. Asserted
-    rather than assumed: a caller scripting `--json` across the noun needs the
-    refusal to be a usage error and not an ignored flag."""
-    ran = cli('symlinks', *verb, '--json', catch_exceptions=True)
+def test_unlink_takes_no_json(cli: Callable[..., Invocation]) -> None:
+    """It answers no verdict and lists nothing, so it has no document to emit.
+    Asserted rather than assumed: a caller scripting `--json` across the noun needs
+    the refusal to be a usage error and not an ignored flag."""
+    ran = cli('symlinks', 'unlink', '--force', '--json', catch_exceptions=True)
 
     assert ran.exit_code == ExitCode.USAGE
     assert ran.document is None
@@ -559,10 +555,8 @@ def test_only_apply_files_a_run_record(sandbox: Sandbox, cli: Callable[..., Invo
 
 def test_show_marks_every_declared_link_and_names_the_orphans_under_them(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:
     """Declared rather than discovered, so a link that was never deployed appears
-    here too — which a walk of `$HOME` could not do.
-
-    On stderr in full: this is a listing rather than a verdict, and it exits 0
-    whatever it finds.
+    here too — which a walk of `$HOME` could not do. A listing rather than a
+    verdict, so it exits 0 whatever it finds.
     """
     declare(sandbox, 'configs/common/.config/kept.conf')
     declare(sandbox, 'configs/common/.config/gone.conf')
@@ -570,12 +564,14 @@ def test_show_marks_every_declared_link_and_names_the_orphans_under_them(sandbox
     cli('symlinks', 'apply')
     (sandbox.repo / 'configs' / 'common' / '.config' / 'gone.conf').unlink()
 
-    ran = cli('symlinks', 'show')
+    ran = cli('symlinks', 'show', '--json')
 
     assert ran.exit_code == ExitCode.CONVERGED
-    assert ran.stdout == ''
-    assert f'→ {DECLARED} →' in ran.stderr
-    assert 'gone.conf (source gone)' in ran.stderr
+    assert {link['address']: link['verdict'] for link in ran.document['links']} == {
+        'configs/common/.config/kept.conf': None,
+        DECLARED: None,
+    }
+    assert [Path(orphan).name for orphan in ran.document['orphans']] == ['gone.conf']
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -658,7 +654,9 @@ def test_show_says_a_fully_deployed_machine_has_nothing_undeployed(sandbox: Sand
     cli('symlinks', 'apply')
     (sandbox.repo / 'configs' / 'common' / '.config' / 'gone.conf').unlink()
 
-    assert '1 declared, 0 not deployed as declared' in cli('symlinks', 'show').stderr
+    document = cli('symlinks', 'show', '--json').document
+
+    assert (document['declared'], document['not_deployed']) == (1, 0)
 
 
 def test_an_apply_deploys_a_link_declared_since_the_last_one_in_this_process(sandbox: Sandbox, cli: Callable[..., Invocation]) -> None:

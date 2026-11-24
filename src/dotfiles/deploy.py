@@ -23,6 +23,8 @@ from rich.markup import escape
 from dotfiles import coordinates as axes
 from dotfiles.effects import Output
 from dotfiles.effects import run
+from dotfiles.output import console
+from dotfiles.output import emit_json
 from dotfiles.output import err_console
 from dotfiles.output import hint
 from dotfiles.resources import symlinks
@@ -200,33 +202,59 @@ def unlink(session: Session) -> bool:
     return not kept
 
 
-def show(session: Session) -> None:
+def show(session: Session, as_json: bool = False) -> None:
     """Every declared link and where it currently stands.
 
     Declared rather than discovered, so a link that was never deployed appears
     here too. A walk of `$HOME` could list only what already exists.
+
+    The rows and the closing count are this read's result, so they go to stdout
+    where a pipe or a `--json` parser reads them.
     """
     observed = symlinks.RESOURCE.observe(session, session.plan)
     verdicts = {change.item: change for change in symlinks.RESOURCE.diff(session.plan, observed)}
-
-    for link in observed.links:
-        change = verdicts.get(link.address)
-        mark = '[green]→[/]' if change is None else '[yellow]✗[/]'
-        note = '' if change is None else f'  ({change.verdict})'
-        err_console.print(f'  {mark} {link.address} → {link.target}{note}')
-
-    for path in observed.orphans:
-        err_console.print(f'  [red]✗[/] {path} (source gone)')
-
-    for orphaned in observed.orphaned_renderings:
-        err_console.print(f'  [red]✗[/] {orphaned.target} (template gone: {orphaned.templates[0].address})')
 
     # Only the declared links that drifted. `verdicts` also holds a row per orphan,
     # and an orphan is by definition not declared — that is why it is pruned rather
     # than repaired — so counting it here would report a healthy machine as having
     # a declared link that did not land.
     undeployed = sum(1 for link in observed.links if link.address in verdicts)
-    err_console.print(f'\n{len(observed.links)} declared, {undeployed} not deployed as declared')
+
+    if as_json:
+        emit_json(
+            {
+                'machine': session.machine_name,
+                'links': [
+                    {
+                        'address': link.address,
+                        'target': str(link.target),
+                        'verdict': None if (change := verdicts.get(link.address)) is None else str(change.verdict),
+                    }
+                    for link in observed.links
+                ],
+                'orphans': [str(path) for path in observed.orphans],
+                'orphaned_renderings': [
+                    {'target': str(orphaned.target), 'template': orphaned.templates[0].address} for orphaned in observed.orphaned_renderings
+                ],
+                'declared': len(observed.links),
+                'not_deployed': undeployed,
+            }
+        )
+        return
+
+    for link in observed.links:
+        change = verdicts.get(link.address)
+        mark = '[green]→[/]' if change is None else '[yellow]✗[/]'
+        note = '' if change is None else f'  ({change.verdict})'
+        console.print(f'  {mark} {link.address} → {link.target}{note}')
+
+    for path in observed.orphans:
+        console.print(f'  [red]✗[/] {path} (source gone)')
+
+    for orphaned in observed.orphaned_renderings:
+        console.print(f'  [red]✗[/] {orphaned.target} (template gone: {orphaned.templates[0].address})')
+
+    console.print(f'\n{len(observed.links)} declared, {undeployed} not deployed as declared')
 
 
 def reload_compositor(coordinates: axes.Coordinates) -> bool:
