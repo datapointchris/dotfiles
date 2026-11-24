@@ -198,7 +198,12 @@ class Session:
         )
         _ = session.machine
         if refresh and session.routes.everything:
-            return dc.replace(session, refresh=False)
+            narrowed = dc.replace(session, refresh=False)
+            # `replace` builds a new instance with an empty cache. Neither the
+            # manifest nor the routes read from it depends on `refresh`, so both
+            # carry over rather than being parsed a second time.
+            narrowed.__dict__.update(machine=session.machine, routes=session.routes)
+            return narrowed
         return session
 
     @functools.cached_property

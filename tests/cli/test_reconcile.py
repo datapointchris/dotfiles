@@ -29,6 +29,7 @@ from dotfiles.results import Lens
 from dotfiles.results import ResourceResult
 from dotfiles.results import ResourceVerdict
 from dotfiles.runs import Timing
+from dotfiles.session import Session
 from dotfiles.vocabulary import ExitCode
 
 MACHINE = 'linux-lxc-server'
@@ -82,7 +83,7 @@ def summaries(_session: object, addresses: Iterable[str] | None = None) -> list[
 def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
     """It was not examined, so it has nothing to report. Inventing a row would put
     something in --json that no checker produced."""
-    monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(ResourceVerdict.CONVERGED, 'machines'))
+    monkeypatch.setattr(reconcile, 'check_declaration', lambda _session: result(ResourceVerdict.CONVERGED, 'machines'))
 
     measured = summaries(None, [name for name in vocabulary.RESOURCES if name not in {'packages', 'system'}])
     addresses = [item.address for item in reconcile.fold_walk(measured, Lens.CHECK)]
@@ -93,14 +94,14 @@ def test_a_skipped_address_is_absent_rather_than_a_fourth_verdict(monkeypatch: p
 
 
 def test_skipping_machines_skips_the_declaration_check() -> None:
-    assert reconcile.machines_row(frozenset({'machines'})) == []
+    assert reconcile.machines_row(frozenset({'machines'}), Session('box')) == []
 
 
 def test_a_resource_that_cannot_answer_is_an_issue_and_the_walk_continues(monkeypatch: pytest.MonkeyPatch) -> None:
     """The engine owns isolation, not the generator: one resource raising must not
     end the stream for the rows after it, or a crashed checker would read as a
     machine with nothing left to examine."""
-    monkeypatch.setattr(reconcile, 'check_declaration', lambda: result(ResourceVerdict.CONVERGED, 'machines'))
+    monkeypatch.setattr(reconcile, 'check_declaration', lambda _session: result(ResourceVerdict.CONVERGED, 'machines'))
     measured = [
         Event('packages', Refusal('packages could not be examined: boom')),
         Event('symlinks', Summary('all fine')),

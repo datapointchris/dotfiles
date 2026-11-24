@@ -638,14 +638,23 @@ def manifest_path(name: str, root: Path | None = None) -> Path:
     return source
 
 
-def load(name: str, root: Path | None = None) -> Machine:
-    """Read one manifest and `flags.yml`, or raise with everything wrong in it."""
-    install = (root / 'install') if root else paths.INSTALL_DIR
+def flags_declared(root: Path | None = None) -> Any:
+    """`flags.yml` as parsed, or an empty mapping where the repo has none."""
+    flags_file = ((root / 'install') if root else paths.INSTALL_DIR) / 'flags.yml'
+    return (catalog.parse_yaml(flags_file.read_text()) or {}) if flags_file.is_file() else {}
+
+
+def load(name: str, root: Path | None = None, *, flag_data: Any = None) -> Machine:
+    """Read one manifest and `flags.yml`, or raise with everything wrong in it.
+
+    `flag_data` is `flags.yml` already parsed, for a caller loading every manifest,
+    so the file is parsed once rather than once per machine.
+    """
     source = manifest_path(name, root)
 
     declared = catalog.parse_yaml(source.read_text()) or {}
-    flags_file = install / 'flags.yml'
-    flag_data = catalog.parse_yaml(flags_file.read_text()) if flags_file.is_file() else {}
+    if flag_data is None:
+        flag_data = flags_declared(root)
 
     issues: list[DeclarationIssue] = []
     if not isinstance(declared, Mapping):

@@ -29,7 +29,7 @@ runs `claude -p` falls behind.
 ## Every host an installer reaches is declared by the installer itself
 
 `custom.sources()` answers where a given tool is fetched from.
-`network._custom_installer_probes` is its only caller, so the connectivity probe
+`network.custom_installer_probes` is its only caller, so the connectivity probe
 asks each installer rather than switching on a declared kind. The probe results
 carry the answer per tool:
 

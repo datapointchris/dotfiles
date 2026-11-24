@@ -95,13 +95,14 @@ from dotfiles.vocabulary import ExitCode
 from dotfiles.vocabulary import address as addressed
 
 
-def check_declaration() -> ResourceResult:
+def check_declaration(session: Session) -> ResourceResult:
     """Validate `packages.yml` against the manifests and what can install them.
 
     An Issue rather than drift whatever it finds, and first in the walk: a machine
     checked against an invalid declaration produces a verdict that means nothing.
+    Validated against the Session's catalog, which the walk goes on to read.
     """
-    findings = validate.declaration()
+    findings = validate.declaration(session.repo, catalog=lambda: session.catalog)
     return declaration_row(findings, validate.errors(findings))
 
 
@@ -410,13 +411,9 @@ class Surveyed:
 
 def survey(
     lens: Lens,
-    skip: frozenset[str] = frozenset(),
-    machine: str | None = None,
+    skip: frozenset[str],
+    session: Session,
     *,
-    refresh: bool = False,
-    owner: str | None = None,
-    entries: frozenset[str] = frozenset(),
-    offline: bool = False,
     announce_bundle: bool = True,
     report: Callable[[ResourceResult], None] | None = None,
 ) -> Surveyed:
@@ -425,15 +422,16 @@ def survey(
     A skipped address is absent rather than a fourth verdict: inventing a row would
     put something in `--json` that no checker produced.
 
-    `owner` and `entries` go through the same `narrowed` `apply_machine` does,
-    refusals included — a rehearsal walking a scope the write refuses rehearses a
-    run that never happens.
+    The caller's Session, so the manifest and catalog it already read are the ones
+    walked. The session's `owner` and `entries` go through the same `narrowed`
+    `apply_machine` does, refusals included — a rehearsal walking a scope the write
+    refuses rehearses a run that never happens.
 
     **Reported a resource at a time, not once at the end**, because the walk is a
     generator and materializing it makes a slow resource look like a hung one.
 
-    `offline` takes blocked items from the staged bundle and never stages one.
-    `Session.resolve` says when it drops `refresh`.
+    An offline session takes blocked items from the staged bundle and never stages
+    one. `Session.resolve` says when it drops `refresh`.
     """
     # `announce_bundle` is off for a caller that is not rehearsing an install.
     # `status show` walks offline to get versions rather than to install anything,
@@ -442,8 +440,7 @@ def survey(
     # away from the next real step, in the state that is the first turn of the
     # loop. Not gated on `report is not None`: `plan --offline --json` and
     # `check --offline --json` both pass None and both genuinely install from it.
-    session = Session.resolve(machine, owner, entries=entries, offline=offline, refresh=refresh)
-    if offline and announce_bundle:
+    if session.offline and announce_bundle:
         report_bundle(offline_bundle.describe(), session.machine_name)
     selection = narrowed(engine.Selection.excluding(skip), session)
 
@@ -454,7 +451,7 @@ def survey(
         if report is not None:
             report(result)
 
-    for row in machines_row(skip) if lens is Lens.CHECK else []:
+    for row in machines_row(skip, session) if lens is Lens.CHECK else []:
         keep(row)
 
     collected: list[Event] = []
@@ -500,14 +497,14 @@ def fold_walk(events: Iterable[Event], lens: Lens) -> Iterator[ResourceResult]:
         yield fold(measuring, lens)[0]
 
 
-def machines_row(skip: frozenset[str]) -> list[ResourceResult]:
+def machines_row(skip: frozenset[str], session: Session) -> list[ResourceResult]:
     """The `machines` verdict, unless it was skipped.
 
     `check`'s and never `plan`'s: an invalid `packages.yml` is something *wrong*,
     and a plan refusing because a manifest names a retired tool would answer a
     question nobody asked.
     """
-    return [] if 'machines' in skip else [check_declaration()]
+    return [] if 'machines' in skip else [check_declaration(session)]
 
 
 def verdict_line(results: Sequence[ResourceResult], lens: Lens) -> str:

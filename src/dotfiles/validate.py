@@ -70,25 +70,30 @@ class Finding:
         return {'section': self.section, 'severity': str(self.severity), 'message': self.message}
 
 
-def declaration(repo: Path | None = None) -> tuple[Finding, ...]:
+def declaration(repo: Path | None = None, *, catalog: Callable[[], catalogs.Catalog] | None = None) -> tuple[Finding, ...]:
     """Every finding, in the order a reader should act on them.
 
     A catalog that will not load short-circuits the rest, and that is the same
     rule the walk applies to a machine: everything downstream is measured
     *against* the catalog, so findings derived from a file that could not be
     parsed would describe a declaration nobody has.
+
+    `catalog` hands over a catalog the caller already loads, such as a Session's,
+    so one run parses `packages.yml` once. It may raise `CatalogError` as loading
+    from disk does.
     """
     root = repo or paths.REPO_ROOT
     try:
-        declared = catalogs.load(root / 'install' / 'packages.yml')
+        declared = catalog() if catalog else catalogs.load(root / 'install' / 'packages.yml')
     except catalogs.CatalogError as refused:
         return tuple(Finding(issue.section, Severity.ERROR, issue.message) for issue in refused.issues)
 
     findings: list[Finding] = []
     manifests: dict[str, machines.Machine] = {}
+    flag_data = machines.flags_declared(root)
     for name in machines.names(root):
         try:
-            manifests[name] = machines.load(name, root)
+            manifests[name] = machines.load(name, root, flag_data=flag_data)
         except machines.MachineError as refused:
             findings.extend(Finding('manifest', Severity.ERROR, f'{name}: {issue.message}') for issue in refused.issues)
 
