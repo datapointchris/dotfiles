@@ -78,7 +78,7 @@ def composed(machine: str | None) -> Composed:
     is what the gate refuses — so an unrooted document refuses itself. A builder
     wants the version rather than which home it sat in, so nothing is lost.
     """
-    session = Session.resolve(machine)
+    session = Session.resolve(machine, offline=True)
     named = session.machine_name
     withheld = frozenset(vocabulary.RESOURCES) - frozenset(publishing.PUBLISHABLE)
     # No run record, as in the resource-scoped read doors in `commands/resources.py`.
@@ -90,7 +90,7 @@ def composed(machine: str | None) -> Composed:
     # each tool. The online lens resolves every release against GitHub first, and
     # on a firewalled box those lookups fail and the rows a builder diffs against
     # vanish.
-    walked = reconcile.survey(Lens.PLAN, withheld, machine, offline=True, announce_bundle=False, report=None)
+    walked = reconcile.survey(Lens.PLAN, withheld, session, announce_bundle=False, report=None)
     trust = session.machine.coordinates.network_trust
     composition = document(walked.results, named, began, verb='plan', written_by=publishing.discriminator(trust))
     return Composed(publishing.rooted(composition, str(Path.home())), tuple(walked.results), named, trust)

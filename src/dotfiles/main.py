@@ -244,20 +244,12 @@ def plan(
         banner.show()
     refreshing = commands.currency(refresh, offline=offline)
     skipped = skipped_addresses(skip)
-    named = Session.resolve(machine).machine_name
+    session = Session.resolve(machine, owner, entries=frozenset(entry or ()), offline=offline, refresh=refreshing)
+    named = session.machine_name
     identity = runs.begin(named, 'plan')
     sinks.open_log(identity)
     lens = Lens.PLAN
-    walked = reconcile.survey(
-        lens,
-        skipped,
-        machine,
-        refresh=refreshing,
-        owner=owner,
-        entries=frozenset(entry or ()),
-        offline=offline,
-        report=None if as_json else answered,
-    )
+    walked = reconcile.survey(lens, skipped, session, report=None if as_json else answered)
     results = walked.results
     # `refresh` beside `offline` and for its reason: both decide how a row is read
     # back, and a record omitting one cannot be read. It is the flag separating a
@@ -322,12 +314,13 @@ def check(
         banner.show()
     refreshing = commands.currency(refresh, offline=offline)
     skipped = skipped_addresses(skip)
-    checked_machine = Session.resolve(machine).machine_name
+    session = Session.resolve(machine, offline=offline, refresh=refreshing)
+    checked_machine = session.machine_name
     identity = runs.begin(checked_machine, 'check')
     when = identity.started
     sinks.open_log(identity)
     lens = Lens.CHECK
-    walked = reconcile.survey(lens, skipped, machine, refresh=refreshing, offline=offline, report=None if as_json else answered)
+    walked = reconcile.survey(lens, skipped, session, report=None if as_json else answered)
     results = walked.results
     # `refresh` for the reason `plan` records it, and more sharply: this is the verb
     # the timer runs, so these are the records the drift series is made of.
