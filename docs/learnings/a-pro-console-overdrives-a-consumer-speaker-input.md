@@ -22,8 +22,11 @@ The fix is a fixed -18 dB on the desktop feed.
 `configs/os/linux/.config/pipewire/pipewire.conf.d/50-desktop-audio-to-bigsix-stereo-channel.conf`
 makes the "BiG SiX Stereo 5/6" sink a filter chain with a gain of 0.125. At 100% a full-scale peak
 leaves at -18 dBFS, about +6 dBu, under the speakers' input with every fader at 0. The whole desktop
-slider is clean, and each 1% step at full loudness is 0.26 dB rather than 0.53 dB at 50%. Set the
-speakers' knob once, to the loudest wanted at 100%.
+slider is clean, and each 1% step at full loudness is 0.26 dB rather than 0.53 dB at 50%.
+
+Plug the speakers into MAIN MONITOR rather than MAIN, and run the Monitor Level knob at 11, its unity
+point. The cut leaves no spare level, so the music turns quiet below 11. Set the speakers' knob
+once, to the loudest wanted at 100%, and use the desktop volume from there.
 
 The sink feeds AUX4 and AUX5, USB returns 5/6, which reach the first stereo channel before its Trim.
 The music shows on that channel's stereo meter and runs through its EQ, balance and fader into the
