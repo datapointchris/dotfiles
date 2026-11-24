@@ -160,7 +160,7 @@ direction is deliberate: everything unmatched is LOGIC, because a logic string
 wrongly marked rendering vanishes from the score with nothing to notice it, while
 a rendering string wrongly marked logic surfaces as a survivor a person corrects.
 
-**A mutation operator is a branch in `planter._mutation` and a row in
-`OPERATORS`.** Anything the harness will not plant is still enumerated, counted
+**A mutation operator is a branch in `planter.mutation` and a row in
+`OPERATORS` in `test_mutation_harness.py`.** Anything the harness will not plant is still enumerated, counted
 and given a reason — the first prototype dropped strings of forty characters or
 more without saying so, which silently excluded every long logic string.

@@ -74,7 +74,7 @@ ERROR Cargo errored! ExitStatus(unix_wait_status(25856))
 
 **Read past the last four lines.** The refusal names `--force`, which reads as a
 flag somebody forgot, and the two hosts that timed out are ten lines above it.
-`providers/cargo._from_binstall` handles this and records why.
+`providers/cargo.from_binstall` handles this and records why.
 
 ## Key Learnings
 
