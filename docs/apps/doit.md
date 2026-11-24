@@ -41,6 +41,20 @@ already has `doit` keeps it until `uv tool uninstall doit` runs there.
 `dotfiles check` names such a tool with that command, because its receipt names an index or owner
 the box's other tools install from.
 
+## The `doit` command is a Go release, and the uv tool supplies `doit-python`
+
+The `doit` on `PATH` is a Go binary from the repo's `cli/` releases, installed by a
+`github_releases` row. It runs the verbs it has ported, and execs `doit-python` with the same
+arguments for every other verb. `doit-python` is the Python package's script, which the `doit` uv
+tool still installs. So `personal-desk-clis` names `doit` under both `github_releases` and
+`uv_tools`, and `dotfiles packages apply --package doit` selects both rows. Without the uv tool, a
+verb only Python runs exits 1, saying `doit-python` is not installed.
+
+The release stage applies before the uv stage. On a box whose uv receipt still lists a `doit`
+script, the uv upgrade removes that path after the release stage has placed the Go binary there. A
+second apply restores the binary, and a third changes nothing. Once the receipt lists only
+`doit-python`, one apply converges.
+
 ## `register.yml` is config, and config stays out of the repo
 
 `doit` reads and writes through its service, which holds the register, the pursuits, the sources and
