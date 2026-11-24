@@ -535,6 +535,7 @@ ASSETS: dict[str, Callable[[str, Target], ReleaseArtifact]] = {
     'alloy': alloy,
     'asl-language-server': asl_language_server,
     'atuin': atuin,
+    'doit': go_release_cli('doit'),
     'duckdb': duckdb,
     'duf': duf,
     'fzf': fzf,

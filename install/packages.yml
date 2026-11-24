@@ -1177,6 +1177,12 @@ github_releases:
     description: Work tracker built for coding agents
     tags: [cli, personal]
 
+  - name: doit
+    repo: datapointchris/doit
+    release_tag_prefix: "cli/"
+    description: Runs its ported verbs in Go and hands every other verb to doit-python
+    tags: [cli, personal]
+
   - name: tuidrive
     repo: datapointchris/tuidrive
     description: Drive a terminal program's real binary on a pty, wait on its screen and compare frames as text

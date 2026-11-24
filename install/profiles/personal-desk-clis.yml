@@ -6,6 +6,7 @@ go_tools:
   - doit-tui
 
 github_releases:
+  - doit
   - learning
   - nomad
   - meso
