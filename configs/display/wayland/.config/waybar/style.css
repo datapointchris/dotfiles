@@ -105,7 +105,19 @@ window#waybar {
 }
 
 /* Desk nudge. The class is the watch's phase, or stopped where no watch has ticked lately.
-   A ready nudge stands out, and a clock that is not counting is dim. */
+   A ready nudge flashes, because the pill and a chime are all a firing shows. A clock that is
+   not counting is dim. */
+@keyframes desk-nudge-flash {
+    from {
+        background: @bg-highlight;
+        color: @yellow;
+    }
+    to {
+        background: @yellow;
+        color: @bg;
+    }
+}
+
 #custom-doit-desk-nudge {
     padding: 0 10px;
     margin: 6px 2px;
@@ -114,9 +126,12 @@ window#waybar {
     color: @fg;
 }
 
-#custom-doit-desk-nudge.firing,
-#custom-doit-desk-nudge.ready {
+#custom-doit-desk-nudge.firing {
     color: @yellow;
+}
+
+#custom-doit-desk-nudge.ready {
+    animation: desk-nudge-flash 0.8s ease-in-out infinite alternate;
 }
 
 #custom-doit-desk-nudge.paused,
