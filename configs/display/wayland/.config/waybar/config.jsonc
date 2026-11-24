@@ -114,7 +114,7 @@
         "return-type": "json",
         "interval": 15,
         "tooltip": false,
-        "on-click": "~/.config/waybar/doit-desk-nudge-panel.sh"
+        "on-click": "~/.config/waybar/doit-tui-window.sh"
     },
 
     "custom/spacer": {

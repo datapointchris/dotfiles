@@ -66,6 +66,18 @@ hl.window_rule({
   dim_around = true,
 })
 
+-- The board a click on the desk nudge pill opens, raised the same way as the capture note.
+hl.window_rule({
+  name = 'doit-tui-window',
+  match = { class = '^(doit\\.tui)$' },
+  float = true,
+  center = true,
+  size = 'monitor_w*0.5 monitor_h*0.6',
+  border_size = 6,
+  border_color = { colors = { 'rgba(ffffffcc)', 'rgba(000000cc)' }, angle = 45 },
+  dim_around = true,
+})
+
 -- Rofi already floats; this keeps keyboard focus on it
 hl.window_rule({
   name = 'rofi',

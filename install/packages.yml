@@ -1933,6 +1933,10 @@ go_tools:
     description: Markdown on a full-screen reader with search and heading jumps
     supersedes: ['release:glow']
 
+  - name: doit-tui
+    package: github.com/datapointchris/doit/cli/cmd/doit-tui
+    description: doit's screens in the terminal, where a click or a key completes a row
+
   - name: forge
     package: github.com/datapointchris/forge
     github_repo: datapointchris/forge
