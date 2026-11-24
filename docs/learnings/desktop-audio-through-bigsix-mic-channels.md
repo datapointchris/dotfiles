@@ -25,6 +25,11 @@ reach the first stereo channel before its Trim. The music then shows on that cha
 and runs through its EQ, balance and fader into the main bus and its G-Series bus compressor. On the
 console, press the USB switch at the top of stereo channel 5/6 and set its Trim to the unity detent.
 
+The sink is a filter chain with a fixed -18 dB, so 100% on the desktop sends a full-scale peak out
+at -18 dBFS, about +6 dBu. That stays under the speakers' RCA input, which distorted from about
++8 dBu, with the console at its unity marks. The whole desktop slider is then clean, and the
+speakers' own volume stays high and fixed.
+
 Make the new sink the default, and pin the multichannel sink at 100% so the new sink's volume is the
 only software level:
 
@@ -34,8 +39,8 @@ pactl set-sink-volume alsa_output.usb-Solid_State_Logic_BiG_SiX-00.multichannel-
 ```
 
 WirePlumber keeps both in `~/.local/state/wireplumber/`, which nothing here deploys, so a rebuilt
-machine runs them again. The desktop volume now sets how hard the bus compressor works, so set it
-once and take loudness from the fader, the monitor level or the speakers.
+machine runs them again. A fader above 0 still adds gain ahead of the speakers' input, and so does
+any other source summed onto the main bus.
 
 ## Key Learnings
 
@@ -47,9 +52,11 @@ once and take loudness from the fader, the monitor level or the speakers.
   one stereo unit across the main mix.
 - The converters are aligned so 0 dBFS = +24 dBu. The channel meter's top LED is +24 dBu, and the
   strip clips at +27 dBu. The meter reads after EQ and dynamics, before the fader.
-- The loopback leaves out `node.dont-fallback`. With it, WirePlumber never relinks the stream once
-  the console disappears, so the output stays silent after a power cycle until PipeWire restarts.
-  Without it, the stream falls back to another output while the console is off and returns when it
-  is on.
+- The playback side leaves out `node.dont-fallback`. With it, WirePlumber never relinks the stream
+  once the console disappears, so the output stays silent after a power cycle until PipeWire
+  restarts. Without it, the stream falls back to another output while the console is off and returns
+  when it is on.
+- The `mixer` plugin has eight inputs, so the graph names `pad:In 1` and `pad:Out` itself. That makes
+  a one-in, one-out graph, which filter-chain copies once per stereo channel.
 - The same console's hidden USB master volume:
   [A USB Interface Keeps Its Own Master Volume](a-usb-interface-keeps-its-own-master-volume.md).
