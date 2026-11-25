@@ -229,6 +229,7 @@ required:
       - configs/trust/fleet/.config/fleet/config.toml.tmpl
       - configs/trust/fleet/.config/homelab/config.toml.tmpl
       - configs/trust/fleet/.config/ifiles/config.toml.tmpl
+      - configs/trust/fleet/.config/ingestion/config.toml.tmpl
       - configs/trust/fleet/.config/learning/config.toml.tmpl
       - configs/trust/fleet/.config/life/config.toml.tmpl
       - configs/trust/fleet/.config/meso/config.toml.tmpl
@@ -248,6 +249,7 @@ required:
     consumers:
       - configs/trust/fleet/.config/fleet/config.toml.tmpl
       - configs/trust/fleet/.config/homelab/config.toml.tmpl
+      - configs/trust/fleet/.config/ingestion/config.toml.tmpl
       - configs/trust/fleet/.config/learning/config.toml.tmpl
       - configs/trust/fleet/.config/life/config.toml.tmpl
       - configs/trust/fleet/.config/meso/config.toml.tmpl

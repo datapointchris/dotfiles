@@ -5,6 +5,7 @@ profiles: [fleet-run-image-clis]
 
 go_tools:
   - fleet
+  - ingestion
 
 git_uv_tools:
   - homelab

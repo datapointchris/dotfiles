@@ -1451,6 +1451,17 @@ cargo_packages:
     checksum: unpublished
     tags: [cli, development]
 
+  # YARA-X's CLI. ingestion's scan stage runs it over every item, and its tests
+  # that do are built with the `yr` tag. The crate is `yara-x-cli`; each release
+  # tarball holds `yr` alone at its root.
+  - name: yara-x-cli
+    command: yr
+    description: YARA-X rule scanner, which ingestion's scan stage runs
+    github_repo: VirusTotal/yara-x
+    binary_pattern: "yara-x-{version}-{target}.tar.gz"
+    checksum: unpublished
+    tags: [cli, security]
+
 
 # ================================================================
 # WINGET PACKAGES (Windows)
@@ -1954,6 +1965,12 @@ go_tools:
     github_repo: datapointchris/fleet
     binary_pattern: "fleet_{version_num}_{os}_{go_arch}.tar.gz"
     description: Reports across the whole repo portfolio, including every open PR
+
+  - name: ingestion
+    package: github.com/datapointchris/ingestion
+    github_repo: datapointchris/ingestion
+    binary_pattern: "ingestion_{version_num}_{os}_{go_arch}.tar.gz"
+    description: Every outside source's connectors, items and their gates, from the ingestion service
 
   - name: helpnav
     package: github.com/datapointchris/helpnav
