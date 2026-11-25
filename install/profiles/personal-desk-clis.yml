@@ -3,7 +3,6 @@
 
 go_tools:
   - helpnav
-  - doit-tui
 
 github_releases:
   - doit
