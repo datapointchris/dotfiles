@@ -123,6 +123,14 @@ the repo the declaration names is drift `plan` reports. npm and PyPI decide what
 latest means and upgrade in bulk, so asking per package is asking their own
 question back.
 
+**An npm row naming a `lockfile` is measured against that lock instead.** `npm
+install -g` pins the top package and resolves every dependency fresh on each
+machine. A tool that runs over personal files then runs an uncommitted tree. A locked row installs into `~/.local/share/npm-locked/<name>/` with
+`npm ci --ignore-scripts`, and links its command into `~/.local/bin`. The install
+writes the lock's sha256 beside the tree once `npm ci` succeeds. A row whose
+committed lock no longer matches that digest reads `stale`, so a bump is one
+commit to the lock and the next apply installs it.
+
 **A uv tool naming an index is measured against that index.** The index is one
 these tools publish to, so no registry above it decides when they move. Its
 project page lists every file with its version, and the newest final release is

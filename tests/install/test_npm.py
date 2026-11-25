@@ -11,13 +11,24 @@ business and what this module decides is the argv and the environment.
 
 from __future__ import annotations
 
+import dataclasses as dc
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from dotfiles import catalog
+from dotfiles import effects
+from dotfiles import evidence as ev
+from dotfiles.effects import Completed
+from dotfiles.plan import DesiredItem
+from dotfiles.plan import Precondition
+from dotfiles.plan import Reason
+from dotfiles.plan import Stage
 from dotfiles.providers import Kind
 from dotfiles.providers import npm
+from dotfiles.registry import BY_NAME
+from dotfiles.resources import Verdict
 
 TAPLO = catalog.NpmGlobal.from_mapping({'name': '@taplo/cli', 'command': 'taplo'})
 
@@ -107,6 +118,46 @@ def test_offline_still_tries_the_registry(home, registry) -> None:
 
     assert npm.install(TAPLO, offline=True).ok
     assert reached.calls[0] == ('npm', 'install', '-g', '@taplo/cli')
+
+
+def test_a_locked_entry_runs_npm_ci_once_while_its_lock_is_unchanged(home, registry, tmp_path, monkeypatch) -> None:
+    """Each apply measures, then installs what does not match, so the second apply finds the first one's tree."""
+    lockfile_dir = tmp_path / 'npm-lockfiles' / 'mcp-excalidraw-server'
+    lockfile_dir.mkdir(parents=True)
+    (lockfile_dir / 'package.json').write_text('{}')
+    (lockfile_dir / 'package-lock.json').write_text('{"lockfileVersion": 3}')
+    declared = {'name': 'mcp-excalidraw-server', 'command': 'excalidraw-canvas', 'lockfile': 'npm-lockfiles/mcp-excalidraw-server'}
+    entry = dc.replace(catalog.NpmGlobal.from_mapping(declared), lockfile_dir=lockfile_dir)
+    item = DesiredItem(
+        section='npm_globals',
+        provider='npm',
+        resource='packages',
+        stage=Stage.NODE_TOOLS,
+        name=entry.name,
+        executable=entry.executable,
+        evidence_path='',
+        precondition=Precondition.NONE,
+        entry=entry,
+        reason=Reason('npm_globals', 'test'),
+    )
+    reached = registry()
+
+    def npm_ci(command: Any, **kwargs: Any) -> Completed:
+        commands = Path(command[-1]) / 'node_modules' / '.bin'
+        commands.mkdir(parents=True, exist_ok=True)
+        (commands / 'excalidraw-canvas').touch()
+        return reached(command, **kwargs)
+
+    monkeypatch.setattr(effects, 'run', npm_ci)
+
+    measured = []
+    for _ in range(2):
+        measured.append(BY_NAME['npm'].evidence(item, ev.Inventories()).verdict)
+        if measured[-1] is not Verdict.MATCHED:
+            assert npm.install(entry, offline=False).ok
+
+    assert measured == [Verdict.MISSING, Verdict.MATCHED]
+    assert reached.calls == [('npm', 'ci', '--ignore-scripts', '--prefix', str(home / npm.LOCKED / 'mcp-excalidraw-server'))]
 
 
 def test_an_offline_failure_says_there_is_nothing_to_fall_back_on(home, registry) -> None:

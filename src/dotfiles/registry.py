@@ -534,12 +534,18 @@ class NpmProvider(CatalogProvider):
     upgrades every global in one call and the registry owns what latest means, so
     asking per package whether it is behind is asking a question npm already
     answers for itself — which is what `resources/packages.CURRENCY` says.
+
+    A row naming a lockfile has no currency either. Its lock is the version, so
+    a lock that moved reads `STALE` from `measure`.
     """
 
     def hosts(self, item: DesiredItem, target: coordinates.Target) -> routing.ItemHosts:
         return routing.ItemHosts(download=frozenset({routing.NPM_REGISTRY}))
 
     def measure(self, item: DesiredItem, installed: ev.Inventory) -> ev.Evidence:
+        entry = item.entry
+        if isinstance(entry, catalogs.NpmGlobal) and entry.lockfile_dir is not None:
+            return ev.by_npm_lock(item, entry, entry.lockfile_dir)
         return ev.in_provider_dir(item, npm.prefix() / 'bin')
 
     def install(self, session: MachineContext, change: Change, item: DesiredItem, privilege: Escalates) -> Outcome:

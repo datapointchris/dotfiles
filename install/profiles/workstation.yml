@@ -48,6 +48,7 @@ npm_globals:
   - prettier
   - markdownlint-cli
   - sass
+  - mcp-excalidraw-server
 
 uv_tools:
   - ruff

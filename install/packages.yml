@@ -445,6 +445,12 @@ system_packages:
     brew: chafa
     description: Image to ASCII converter (used by Yazi for image preview)
 
+  - name: librsvg
+    pacman: librsvg
+    brew: librsvg
+    command: rsvg-convert
+    description: SVG rendering library (provides rsvg-convert, which renders a drawing's SVG to PNG)
+
   # Note: resvg removed - now embedded in Yazi as a Rust crate (not needed separately)
 
   # Archive Tools
@@ -1607,8 +1613,15 @@ yazi_plugins:
 # NPM GLOBAL PACKAGES
 # ================================================================
 # Installed via: npm install -g <package>
+# A row naming a `lockfile` installs with: npm ci --ignore-scripts --prefix ~/.local/share/npm-locked/<name>
 # Requires the Node.js system package (see system_packages) to provide npm
 # These are system-wide tools, not project dependencies
+#
+# `npm install -g` pins only the top package, and npm resolves every dependency
+# fresh on each machine. A tool that runs as the user over personal files names a
+# `lockfile` directory instead, relative to this file, holding a package.json and
+# the package-lock.json npm wrote for it. Apply installs again when that lock
+# changes, so a bump is one commit to the lock.
 
 npm_globals:
   # Language Servers
@@ -1655,6 +1668,15 @@ npm_globals:
     # offline-cache path, and that download fails on a firewalled machine (the WSL
     # box). The github_releases provider integrates with the offline bundle, so
     # it works online AND offline. Do not re-migrate to npm.
+
+  # Drawing
+  drawing:
+    # The lock also holds elkjs, which a graph layout script loads from the same
+    # node_modules by resolving excalidraw-canvas's real path.
+    - name: mcp-excalidraw-server
+      command: excalidraw-canvas
+      lockfile: npm-lockfiles/mcp-excalidraw-server
+      description: Excalidraw canvas CLI that reads and writes scenes, locked with elkjs for graph layout
 
 # ================================================================
 # UV TOOLS (Python)
