@@ -32,6 +32,7 @@ from pathlib import Path
 
 from dotfiles import crates_io
 from dotfiles import github_release
+from dotfiles import go_proxy
 from dotfiles import paths
 from dotfiles import python_index
 from dotfiles import uv_lock
@@ -104,8 +105,8 @@ class Cached:
 @dc.dataclass(frozen=True, slots=True)
 class Wanted:
     """A repo to ask about, the tag prefix that narrows the answer, and which
-    endpoint holds it — or a vendor's own file, a crate or a package index page,
-    for a tool whose repo is not what its installer reads."""
+    endpoint holds it — or a vendor's own file, a crate, a package index page or
+    a Go package, for a tool whose repo is not what its installer reads."""
 
     repo: str
     tag_prefix: str = ''
@@ -144,6 +145,9 @@ class Wanted:
     python_project: str = ''
     """A project's page on a Python package index, asked instead of any repo, for a uv tool that installs from one."""
 
+    go_package: str = ''
+    """A Go package path, asked of the module proxy instead of any repo, for a Go tool that names no release."""
+
     ceiling: str = ''
     """A declared `max_version`, so the answer is the newest release at or below it rather than the newest."""
 
@@ -162,6 +166,8 @@ class Wanted:
             return self.python_project
         if self.crate:
             return crates_io.index_url(self.crate)
+        if self.go_package:
+            return f'{go_proxy.PROXY_URL}/{self.go_package}'
         key = f'{self.repo}#{self.tag_prefix}' if self.tag_prefix else self.repo
         return f'{key}<={self.ceiling}' if self.ceiling else key
 
@@ -303,6 +309,8 @@ def newest(wanted: Wanted, previous: Cached | None = None) -> github_release.New
         return crates_io.newest_version(wanted.crate, etag)
     if wanted.python_project:
         return python_index.newest_version(wanted.python_project, etag)
+    if wanted.go_package:
+        return go_proxy.newest_version(wanted.go_package)
     if wanted.from_tags:
         return github_release.newest_tag(wanted.repo, wanted.tag_prefix, etag)
     return github_release.newest_version(wanted.repo, wanted.tag_prefix, etag, wanted.ceiling)

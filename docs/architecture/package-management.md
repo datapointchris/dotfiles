@@ -143,6 +143,12 @@ the upstream the check compares against. A row at a tag ahead of the crate reads
 as stale on every apply when the binary prints the crate's version, as sd's
 `v1.1.0` asset prints `sd 1.0.0`.
 
+**A Go tool that names no release is measured against the module proxy.** `go
+install @latest` resolves through the proxy, so its highest listed release is what
+`apply` installs. A Go tool that names a `github_repo` stays measured against that
+release, because its asset is what an offline bundle stages. No bundle stages a
+tool without one, so an offline run leaves it unmeasured rather than guessing.
+
 An entry that cannot be asked declares so rather than being probed and hoped for.
 Which clauses have to hold, and the GUI whose probe blocked three `dotfiles plan`
 runs on its own event loop, are `has_currency` in

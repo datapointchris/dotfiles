@@ -69,9 +69,10 @@ CURRENCY = (catalog.GithubRelease, catalog.GoTool, catalog.CargoPackage, catalog
 Each installs from an upstream this declaration names, so "what should be
 installed" is decided there rather than by anyone else's schedule. For most that
 is a repo's tag. A cargo package is the exception, measured against crates.io for
-the reason `crates_io` records. `go install @latest` and `cargo binstall` *are*
-the upgrade, because nothing sits underneath a Go tool or a Rust CLI deciding
-when it moves.
+the reason `crates_io` records. A Go tool that names no release is the other. It
+is measured against the module proxy, which is where `go install @latest`
+resolves. `go install @latest` and `cargo binstall` *are* the upgrade, because
+nothing sits underneath a Go tool or a Rust CLI deciding when it moves.
 
 A uv tool is asked only where it names an index. That index is one this
 declaration publishes to, so nothing else upgrades what it serves. A uv tool from
@@ -571,23 +572,24 @@ def has_currency(item: DesiredItem, *, offline: bool) -> bool:
     """Whether this item can be compared against an upstream at all.
 
     Every clause has to hold, and an entry failing one is not a finding — it is a
-    question nobody can answer, and an UNKNOWN row on every plan is noise. A Go
-    tool declared by module path alone names no repo to consult. A binary with no
-    version flag names one and still cannot be asked: `triangle version` runs a
-    triangulation, which is what `reports_version` exists to declare.
-    Something that installs no binary is asked through its checkout instead, as
-    `checkout` says.
+    question nobody can answer, and an UNKNOWN row on every plan is noise. A
+    binary with no version flag names an upstream and still cannot be asked:
+    `triangle version` runs a triangulation, which is what `reports_version`
+    exists to declare. Something that installs no binary is asked through its
+    checkout instead, as `checkout` says.
 
     A vendor's version file is a question for an online run only. No bundle
     records what one said, and the script that would act on it downloads from
     that vendor's host. Offline, a present claude-code is left alone, which is
     what `custom._claude_code` does with it too. A package index page is the
-    same, because no bundle stages a Python tool.
+    same, because no bundle stages a Python tool. So is the module proxy, because
+    no bundle stages a Go tool that names no release.
     """
     if not (isinstance(item.entry, CURRENCY) and item.entry.reports_version and (item.executable or checkout(item))):
         return False
     wanted = wanted_release(item)
-    return bool(wanted.repo or wanted.crate) or (bool(wanted.version_file or wanted.python_project) and not offline)
+    online_only = wanted.version_file or wanted.python_project or wanted.go_package
+    return bool(wanted.repo or wanted.crate) or (bool(online_only) and not offline)
 
 
 PROBE_WORKERS = 8
@@ -700,7 +702,11 @@ def wanted_release(item: DesiredItem) -> releases.Wanted:
             ceiling=entry.max_version,
         )
     if isinstance(entry, catalog.GoTool):
-        return releases.Wanted(repo=entry.github_repo)
+        # A tool naming a release is held to it, because that release is what a
+        # bundle stages. One naming none is held to what `go install @latest` takes.
+        if entry.github_repo:
+            return releases.Wanted(repo=entry.github_repo)
+        return releases.Wanted(repo='', go_package=entry.package)
     if isinstance(entry, catalog.CargoPackage):
         return cargo.wanted(entry)
     if isinstance(entry, catalog.GitUvTool):
@@ -1100,9 +1106,11 @@ def behind(version: str, observed: Observed, item: DesiredItem) -> str:
 
 def newest_upstream(item: DesiredItem) -> str:
     """What an online figure is, named so a crate is not read against its repo's newer tag."""
-    crate = wanted_release(item).crate
-    if crate:
-        return f'the newest {crate} on crates.io'
+    wanted = wanted_release(item)
+    if wanted.crate:
+        return f'the newest {wanted.crate} on crates.io'
+    if wanted.go_package:
+        return f'the newest release on {routing.GO_PROXY}'
     if isinstance(item.entry, catalog.UvTool) and item.entry.index:
         return f'the newest {item.name} on the {item.entry.index} index'
     if isinstance(item.entry, catalog.GithubRelease) and item.entry.max_version:
@@ -1178,9 +1186,9 @@ def unmeasurable(item: DesiredItem, observed: Observed) -> str:
         return f'{because}, and the staged bundle carries no version for {item.name} to compare against'
     reason = 'not refreshed this run' if not observed.consulted_network else 'upstream did not answer'
     wanted = wanted_release(item)
-    if wanted.crate:
-        return f'no cached version from {wanted.key} within the TTL ({reason})'
-    return f'no cached release for {wanted.version_file or wanted.repo} within the TTL ({reason})'
+    if wanted.repo:
+        return f'no cached release for {wanted.repo} within the TTL ({reason})'
+    return f'no cached version from {wanted.key} within the TTL ({reason})'
 
 
 def never_bundled(item: DesiredItem) -> str:

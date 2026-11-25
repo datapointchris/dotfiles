@@ -7,9 +7,10 @@ import pytest
 
 from dotfiles import catalog
 from dotfiles import github_release
+from dotfiles import go_proxy
 from dotfiles import install_versions
 
-PROXY = install_versions.GO_PROXY_URL
+PROXY = go_proxy.PROXY_URL
 
 
 def gone(url: str, status: int) -> NoReturn:

@@ -37,6 +37,7 @@ from dotfiles import catalog
 from dotfiles import crates_io
 from dotfiles import engine
 from dotfiles import evidence as ev
+from dotfiles import go_proxy
 from dotfiles import providers
 from dotfiles import registry
 from dotfiles import releases
@@ -975,13 +976,24 @@ def test_a_missing_release_is_missing_rather_than_unmeasured(tmp_path: Path, fak
     assert [change.verdict for change in changes(live)] == [Verdict.MISSING]
 
 
-def test_a_registry_installed_tool_is_never_asked_about_currency(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
-    """apt and npm upgrade on their own schedule, and an entry naming no repo has
-    no upstream to ask. Either way it is a question nothing here owns."""
+@pytest.mark.parametrize(
+    ('installed', 'expected'),
+    [('v0.6.0', [('go/task', Verdict.STALE, '0.19.0 is the newest release on proxy.golang.org')]), ('v0.19.0', [])],
+    ids=['behind', 'current'],
+)
+def test_a_go_tool_naming_no_release_is_measured_against_the_module_proxy(
+    tmp_path: Path, fake_bin: Path, release_cache: Path, monkeypatch: pytest.MonkeyPatch, installed: str, expected: list
+) -> None:
+    """`go install @latest` is its upgrade, and the proxy is where that resolves.
+    Nothing else moves such a tool forward, so measured against nothing it stays
+    at its first install for good. The current case is also the default
+    `--reinstall` overrides: a tool that measures fine is not touched."""
     go_installed('task')
+    monkeypatch.setattr(gotool, 'module_version', lambda binary: installed)
+    cached(release_cache, {f'{go_proxy.PROXY_URL}/github.com/go-task/task/v3/cmd/task': '0.19.0'})
     live = session(tmp_path, GO_TOOL, DECLARES_TASK)
 
-    assert changes(live) == ()
+    assert [(change.item, change.verdict, change.detail) for change in changes(live)] == expected
 
 
 CARGO_CURRENCY = {'cargo_packages': [{'name': 'fd-find', 'command': 'fd', 'github_repo': 'sharkdp/fd'}]}
@@ -1211,14 +1223,6 @@ def test_a_reinstall_makes_an_installed_tool_actionable(tmp_path: Path, fake_bin
 
     assert [(change.item, change.verdict) for change in found] == [('go/task', Verdict.STALE)]
     assert found[0].actionable
-
-
-def test_an_installed_tool_is_left_alone_without_the_flag(tmp_path: Path, fake_bin: Path) -> None:
-    """The default, and the thing the flag exists to override: a tool that measures
-    fine is not touched."""
-    go_installed('task')
-
-    assert changes(session(tmp_path, GO_TOOL, DECLARES_TASK)) == ()
 
 
 def test_a_reinstall_reaches_what_currency_cannot_measure(tmp_path: Path, fake_bin: Path, release_cache: Path) -> None:
