@@ -43,7 +43,7 @@ Run that in a loop until a slow start is caught, since an intermittent stall wil
 
 Generated blocks are cached and keyed on the tool's binary mtime, so each is regenerated only after that tool is upgraded. Caching is not the same as not paying, though: a cached file still costs its whole size to source, and `ruff` and `uv` generate 668K and 516K of clap definitions. So a block that *can* be autoloaded is written to `$XDG_CACHE_HOME/zsh/functions/` as `_<tool>`, where compinit indexes it and zsh reads the body only when Tab asks. Everything else is sourced from `$XDG_CACHE_HOME/zsh/completions/`.
 
-What decides it is the generator's output, not the kind of thing it is. An autoloadable file has `#compdef` as its literal first line, and re-dispatches when `$funcstack[1]` is its own name — cobra and clap emit both, Typer emits neither, and doit emits only the first. Typer's leading blank line is the whole difference between a completion that works and one compinit silently skips.
+What decides it is the generator's output, not the kind of thing it is. An autoloadable file has `#compdef` as its literal first line, and re-dispatches when `$funcstack[1]` is its own name — cobra and clap emit both, and Typer emits neither. Typer's leading blank line is the whole difference between a completion that works and one compinit silently skips.
 
 Force a rebuild by deleting either directory, and the dump with them:
 

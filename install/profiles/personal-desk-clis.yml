@@ -15,7 +15,6 @@ custom_installers:
   - zmk
 
 uv_tools:
-  - doit
   - keymap-align
   - indy
   - logsift

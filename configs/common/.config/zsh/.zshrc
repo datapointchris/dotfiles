@@ -414,6 +414,7 @@ cache_completion learning learning completion zsh
 cache_completion meso meso completion zsh
 cache_completion nomad nomad completion zsh
 cache_completion slate slate completion zsh
+cache_completion doit doit shell completion zsh
 # ifiles and ypl complete names by calling their servers — remote paths, and
 # playlists — so each Tab there is a request rather than a lookup. The generated
 # script is static; the network call happens inside `<tool> __complete`.
@@ -423,7 +424,7 @@ cache_completion ypl ypl completion zsh
 # than calling howto, so Tab spawns nothing.
 cache_completion howto howto shell completion zsh
 
-# The Typer tools and doit are completions too, and they are sourced rather than
+# The Typer tools are completions too, and they are sourced rather than
 # autoloaded — which puts them below compinit, not here. See "SOURCED
 # COMPLETIONS" after compinit runs.
 
@@ -518,13 +519,6 @@ cache_eval indy env _INDY_COMPLETE=source_zsh indy
 cache_eval psyche env _PSYCHE_COMPLETE=source_zsh psyche
 cache_eval syncer env _SYNCER_COMPLETE=source_zsh syncer
 cache_eval safekeep env _SAFEKEEP_COMPLETE=source_zsh safekeep
-
-# doit writes its own rather than using Typer's generator, so that completing a
-# pursuit name reads doit's flat name cache instead of spawning Python on Tab.
-# It tags `#compdef` correctly and still fails the second half: a bare
-# `compdef _doit doit` with no re-dispatch. cobra and clap both emit the guard,
-# which is why every other tool here autoloads.
-cache_eval -b doit doit-completion doit shell completion zsh
 
 # ------------------------------------------------------------------ #
 # PROMPT

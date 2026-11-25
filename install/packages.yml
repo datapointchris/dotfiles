@@ -1183,11 +1183,15 @@ github_releases:
     description: Work tracker built for coding agents
     tags: [cli, personal]
 
+  # `supersedes` removes the doit uv tool, whose one script is `doit-python`, and
+  # `~/go/bin/doit-tui`. This binary runs every verb, `tui` included, so nothing
+  # calls either.
   - name: doit
     repo: datapointchris/doit
     release_tag_prefix: "cli/"
-    description: Runs its ported verbs in Go and hands every other verb to doit-python
+    description: What a person attends to now, and everything that decides it — the draw, the dashboard, the journal and the review
     tags: [cli, personal]
+    supersedes: ['uv:doit', 'go:doit-tui']
 
   - name: tuidrive
     repo: datapointchris/tuidrive
@@ -1770,11 +1774,6 @@ uv_tools:
       index: datapointchris
       repo: datapointchris/syncer
       description: Sync files and directories
-
-    - name: doit
-      index: datapointchris
-      repo: datapointchris/doit
-      description: What a person attends to now, and everything that decides it — the draw, the dashboard, the journal and the review
 
     - name: howto
       index: datapointchris

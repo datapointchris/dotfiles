@@ -43,7 +43,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 **External tools** (installed from their own repo or package index, not this one):
 
-- `doit` and the other `uv_tools` naming an `index`: Python apps installed with `uv tool install` from their owner's package index
+- `uv_tools` naming an `index`: Python apps installed with `uv tool install` from their owner's package index
 - `git_uv_tools`: Python apps from private repos, installed with `uv tool install` at their newest release tag, held to that tag's `uv.lock`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 

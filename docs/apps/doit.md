@@ -28,32 +28,25 @@ from it.
 
 ## A machine gets doit only if its manifest or a profile it takes names it
 
-Six symlinked scripts became one `uv_tools` install from the owner's package index, alongside
-`refcheck` and `safekeep` — category 4 in
+A symlinked app lands on every machine that gets `apps/` symlinks, while a declared package reaches
+only the machines whose manifest, or a profile it composes, names it — see
 [App Installation Patterns](../learnings/app-installation-patterns.md). That distinction is the one
-to carry. A symlinked app lands on every machine that gets `apps/` symlinks, while a uv tool reaches
-only the machines whose manifest, or a profile it composes, declares it.
+to carry.
 
 `personal-desk-clis` declares `doit`, because it serves one person's own desks. A box that takes
 `workstation` without `personal-desk` gets `howto` and no `doit`, and `wsl-work-workstation` is that
-box. `dotfiles apply` leaves alone a uv tool whose entry left a machine's profiles, so a box that
-already has `doit` keeps it until `uv tool uninstall doit` runs there.
-`dotfiles check` names such a tool with that command, because its receipt names an index or owner
-the box's other tools install from.
+box.
 
-## The `doit` command is a Go release, and the uv tool supplies `doit-python`
+## A desk installs one Go binary, which runs every verb
 
 The `doit` on `PATH` is a Go binary from the repo's `cli/` releases, installed by a
-`github_releases` row. It runs the verbs it has ported, and execs `doit-python` with the same
-arguments for every other verb. `doit-python` is the Python package's script, which the `doit` uv
-tool still installs. So `personal-desk-clis` names `doit` under both `github_releases` and
-`uv_tools`, and `dotfiles packages apply --package doit` selects both rows. Without the uv tool, a
-verb only Python runs exits 1, saying `doit-python` is not installed.
+`github_releases` row. It runs every verb, `tui` included, and its zsh completion autoloads like the
+other cobra tools'.
 
-The release stage applies before the uv stage. On a box whose uv receipt still lists a `doit`
-script, the uv upgrade removes that path after the release stage has placed the Go binary there. A
-second apply restores the binary, and a third changes nothing. Once the receipt lists only
-`doit-python`, one apply converges.
+The row's `supersedes` removes the Python package's uv tool and `~/go/bin/doit-tui` on a box that
+still has them, once the release is installed. `uv:doit` names the uv tool by its package. Its
+receipt lists only the `doit-python` script, so `uv tool uninstall doit` leaves the release's
+`doit` in place.
 
 ## `register.yml` is config, and config stays out of the repo
 
