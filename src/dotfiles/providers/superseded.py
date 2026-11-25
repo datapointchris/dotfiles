@@ -101,12 +101,16 @@ def remove(removal: Removal, privilege: Escalates) -> Result:
     """Take one superseded copy off the machine with the installer that put it there.
 
     Done once the copy is gone, whatever the installer exited with: brew exits 0
-    from an uninstall it refused.
+    from an uninstall it refused. A copy already gone is done without running it.
+    A stale entry plans its reinstall and this removal side by side, and the
+    reinstall removes the copy first.
 
     A Homebrew service is stopped first, because `brew uninstall` leaves its daemon
     running. The unit the entry declares is not: the entry is installed, so that unit
     supervises the replacement.
     """
+    if removal.path and not Path(removal.path).exists(follow_symlinks=False):
+        return Result(True, f'{removal.mechanism}: {removal.path} already gone', kind=Kind.UNCHANGED)
     syspkg.stop_service(removal.mechanism, removal.package, unit='')
     removed = uninstall(removal, privilege)
     if removed.ok and Path(removal.path).exists(follow_symlinks=False):

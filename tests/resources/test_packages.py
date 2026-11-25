@@ -1732,6 +1732,16 @@ def test_a_uv_row_names_a_tool_by_its_receipt_and_spares_the_entrys_executable(
     assert (superseded.argv(removal) if removal else None) == command
 
 
+def test_a_removal_whose_copy_the_reinstall_already_took_is_done(fake_bin: Path, tmp_path: Path, unprivileged: Privilege) -> None:
+    """A stale release plans its reinstall beside the removal its `supersedes`
+    names, and the reinstall removes the copy first. uv then refuses a second
+    uninstall with exit 2."""
+    executable(fake_bin, 'uv', '#!/bin/sh\necho "error: oldfrob is not installed" >&2\nexit 2\n')
+    removal = superseded.Removal('uv', 'uv tool uninstall oldfrob', 'oldfrob', path=str(tmp_path / 'oldfrob-python'))
+
+    assert superseded.remove(removal, unprivileged).ok
+
+
 @pytest.mark.parametrize(('removes', 'status'), [(True, OutcomeStatus.DONE), (False, OutcomeStatus.FAILED)], ids=['removed', 'refused'])
 def test_apply_removes_a_homebrew_copy_the_release_supersedes(
     tmp_path: Path,
