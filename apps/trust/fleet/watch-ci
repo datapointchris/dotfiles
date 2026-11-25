@@ -122,6 +122,14 @@ takes its verdict from there, again if that commit's run is replaced too. The he
 run validates the whole tree, so its verdict covers the commit. A run replaced this
 way counts for nothing and names the commit that replaced it.
 
+A release run can instead end green having left its release to a newer push, so an
+install after it finds the release before. `--until-branch-settles` follows the
+branch the commit was pushed to once its runs pass. It waits on the branch's head the
+same way, until a head's runs end with no newer push, and every run followed counts
+toward the verdict:
+
+    watch-ci --commit HEAD --wait --until-branch-settles && dotfiles packages apply --package <name>
+
 Exit 0 means every run counted concluded success, skipped or neutral, and 1 means one
 concluded anything else. Exit 2 is a usage error or a ref naming no commit. Exit 3 is
 no verdict: no run within --start-within, or runs still going at --timeout. Exit 4 is
@@ -1830,6 +1838,24 @@ class CommitWait:
                     )
             self.following = sha = newer
 
+    async def follow_branch(self, sha: str) -> Ending:
+        """The verdict once the branch the commit was pushed to stops moving, each newer head followed as the commit was."""
+        ending = await self.follow_replacements(sha)
+        branch = next((run['head_branch'] for run in self.seen.values() if run.get('event') == 'push' and run['head_sha'] == sha), None)
+        while ending.code == EXIT_PASSED and branch:
+            head = await self.commit_on_github(branch)
+            if head == self.following:
+                return ending
+            print(f'{time.strftime("%H:%M:%S")} {clean(branch)} moved to {head[:7]}, following it', file=sys.stderr, flush=True)
+            settled, self.following = self.following, head
+            newer = await self.follow_replacements(head)
+            if newer.conclusion == 'no_run_started':
+                # A push that starts no workflow releases nothing, so the head before it settled the branch.
+                self.following = settled
+                return ending
+            ending = newer
+        return ending
+
     def counted(self) -> list[Json]:
         return [run for run in self.seen.values() if run['id'] not in self.replaced_by]
 
@@ -1925,7 +1951,8 @@ class CommitWait:
         try:
             async with asyncio.timeout(self.args.timeout):
                 self.following = self.sha = self.sha or await self.commit_on_github(self.args.commit)
-                ending = await self.follow_replacements(self.sha)
+                follow = self.follow_branch if self.args.until_branch_settles else self.follow_replacements
+                ending = await follow(self.sha)
         except TimeoutError:
             ending = self.at_timeout()
         except NoAnswer as error:
@@ -2067,11 +2094,16 @@ def main() -> int:
         '--timeout', type=float, metavar='SECONDS', help='with --commit: exit 3 where runs are still going by then (default 3600)'
     )
     parser.add_argument('--json', action='store_true', help='with --commit: print one JSON object instead of lines')
+    parser.add_argument(
+        '--until-branch-settles',
+        action='store_true',
+        help="with --commit: once the commit's runs pass, follow its branch's head until no newer push lands",
+    )
     args = parser.parse_args()
     if args.commit is not None or args.wait:
         return commit_wait_command(parser, args)
-    if args.start_within is not None or args.timeout is not None or args.json:
-        parser.error('--start-within, --timeout and --json belong to --commit --wait')
+    if args.start_within is not None or args.timeout is not None or args.json or args.until_branch_settles:
+        parser.error('--start-within, --timeout, --json and --until-branch-settles belong to --commit --wait')
     args.interval = args.interval if args.interval is not None else 1
     args.keep = args.keep if args.keep is not None else 10
     owner, repos = registry(args.repo)
