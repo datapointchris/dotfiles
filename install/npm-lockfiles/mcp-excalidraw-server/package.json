@@ -1,0 +1,9 @@
+{
+  "name": "mcp-excalidraw-server-locked",
+  "private": true,
+  "description": "excalidraw-canvas and the elkjs it lays graphs out with, installed by npm ci from the lock beside this file",
+  "dependencies": {
+    "elkjs": "0.12.1",
+    "mcp-excalidraw-server": "2.2.0"
+  }
+}

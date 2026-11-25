@@ -772,9 +772,31 @@ class GoTool(Entry):
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
 class NpmGlobal(Entry):
+    """A package from the npm registry, installed globally unless it names a `lockfile`.
+
+    `npm install -g <name>@<version>` pins the top package and resolves every
+    dependency fresh on each machine. A row naming a lockfile installs the tree
+    that lock records instead, with `npm ci` into a directory of its own, so its
+    versions live in the lock rather than in `version`.
+    """
+
     section: ClassVar[str] = 'npm_globals'
     structure: ClassVar[Structure] = Structure.GROUPED
     honored_constraints: ClassVar[tuple[str, ...]] = ('version',)
+
+    lockfile: str = ''
+    """A directory holding a `package.json` and the `package-lock.json` npm wrote for it, relative to `packages.yml`."""
+
+    lockfile_dir: Path | None = dc.field(
+        default=None, metadata={RESOLVED_BY_LOAD: 'name the directory with lockfile, relative to packages.yml'}
+    )
+    """The directory `lockfile` names. `load` resolves it and refuses one missing either file."""
+
+    def problems(self) -> tuple[str, ...]:
+        found = list(Entry.problems(self))
+        if self.lockfile and self.version:
+            found.append(f'names both a version and the lockfile {self.lockfile!r}, and the lock is what holds the version')
+        return tuple(found)
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1456,6 +1478,8 @@ def load(path: Path | None = None, *, system: Path | None = None) -> Catalog:
     issues.extend(index_issues)
     entries[UvTool.section], unresolved = with_index_urls(entries[UvTool.section], indexes)
     issues.extend(unresolved)
+    entries[NpmGlobal.section], unlocked = with_lockfile_dirs(entries[NpmGlobal.section], source.parent)
+    issues.extend(unlocked)
 
     for file, raw in declared.items():
         known = set(SYSTEM_SECTIONS) if file == system_source else set(SECTIONS) | BARE_SECTIONS
@@ -1502,6 +1526,29 @@ def with_index_urls(rows: tuple[Entry, ...], indexes: Mapping[str, str]) -> tupl
                 )
             else:
                 row = dc.replace(row, index_url=indexes[row.index])
+        resolved.append(row)
+    return tuple(resolved), issues
+
+
+NPM_LOCK_FILES = ('package.json', 'package-lock.json')
+"""What `npm ci` reads from a locked `npm_globals` row's directory."""
+
+
+def with_lockfile_dirs(rows: tuple[Entry, ...], declared_in: Path) -> tuple[tuple[Entry, ...], list[DeclarationIssue]]:
+    """`npm_globals` with each `lockfile` resolved against the file declaring it, and a refusal for each directory short of a file."""
+    resolved: list[Entry] = []
+    issues: list[DeclarationIssue] = []
+    for row in rows:
+        if isinstance(row, NpmGlobal) and row.lockfile:
+            directory = (declared_in / row.lockfile).resolve()
+            if absent := [name for name in NPM_LOCK_FILES if not (directory / name).is_file()]:
+                issues.append(
+                    DeclarationIssue(
+                        NpmGlobal.section, f'{row.name} names the lockfile {row.lockfile!r}, which holds no {" or ".join(absent)}'
+                    )
+                )
+            else:
+                row = dc.replace(row, lockfile_dir=directory)
         resolved.append(row)
     return tuple(resolved), issues
 

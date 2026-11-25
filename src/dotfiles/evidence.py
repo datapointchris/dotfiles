@@ -39,8 +39,10 @@ from dotfiles.effects import Output
 from dotfiles.effects import run
 from dotfiles.plan import DesiredItem
 from dotfiles.plan import Preconditions
+from dotfiles.providers import bin_dir
 from dotfiles.providers import ghrelease
 from dotfiles.providers import gotool
+from dotfiles.providers import npm
 from dotfiles.providers import syspkg
 from dotfiles.resources import Blocker
 from dotfiles.resources import Verdict
@@ -334,6 +336,27 @@ def in_provider_dir(item: DesiredItem, directory: Path) -> Evidence:
     if elsewhere:
         return Evidence(Verdict.MISSING, f'{placed} does not exist; the {item.executable} on PATH is {elsewhere}')
     return Evidence(Verdict.MISSING, f'{placed} does not exist')
+
+
+def by_npm_lock(item: DesiredItem, entry: catalog.NpmGlobal, lockfile_dir: Path) -> Evidence:
+    """A locked npm row's command, linked out of its own tree and installed from the lock committed now.
+
+    `~/.local/bin` is shared, so a file there of that name proves nothing until it
+    resolves into the row's tree. A lock that moved since the install reads
+    `STALE`, which `apply` installs again.
+    """
+    link = bin_dir() / item.executable
+    tree = npm.locked_home(entry)
+    if not link.exists():
+        return Evidence(Verdict.MISSING, f'{link} does not exist')
+    if not link.resolve().is_relative_to(tree.resolve()):
+        return Evidence(Verdict.MISSING, f'{link} resolves to {link.resolve()}, outside {tree}')
+    committed = npm.lock_digest(lockfile_dir)
+    installed = npm.installed_lock(entry)
+    if installed != committed:
+        found = f'installed from lock {installed[:12]}' if installed else 'no install from a lock finished'
+        return Evidence(Verdict.STALE, f'{found}, and the committed lock is {committed[:12]}', binary=link)
+    return Evidence(Verdict.MATCHED, str(link), binary=link)
 
 
 def by_release(item: DesiredItem) -> Evidence:
