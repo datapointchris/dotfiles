@@ -1,0 +1,68 @@
+// The record files a project's devstats commit hooks write on this machine, one
+// directory a project. Nothing syncs this directory, so the glob names no host. Every
+// checkout and worktree of a project writes the same files, so a commit made in any
+// of them ships from here.
+//
+// A collector's line carries every test or function it read, and a pytest line has
+// passed 800 KiB, so each receiver takes lines up to 8 MiB rather than the 1 MiB
+// default that would split one.
+
+// Each pre-commit hook's result, post-commit collector's reading and commit, one a line.
+otelcol.receiver.filelog "devstats_events" {
+  include          = [string.format("%s/devstats/*/events.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+  max_log_size     = "8MiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      parse_to  = "attributes.record",
+      on_error  = "send_quiet",
+      timestamp = {parse_from = "attributes.record.timestamp", layout_type = "gotime", layout = "2006-01-02T15:04:05.999999999Z07:00"},
+    },
+    {type = "remove", if = "attributes.record != nil", field = "attributes.record"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "devstats.event"},
+  ]
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
+// Each commit's snapshot, built from its events, one a line.
+otelcol.receiver.filelog "devstats_snapshots" {
+  include          = [string.format("%s/devstats/*/snapshots.jsonl", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+  max_log_size     = "8MiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      parse_to  = "attributes.record",
+      on_error  = "send_quiet",
+      timestamp = {parse_from = "attributes.record.collected_at", layout_type = "gotime", layout = "2006-01-02T15:04:05.999999999Z07:00"},
+    },
+    {type = "remove", if = "attributes.record != nil", field = "attributes.record"},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "devstats.snapshot"},
+  ]
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
