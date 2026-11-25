@@ -66,10 +66,10 @@ hl.window_rule({
   dim_around = true,
 })
 
--- The board a click on the desk nudge pill opens, raised the same way as the capture note.
+-- doit's panel, which the desk nudge pill and SUPER+N open, raised the same way as the capture note.
 hl.window_rule({
-  name = 'doit-tui-window',
-  match = { class = '^(doit\\.tui)$' },
+  name = 'doit-panel-window',
+  match = { title = '^(doit panel)$' },
   float = true,
   center = true,
   size = 'monitor_w*0.5 monitor_h*0.6',

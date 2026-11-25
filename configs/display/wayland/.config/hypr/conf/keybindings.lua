@@ -16,6 +16,7 @@ bind(mainMod .. ' + Return', 'Open terminal', hl.dsp.exec_cmd('ghostty'))
 bind(mainMod .. ' + Space', 'Open launcher', hl.dsp.exec_cmd('rofi -show drun'))
 bind(mainMod .. ' + SHIFT + slash', 'Show keybinds', hl.dsp.exec_cmd('rofi-keybinds'))
 bind(mainMod .. ' + C', 'Capture a note to the fleet inbox', hl.dsp.exec_cmd('fleet-capture-window'))
+bind(mainMod .. ' + N', "Open or close doit's panel", hl.dsp.exec_cmd('~/.config/waybar/doit-panel-window.sh'))
 
 -- Window management
 bind(mainMod .. ' + Q', 'Close window', hl.dsp.window.close())
