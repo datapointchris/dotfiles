@@ -190,8 +190,8 @@ Most are the installers `diagnose.removal_of` attributes a copy to by package,
 which is what a row is matched against. An AUR build is pacman's to remove.
 `go` and `release` keep no receipt, so their row names a file instead: the
 binary of that name in the directory the installer writes to, which is
-`superseded.PLACED`. `go:actionlint` is `~/go/bin/actionlint`. A `uv:` row on an
-entry that installs under another name is asked of `uv tool list`.
+`superseded.PLACED`. `go:actionlint` is `~/go/bin/actionlint`. A `uv:` row names
+a tool by its package, as uv's receipt does, whatever executables it installs.
 """
 
 

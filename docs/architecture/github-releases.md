@@ -74,7 +74,9 @@ put a file there. Their rows name the file instead: `go:actionlint` is the
 `~/.local/bin`. That also covers a replacement under a new name, which never
 puts a second copy of anything on PATH. jactionlint replaced actionlint that
 way. A link is never deleted this way, because `~/.local/bin` also holds uv's
-links and the ones this repo deploys.
+links and the ones this repo deploys. A `uv:` row names a tool by its package,
+and its receipt lists the scripts `uv tool uninstall` deletes, whatever their
+names.
 
 ## Verification defends the transfer, not the publisher
 

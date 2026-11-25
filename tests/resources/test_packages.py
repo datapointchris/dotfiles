@@ -1709,17 +1709,25 @@ def test_the_apply_that_installs_a_replacement_deletes_the_go_binary_it_was_rena
 
 
 @pytest.mark.parametrize(
-    ('claimed', 'command'),
-    [('oldfrob', ['uv', 'tool', 'uninstall', 'oldfrob']), ('', None)],
-    ids=['uv-owns-it', 'another-program-of-that-name'],
+    ('listed', 'command'),
+    [
+        (('frob-python',), ['uv', 'tool', 'uninstall', 'oldfrob']),
+        (None, None),
+        (('frob', 'frob-python'), None),
+    ],
+    ids=['uv-owns-it', 'another-program-of-that-name', 'its-uninstall-would-take-the-entry'],
 )
-def test_a_uv_row_under_a_former_name_takes_only_a_tool_uv_claims(
-    monkeypatch: pytest.MonkeyPatch, claimed: str, command: list[str] | None
+def test_a_uv_row_names_a_tool_by_its_receipt_and_spares_the_entrys_executable(
+    uv_tools: Path, tmp_path: Path, listed: tuple[str, ...] | None, command: list[str] | None
 ) -> None:
-    """A rename puts no second copy on PATH, so uv's receipt names the old one."""
-    monkeypatch.setattr(superseded, 'uv_tool_providing', lambda _name: claimed)
+    """A rename puts no second copy on PATH, so uv's receipt names the old tool and
+    every executable its uninstall deletes."""
+    if listed is not None:
+        rows = ', '.join(f'{{ name = "{name}", install-path = "{tmp_path / name}", from = "oldfrob" }}' for name in listed)
+        (uv_tools / 'oldfrob').mkdir()
+        (uv_tools / 'oldfrob' / 'uv-receipt.toml').write_text(f'[tool]\nrequirements = [{{ name = "oldfrob" }}]\nentrypoints = [{rows}]\n')
 
-    removal = superseded.under_former_name('uv', 'oldfrob')
+    removal = superseded.under_former_name('uv', 'oldfrob', keep='frob')
 
     assert (superseded.argv(removal) if removal else None) == command
 

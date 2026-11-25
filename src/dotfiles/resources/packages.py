@@ -413,14 +413,24 @@ def placed_beside(item: DesiredItem) -> list[diagnose.Removal]:
 
     Looked up by name rather than found by `shadowing`, because a replacement
     under a new name is no second copy of anything: jactionlint's install never
-    puts a second `actionlint` on PATH. A row naming the item's own executable
-    would delete what was just installed, so it names nothing.
+    puts a second `actionlint` on PATH. A row whose removal would delete the
+    item's own executable names nothing.
     """
     return [
         removal
-        for installer, binary in map(catalog.superseded_row, getattr(item.entry, 'supersedes', ()))
-        if binary != item.executable and (removal := superseded.under_former_name(installer, binary))
+        for installer, name in map(catalog.superseded_row, getattr(item.entry, 'supersedes', ()))
+        if (removal := superseded.under_former_name(installer, name, keep=item.executable))
     ]
+
+
+def named_by_supersedes(plan: Plan, installer: str) -> set[str]:
+    """What the plan's `supersedes` rows name under one installer."""
+    return {
+        name
+        for item in plan.items
+        for prefix, name in map(catalog.superseded_row, getattr(item.entry, 'supersedes', ()))
+        if prefix == installer
+    }
 
 
 def placed_change(item: DesiredItem, removal: diagnose.Removal, observed: Observed) -> Change:
@@ -462,13 +472,15 @@ def undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
     `packages apply --package forge` advised removing fleet, ifiles and projects,
     and `~/go/bin` holds the only copy of each. `--owner` narrows to one
     owner's whole set, which still answers.
+
+    A `go:` row explains the binary it names, because `placed_beside` reports that binary as a removal.
     """
     if session.entries:
         return {}
     owners = {owner for item in plan.items if item.entry and (owner := item.entry.owner)}
     if not owners:
         return {}
-    declared = {item.executable for item in plan.items if item.executable}
+    declared = {item.executable for item in plan.items if item.executable} | named_by_supersedes(plan, 'go')
     return {
         binary: module
         for binary, module in gotool.installed_modules(session.home / 'go' / 'bin').items()
@@ -477,12 +489,15 @@ def undeclared_own_tools(session: Session, plan: Plan) -> dict[str, str]:
 
 
 def undeclared_own_uv_tools(session: Session, plan: Plan) -> dict[str, str]:
-    """uv tools this plan does not take, whose receipt names an index or GitHub owner the plan installs from."""
+    """uv tools this plan does not take, whose receipt names an index or GitHub owner the plan installs from.
+
+    A `uv:` row takes the tool it names, because `placed_beside` reports that tool as a removal.
+    """
     if session.entries:
         return {}
     indexes = {item.entry.index_url for item in plan.items if isinstance(item.entry, catalog.UvTool) and item.entry.index_url}
     owners = {owner for item in plan.items if item.entry and (owner := item.entry.owner)}
-    declared = {item.name for item in plan.items}
+    declared = {item.name for item in plan.items} | named_by_supersedes(plan, 'uv')
     found = {}
     for directory in sorted(paths.uv_tool_dir().glob('*/')):
         source = ev.uv_tool_source(directory.name)

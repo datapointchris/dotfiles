@@ -15,8 +15,8 @@ from pathlib import Path
 from dotfiles import effects
 from dotfiles import paths
 from dotfiles.diagnose import Removal
-from dotfiles.diagnose import uv_tool_providing
 from dotfiles.effects import Output
+from dotfiles.evidence import uv_tool_entrypoints
 from dotfiles.privilege import Escalates
 from dotfiles.providers import Kind
 from dotfiles.providers import Result
@@ -50,16 +50,20 @@ def placed(installer: str, binary: str) -> Removal | None:
     return Removal(installer, f'rm {paths.under_home(path, Path.home())}', binary, path=str(path))
 
 
-def under_former_name(installer: str, name: str) -> Removal | None:
-    """The copy a row names under a name its entry does not install as, where one is here.
+def under_former_name(installer: str, name: str, keep: str) -> Removal | None:
+    """The copy a row names, where one is here and removing it leaves `keep`, the entry's own executable.
 
-    uv keeps a receipt, so it is asked whether the tool is its own. That leaves any
-    other program of the same name alone, such as one a system package installs.
+    A `go:` or `release:` row names a file, so a row naming `keep` names the file
+    the entry just installed. A `uv:` row names a tool by its package, as uv's
+    receipt does, and uv's uninstall deletes every executable that receipt lists.
+    So a receipt listing `keep` names nothing either. Asking the receipt also
+    leaves alone any other program of the same name, such as one a system package
+    installs.
     """
     if installer in PLACED:
-        return placed(installer, name)
-    if installer == 'uv' and uv_tool_providing(name) == name:
-        return Removal('uv', f'uv tool uninstall {name}', name, path=str(bin_dir() / name))
+        return None if name == keep else placed(installer, name)
+    if installer == 'uv' and (links := uv_tool_entrypoints(name)) and all(link.name != keep for link in links):
+        return Removal('uv', f'uv tool uninstall {name}', name, path=str(links[0]))
     return None
 
 

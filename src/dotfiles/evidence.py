@@ -145,6 +145,18 @@ def uv_tool_source(name: str) -> UvToolSource | None:
     return UvToolSource(direct, indexes)
 
 
+def uv_tool_entrypoints(name: str) -> tuple[Path, ...]:
+    """The executables a tool's receipt lists, which `uv tool uninstall` deletes, or none where uv has no such tool.
+
+    A tool and its executables are named apart: the `httpie` package installs `http`.
+    """
+    try:
+        recorded = tomllib.loads((paths.uv_tool_dir() / name / 'uv-receipt.toml').read_text()).get('tool', {})
+    except (OSError, tomllib.TOMLDecodeError):
+        return ()
+    return tuple(Path(row['install-path']) for row in recorded.get('entrypoints', ()) if row.get('install-path'))
+
+
 def uv_tool_version(name: str) -> str | None:
     """The version of a tool's own distribution in its environment, or None where none is installed.
 
