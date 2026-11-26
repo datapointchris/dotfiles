@@ -1848,7 +1848,7 @@ git_uv_tools:
     repo: https://github.com/datapointchris/psyche.git
     requires_github_auth: true
     supersedes: ['uv:digest']
-    description: Analyze YouTube videos and web articles with Claude, building a searchable knowledge base
+    description: Analyze web articles and sources parsed elsewhere with Claude, building a searchable knowledge base
 
   - name: homelab
     repo: https://github.com/datapointchris/homelab.git
