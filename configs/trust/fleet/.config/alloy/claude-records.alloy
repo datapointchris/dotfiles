@@ -62,6 +62,37 @@ otelcol.receiver.filelog "hook_runs" {
   }
 }
 
+// Each hard-to-read sentence check that the Bash rule sent and got no answer to, one field a
+// line. The service emits every answered check itself. These lines carry the same attributes,
+// so they land beside them in otel.hard_to_read_sentence_checks. The `*` follows a file the
+// rule has rotated.
+otelcol.receiver.filelog "hard_to_read_sentence_checks" {
+  include          = [string.format("%s/telemetry/hard-to-read-sentences-checks.jsonl*", coalesce(sys.env("XDG_STATE_HOME"), string.format("%s/.local/state", sys.env("HOME"))))]
+  start_at         = "beginning"
+  storage          = otelcol.storage.file.offsets.handler
+  fingerprint_size = "1KiB"
+
+  operators = [
+    {
+      type      = "json_parser",
+      timestamp = {parse_from = "attributes.timestamp", layout_type = "gotime", layout = "2006-01-02T15:04:05.999999999Z07:00"},
+    },
+    {type = "move", from = "attributes.sentences", to = "body"},
+    {type = "key_value_parser", parse_from = "attributes.resource", parse_to = "resource", delimiter = "=", pair_delimiter = ","},
+    {type = "add", field = "resource[\"host.name\"]", value = string.to_lower(string.split(constants.hostname, ".")[0])},
+    {type = "add", field = "attributes[\"fleet.kind\"]", value = "hard_to_read_sentences.check"},
+  ]
+
+  retry_on_failure {
+    enabled          = true
+    max_elapsed_time = "0s"
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.collector.input]
+  }
+}
+
 // Each call a session made into a watched CLI, scored for suspicion, one call a line.
 // A review drains a session's ledger by renaming it into reviewed/. The receiver tells
 // files apart by their opening bytes, so reading both globs ships each line once.
