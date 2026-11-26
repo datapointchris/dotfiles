@@ -67,12 +67,13 @@ hl.window_rule({
 })
 
 -- doit's panel, which the desk nudge pill and SUPER+N open, raised the same way as the capture note.
+-- Nine tenths of the height holds the whole panel at half the width, so it opens without a scrollbar.
 hl.window_rule({
   name = 'doit-panel-window',
   match = { title = '^(doit panel)$' },
   float = true,
   center = true,
-  size = 'monitor_w*0.5 monitor_h*0.6',
+  size = 'monitor_w*0.5 monitor_h*0.9',
   border_size = 6,
   border_color = { colors = { 'rgba(ffffffcc)', 'rgba(000000cc)' }, angle = 45 },
   dim_around = true,
