@@ -1089,6 +1089,15 @@ user_timers:
     network_trust: fleet
     excludes_os_family: windows
 
+  # A new server's host key reaches every other desk at its next run. The desk
+  # that provisioned the server learned the key when it read it.
+  - name: known-hosts-apply
+    description: Converge this desk's known_hosts to the declared host key of each server
+    argv: [fleet, machine, known-hosts, apply]
+    every: 1h
+    network_trust: fleet
+    excludes_os_family: windows
+
   # These run only where a manifest sets primary_workstation. What they build
   # syncs to the other machines, or reads this machine's own sessions.
   - name: exemplar-pull
