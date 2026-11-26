@@ -559,7 +559,7 @@ system_packages:
     apt: yt-dlp
     pacman: yt-dlp
     brew: yt-dlp
-    description: Lets mpv play the YouTube links ypl play hands it
+    description: The real yt-dlp, which ypl play hands mpv after a turn at ypl's door. Where ypl is installed, the yt-dlp app ahead of it on PATH sends a typed yt-dlp to ypl ytdlp
 
   - name: graphviz
     apt: graphviz

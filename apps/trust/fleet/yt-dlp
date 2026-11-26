@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# A yt-dlp typed at a desk runs on ypl's server, through the door that paces
+# every read of YouTube, and prints and writes here what yt-dlp would.
+# `ypl play` passes over any yt-dlp holding `ypl ytdlp`, so mpv still gets the
+# real one. A box without ypl runs the next yt-dlp on PATH.
+set -euo pipefail
+
+if command -v ypl >/dev/null 2>&1; then
+  exec ypl ytdlp -- "$@"
+fi
+
+IFS=: read -ra dirs <<<"$PATH"
+for dir in "${dirs[@]}"; do
+  candidate="$dir/yt-dlp"
+  if [[ -f $candidate && -x $candidate && ! $candidate -ef ${BASH_SOURCE[0]} ]]; then
+    exec "$candidate" "$@"
+  fi
+done
+
+echo "yt-dlp: neither ypl nor another yt-dlp is on PATH" >&2
+exit 127
