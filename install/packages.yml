@@ -372,6 +372,12 @@ system_packages:
     brew: rclone
     description: Cloud storage sync and management
 
+  - name: restic
+    apt: restic
+    pacman: restic
+    brew: restic
+    description: Deduplicating, encrypted backups
+
   # FUSE runtime dependency for mount-s3 (see custom_installers). Linux only —
   # mount-s3 has no macOS build, so no brew entry. libfuse2 is the FUSE 2 API the
   # AWS binary links against (fuse2 on Arch). apt name is libfuse2t64: Debian's
