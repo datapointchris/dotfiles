@@ -216,12 +216,13 @@ required:
   # it, ifiles' names its file server, and this public repo must not carry the
   # domain itself.
   #
-  # Each template among the consumers holds the keys its CLI's login writes, in
-  # its order, and no comment: goclilogin's three, or the url and source `ifiles
-  # auth login` writes. A file a CLI wrote at login before this machine set these
-  # values is then a rendering, so the next apply overwrites it rather than
-  # refusing it as somebody else's. Change a value here in ~/.env, since apply
-  # overwrites an edit made in the rendered file.
+  # A template among the consumers holds whatever keys its CLI reads. Where a
+  # CLI's login wrote its file while these values were unset, that file reads as
+  # a rendering only if the template holds exactly what the login wrote.
+  # Otherwise apply refuses it as somebody else's, and one
+  # `dotfiles symlinks apply --force` replaces it, along with every other target
+  # that run finds foreign. Change a value here in ~/.env, since apply overwrites
+  # an edit made in the rendered file.
   - name: HOMELAB_DOMAIN
     description: Domain the homelab serves its APIs and identity provider under, as a bare host name such as example.com
     network_trust: fleet
