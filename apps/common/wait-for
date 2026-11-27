@@ -21,11 +21,12 @@ passes. So a wait on a job of many hours ends within one stall bound of the job 
 rather than at a deadline sized for the slowest healthy run. Under --stall, a pending
 line with no number is unreadable.
 
-A line the check prints before its reading is what the wait reports it saw. Anything else, an empty line, or a check that exits non-zero is unreadable. Three
-unreadable polls in a row exit 2, naming what the last one read, because a loop that
-takes an empty read as "not yet" waits until its deadline, or forever. A check that
-cannot start exits 2 at once. The deadline exits 1, and bounds each poll as well as
-the sleep between them.
+A line the check prints before its reading is what the wait reports it saw. Anything
+else, an empty line, or a check that exits non-zero is unreadable. Three unreadable
+polls in a row exit 2, naming what the last one read, because a loop that takes an
+empty read as "not yet" waits until its deadline, or forever. A check that cannot
+start exits 2 at once. The deadline exits 1, and bounds each poll as well as the sleep
+between them.
 
 Each changed reading goes to stderr as it arrives. The verdict is the last line: on
 stdout where ready, and on stderr otherwise, as kubectl wait does. --json prints it
@@ -47,7 +48,8 @@ import re
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
+from dataclasses import dataclass
 
 READINGS = ('ready', 'pending', 'failed')
 UNREADABLE_IN_A_ROW = 3
@@ -113,7 +115,11 @@ def read_once(check: list[str], within: float, needs_progress: bool) -> tuple[st
     except ValueError:
         reading = ''
     if reading not in READINGS:
-        return 'unreadable', None, f'the check printed {last!r}, which is not ready, pending, pending N or failed' if last else 'the check printed nothing'
+        return (
+            'unreadable',
+            None,
+            f'the check printed {last!r}, which is not ready, pending, pending N or failed' if last else 'the check printed nothing',
+        )
     if reading == 'pending' and progress is None and needs_progress:
         return 'unreadable', None, 'the check printed pending with no number, which --stall needs to see the work move'
     said = lines[-2].strip() if len(lines) > 1 else ''
@@ -170,7 +176,9 @@ def wait(check: list[str], timeout: float, every: float, stall: float | None = N
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        prog='wait-for', description=__doc__.split('\n\n', 2)[0], epilog=__doc__.split('\n\n', 2)[2],
+        prog='wait-for',
+        description=__doc__.split('\n\n', 2)[0],
+        epilog=__doc__.split('\n\n', 2)[2],
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument('--timeout', type=duration, required=True, help='how long to wait before ending at the deadline')
