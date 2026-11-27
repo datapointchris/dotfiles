@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import dataclasses as dc
 import enum
+import os
 import shutil
 from pathlib import Path
 
@@ -345,9 +346,17 @@ def place(source: Path, destination: Path) -> None:
     busy`, and the binary currently running is routinely `task`, which is what
     invoked the install. Shared rather than written per provider because the
     failure is a property of the destination, not of where the bytes came from.
+
+    The staged name carries this process's id. Two applies can install one
+    binary in the same second. With one shared name, the first rename would
+    take the other's staged file.
     """
     destination.parent.mkdir(parents=True, exist_ok=True)
-    staged = destination.with_name(f'{destination.name}.new')
-    shutil.copy2(source, staged)
-    staged.chmod(0o755)
-    staged.replace(destination)
+    staged = destination.with_name(f'{destination.name}.{os.getpid()}.new')
+    try:
+        shutil.copy2(source, staged)
+        staged.chmod(0o755)
+        staged.replace(destination)
+    except BaseException:
+        staged.unlink(missing_ok=True)
+        raise
